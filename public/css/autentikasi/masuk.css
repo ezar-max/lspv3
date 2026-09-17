@@ -1,0 +1,37 @@
+/* MASUK.CSS - Login & Auth Page Layout */
+
+.halaman-autentikasi {
+  min-height: calc(100vh - 160px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--biru-bg);
+  padding: 3rem 1.5rem;
+}
+
+.kartu-autentikasi {
+  background: var(--putih);
+  border-radius: var(--radius-lg);
+  width: 100%;
+  max-width: 440px;
+  padding: 2.25rem 2rem;
+  box-shadow: var(--bayangan-soft);
+  border: 1px solid var(--biru-soft);
+}
+
+.header-autentikasi {
+  text-align: center;
+  margin-bottom: 1.75rem;
+}
+
+.header-autentikasi h2 {
+  font-size: 1.5rem;
+  color: var(--biru-malam);
+  font-weight: 700;
+}
+
+.header-autentikasi p {
+  color: var(--abu-teks);
+  font-size: 0.88rem;
+  margin-top: 0.25rem;
+}

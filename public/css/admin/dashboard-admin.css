@@ -1,0 +1,136 @@
+/* DASHBOARD-ADMIN.CSS - Academic Light Blue Theme for Admin */
+
+.grid-admin-top {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.25rem;
+  margin-bottom: 1.75rem;
+}
+
+.kartu-admin-metric {
+  background: var(--putih);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem 1.5rem;
+  border: 1px solid var(--biru-soft);
+  box-shadow: var(--bayangan-soft);
+  display: flex;
+  align-items: center;
+  gap: 1.1rem;
+  transition: var(--transisi);
+}
+
+.kartu-admin-metric:hover {
+  border-color: var(--biru-utama);
+  box-shadow: var(--bayangan-hover);
+}
+
+.ikon-metric {
+  width: 46px;
+  height: 46px;
+  border-radius: var(--radius-md);
+  background: var(--biru-tint);
+  color: var(--biru-utama);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+  flex-shrink: 0;
+}
+
+.angka-metric {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--biru-malam);
+  line-height: 1.1;
+}
+
+@media (max-width: 992px) {
+  .grid-admin-top {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 576px) {
+  .grid-admin-top {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── TAMPILAN TABEL ADMIN BERSIH & MINIMALIS ── */
+.kartu-tabel-admin {
+  background: var(--putih);
+  border-radius: 14px;
+  border: 1px solid var(--biru-soft);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+  overflow: hidden;
+}
+
+.tabel-admin-header {
+  background: #f0f6fb;
+  border-bottom: 1.5px solid var(--biru-soft);
+  color: var(--biru-malam);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.tabel-admin-header th {
+  padding: 0.85rem 1.15rem;
+  white-space: nowrap;
+}
+
+.tabel-admin-body tr {
+  transition: background-color 0.15s ease;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.tabel-admin-body tr:last-child {
+  border-bottom: none;
+}
+
+.tabel-admin-body tr:hover {
+  background-color: #f8fbfe;
+}
+
+.tabel-admin-body td {
+  padding: 0.9rem 1.15rem;
+  color: #334155;
+  font-size: 0.85rem;
+  vertical-align: middle;
+}
+
+/* Aksi Tabel Minimalis */
+.btn-aksi-tabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.38rem 0.75rem;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  transition: var(--transisi);
+  border: 1px solid transparent;
+}
+
+.btn-aksi-tabel-utama {
+  background: var(--biru-utama);
+  color: var(--putih);
+}
+
+.btn-aksi-tabel-utama:hover {
+  background: var(--biru-gelap);
+  color: var(--putih);
+}
+
+.btn-aksi-tabel-outline {
+  background: var(--putih);
+  color: var(--biru-gelap);
+  border-color: var(--biru-soft);
+}
+
+.btn-aksi-tabel-outline:hover {
+  background: var(--biru-tint);
+  border-color: var(--biru-muda);
+  color: var(--biru-gelap);
+}

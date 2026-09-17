@@ -1,0 +1,347 @@
+/* BERANDA.CSS - Public Home Page Styles (Academic Light Blue Design System) */
+
+/* ── HERO SECTION ── */
+.hero-publik {
+  background: var(--putih);
+  padding: 4rem 1.5rem 5rem 1.5rem;
+  border-bottom: 1px solid var(--biru-soft);
+  position: relative;
+}
+
+.hero-konten {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  gap: 3rem;
+  align-items: center;
+}
+
+.hero-teks h1 {
+  font-size: clamp(2.2rem, 4vw, 3rem);
+  font-weight: 800;
+  line-height: 1.25;
+  color: var(--biru-malam);
+  margin-bottom: 1rem;
+}
+
+.hero-teks h1 span {
+  color: var(--biru-utama);
+}
+
+.hero-teks p {
+  font-size: 1.05rem;
+  color: var(--abu-teks);
+  margin-bottom: 1.75rem;
+  line-height: 1.65;
+  max-width: 580px;
+}
+
+/* HERO WIDGET CARD */
+.hero-gambar-box {
+  background: var(--biru-bg);
+  border-radius: var(--radius-lg);
+  padding: 2rem;
+  box-shadow: var(--bayangan-soft);
+  border: 1px solid var(--biru-soft);
+  text-align: center;
+}
+
+.hero-icon-wrapper {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: var(--biru-tint);
+  color: var(--biru-utama);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1rem auto;
+  font-size: 2.25rem;
+}
+
+.hero-gambar-box h3 {
+  font-size: 1.2rem;
+  color: var(--biru-malam);
+  font-weight: 700;
+  margin-bottom: 0.35rem;
+}
+
+.hero-gambar-box p {
+  color: var(--abu-teks);
+  font-size: 0.88rem;
+  margin-bottom: 1rem;
+}
+
+.hero-badge-group {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* ── STATISTIK COUNTER GRID ── */
+.hero-statistik-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.25rem;
+  max-width: 1200px;
+  margin: 2.5rem auto 4rem auto;
+  padding: 0 1.5rem;
+}
+
+.kartu-stat {
+  background: var(--putih);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem 1rem;
+  border: 1px solid var(--biru-soft);
+  box-shadow: var(--bayangan-soft);
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  transition: var(--transisi);
+}
+
+.kartu-stat:hover {
+  border-color: var(--biru-utama);
+}
+
+.stat-icon-chip {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  background: var(--biru-tint);
+  color: var(--biru-utama);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  flex-shrink: 0;
+}
+
+.stat-angka {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: var(--biru-malam);
+  line-height: 1.1;
+}
+
+.stat-label {
+  color: var(--abu-teks);
+  font-size: 0.82rem;
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+/* ── SEKSI & HEADER ── */
+.seksi-fitur {
+  max-width: 1200px;
+  margin: 4rem auto;
+  padding: 0 1.5rem;
+}
+
+.judul-seksi {
+  text-align: center;
+  margin-bottom: 2.5rem;
+}
+
+.judul-seksi .kicker-section {
+  display: inline-block;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--biru-utama);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin-bottom: 0.35rem;
+}
+
+.judul-seksi h2 {
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  color: var(--biru-malam);
+  font-weight: 800;
+}
+
+.judul-seksi p {
+  color: var(--abu-teks);
+  font-size: 0.95rem;
+  max-width: 580px;
+  margin: 0.4rem auto 0 auto;
+}
+
+/* ── KEUNGGULAN GRID ── */
+.grid-keunggulan {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.25rem;
+}
+
+.kartu-keunggulan {
+  background: var(--putih);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  border: 1px solid var(--biru-soft);
+  box-shadow: var(--bayangan-soft);
+  display: flex;
+  flex-direction: column;
+  transition: var(--transisi);
+}
+
+.kartu-keunggulan:hover {
+  border-color: var(--biru-utama);
+  box-shadow: var(--bayangan-hover);
+}
+
+.keunggulan-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  background: var(--biru-tint);
+  color: var(--biru-utama);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.kartu-keunggulan h4 {
+  font-size: 1.05rem;
+  color: var(--biru-malam);
+  font-weight: 700;
+  margin-bottom: 0.4rem;
+}
+
+.kartu-keunggulan p {
+  color: var(--abu-teks);
+  font-size: 0.86rem;
+  line-height: 1.55;
+}
+
+/* ── ALUR PROSES STEP TIMELINE ── */
+.alur-proses-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.25rem;
+}
+
+.kartu-step-alur {
+  background: var(--putih);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  border: 1px solid var(--biru-soft);
+  box-shadow: var(--bayangan-soft);
+  text-align: center;
+  transition: var(--transisi);
+}
+
+.kartu-step-alur:hover {
+  border-color: var(--biru-utama);
+}
+
+.step-number-badge {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: var(--biru-utama);
+  color: var(--putih);
+  font-size: 1rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 0.85rem auto;
+}
+
+.kartu-step-alur h4 {
+  font-size: 1rem;
+  color: var(--biru-malam);
+  font-weight: 700;
+  margin-bottom: 0.4rem;
+}
+
+.kartu-step-alur p {
+  color: var(--abu-teks);
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+
+/* ── SKEMA UNGGULAN GRID ── */
+.grid-skema-publik {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+
+.kartu-skema-item {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.kartu-skema-item .skema-footer {
+  margin-top: auto;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--biru-soft);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* ── BANNER CTA BOTTOM ── */
+.banner-cta-publik {
+  background: var(--biru-malam);
+  color: var(--putih);
+  border-radius: var(--radius-lg);
+  padding: 3rem 2rem;
+  text-align: center;
+  box-shadow: var(--bayangan-hover);
+  margin-top: 4rem;
+}
+
+.banner-cta-publik h2 {
+  font-size: clamp(1.6rem, 3vw, 2.2rem);
+  font-weight: 800;
+  margin-bottom: 0.6rem;
+  color: var(--putih);
+}
+
+.banner-cta-publik p {
+  color: var(--abu-border);
+  font-size: 1rem;
+  max-width: 560px;
+  margin: 0 auto 1.75rem auto;
+}
+
+/* RESPONSIVE */
+@media (max-width: 992px) {
+  .hero-konten {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+    text-align: center;
+  }
+  .hero-teks p {
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .hero-statistik-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .grid-keunggulan, .alur-proses-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .hero-publik {
+    padding: 2.5rem 1rem 3rem 1rem;
+  }
+  .hero-statistik-grid {
+    grid-template-columns: 1fr;
+  }
+  .grid-keunggulan, .alur-proses-grid {
+    grid-template-columns: 1fr;
+  }
+  .banner-cta-publik {
+    padding: 2rem 1.25rem;
+  }
+}

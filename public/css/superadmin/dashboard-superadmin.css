@@ -1,0 +1,29 @@
+/* DASHBOARD-SUPERADMIN.CSS - Academic Light Blue Theme for Super Admin */
+
+.header-superadmin {
+  background: var(--biru-malam);
+  color: var(--putih);
+  padding: 1.75rem 2rem;
+  border-radius: var(--radius-lg);
+  margin-bottom: 1.75rem;
+  box-shadow: var(--bayangan-soft);
+}
+
+.grid-role-stat {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.25rem;
+  margin-bottom: 1.75rem;
+}
+
+@media (max-width: 992px) {
+  .grid-role-stat {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 576px) {
+  .grid-role-stat {
+    grid-template-columns: 1fr;
+  }
+}

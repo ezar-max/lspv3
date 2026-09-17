@@ -1,0 +1,207 @@
+/* DASHBOARD-ASESI.CSS - Academic Light Blue Theme for Asesi */
+
+.header-dashboard-asesi {
+  background: var(--biru-malam);
+  color: var(--putih);
+  padding: 1.75rem 2rem;
+  border-radius: var(--radius-lg);
+  margin-bottom: 1.75rem;
+  box-shadow: var(--bayangan-soft);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+}
+
+.teks-header-asesi h1 {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--putih);
+  margin-bottom: 0.25rem;
+}
+
+.teks-header-asesi p {
+  color: var(--biru-tint);
+  font-size: 0.9rem;
+}
+
+.grid-progress-asesi {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 1.25rem;
+}
+
+.kartu-status-pendaftaran {
+  background: var(--putih);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  border: 1px solid var(--biru-soft);
+  box-shadow: var(--bayangan-soft);
+}
+
+/* Progress Bar Header */
+.progress-bar-container {
+  background: #e2e8f0;
+  border-radius: 9999px;
+  height: 8px;
+  width: 100%;
+  overflow: hidden;
+  margin: 0.75rem 0 1.25rem 0;
+  position: relative;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, #0284c7 0%, #059669 100%);
+  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.progress-bar-fill.ditolak {
+  background: linear-gradient(90deg, #f87171 0%, #dc2626 100%);
+}
+
+.progress-bar-fill.revisi {
+  background: linear-gradient(90deg, #fbbf24 0%, #d97706 100%);
+}
+
+/* Step Node List */
+.tahap-progress-list {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 1.25rem;
+  margin-bottom: 1.25rem;
+  position: relative;
+}
+
+.tahap-progress-list::before {
+  content: '';
+  position: absolute;
+  top: 18px;
+  left: 8%;
+  right: 8%;
+  height: 3px;
+  background: #e2e8f0;
+  z-index: 1;
+}
+
+.item-tahap {
+  text-align: center;
+  flex: 1;
+  position: relative;
+  z-index: 2;
+  padding: 0 0.35rem;
+}
+
+.lingkaran-tahap {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: #ffffff;
+  color: var(--abu-teks);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 0.45rem auto;
+  font-weight: 700;
+  font-size: 0.95rem;
+  border: 2.5px solid #cbd5e1;
+  transition: var(--transisi);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+}
+
+/* Tahap Selesai (Hijau) */
+.item-tahap.selesai .lingkaran-tahap {
+  background: #16a34a;
+  color: #ffffff;
+  border-color: #16a34a;
+  box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.2);
+}
+
+/* Tahap Aktif (Biru) */
+.item-tahap.aktif .lingkaran-tahap {
+  background: #0284c7;
+  color: #ffffff;
+  border-color: #0284c7;
+  box-shadow: 0 0 0 4px rgba(2, 132, 199, 0.25);
+  animation: pulse-ring 2s infinite;
+}
+
+/* Tahap Perlu Revisi (Amber) */
+.item-tahap.revisi .lingkaran-tahap {
+  background: #d97706;
+  color: #ffffff;
+  border-color: #d97706;
+  box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.2);
+}
+
+/* Tahap Ditolak (Merah) */
+.item-tahap.ditolak .lingkaran-tahap {
+  background: #dc2626;
+  color: #ffffff;
+  border-color: #dc2626;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.2);
+}
+
+/* Tahap Menunggu / Belum Aktif (Abu) */
+.item-tahap.menunggu .lingkaran-tahap {
+  background: #f8fafc;
+  color: #94a3b8;
+  border-color: #e2e8f0;
+}
+
+@keyframes pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 rgba(2, 132, 199, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 8px rgba(2, 132, 199, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(2, 132, 199, 0);
+  }
+}
+
+/* Timeline Detail Card */
+.timeline-item-detail {
+  display: flex;
+  gap: 1rem;
+  padding: 0.9rem 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.timeline-item-detail:last-child {
+  border-bottom: none;
+}
+
+.timeline-bullet {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  flex-shrink: 0;
+  margin-top: 0.15rem;
+}
+
+@media (max-width: 992px) {
+  .grid-progress-asesi {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .tahap-progress-list {
+    flex-wrap: wrap;
+    gap: 1rem 0;
+  }
+  .item-tahap {
+    flex: 1 1 45%;
+  }
+  .tahap-progress-list::before {
+    display: none;
+  }
+}

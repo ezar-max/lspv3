@@ -1,0 +1,100 @@
+/* PENDAFTARAN-SKEMA.CSS - FR.APL.01 Stepper Wizard & Signature Canvas */
+
+.stepper-apl01 {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 2rem;
+  background: var(--putih);
+  padding: 1.25rem 2rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--biru-soft);
+  box-shadow: var(--bayangan-soft);
+  position: relative;
+}
+
+.item-step {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--abu-teks);
+  cursor: pointer;
+  transition: var(--transisi);
+}
+
+.nomor-step {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--biru-soft);
+  color: var(--biru-utama);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+}
+
+.item-step.aktif {
+  color: var(--biru-malam);
+}
+
+.item-step.aktif .nomor-step {
+  background: var(--biru-utama);
+  color: var(--putih);
+  box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.2);
+}
+
+.item-step.selesai .nomor-step {
+  background: var(--hijau-sukses);
+  color: var(--putih);
+}
+
+.konten-step-bag1, .konten-step-bag2, .konten-step-bag31, .konten-step-bag32 {
+  display: none;
+}
+
+.konten-step-bag1.aktif, .konten-step-bag2.aktif, .konten-step-bag31.aktif, .konten-step-bag32.aktif {
+  display: block;
+}
+
+/* FR.APL.01 LAYOUT PHYSICAL FORM SIMULATION */
+.box-dokumen-apl01 {
+  background: var(--putih);
+  border: 2px solid var(--biru-muda);
+  border-radius: var(--radius-lg);
+  padding: 2.5rem;
+  box-shadow: var(--bayangan-hover);
+  position: relative;
+}
+
+.header-form-apl01 {
+  border-bottom: 2px solid var(--biru-muda);
+  padding-bottom: 1.5rem;
+  margin-bottom: 1.75rem;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.judul-apl01 {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--biru-malam);
+}
+
+.subjudul-apl01 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--biru-utama);
+  margin-bottom: 1rem;
+}
+
+/* CANVAS SIGNATURE MODAL */
+.canvas-signature-pad {
+  border: 2px dashed var(--biru-muda);
+  border-radius: var(--radius-md);
+  background: #fdfdfd;
+  cursor: crosshair;
+  touch-action: none;
+}

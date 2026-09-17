@@ -1,0 +1,48 @@
+/* PENDAFTARAN-BAGIAN2.CSS - FR.APL.01 Bagian 2 Data Sertifikasi */
+
+.stepper-header-page {
+  display: flex;
+  justify-content: space-between;
+  background: var(--putih);
+  padding: 1.25rem 2rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--biru-soft);
+  box-shadow: var(--bayangan-soft);
+  margin-bottom: 2rem;
+}
+
+.step-pill {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-weight: 700;
+  font-size: 0.88rem;
+  color: var(--abu-teks);
+  text-decoration: none;
+}
+
+.step-pill.aktif { color: var(--biru-malam); }
+.step-pill .step-num {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: var(--biru-soft); color: var(--biru-utama);
+  display: flex; align-items: center; justify-content: center; font-weight: 800;
+}
+.step-pill.aktif .step-num { background: var(--biru-utama); color: var(--putih); box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.2); }
+.step-pill.selesai .step-num { background: var(--hijau-sukses); color: var(--putih); }
+
+.card-form-apl {
+  background: var(--putih);
+  border-radius: var(--radius-lg);
+  border: 2px solid var(--biru-muda);
+  padding: 2.5rem;
+  box-shadow: var(--bayangan-hover);
+}
+
+.title-section-apl {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--biru-malam);
+  border-bottom: 2px solid var(--biru-muda);
+  padding-bottom: 1rem;
+  margin-bottom: 1.5rem;
+}

@@ -1,0 +1,51 @@
+/* DASHBOARD-ASESOR.CSS - Academic Light Blue Theme for Asesor */
+
+.header-asesor {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.75rem;
+}
+
+.header-asesor h1 {
+  font-size: 1.6rem;
+  color: var(--biru-malam);
+  font-weight: 700;
+}
+
+.grid-ringkasan-asesor {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.25rem;
+  margin-bottom: 1.75rem;
+}
+
+.kartu-asesor-stat {
+  background: var(--putih);
+  border-radius: var(--radius-lg);
+  padding: 1.35rem 1.5rem;
+  border: 1px solid var(--biru-soft);
+  box-shadow: var(--bayangan-soft);
+  transition: var(--transisi);
+}
+
+.kartu-asesor-stat:hover {
+  border-color: var(--biru-utama);
+}
+
+@media (max-width: 992px) {
+  .grid-ringkasan-asesor {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 576px) {
+  .grid-ringkasan-asesor {
+    grid-template-columns: 1fr;
+  }
+  .header-asesor {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+}
