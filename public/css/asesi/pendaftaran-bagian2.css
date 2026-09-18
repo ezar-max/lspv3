@@ -21,14 +21,32 @@
   text-decoration: none;
 }
 
-.step-pill.aktif { color: var(--biru-malam); }
-.step-pill .step-num {
-  width: 32px; height: 32px; border-radius: 50%;
-  background: var(--biru-soft); color: var(--biru-utama);
-  display: flex; align-items: center; justify-content: center; font-weight: 800;
+.step-pill.aktif {
+  color: var(--biru-malam);
 }
-.step-pill.aktif .step-num { background: var(--biru-utama); color: var(--putih); box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.2); }
-.step-pill.selesai .step-num { background: var(--hijau-sukses); color: var(--putih); }
+
+.step-pill .step-num {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--biru-soft);
+  color: var(--biru-utama);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+}
+
+.step-pill.aktif .step-num {
+  background: var(--biru-utama);
+  color: var(--putih);
+  box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.2);
+}
+
+.step-pill.selesai .step-num {
+  background: var(--hijau-sukses);
+  color: var(--putih);
+}
 
 .card-form-apl {
   background: var(--putih);

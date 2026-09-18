@@ -319,14 +319,18 @@
     gap: 2rem;
     text-align: center;
   }
+
   .hero-teks p {
     margin-left: auto;
     margin-right: auto;
   }
+
   .hero-statistik-grid {
     grid-template-columns: repeat(2, 1fr);
   }
-  .grid-keunggulan, .alur-proses-grid {
+
+  .grid-keunggulan,
+  .alur-proses-grid {
     grid-template-columns: repeat(2, 1fr);
   }
 }
@@ -335,12 +339,16 @@
   .hero-publik {
     padding: 2.5rem 1rem 3rem 1rem;
   }
+
   .hero-statistik-grid {
     grid-template-columns: 1fr;
   }
-  .grid-keunggulan, .alur-proses-grid {
+
+  .grid-keunggulan,
+  .alur-proses-grid {
     grid-template-columns: 1fr;
   }
+
   .banner-cta-publik {
     padding: 2rem 1.25rem;
   }

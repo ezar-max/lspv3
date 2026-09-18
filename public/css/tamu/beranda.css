@@ -16,7 +16,7 @@
   /* Status */
   --sukses: #10b981;
   --sukses-bg: #ecfdf5;
-  
+
   /* Netral / Teks */
   --teks-gelap: #0f172a;
   --teks-sedang: #334155;
@@ -42,7 +42,9 @@
   --transisi-halus: 0.5s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
@@ -237,7 +239,8 @@ body {
 .hero-publik {
   position: relative;
   background: var(--putih);
-  padding: 2.75rem 0 3.75rem; /* Margin atas dipersingkat agar tidak terlalu jauh */
+  padding: 2.75rem 0 3.75rem;
+  /* Margin atas dipersingkat agar tidak terlalu jauh */
   overflow: hidden;
   border-bottom: 1px solid rgba(226, 232, 240, 0.6);
   text-align: center;
@@ -264,6 +267,7 @@ body {
     transform: translateX(-50%) translateY(0) scale(1);
     opacity: 0.6;
   }
+
   100% {
     transform: translateX(-50%) translateY(25px) scale(1.08);
     opacity: 0.85;
@@ -278,20 +282,32 @@ body {
 }
 
 /* Animasi Masuk Awal (Entrance Stagger) */
-.hero-konten > * {
+.hero-konten>* {
   animation: heroFadeInUp 0.7s cubic-bezier(0.16, 1, 0.3, 1) backwards;
 }
 
-.hero-konten > *:nth-child(1) { animation-delay: 0.05s; }
-.hero-konten > *:nth-child(2) { animation-delay: 0.15s; }
-.hero-konten > *:nth-child(3) { animation-delay: 0.25s; }
-.hero-konten > *:nth-child(4) { animation-delay: 0.35s; }
+.hero-konten>*:nth-child(1) {
+  animation-delay: 0.05s;
+}
+
+.hero-konten>*:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.hero-konten>*:nth-child(3) {
+  animation-delay: 0.25s;
+}
+
+.hero-konten>*:nth-child(4) {
+  animation-delay: 0.35s;
+}
 
 @keyframes heroFadeInUp {
   0% {
     opacity: 0;
     transform: translateY(18px);
   }
+
   100% {
     opacity: 1;
     transform: translateY(0);
@@ -353,6 +369,7 @@ body {
     transform: scale(0.8);
     opacity: 0.8;
   }
+
   100% {
     transform: scale(2.4);
     opacity: 0;
@@ -987,9 +1004,17 @@ body {
 }
 
 /* Staggered Delay for Reveal items */
-.reveal-delay-1 { transition-delay: 0.1s; }
-.reveal-delay-2 { transition-delay: 0.2s; }
-.reveal-delay-3 { transition-delay: 0.3s; }
+.reveal-delay-1 {
+  transition-delay: 0.1s;
+}
+
+.reveal-delay-2 {
+  transition-delay: 0.2s;
+}
+
+.reveal-delay-3 {
+  transition-delay: 0.3s;
+}
 
 /* ==========================================================================
    9. RESPONSIVE MEDIA QUERIES

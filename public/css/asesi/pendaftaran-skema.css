@@ -50,11 +50,17 @@
   color: var(--putih);
 }
 
-.konten-step-bag1, .konten-step-bag2, .konten-step-bag31, .konten-step-bag32 {
+.konten-step-bag1,
+.konten-step-bag2,
+.konten-step-bag31,
+.konten-step-bag32 {
   display: none;
 }
 
-.konten-step-bag1.aktif, .konten-step-bag2.aktif, .konten-step-bag31.aktif, .konten-step-bag32.aktif {
+.konten-step-bag1.aktif,
+.konten-step-bag2.aktif,
+.konten-step-bag31.aktif,
+.konten-step-bag32.aktif {
   display: block;
 }
 

@@ -43,6 +43,7 @@
   .grid-ringkasan-asesor {
     grid-template-columns: 1fr;
   }
+
   .header-asesor {
     flex-direction: column;
     align-items: flex-start;
