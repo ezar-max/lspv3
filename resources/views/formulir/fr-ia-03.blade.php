@@ -138,7 +138,7 @@
                                         $defaultPertanyaan = 'Jelaskan prosedur dan pertimbangan utama Anda saat mengeksekusi langkah kerja pada kriteria unjuk kerja ' . $kuk->nomor_kuk . ' ini?';
                                         $valPertanyaan = $savedPertanyaan[$kuk->id] ?? $defaultPertanyaan;
                                         $valRespon = $savedRespon[$kuk->id] ?? 'Asesi dapat menjelaskan prosedur teknis dengan tepat, runtut, dan sesuai standar SOP kerja.';
-                                        $valPencapaian = $savedPencapaian[$kuk->id] ?? 'M';
+                                        $valPencapaian = $savedPencapaian[$kuk->id] ?? null;
                                     @endphp
                                     <tr>
                                         <td style="text-align: center; font-weight: 700; vertical-align: top;">{{ $qCount }}.</td>

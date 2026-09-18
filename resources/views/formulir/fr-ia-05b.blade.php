@@ -61,7 +61,7 @@
             $totalSalah = $skorData['salah'] ?? 0;
         }
 
-        $rekomendasiVal = $skorNilai !== null ? ($skorNilai >= 70 ? 'K' : 'BK') : ($iaRecord05b->rekomendasi ?? ($ia05cRecord->rekomendasi ?? 'K'));
+        $rekomendasiVal = $skorNilai !== null ? ($skorNilai >= 70 ? 'K' : 'BK') : ($iaRecord05b->rekomendasi ?? ($ia05cRecord->rekomendasi ?? null));
     @endphp
 
     <!-- ACTION BAR ATAS -->

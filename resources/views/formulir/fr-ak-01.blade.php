@@ -39,9 +39,9 @@
         $tglTtdAsesor = $pendaftaran->tanggal_ttd_asesor_ak01 ? \Carbon\Carbon::parse($pendaftaran->tanggal_ttd_asesor_ak01)->isoFormat('D MMMM YYYY') : ($pendaftaran->tanggal_ttd_asesor ? \Carbon\Carbon::parse($pendaftaran->tanggal_ttd_asesor)->isoFormat('D MMMM YYYY') : null);
         $tglTtdAsesi = $pendaftaran->tanggal_ttd_asesi_ak01 ? \Carbon\Carbon::parse($pendaftaran->tanggal_ttd_asesi_ak01)->isoFormat('D MMMM YYYY') : ($pendaftaran->tanggal_ttd_asesi ? \Carbon\Carbon::parse($pendaftaran->tanggal_ttd_asesi)->isoFormat('D MMMM YYYY') : null);
 
-        $buktiSelected = $pendaftaran->bukti_dikumpulkan ?? ['Hasil Verifikasi Portofolio', 'Hasil Pertanyaan Lisan', 'Hasil Pertanyaan Tertulis'];
+        $buktiSelected = $pendaftaran->bukti_dikumpulkan ?? null;
         if (!is_array($buktiSelected)) $buktiSelected = [];
-        $tukSelected = $pendaftaran->tuk_type ?? 'Sewaktu';
+        $tukSelected = $pendaftaran->tuk_type ?? null;
     @endphp
 
     <!-- ACTION BAR ATAS -->

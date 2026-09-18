@@ -1,8 +1,8 @@
 /* ==========================================================================
-   MASUK.CSS - Desain Modern Minimalis Autentikasi (Linear Light Aesthetic)
+   REGISTRASI.CSS - Desain Modern Minimalis Pendaftaran Asesi (Linear Light)
    ========================================================================== */
 
-.halaman-autentikasi {
+.halaman-registrasi {
   min-height: calc(100vh - 80px);
   display: flex;
   align-items: center;
@@ -16,11 +16,11 @@
 /* Ambient Floating Glow di Latar Belakang */
 .auth-ambient-glow {
   position: absolute;
-  top: 15%;
+  top: 10%;
   left: 50%;
   transform: translateX(-50%);
-  width: 650px;
-  height: 450px;
+  width: 750px;
+  height: 500px;
   background: radial-gradient(circle, rgba(219, 234, 254, 0.55) 0%, rgba(239, 246, 255, 0.2) 50%, transparent 70%);
   filter: blur(50px);
   pointer-events: none;
@@ -33,7 +33,7 @@
   100% { transform: translateX(-50%) translateY(20px) scale(1.06); opacity: 0.85; }
 }
 
-.kartu-autentikasi {
+.kartu-registrasi {
   position: relative;
   z-index: 1;
   background: rgba(255, 255, 255, 0.94);
@@ -42,13 +42,13 @@
   border: 1px solid rgba(226, 232, 240, 0.9);
   border-radius: 18px;
   width: 100%;
-  max-width: 440px;
-  padding: 2.5rem 2.25rem;
-  box-shadow: 0 20px 40px -15px rgba(15, 23, 42, 0.05), 0 1px 3px rgba(0, 0, 0, 0.02);
+  max-width: 660px;
+  padding: 2.75rem 2.5rem;
+  box-shadow: 0 20px 45px -15px rgba(15, 23, 42, 0.05), 0 1px 3px rgba(0, 0, 0, 0.02);
   transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.header-autentikasi {
+.header-registrasi {
   text-align: center;
   margin-bottom: 2rem;
 }
@@ -64,7 +64,7 @@
   padding: 4px 12px 4px 10px;
   border-radius: 9999px;
   border: 1px solid rgba(37, 99, 235, 0.15);
-  margin-bottom: 1rem;
+  margin-bottom: 0.85rem;
 }
 
 .radar-dot-wadah {
@@ -98,8 +98,8 @@
   100% { transform: scale(2.4); opacity: 0; }
 }
 
-.header-autentikasi h2 {
-  font-size: 1.6rem;
+.header-registrasi h1 {
+  font-size: 1.65rem;
   font-weight: 800;
   color: #0f172a;
   letter-spacing: -0.03em;
@@ -107,10 +107,16 @@
   margin-bottom: 0.4rem;
 }
 
-.header-autentikasi p {
+.header-registrasi p {
   color: #64748b;
   font-size: 0.875rem;
   line-height: 1.5;
+}
+
+.grid-dua-kolom {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.15rem;
 }
 
 .grup-form {
@@ -131,6 +137,11 @@
 .label-form i {
   color: #94a3b8;
   font-size: 0.8rem;
+}
+
+.tanda-wajib {
+  color: #ef4444;
+  font-weight: 700;
 }
 
 .input-control {
@@ -229,12 +240,16 @@
   color: #1d4ed8;
 }
 
-@media (max-width: 480px) {
-  .kartu-autentikasi {
+@media (max-width: 640px) {
+  .kartu-registrasi {
     padding: 2rem 1.5rem;
     border-radius: 14px;
   }
-  .header-autentikasi h2 {
-    font-size: 1.4rem;
+  .grid-dua-kolom {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+  .header-registrasi h1 {
+    font-size: 1.45rem;
   }
 }

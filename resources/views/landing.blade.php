@@ -6,41 +6,38 @@
     <title>LSP SMKN 1 Gunungputri | Sertifikasi Profesi BNSP</title>
     <meta name="description" content="Lembaga Sertifikasi Profesi P1 SMKN 1 Gunungputri terlisensi resmi oleh Badan Nasional Sertifikasi Profesi (BNSP) No. BNSP-LSP-2629-ID.">
 
-    <!-- Tipografi Public Sans & Plus Jakarta Sans -->
+    <!-- Tipografi Inter & Plus Jakarta Sans -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
 
-    <!-- Berkas CSS Khusus Tamu (Aturan Peraturan No. 1, 5, 7) -->
+    <!-- Berkas CSS Khusus Tamu -->
     <link rel="stylesheet" href="{{ asset('css/tamu/beranda.css') }}">
 </head>
 <body>
 
-    <!-- NAVBAR PUBLIK BERSIH -->
+    <!-- NAVBAR PUBLIK BERSIH (Full-Width Kotak Transparan Glassmorphism) -->
     <nav class="navbar-publik">
         <div class="wadah navbar-wadah">
             <a href="#beranda" class="brand-lsp" aria-label="Beranda LSP SMKN 1 Gunungputri">
                 <img src="{{ asset('logo/logo-lsp.jpeg') }}" alt="Logo LSP SMKN 1 Gunungputri" class="brand-logo-img">
-                <div class="brand-info">
-                    <span class="brand-nama">LSP SMKN 1 Gunungputri</span>
-                    <span class="brand-lisensi">Lisensi Resmi BNSP: BNSP-LSP-2629-ID</span>
-                </div>
+                <span class="brand-nama">LSP SMKN 1 Gunungputri</span>
             </a>
 
             <ul class="nav-menu" id="menuNavigasi">
                 <li><a href="#beranda" class="nav-link aktif">Beranda</a></li>
-                <li><a href="#skema" class="nav-link">Skema</a></li>
-                <li><a href="#berita" class="nav-link">Berita &amp; Pengumuman</a></li>
+                <li><a href="#skema" class="nav-link">Skema Keahlian</a></li>
+                <li><a href="#berita" class="nav-link">Berita</a></li>
             </ul>
 
             @if(!request()->routeIs('masuk', 'registrasi', 'daftar'))
             <div class="nav-aksi">
                 @auth
                     <a href="{{ route(auth()->user()->peran . '.dasbor') }}" class="tombol-cta-header">
-                        Buka Dasbor
+                        Dasbor
                     </a>
                 @else
-                    <a href="{{ route('masuk') }}" style="text-decoration: none; color: var(--biru-malam); font-weight: 700; font-size: 0.86rem; padding: 8px 14px; border-radius: var(--radius-sm); border: 1px solid var(--biru-soft); transition: var(--transisi); background: #ffffff;">
+                    <a href="{{ route('masuk') }}" class="tombol-masuk">
                         Masuk
                     </a>
                     <a href="{{ route('daftar') }}" class="tombol-cta-header">
@@ -48,76 +45,51 @@
                     </a>
                 @endauth
                 <button type="button" class="tombol-menu-hp" id="tombolMenuHp" aria-label="Buka Menu">
-                    ☰
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
                 </button>
             </div>
             @endif
         </div>
     </nav>
 
-    <!-- HERO SECTION (MENGIKUTI STRUKTUR REPO EZAR-MAX) -->
+    <!-- HERO SECTION (Linear Light Aesthetic - Margin Rapi & Pendaran Cahaya) -->
     <header class="hero-publik" id="beranda">
-        <div class="hero-pola-titik"></div>
+        <div class="hero-glow"></div>
         <div class="wadah">
             <div class="hero-konten">
-                <div class="hero-teks">
-                    <span class="hero-lisensi-chip">
-                        Lisensi Resmi BNSP &middot; KEP.1215/BNSP/V/2025
-                    </span>
-                    <h1 class="hero-judul">
-                        Sertifikasi Profesi Vokasi
-                        <span class="hero-judul-aksen">Unggul &amp; Berstandar Nasional</span>
-                    </h1>
-                    <p class="hero-deskripsi">
-                        Portal resmi sistem informasi asesmen kompetensi keahlian LSP SMKN 1 Gunungputri. Menguji, memverifikasi, dan menerbitkan sertifikasi resmi berlisensi BNSP untuk mencetak lulusan vokasi siap kerja berdaya saing global.
-                    </p>
-                    <div class="hero-aksi">
-                        <a href="#skema" class="tombol-utama">
-                            Eksplorasi Skema Keahlian
-                        </a>
-                        <a href="{{ route('daftar') }}" class="tombol-outline">
-                            Daftar Asesi Baru
-                        </a>
-                    </div>
-                    <div class="hero-kepercayaan">
-                        <span>Standar Kompetensi Nasional</span>
-                        <span>Asesor Praktisi Industri</span>
-                        <span>Sertifikat Diakui DUDI</span>
-                    </div>
-                </div>
-
-                <div class="hero-visual">
-                    <div class="hero-kartu-logo">
-                        <img src="{{ asset('logo/logo-lsp.jpeg') }}" alt="Logo LSP SMKN 1 Gunungputri">
-                        <div class="hero-kartu-caption">
-                            <strong>LSP SMKN 1 Gunungputri</strong>
-                            <span>Terakreditasi &amp; Berlisensi BNSP RI</span>
-                            <div style="font-family: var(--font-mono); font-size: 0.82rem; font-weight: 700; color: var(--biru-utama); margin-top: 8px;">
-                                BNSP-LSP-2629-ID
-                            </div>
-                            <div style="font-size: 0.76rem; color: var(--sukses); font-weight: 600; margin-top: 2px;">
-                                Berlaku s/d 23 Mei 2030
-                            </div>
-                        </div>
-                    </div>
+                <h1 class="hero-judul">
+                    Sertifikasi Profesi Vokasi <br />
+                    <span class="hero-judul-aksen">Standar Nasional &amp; Industri</span>
+                </h1>
+                
+                <p class="hero-deskripsi">
+                    Uji kompetensi keahlian terstandar BNSP bagi siswa dan profesional di SMKN 1 Gunungputri untuk melahirkan lulusan unggul berdaya saing global.
+                </p>
+                
+                <div class="hero-aksi">
+                    <a href="#skema" class="tombol-utama">
+                        <span>Jelajahi Skema</span>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                    </a>
+                    <a href="{{ route('daftar') }}" class="tombol-outline">
+                        Daftar Peserta Asesi
+                    </a>
                 </div>
             </div>
         </div>
     </header>
 
-
     <!-- SKEMA SERTIFIKASI KEAHLIAN VOKASI -->
-    <section class="seksi-konten" id="skema">
+    <section class="seksi-konten seksi-abu" id="skema">
         <div class="wadah">
-            <div class="judul-seksi">
-                <span class="kicker-section">Program Skema</span>
-                <h2>Skema Sertifikasi Keahlian Vokasi</h2>
-                <p>Pilih skema sertifikasi standar nasional BNSP yang sesuai program keahlian Anda.</p>
+            <div class="judul-seksi reveal">
+                <h2>Skema Sertifikasi Keahlian</h2>
+                <p>Standar Kompetensi Kerja Nasional Indonesia (SKKNI) terverifikasi BNSP.</p>
             </div>
 
             <!-- FILTER KATEGORI -->
-            <div class="bilah-filter-skema">
-                <button type="button" class="tombol-filter aktif" data-kategori="semua">Semua Skema (5)</button>
+            <div class="bilah-filter-skema reveal">
+                <button type="button" class="tombol-filter aktif" data-kategori="semua">Semua Skema ({{ count($daftarSkema) }})</button>
                 <button type="button" class="tombol-filter" data-kategori="pplg">PPLG</button>
                 <button type="button" class="tombol-filter" data-kategori="kimia">Kimia Industri</button>
                 <button type="button" class="tombol-filter" data-kategori="mesin">Teknik Pemesinan</button>
@@ -145,16 +117,23 @@
                         }
                     @endphp
 
-                    <div class="kartu-skema-item" data-kategori="{{ $kategoriSlug }}">
-                        <div>
+                    <div class="kartu-skema-item reveal" data-kategori="{{ $kategoriSlug }}">
+                        <div class="skema-kartu-atas">
                             <span class="skema-kategori-chip">{{ $skema->bidang_keahlian }}</span>
-                            <h3 class="skema-nama">{{ $skema->nama_skema }}</h3>
-                            <p class="skema-deskripsi">{{ $skema->deskripsi }}</p>
+                            <span class="skema-unit-count">{{ $skema->jumlah_unit }} Unit</span>
                         </div>
-                        <div class="skema-footer">
-                            <span class="skema-unit-count">{{ $skema->jumlah_unit }} Unit SKKNI</span>
+
+                        <div class="skema-kartu-tengah">
+                            <h3 class="skema-nama">{{ $skema->nama_skema }}</h3>
+                            @if($skema->deskripsi)
+                                <p class="skema-deskripsi">{{ $skema->deskripsi }}</p>
+                            @endif
+                        </div>
+
+                        <div class="skema-kartu-bawah">
                             <button type="button" class="tombol-skema-rincian" data-id-skema="{{ $skema->id }}" data-nama-skema="{{ $skema->nama_skema }}">
-                                Rincian Unit
+                                <span>Rincian Unit</span>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
                             </button>
                         </div>
                     </div>
@@ -163,29 +142,28 @@
         </div>
     </section>
 
-    <!-- BERITA & PENGUMUMAN ASESMEN (MENGIKUTI REPOSITORI EZAR-MAX) -->
-    <section class="seksi-konten seksi-putih" id="berita">
+    <!-- BERITA & PENGUMUMAN -->
+    <section class="seksi-konten" id="berita">
         <div class="wadah">
-            <div class="judul-seksi">
-                <span class="kicker-section">Informasi Publik</span>
-                <h2>Berita &amp; Pengumuman Asesmen</h2>
-                <p>Update terkini seputar kegiatan uji kompetensi dan jadwal sertifikasi vokasi LSP SMKN 1 Gunungputri.</p>
+            <div class="judul-seksi reveal">
+                <h2>Berita &amp; Pengumuman</h2>
+                <p>Informasi jadwal dan kegiatan sertifikasi kompetensi terbaru.</p>
             </div>
 
             <div class="grid-berita">
                 @forelse($daftarBerita as $berita)
-                    <article class="kartu-berita">
+                    <article class="kartu-berita reveal">
                         @if($berita->gambar)
-                            <a href="{{ route('berita.detail', $berita->slug) }}" class="berita-gambar-wadah" style="margin: -24px -24px 16px -24px; overflow: hidden; border-radius: var(--radius-md) var(--radius-md) 0 0; max-height: 180px; display: block;">
-                                <img src="{{ asset($berita->gambar) }}" alt="{{ $berita->judul }}" style="width: 100%; height: 180px; object-fit: cover; transition: transform 0.3s ease;">
+                            <a href="{{ route('berita.detail', $berita->slug) }}" class="berita-gambar-wadah">
+                                <img src="{{ asset($berita->gambar) }}" alt="{{ $berita->judul }}" loading="lazy">
                             </a>
                         @endif
                         <div class="berita-kencang">
-                            <span class="lencana-kategori lencana-{{ strtolower($berita->kategori) }}">
+                            <span class="lencana-kategori">
                                 {{ $berita->kategori }}
                             </span>
                             <span class="berita-tanggal">
-                                {{ $berita->tanggal_publikasi ? $berita->tanggal_publikasi->translatedFormat('d M Y') : '' }}
+                                &middot; {{ $berita->tanggal_publikasi ? $berita->tanggal_publikasi->translatedFormat('d M Y') : '' }}
                             </span>
                         </div>
                         <h3 class="berita-judul">
@@ -195,11 +173,11 @@
                         </h3>
                         <p class="berita-ringkasan">{{ $berita->ringkasan ?: \Illuminate\Support\Str::limit(strip_tags($berita->konten), 120) }}</p>
                         <a href="{{ route('berita.detail', $berita->slug) }}" class="berita-tautan">
-                            Informasi Selengkapnya &rarr;
+                            Baca selengkapnya &rarr;
                         </a>
                     </article>
                 @empty
-                    <div class="kosong-berita">
+                    <div class="kosong-berita" style="grid-column: 1 / -1; text-align: center; color: var(--teks-abu); padding: 3rem 0;">
                         Belum ada berita atau pengumuman yang dipublikasikan saat ini.
                     </div>
                 @endforelse
@@ -207,18 +185,19 @@
         </div>
     </section>
 
-    <!-- BANNER CTA SEKSI (STEEL BLUE & NAVY) -->
-    <section class="seksi-konten" style="padding-top: 20px; padding-bottom: 50px;">
+    <!-- BANNER CTA SEKSI -->
+    <section class="seksi-konten seksi-abu">
         <div class="wadah">
-            <div class="banner-cta-publik">
-                <h3>Siap Menguji &amp; Membuktikan Kompetensi Keahlian Anda?</h3>
-                <p>Daftarkan diri Anda sekarang untuk mengikuti program sertifikasi kompetensi berlisensi resmi BNSP (BNSP-LSP-2629-ID) di LSP SMKN 1 Gunungputri.</p>
-                <div class="cta-aksi">
-                    <a href="#skema" class="tombol-cta-putih">
-                        Pilih Skema Keahlian
+            <div class="banner-cta-publik reveal">
+                <h3>Siap Meraih Sertifikasi Kompetensi Resmi?</h3>
+                <p>Uji kemampuan Anda dan dapatkan pengakuan profesi berstandar nasional dari Badan Nasional Sertifikasi Profesi (BNSP).</p>
+                <div class="hero-aksi" style="justify-content: center;">
+                    <a href="#skema" class="tombol-outline">
+                        Pilih Program Skema
                     </a>
-                    <a href="{{ route('daftar') }}" class="tombol-cta-transparan">
-                        Daftar Asesi Baru
+                    <a href="{{ route('daftar') }}" class="tombol-utama">
+                        <span>Daftar Sekarang</span>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
                     </a>
                 </div>
             </div>
@@ -239,55 +218,54 @@
                 <!-- Konten unit dimuat secara asinkron via JS -->
             </div>
             <div class="kaki-modal">
-                <button type="button" class="tombol-skema-rincian" id="tombolBatalModal">
+                <button type="button" class="tombol-outline" id="tombolBatalModal" style="padding: 6px 14px; font-size: 0.85rem;">
                     Tutup
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- FOOTER PUBLIK (MENGIKUTI REPO EZAR-MAX) -->
-    <footer class="footer-publik">
+    <!-- FOOTER PUBLIK -->
+    <footer class="footer-publik reveal">
         <div class="wadah">
             <div class="footer-grid">
                 <div>
                     <div class="footer-brand-nama">LSP P1 SMKN 1 Gunungputri</div>
-                    <div class="footer-brand-lisensi">No. Lisensi: BNSP-LSP-2629-ID</div>
+                    <div class="footer-brand-lisensi">Lisensi BNSP: BNSP-LSP-2629-ID</div>
                     <p class="footer-deskripsi">
-                        Lembaga Sertifikasi Profesi Pihak Kesatu (LSP P1) SMKN 1 Gunungputri terlisensi resmi BNSP untuk menjamin mutu kompetensi dan daya saing profesional lulusan vokasi di dunia industri global.
+                        Lembaga Sertifikasi Profesi Pihak Kesatu (LSP P1) SMKN 1 Gunungputri berkomitmen menjamin mutu kompetensi dan daya saing profesional lulusan vokasi di dunia industri.
                     </p>
                 </div>
 
                 <div>
                     <h4 class="footer-kolom-judul">Program Skema</h4>
                     <ul class="footer-daftar">
-                        <li><a href="#skema">Pemrogram Junior (PPLG)</a></li>
-                        <li><a href="#skema">Ekstraksi &amp; Destilasi (Kimia)</a></li>
-                        <li><a href="#skema">Mesin Bubut (Pemesinan)</a></li>
-                        <li><a href="#skema">Pengelasan Logam (Las)</a></li>
-                        <li><a href="#skema">Measuring Operator (Elektronika)</a></li>
+                        <li><a href="#skema">Rekayasa Perangkat Lunak</a></li>
+                        <li><a href="#skema">Kimia Industri</a></li>
+                        <li><a href="#skema">Teknik Pemesinan</a></li>
+                        <li><a href="#skema">Teknik Pengelasan</a></li>
+                        <li><a href="#skema">Elektronika Industri</a></li>
                     </ul>
                 </div>
 
                 <div>
-                    <h4 class="footer-kolom-judul">Akses &amp; Tautan Resmi</h4>
+                    <h4 class="footer-kolom-judul">Akses &amp; Informasi</h4>
                     <ul class="footer-daftar">
                         <li><a href="{{ route('masuk') }}">Masuk Portal Asesmen</a></li>
                         <li><a href="{{ route('daftar') }}">Pendaftaran Peserta Asesi</a></li>
-                        <li><a href="https://bnsp.go.id" target="_blank" rel="noopener noreferrer">Badan Nasional Sertifikasi Profesi (BNSP)</a></li>
-                        <li><a href="https://bnsp.go.id/lsp/smkn-1-gunungputri" target="_blank" rel="noopener noreferrer">Profil BNSP SMKN 1 Gunungputri</a></li>
-                        <li><a href="https://smkn1gunungputri.sch.id" target="_blank" rel="noopener noreferrer">Website SMKN 1 Gunungputri</a></li>
+                        <li><a href="https://bnsp.go.id" target="_blank" rel="noopener noreferrer">Website Resmi BNSP</a></li>
+                        <li><a href="https://smkn1gunungputri.sch.id" target="_blank" rel="noopener noreferrer">SMKN 1 Gunungputri</a></li>
                     </ul>
                 </div>
             </div>
 
             <div class="footer-bawah">
-                &copy; {{ date('Y') }} LSP P1 SMKN 1 Gunungputri. Lisensi BNSP: BNSP-LSP-2629-ID. Hak Cipta Dilindungi Undang-Undang.
+                &copy; {{ date('Y') }} LSP P1 SMKN 1 Gunungputri. Lisensi Resmi BNSP-LSP-2629-ID. Hak Cipta Dilindungi.
             </div>
         </div>
     </footer>
 
-    <!-- Berkas JS Khusus Tamu (Aturan Peraturan No. 1 & 6) -->
+    <!-- Berkas JS Khusus Tamu -->
     <script src="{{ asset('js/tamu/beranda.js') }}"></script>
 </body>
 </html>

@@ -83,7 +83,7 @@
         $isCompleted = ($iaRecord && $iaRecord->status === 'completed');
         $savedRespon = $iaRecord->data_jawaban['respon_lisan'] ?? [];
         $savedPencapaian = $iaRecord->data_jawaban['pencapaian'] ?? [];
-        $rekomendasiVal = $iaRecord->rekomendasi ?? 'K';
+        $rekomendasiVal = $iaRecord->rekomendasi ?? null;
     @endphp
 
     <!-- ACTION BAR ATAS -->
@@ -195,7 +195,7 @@
                 @foreach($soalList as $no => $item)
                     @php
                         $valRespon = $savedRespon[$no] ?? '';
-                        $pencapaianVal = $savedPencapaian[$no] ?? 'ya';
+                        $pencapaianVal = $savedPencapaian[$no] ?? null;
                     @endphp
 
                     <div class="lisan-card">

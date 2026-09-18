@@ -64,14 +64,14 @@
     <div class="min-h-screen flex flex-col justify-between" x-data="{ mobileNavOpen: false, userDropdownOpen: false, openDropdown: null }">
         
         <!-- TOP STICKY NAVBAR -->
-        <nav class="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-2xs">
+        <nav class="sticky top-0 z-40 backdrop-blur-md transition-all duration-300" style="background: rgba(255, 255, 255, 0.50); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: none; border-bottom: none; box-shadow: none;">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="flex items-center justify-between h-16 gap-4">
                     
                     <!-- LEFT: BRAND LOGO & ROLE -->
                     <div class="flex items-center gap-3 shrink-0">
                         <a href="{{ $brandRoute }}" class="flex items-center gap-2.5 group">
-                            <img src="{{ asset('images/logo-lsp.jpeg') }}" alt="Logo LSP" class="h-8 w-8 object-contain rounded-lg shadow-2xs border border-slate-200/80">
+                            <img src="{{ asset('images/logo-lsp.jpeg') }}" alt="Logo LSP" class="h-8 w-8 object-contain rounded-lg">
                             <div class="leading-tight">
                                 <div class="font-bold text-slate-900 text-xs sm:text-sm group-hover:text-blue-600 transition-colors">
                                     LSP SMKN 1 Gunungputri

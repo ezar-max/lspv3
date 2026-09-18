@@ -1,6 +1,6 @@
 /**
  * BERANDA.JS - LSP SMKN 1 GUNUNGPUTRI (LANDING TAMU)
- * Logika Filter Skema, Modal Rincian Unit, Menu Mobile, & Interaktivitas
+ * Logika Filter Skema, Modal Rincian Unit, Menu Mobile, Scroll Reveal, & Scrollspy
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -29,17 +29,47 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 2. Sticky Navbar Effect on Scroll
+  // 2. Sticky Navbar Scrolled Effect & Scrollspy
   const navbar = document.querySelector('.navbar-publik');
-  if (navbar) {
-    window.addEventListener('scroll', () => {
-      if (window.scrollY > 20) {
+  const navLinks = document.querySelectorAll('.nav-menu .nav-link');
+  const sections = document.querySelectorAll('header[id], section[id]');
+
+  function onScroll() {
+    const scrollY = window.scrollY;
+
+    // Scrolled class for elevated navbar
+    if (navbar) {
+      if (scrollY > 20) {
         navbar.classList.add('scrolled');
       } else {
         navbar.classList.remove('scrolled');
       }
+    }
+
+    // Scrollspy active indicator
+    let currentSectionId = '';
+    sections.forEach(section => {
+      const sectionTop = section.offsetTop - 120;
+      const sectionHeight = section.offsetHeight;
+      if (scrollY >= sectionTop && scrollY < sectionTop + sectionHeight) {
+        currentSectionId = section.getAttribute('id');
+      }
     });
+
+    if (currentSectionId) {
+      navLinks.forEach(link => {
+        const href = link.getAttribute('href');
+        if (href === `#${currentSectionId}`) {
+          link.classList.add('aktif');
+        } else {
+          link.classList.remove('aktif');
+        }
+      });
+    }
   }
+
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll(); // Inisialisasi posisi awal
 
   // 3. Filter Skema Berdasarkan Kategori
   const tombolFilters = document.querySelectorAll('.tombol-filter');
@@ -222,4 +252,31 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   });
+
+  // 5. Scroll Reveal Animation dengan IntersectionObserver
+  const reveals = document.querySelectorAll('.reveal');
+  if (reveals.length > 0 && 'IntersectionObserver' in window) {
+    const revealObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('aktif');
+        } else {
+          // Hanya hapus jika sudah scroll jauh keluar dari viewport
+          const rect = entry.boundingClientRect;
+          if (rect.top > window.innerHeight || rect.bottom < 0) {
+            entry.target.classList.remove('aktif');
+          }
+        }
+      });
+    }, {
+      root: null,
+      threshold: 0.08,
+      rootMargin: '0px 0px -40px 0px'
+    });
+
+    reveals.forEach(el => revealObserver.observe(el));
+  } else {
+    // Fallback jika browser tidak support IntersectionObserver
+    reveals.forEach(el => el.classList.add('aktif'));
+  }
 });

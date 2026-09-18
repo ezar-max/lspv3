@@ -26,38 +26,43 @@
     <!-- SCROLL PROGRESS BAR -->
     <div class="scroll-progress"></div>
 
-    <!-- NAVBAR PUBLIK -->
+    <!-- NAVBAR PUBLIK BERSIH (Full-Width Kotak Transparan Glassmorphism) -->
     <nav class="navbar-publik">
-        <a href="{{ route('beranda') }}" class="brand-lsp" style="display: flex; align-items: center; gap: 0.85rem;">
-            <img src="{{ asset('images/logo-lsp.jpeg') }}" alt="Logo LSP SMKN 1 Gunungputri" style="height: 48px; width: 48px; object-fit: contain; border-radius: 8px; border: 1px solid var(--biru-soft); padding: 2px; background: #fff;">
-            <div style="display: flex; flex-direction: column;">
-                <span style="font-weight: 800; font-size: 1.12rem; color: var(--biru-malam); line-height: 1.2;">LSP SMKN 1 Gunungputri</span>
-                <span style="font-size: 0.76rem; font-weight: 700; color: var(--biru-utama);">Lisensi Resmi BNSP: {{ config('lsp.nomor_lisensi', 'BNSP-LSP-2629-ID') }}</span>
-            </div>
-        </a>
+        <div class="navbar-wadah">
+            <a href="{{ route('beranda') }}" class="brand-lsp" aria-label="Beranda LSP SMKN 1 Gunungputri">
+                <img src="{{ asset('logo/logo-lsp.jpeg') }}" alt="Logo LSP SMKN 1 Gunungputri" class="brand-logo-img">
+                <span class="brand-nama">LSP SMKN 1 Gunungputri</span>
+            </a>
 
-        <ul class="nav-menu" id="menuNavigasi">
-            <li><a href="{{ route('beranda') }}#beranda" class="nav-link {{ request()->routeIs('beranda') ? 'aktif' : '' }}">Beranda</a></li>
-            <li><a href="{{ route('beranda') }}#skema" class="nav-link">Skema</a></li>
-            <li><a href="{{ route('beranda') }}#berita" class="nav-link">Berita &amp; Pengumuman</a></li>
-        </ul>
+            <ul class="nav-menu" id="menuNavigasi">
+                <li><a href="{{ route('beranda') }}#beranda" class="nav-link {{ request()->routeIs('beranda') ? 'aktif' : '' }}">Beranda</a></li>
+                <li><a href="{{ route('beranda') }}#skema" class="nav-link">Skema Keahlian</a></li>
+                <li><a href="{{ route('beranda') }}#berita" class="nav-link">Berita</a></li>
+            </ul>
 
-        @if(!request()->routeIs('masuk', 'registrasi', 'daftar'))
             <div class="nav-aksi">
                 @auth
-                    <a href="{{ route(auth()->user()->peran . '.dasbor') }}" class="tombol-cta-header" style="background: var(--biru-utama); color: #ffffff; text-decoration: none; font-weight: 700; font-size: 0.86rem; padding: 8px 18px; border-radius: var(--radius-sm); border: 1px solid var(--biru-utama);">
-                        Buka Dasbor
+                    <a href="{{ route(auth()->user()->peran . '.dasbor') }}" class="tombol-cta-header">
+                        Dasbor
                     </a>
                 @else
-                    <a href="{{ route('masuk') }}" style="text-decoration: none; color: var(--biru-malam); font-weight: 700; font-size: 0.86rem; padding: 8px 14px; border-radius: var(--radius-sm); border: 1px solid var(--biru-soft); transition: var(--transisi); background: #ffffff;">
-                        Masuk
-                    </a>
-                    <a href="{{ route('daftar') }}" class="tombol-cta-header" style="background: var(--biru-utama); color: #ffffff; text-decoration: none; font-weight: 700; font-size: 0.86rem; padding: 8px 18px; border-radius: var(--radius-sm); border: 1px solid var(--biru-utama);">
-                        Daftar Asesi
-                    </a>
+                    @if(!request()->routeIs('masuk'))
+                        <a href="{{ route('masuk') }}" class="tombol-masuk">
+                            Masuk
+                        </a>
+                    @endif
+                    @if(!request()->routeIs('registrasi', 'daftar'))
+                        <a href="{{ route('daftar') }}" class="tombol-cta-header">
+                            Daftar Asesi
+                        </a>
+                    @else
+                        <a href="{{ route('masuk') }}" class="tombol-cta-header">
+                            Masuk Portal
+                        </a>
+                    @endif
                 @endauth
             </div>
-        @endif
+        </div>
     </nav>
 
     <!-- KONTEN UTAMA -->

@@ -91,7 +91,7 @@
         $savedJawaban = $iaRecord->data_jawaban['jawaban_esai'] ?? [];
         $savedPencapaian = $iaRecord->data_jawaban['pencapaian'] ?? [];
         $savedCatatanSoal = $iaRecord->data_jawaban['catatan_per_soal'] ?? [];
-        $rekomendasiVal = $iaRecord->rekomendasi ?? 'K';
+        $rekomendasiVal = $iaRecord->rekomendasi ?? null;
     @endphp
 
     <!-- ACTION BAR ATAS -->
@@ -244,7 +244,7 @@
                 @foreach($soalList as $no => $item)
                     @php
                         $valJawaban = $savedJawaban[$no] ?? '';
-                        $pencapaianVal = $savedPencapaian[$no] ?? 'ya';
+                        $pencapaianVal = $savedPencapaian[$no] ?? null;
                         $catatanItem = $savedCatatanSoal[$no] ?? '';
                     @endphp
 

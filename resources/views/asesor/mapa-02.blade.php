@@ -246,10 +246,10 @@
                                         @php
                                             $kKey = $kuk->id;
                                             $savedItem = $savedPeta[$unit->id][$elem->id][$kKey] ?? [];
-                                            $clo = $savedItem['clo'] ?? 1;
-                                            $dpt = $savedItem['dpt'] ?? 1;
+                                            $clo = $savedItem['clo'] ?? null;
+                                            $dpt = $savedItem['dpt'] ?? null;
                                             $pmo = $savedItem['pmo'] ?? 0;
-                                            $dpe = $savedItem['dpe'] ?? 1;
+                                            $dpe = $savedItem['dpe'] ?? null;
                                             $dpl = $savedItem['dpl'] ?? 0;
                                             $vp  = $savedItem['vp']  ?? 0;
                                             $pw  = $savedItem['pw']  ?? 0;
