@@ -442,6 +442,31 @@
             .page-break {
                 page-break-before: always;
             }
+            .baris-relevan-dicoret {
+                opacity: 0.65 !important;
+            }
+            .baris-relevan-dicoret .role-title {
+                text-decoration: line-through !important;
+                color: #475569 !important;
+            }
+            .helper-manajer-lsp, .btn-today-relevan, .toggle-relevan-tabel {
+                display: none !important;
+            }
+        }
+
+        /* Styling Interaktif untuk Tabel Konfirmasi dengan Orang yang Relevan */
+        .baris-relevan-aktif {
+            background-color: #ffffff;
+            transition: all 0.2s ease;
+        }
+        .baris-relevan-dicoret {
+            background-color: #f8fafc;
+            opacity: 0.72;
+            transition: all 0.2s ease;
+        }
+        .baris-relevan-dicoret .role-title {
+            text-decoration: line-through;
+            color: #94a3b8;
         }
 
         /* Mode Tampilan Terkunci (Read-Only) untuk Asesor */
@@ -476,12 +501,23 @@
 
     $penyusunTabelSaved = $mapa01->penyusun_validator_tabel ?? [];
     $adminValidatorData = $penyusunTabelSaved['validator_1'] ?? [];
+
+    $masterMapa01 = !$isMasterMode && !empty($pendaftaran->skema_id) 
+        ? \App\Models\Mapa01::where('skema_id', $pendaftaran->skema_id)->whereNull('pendaftaran_id')->first() 
+        : null;
+    $masterValidatorData = $masterMapa01?->penyusun_validator_tabel['validator_1'] ?? [];
+    $isMasterSchemeValidated = !empty($masterValidatorData['ttd']) || (($masterValidatorData['status_validasi'] ?? '') === 'tervalidasi');
+
+    if (!$isMasterMode && $isMasterSchemeValidated) {
+        $adminValidatorData = !empty($adminValidatorData['ttd']) ? $adminValidatorData : $masterValidatorData;
+    }
+
     $adminValidatorNama = $adminValidatorData['nama'] ?? '';
     $adminValidatorMet = $adminValidatorData['nomor_met'] ?? '';
     $adminTtd = $adminValidatorData['ttd'] ?? ($pendaftaran->tanda_tangan_admin ?? null);
     $adminTtdTgl = $adminValidatorData['ttd_tanggal'] ?? ($pendaftaran->tanggal_ttd_admin ? \Carbon\Carbon::parse($pendaftaran->tanggal_ttd_admin)->format('d/m/Y') : '');
     $adminStatusValidasi = $adminValidatorData['status_validasi'] ?? null;
-    $isValidatedAdmin = !empty($adminValidatorData['ttd']) || $adminStatusValidasi === 'tervalidasi' || (!empty($pendaftaran->tanda_tangan_admin) && !empty($pendaftaran->tanggal_ttd_admin));
+    $isValidatedAdmin = !empty($adminValidatorData['ttd']) || $adminStatusValidasi === 'tervalidasi' || (!empty($pendaftaran->tanda_tangan_admin) && !empty($pendaftaran->tanggal_ttd_admin)) || (!$isMasterMode && $isMasterSchemeValidated);
     $catatanValidasi = $adminValidatorData['catatan'] ?? null;
 
     $targetValidasiId = !empty($mapa01->id) ? $mapa01->id : (!empty($pendaftaran->id) ? $pendaftaran->id : ($pendaftaran->skema_id ?? 0));
@@ -511,9 +547,20 @@
         </div>
         <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
             @if($isAdmin)
-                <button type="button" onclick="bukaModal('modalValidasiAdminMapa01')" class="tombol tombol-sm" style="background: {{ $isValidatedAdmin ? '#059669' : '#047857' }}; color: #ffffff; border: 1px solid #065f46; font-weight: 700;">
-                    <span>{{ $isValidatedAdmin ? 'Perbarui Validasi Admin' : 'Validasi & Sahkan FR.MAPA.01' }}</span>
-                </button>
+                @if(!$isMasterMode && $isMasterSchemeValidated)
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                        Tervalidasi Resmi (Master Skema)
+                    </span>
+                @elseif($isValidatedAdmin)
+                    <button type="button" onclick="bukaModal('modalValidasiAdminMapa01')" class="tombol tombol-sm" style="background: #059669; color: #ffffff; border: 1px solid #065f46; font-weight: 700;">
+                        <span>Perbarui Validasi Admin</span>
+                    </button>
+                @else
+                    <button type="button" onclick="bukaModal('modalValidasiAdminMapa01')" class="tombol tombol-sm" style="background: #047857; color: #ffffff; border: 1px solid #065f46; font-weight: 700;">
+                        <span>Validasi &amp; Sahkan FR.MAPA.01</span>
+                    </button>
+                @endif
             @endif
             @if(!$isAsesi && $isConfigured)
                 <button type="button" id="btn-toggle-edit-mapa01" onclick="toggleEditMapa01()" class="tombol tombol-sm" style="background: #4f46e5; color: #ffffff; border: 1px solid #4338ca; font-weight: 700;">
@@ -524,8 +571,8 @@
                 Cetak Dokumen
             </button>
             @if(!$isAsesi)
-                <button type="button" id="btn-simpan-mapa01" onclick="document.getElementById('form-mapa01').submit()" class="tombol tombol-utama tombol-sm btn-simpan-mapa01" style="background: #059669; border-color: #059669; font-weight: 700; display: {{ $isConfigured ? 'none' : 'inline-flex' }};">
-                    Simpan Formulir
+                <button type="button" id="btn-simpan-mapa01" onclick="submitMapa01('draft')" class="tombol tombol-utama tombol-sm btn-simpan-mapa01" style="background: #059669; border-color: #059669; font-weight: 700; display: {{ $isConfigured ? 'none' : 'inline-flex' }};">
+                    {{ $isAdmin ? 'Simpan & Validasi Formulir' : 'Simpan Formulir' }}
                 </button>
             @endif
         </div>
@@ -568,12 +615,12 @@
                     <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #10b981;"></span>
                     <strong style="color: #064e3b; font-size: 0.88rem;">Dokumen FR.MAPA.01 Telah Tervalidasi & Disahkan</strong>
                 </div>
-                <span>Validator: <strong>{{ $adminValidatorNama }}</strong> ({{ $adminValidatorMet }}) pada <strong>{{ $adminTtdTgl }}</strong>. Status: <strong>Tervalidasi Resmi (Admin LSP)</strong>.</span>
+                <span>Validator: <strong>{{ $adminValidatorNama }}</strong> ({{ $adminValidatorMet }}) pada <strong>{{ $adminTtdTgl }}</strong>. Status: <strong>Tervalidasi Resmi (Admin LSP){{ (!$isMasterMode && $isMasterSchemeValidated) ? ' via Master Skema' : '' }}</strong>.</span>
                 @if(!empty($catatanValidasi))
                     <div style="margin-top: 0.25rem; font-style: italic; color: #047857;">Catatan: "{{ $catatanValidasi }}"</div>
                 @endif
             </div>
-            @if($isAdmin)
+            @if($isAdmin && ($isMasterMode || !$isMasterSchemeValidated))
                 <button type="button" onclick="bukaModal('modalValidasiAdminMapa01')" class="tombol tombol-sm" style="background: #ffffff; color: #065f46; border: 1px solid #a7f3d0; font-weight: 700;">
                     Ubah Validasi
                 </button>
@@ -616,6 +663,35 @@
             $matriksSaved = (array) ($mapa01?->rencana_unit_matriks ?? []);
             $konfirmasiTabelSaved = (array) ($mapa01?->konfirmasi_pihak_relevan_tabel ?? []);
             $penyusunTabelSaved = (array) ($mapa01?->penyusun_validator_tabel ?? []);
+
+            $roleDefinitions = [
+                'manajer_lsp' => [
+                    'label' => 'Manajer sertifikasi LSP',
+                    'sublabel' => 'Penjamin mutu asesmen dari LSP',
+                    'aliases' => ['Manajer sertifikasi LSP'],
+                ],
+                'lead_asesor' => [
+                    'label' => 'Master Asesor / Master Trainer / Lead Asesor Kompetensi',
+                    'sublabel' => 'Lead asesor / pengarah teknis asesmen',
+                    'aliases' => ['Master Asesor / Master Trainer / Lead Asesor Kompetensi'],
+                ],
+                'manajer_pelatihan' => [
+                    'label' => 'Manajer pelatihan Lembaga Training terakreditasi / terdaftar',
+                    'sublabel' => 'Lembaga diklat / mitra pelatihan terakreditasi',
+                    'aliases' => [
+                        'Manajer pelatihan Lembaga Training terakreditasi / terdaftar',
+                        'Manajer Pelatihan Lembaga Training terakreditasi / Lembaga Training terdaftar',
+                    ],
+                ],
+                'supervisor' => [
+                    'label' => 'Manajer atau supervisor di tempat kerja',
+                    'sublabel' => 'Penyelia teknis tempat kerja / industri / DU-DI',
+                    'aliases' => [
+                        'Manajer atau supervisor di tempat kerja',
+                        'Manajer atau supervisor ditempat kerja',
+                    ],
+                ],
+            ];
             
             // Resolusi Asesor Penguji yang sebenarnya (bukan Admin LSP)
             $resolvedAsesor = null;
@@ -667,6 +743,13 @@
             }
 
             $asesorTtd = $candidateTtd;
+            if ($isAdmin && empty($asesorTtd)) {
+                $asesorTtd = $resolvedAsesor?->tanda_tangan 
+                    ?: ('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="220" height="60"><text x="10" y="38" font-family="Brush Script MT, cursive, sans-serif" font-size="24" fill="%231e3a8a">' . urlencode($asesorNama) . '</text></svg>');
+                $isAsesorAutoSigned = true;
+            } else {
+                $isAsesorAutoSigned = !empty($asesorTtd) && !empty($candidateTtd);
+            }
         @endphp
 
         <!-- ========================================================================= -->
@@ -889,22 +972,36 @@
                 <!-- KONFIRMASI DENGAN ORANG YANG RELEVAN -->
                 <tr>
                     <td style="background: #f8fafc;"></td>
-                    <td style="font-weight: 700; color: #0f172a;">Konfirmasi dengan orang yang relevan</td>
+                    <td style="font-weight: 700; color: #0f172a;">
+                        Konfirmasi dengan orang yang relevan
+                        <div style="font-size: 0.72rem; font-weight: normal; color: #64748b; margin-top: 2px;">
+                            *Coret yang tidak perlu &bull; Tersinkronisasi dengan tabel konfirmasi di bawah
+                        </div>
+                    </td>
                     <td colspan="2">
-                        @php
-                            $opsiKonfirmasi = [
-                                'Manajer sertifikasi LSP',
-                                'Master Asesor / Master Trainer / Lead Asesor Kompetensi',
-                                'Manajer Pelatihan Lembaga Training terakreditasi / Lembaga Training terdaftar',
-                                'Manajer atau supervisor ditempat kerja'
-                            ];
-                        @endphp
                         <div class="opsi-grid-2">
-                            @foreach($opsiKonfirmasi as $idx => $konf)
+                            @foreach($roleDefinitions as $roleKey => $roleData)
+                                @php
+                                    $isRoleChecked = false;
+                                    foreach ($roleData['aliases'] as $alias) {
+                                        if (in_array($alias, $konfirmasiSaved, true)) {
+                                            $isRoleChecked = true;
+                                            break;
+                                        }
+                                    }
+                                    if (!$isRoleChecked && !empty($konfirmasiTabelSaved[$roleKey]['relevan'])) {
+                                        $isRoleChecked = true;
+                                    }
+                                @endphp
                                 <label class="opsi-card-modern">
-                                    <input type="checkbox" name="konfirmasi_orang_relevan[]" value="{{ $konf }}"
-                                        {{ in_array($konf, $konfirmasiSaved) ? 'checked' : '' }}>
-                                    <span>{{ $konf }}</span>
+                                    <input type="checkbox" 
+                                           name="konfirmasi_orang_relevan[]" 
+                                           value="{{ $roleData['label'] }}"
+                                           data-role-key="{{ $roleKey }}"
+                                           class="input-konfirmasi-1-1"
+                                           onchange="syncKonfirmasiToTabel('{{ $roleKey }}', this.checked)"
+                                           {{ $isRoleChecked ? 'checked' : '' }}>
+                                    <span>{{ $roleData['label'] }}</span>
                                 </label>
                             @endforeach
                         </div>
@@ -1242,237 +1339,338 @@
             <div style="font-size: 0.75rem; font-style: italic; color: #64748b; margin-top: -1rem; margin-bottom: 1.5rem;">*Coret yang tidak perlu</div>
 
             <!-- TABEL KONFIRMASI DENGAN ORANG YANG RELEVAN -->
-            <div class="mb-6 space-y-2">
-                <div class="flex items-center gap-2">
-                    <span class="w-1.5 h-4 bg-indigo-600 rounded-full"></span>
-                    <h3 class="text-sm font-bold text-slate-900 uppercase tracking-wide">
-                        Konfirmasi dengan Orang yang Relevan
-                    </h3>
-                </div>
+            <div style="font-weight: 800; font-size: 0.95rem; margin-top: 1.5rem; margin-bottom: 0.6rem; color: #0f172a; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+                <span>Konfirmasi dengan Orang yang Relevan:</span>
+                <span style="font-size: 0.75rem; font-style: italic; color: #64748b; font-weight: normal;">
+                    *Coret yang tidak perlu &bull; Tersinkronisasi dengan Bagian 1.1
+                </span>
+            </div>
 
-                <div class="rounded-xl border border-slate-200 bg-white shadow-xs overflow-hidden">
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left border-collapse">
-                            <thead>
-                                <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 text-xs font-semibold uppercase tracking-wider">
-                                    <th class="px-4 py-3" style="width: 44%;">Orang yang Relevan</th>
-                                    <th class="px-4 py-3" style="width: 34%;">Nama</th>
-                                    <th class="px-4 py-3" style="width: 22%;">Tanda Tangan & Tanggal</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-slate-100">
-                                @php
-                                    $listOrangRelevan = [
-                                        'manajer_lsp' => 'Manajer sertifikasi LSP',
-                                        'lead_asesor' => 'Master Asesor / Master Trainer / Lead Asesor Kompetensi',
-                                        'manajer_pelatihan' => 'Manajer pelatihan Lembaga Training terakreditasi / terdaftar',
-                                        'supervisor' => 'Manajer atau supervisor di tempat kerja'
-                                    ];
-                                @endphp
-                                @foreach($listOrangRelevan as $key => $label)
-                                    @php
-                                        $namaVal = $konfirmasiTabelSaved[$key]['nama'] ?? '';
-                                        $ttdVal = $konfirmasiTabelSaved[$key]['ttd_tanggal'] ?? '';
-                                    @endphp
-                                    <tr class="hover:bg-slate-50/60 transition-colors">
-                                        <td class="px-4 py-2.5 text-sm font-medium text-slate-800">
-                                            {{ $label }}
-                                        </td>
-                                        <td class="px-4 py-2.5">
-                                            <input type="text" 
-                                                   name="konfirmasi_pihak_relevan_tabel[{{ $key }}][nama]" 
-                                                   value="{{ $namaVal }}" 
-                                                   class="w-full px-3 py-1.5 text-sm rounded-lg border border-slate-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 bg-white placeholder-slate-400 text-slate-800 transition-colors" 
-                                                   placeholder="Nama pejabat/petugas...">
-                                        </td>
-                                        <td class="px-4 py-2.5">
-                                            <div class="flex items-center gap-2">
-                                                <input type="text" 
-                                                       name="konfirmasi_pihak_relevan_tabel[{{ $key }}][ttd_tanggal]" 
-                                                       value="{{ $ttdVal }}" 
-                                                       class="w-36 px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-slate-300 text-slate-700 bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-                                                        placeholder="dd/mm/yyyy">
-                                                <span class="inline-flex items-center text-[10px] font-bold px-2 py-1 rounded-md bg-slate-100 text-slate-600 border border-slate-200 shrink-0">
-                                                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5"></span> Sesuai
-                                                </span>
+            @php
+                $defaultLspManagerNama = $adminValidatorNama 
+                    ?: (auth()->check() && in_array(auth()->user()->peran, ['admin', 'superadmin']) 
+                        ? auth()->user()->nama_lengkap 
+                        : (\App\Models\Pengguna::whereIn('peran', ['admin', 'superadmin'])->value('nama_lengkap') ?: 'Manajer Sertifikasi LSP'));
+            @endphp
+
+            <div style="overflow-x: auto; margin-bottom: 1.5rem; border: 1px solid #cbd5e1; border-radius: 6px;">
+                <table class="tabel-mapa-modern" id="tabel-konfirmasi-relevan" style="font-size: 0.82rem; width: 100%; margin-bottom: 0; border: none;">
+                    <thead>
+                        <tr>
+                            <th class="th-slate" style="width: 44%; text-align: left; padding: 0.55rem 0.75rem;">
+                                Orang yang Relevan (*Coret jika tidak perlu)
+                            </th>
+                            <th class="th-slate" style="width: 32%; text-align: left; padding: 0.55rem 0.75rem;">
+                                Nama Pejabat / Petugas
+                            </th>
+                            <th class="th-slate" style="width: 24%; text-align: left; padding: 0.55rem 0.75rem;">
+                                Tanda Tangan & Tanggal
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($roleDefinitions as $key => $roleData)
+                            @php
+                                $isRelevan = false;
+                                foreach ($roleData['aliases'] as $alias) {
+                                    if (in_array($alias, $konfirmasiSaved, true)) {
+                                        $isRelevan = true;
+                                        break;
+                                    }
+                                }
+                                if (!$isRelevan && !empty($konfirmasiTabelSaved[$key]['relevan'])) {
+                                    $isRelevan = true;
+                                }
+                                if (!$isRelevan && !empty($konfirmasiTabelSaved[$key]['nama'])) {
+                                    $isRelevan = true;
+                                }
+
+                                $namaVal = $konfirmasiTabelSaved[$key]['nama'] ?? '';
+                                $ttdVal = $konfirmasiTabelSaved[$key]['ttd_tanggal'] ?? '';
+                                $isComplete = !empty(trim($namaVal)) && !empty(trim($ttdVal));
+                            @endphp
+                            <tr id="row-konfirmasi-{{ $key }}" 
+                                class="transition-colors {{ $isRelevan ? 'baris-relevan-aktif' : 'baris-relevan-dicoret' }}">
+                                
+                                <!-- Kolom 1: Status & Jabatan -->
+                                <td style="padding: 0.6rem 0.75rem; vertical-align: top;">
+                                    <div class="flex items-start gap-2.5">
+                                        <input type="checkbox" 
+                                               name="konfirmasi_pihak_relevan_tabel[{{ $key }}][relevan]" 
+                                               value="1" 
+                                               id="check-tabel-{{ $key }}" 
+                                               class="toggle-relevan-tabel mt-1 h-4 w-4 rounded border-slate-300 text-slate-800 focus:ring-slate-700 cursor-pointer"
+                                               data-role-key="{{ $key }}"
+                                               onchange="syncTabelToKonfirmasi('{{ $key }}', this.checked)" 
+                                               {{ $isRelevan ? 'checked' : '' }}>
+                                        
+                                        <div class="flex-1">
+                                            <label for="check-tabel-{{ $key }}" 
+                                                   id="title-role-{{ $key }}"
+                                                   class="role-title block text-sm font-semibold cursor-pointer {{ $isRelevan ? 'text-slate-900' : 'text-slate-400 line-through' }}">
+                                                {{ $roleData['label'] }}
+                                            </label>
+                                            <div class="text-[11px] text-slate-500 mt-0.5">
+                                                {{ $roleData['sublabel'] }}
                                             </div>
-                                        </td>
-                                    </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+                                            <div class="mt-1.5" id="badge-wrapper-{{ $key }}">
+                                                @if($isRelevan)
+                                                    <span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-800 border border-blue-200" id="badge-role-{{ $key }}">
+                                                        <span class="w-1.5 h-1.5 rounded-full bg-blue-700"></span> Relevan &bull; Dikonfirmasi
+                                                    </span>
+                                                @else
+                                                    <span class="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 border border-slate-200" id="badge-role-{{ $key }}">
+                                                        <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span> Dicoret (*tidak perlu)
+                                                    </span>
+                                                @endif
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+
+                                <!-- Kolom 2: Nama Pejabat -->
+                                <td style="padding: 0.6rem 0.75rem; vertical-align: top;">
+                                    <input type="text" 
+                                           name="konfirmasi_pihak_relevan_tabel[{{ $key }}][nama]" 
+                                           id="input-nama-{{ $key }}"
+                                           value="{{ $namaVal }}" 
+                                           oninput="updateRowStatusBadge('{{ $key }}')"
+                                           class="input-nama-relevan w-full px-3 py-1.5 text-sm rounded border border-slate-300 focus:border-slate-700 focus:ring-1 focus:ring-slate-700 bg-white placeholder-slate-400 text-slate-800 transition-colors {{ !$isRelevan ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : '' }}" 
+                                           placeholder="{{ $isRelevan ? 'Nama pejabat/petugas...' : '— Dicoret (tidak perlu diisi) —' }}"
+                                           {{ !$isRelevan ? 'disabled' : '' }}>
+                                    
+                                    @if($key === 'manajer_lsp')
+                                        <div class="mt-1.5 helper-manajer-lsp" id="helper-manajer-{{ $key }}" style="{{ !$isRelevan ? 'display: none;' : '' }}">
+                                            <button type="button" 
+                                                    onclick="isiOtomatisManajerLsp('{{ $key }}', '{{ addslashes($defaultLspManagerNama) }}')" 
+                                                    class="inline-flex items-center gap-1 text-[11px] font-semibold text-sky-700 hover:text-sky-900 hover:underline cursor-pointer">
+                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                                </svg>
+                                                Gunakan Data Manajer/Admin LSP ({{ $defaultLspManagerNama }})
+                                            </button>
+                                        </div>
+                                    @endif
+                                </td>
+
+                                <!-- Kolom 3: Tanda Tangan & Tanggal -->
+                                <td style="padding: 0.6rem 0.75rem; vertical-align: top;">
+                                    <div class="flex flex-col gap-1.5">
+                                        <div class="flex items-center gap-1.5">
+                                            <input type="text" 
+                                                   name="konfirmasi_pihak_relevan_tabel[{{ $key }}][ttd_tanggal]" 
+                                                   id="input-tgl-{{ $key }}"
+                                                   value="{{ $ttdVal }}" 
+                                                   oninput="updateRowStatusBadge('{{ $key }}')"
+                                                   class="input-tgl-relevan w-28 px-2.5 py-1.5 text-xs font-semibold rounded border border-slate-300 text-slate-700 bg-white focus:border-slate-700 focus:ring-1 focus:ring-slate-700 placeholder-slate-400 transition-colors {{ !$isRelevan ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : '' }}" 
+                                                   placeholder="dd/mm/yyyy"
+                                                   {{ !$isRelevan ? 'disabled' : '' }}>
+                                            
+                                            <button type="button" 
+                                                    id="btn-today-{{ $key }}"
+                                                    onclick="isiTanggalHariIni('{{ $key }}')"
+                                                    class="btn-today-relevan px-2 py-1.5 text-[11px] font-semibold rounded bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 transition-colors shrink-0 cursor-pointer"
+                                                    style="{{ !$isRelevan ? 'display: none;' : '' }}"
+                                                    title="Isi dengan tanggal hari ini">
+                                                Hari Ini
+                                            </button>
+                                        </div>
+
+                                        <!-- Status Konfirmasi Dinamis -->
+                                        <div id="status-container-{{ $key }}">
+                                            @if(!$isRelevan)
+                                                <span class="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200">
+                                                    <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span> Dicoret
+                                                </span>
+                                            @elseif($isComplete)
+                                                <span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> &check; Terkonfirmasi
+                                                </span>
+                                            @else
+                                                <span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200">
+                                                    <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> &#9203; Belum Dikonfirmasi
+                                                </span>
+                                            @endif
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
             </div>
 
             <!-- TABEL PENYUSUN DAN VALIDATOR -->
-            <div class="mb-6 space-y-2">
-                <div class="flex items-center gap-2">
-                    <span class="w-1.5 h-4 bg-indigo-600 rounded-full"></span>
-                    <h3 class="text-sm font-bold text-slate-900 uppercase tracking-wide">
-                        Penyusun dan Validator
-                    </h3>
-                </div>
+            <div style="font-weight: 800; font-size: 0.95rem; margin-top: 1.5rem; margin-bottom: 0.6rem; color: #0f172a;">
+                Penyusun dan Validator:
+            </div>
 
-                @php
-                    $adminValidatorNama = $penyusunTabelSaved['validator_1']['nama'] 
-                        ?? '';
-                    $adminValidatorMet = $penyusunTabelSaved['validator_1']['nomor_met'] 
-                        ?? '';
-                    $adminTtd = $penyusunTabelSaved['validator_1']['ttd'] 
-                        ?? ($pendaftaran->tanda_tangan_admin ?? null);
-                    $adminTtdTgl = $penyusunTabelSaved['validator_1']['ttd_tanggal'] 
-                        ?? ($pendaftaran->tanggal_ttd_admin ? \Carbon\Carbon::parse($pendaftaran->tanggal_ttd_admin)->format('d/m/Y') : '');
-                @endphp
+            @php
+                $adminValidatorNama = $penyusunTabelSaved['validator_1']['nama'] 
+                    ?? '';
+                $adminValidatorMet = $penyusunTabelSaved['validator_1']['nomor_met'] 
+                    ?? '';
+                $adminTtd = $penyusunTabelSaved['validator_1']['ttd'] 
+                    ?? ($pendaftaran->tanda_tangan_admin ?? null);
+                $adminTtdTgl = $penyusunTabelSaved['validator_1']['ttd_tanggal'] 
+                    ?? ($pendaftaran->tanggal_ttd_admin ? \Carbon\Carbon::parse($pendaftaran->tanggal_ttd_admin)->format('d/m/Y') : '');
+            @endphp
 
-                <div class="rounded-xl border border-slate-200 bg-white shadow-xs overflow-hidden">
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left border-collapse">
-                            <thead>
-                                <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 text-xs font-semibold uppercase tracking-wider">
-                                    <th class="px-4 py-3 text-center" style="width: 20%;">Status</th>
-                                    <th class="px-3 py-3 text-center" style="width: 5%;">No</th>
-                                    <th class="px-4 py-3" style="width: 32%;">Nama</th>
-                                    <th class="px-4 py-3" style="width: 23%;">Nomor MET / Registrasi</th>
-                                    <th class="px-4 py-3 text-center" style="width: 20%;">Tanda Tangan & Tgl</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-slate-100">
-                                <!-- 1. PENYUSUN (ASESOR PENGUJI) -->
-                                <tr class="hover:bg-slate-50/60 transition-colors">
-                                    <td class="px-4 py-3 text-center bg-slate-50/40">
-                                        <div class="font-bold text-sm text-slate-900 leading-tight">PENYUSUN</div>
-                                        <div class="text-xs text-slate-500 font-medium">(Asesor Penguji)</div>
-                                        <div class="mt-1">
-                                            @if($asesorTtd)
-                                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                                                    Terverifikasi
-                                                </span>
-                                            @else
-                                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
-                                                    <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-                                                    Menunggu TTD
-                                                </span>
-                                            @endif
+            <div style="overflow-x: auto; margin-bottom: 1.5rem; border: 1px solid #cbd5e1; border-radius: 6px;">
+                <table class="tabel-mapa-modern" style="font-size: 0.82rem; width: 100%; margin-bottom: 0; border: none;">
+                    <thead>
+                        <tr>
+                            <th class="th-slate" style="width: 20%; text-align: center; padding: 0.55rem 0.75rem;">Status</th>
+                            <th class="th-slate" style="width: 5%; text-align: center; padding: 0.55rem 0.75rem;">No.</th>
+                            <th class="th-slate" style="width: 32%; text-align: left; padding: 0.55rem 0.75rem;">Nama</th>
+                            <th class="th-slate" style="width: 23%; text-align: left; padding: 0.55rem 0.75rem;">Nomor MET / Registrasi</th>
+                            <th class="th-slate" style="width: 20%; text-align: center; padding: 0.55rem 0.75rem;">Tanda Tangan & Tgl</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- 1. PENYUSUN (ASESOR PENGUJI) -->
+                        <tr>
+                            <td style="text-align: center; background-color: #f8fafc; padding: 0.6rem 0.75rem;">
+                                <div style="font-weight: 800; font-size: 0.88rem; color: #0f172a; line-height: 1.2;">PENYUSUN</div>
+                                <div style="font-size: 0.75rem; color: #64748b; font-weight: 500;">(Asesor Penguji)</div>
+                                <div style="margin-top: 0.35rem;">
+                                    @if($asesorTtd)
+                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                            {{ ($isAdmin && !empty($isAsesorAutoSigned)) ? 'Otomatis' : 'Telah Ditandatangani' }}
+                                        </span>
+                                    @else
+                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                                            Menunggu TTD
+                                        </span>
+                                    @endif
+                                </div>
+                            </td>
+                            <td style="text-align: center; font-weight: 700; color: #475569; padding: 0.6rem 0.75rem;">
+                                1.
+                            </td>
+                            <td style="padding: 0.6rem 0.75rem;">
+                                <input type="text" 
+                                       name="penyusun_validator_tabel[penyusun_1][nama]" 
+                                       value="{{ $asesorNama }}" 
+                                       class="w-full px-3 py-1.5 text-sm font-semibold rounded border border-slate-300 focus:border-slate-700 focus:ring-1 focus:ring-slate-700 bg-white text-slate-800 transition-colors" 
+                                       placeholder="Nama asesor...">
+                            </td>
+                            <td style="padding: 0.6rem 0.75rem;">
+                                <input type="text" 
+                                       name="penyusun_validator_tabel[penyusun_1][nomor_met]" 
+                                       value="{{ $asesorMet }}" 
+                                       class="w-full px-3 py-1.5 text-sm font-medium rounded border border-slate-300 focus:border-slate-700 focus:ring-1 focus:ring-slate-700 bg-white text-slate-800 transition-colors" 
+                                       placeholder="Nomor MET/Registrasi...">
+                            </td>
+                            <td style="padding: 0.6rem 0.75rem; text-align: center;" id="container-ttd-asesor-preview">
+                                @if($asesorTtd)
+                                    <div class="flex flex-col items-center gap-1">
+                                        <div class="h-11 w-28 rounded border border-slate-200 bg-slate-50/80 p-1 flex items-center justify-center shadow-2xs">
+                                            <img src="{{ Str::startsWith($asesorTtd, 'data:') ? $asesorTtd : asset($asesorTtd) }}" alt="TTD Asesor" class="max-h-9 max-w-full object-contain">
                                         </div>
-                                    </td>
-                                    <td class="px-3 py-3 text-center font-bold text-slate-600 text-xs">
-                                        1
-                                    </td>
-                                    <td class="px-4 py-3">
-                                        <input type="text" 
-                                               name="penyusun_validator_tabel[penyusun_1][nama]" 
-                                               value="{{ $asesorNama }}" 
-                                               class="w-full px-3 py-1.5 text-sm font-semibold rounded-lg border border-slate-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 bg-white text-slate-800 transition-colors" 
-                                               placeholder="Nama asesor...">
-                                    </td>
-                                    <td class="px-4 py-3">
-                                        <input type="text" 
-                                               name="penyusun_validator_tabel[penyusun_1][nomor_met]" 
-                                               value="{{ $asesorMet }}" 
-                                               class="w-full px-3 py-1.5 text-sm font-medium rounded-lg border border-slate-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 bg-white text-slate-800 transition-colors" 
-                                               placeholder="Nomor MET/Registrasi...">
-                                    </td>
-                                    <td class="px-4 py-3 text-center" id="container-ttd-asesor-preview">
-                                        @if($asesorTtd)
-                                            <div class="flex flex-col items-center gap-1">
-                                                <div class="h-11 w-28 rounded-lg border border-slate-200 bg-slate-50/80 p-1 flex items-center justify-center shadow-2xs">
-                                                    <img src="{{ Str::startsWith($asesorTtd, 'data:') ? $asesorTtd : asset($asesorTtd) }}" alt="TTD Asesor" class="max-h-9 max-w-full object-contain">
-                                                </div>
-                                                <span class="text-[11px] font-semibold text-slate-500">{{ $penyusunTabelSaved['penyusun_1']['ttd_tanggal'] ?? '' }}</span>
-                                            </div>
-                                        @else
+                                        <span class="text-[11px] font-semibold text-slate-500">{{ $penyusunTabelSaved['penyusun_1']['ttd_tanggal'] ?? date('d/m/Y') }}</span>
+                                        @if($isAdmin)
+                                            <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                                ✓ Terverifikasi Otomatis
+                                            </span>
+                                        @endif
+                                    </div>
+                                @else
+                                    <button type="button" 
+                                            onclick="bukaModal('modalCanvasTtd')" 
+                                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-2xs transition-colors cursor-pointer">
+                                        <span>Bubuhkan Tanda Tangan</span>
+                                    </button>
+                                @endif
+                                <input type="hidden" name="tanda_tangan_asesor" id="input-ttd-asesor-base64" value="{{ $asesorTtd }}">
+                                <input type="hidden" name="penyusun_validator_tabel[penyusun_1][ttd]" value="{{ $asesorTtd }}">
+                                <input type="hidden" name="penyusun_validator_tabel[penyusun_1][ttd_tanggal]" value="{{ $penyusunTabelSaved['penyusun_1']['ttd_tanggal'] ?? date('d/m/Y') }}">
+                            </td>
+                        </tr>
+
+                        <!-- 2. VALIDATOR (ADMIN LSP) -->
+                        <tr>
+                            <td style="text-align: center; background-color: #f8fafc; padding: 0.6rem 0.75rem;">
+                                <div style="font-weight: 800; font-size: 0.88rem; color: #0f172a; line-height: 1.2;">VALIDATOR</div>
+                                <div style="font-size: 0.75rem; color: #64748b; font-weight: 500;">(Admin LSP)</div>
+                                <div style="margin-top: 0.35rem;">
+                                    @if($adminTtd)
+                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                            Tervalidasi
+                                        </span>
+                                    @else
+                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                                            Menunggu
+                                        </span>
+                                    @endif
+                                </div>
+                            </td>
+                            <td style="text-align: center; font-weight: 700; color: #475569; padding: 0.6rem 0.75rem;">
+                                2.
+                            </td>
+                            <td style="padding: 0.6rem 0.75rem;">
+                                <input type="text" 
+                                       name="penyusun_validator_tabel[validator_1][nama]" 
+                                       value="{{ $adminValidatorNama ?: ($isAdmin ? auth()->user()->nama_lengkap : '') }}" 
+                                       class="w-full px-3 py-1.5 text-sm font-semibold rounded border border-slate-300 focus:border-slate-700 focus:ring-1 focus:ring-slate-700 bg-white text-slate-800 transition-colors" 
+                                       placeholder="Nama admin validator...">
+                            </td>
+                            <td style="padding: 0.6rem 0.75rem;">
+                                <input type="text" 
+                                       name="penyusun_validator_tabel[validator_1][nomor_met]" 
+                                       value="{{ $adminValidatorMet ?: ($isAdmin ? (auth()->user()->nomor_registrasi ?: 'NIP/REG.ADM.LSP.001') : '') }}" 
+                                       class="w-full px-3 py-1.5 text-sm font-medium rounded border border-slate-300 focus:border-slate-700 focus:ring-1 focus:ring-slate-700 bg-white text-slate-800 transition-colors" 
+                                       placeholder="Nomor registrasi admin...">
+                            </td>
+                            <td style="padding: 0.6rem 0.75rem; text-align: center;" id="container-ttd-validator-preview">
+                                @if($adminTtd)
+                                    <div class="flex flex-col items-center gap-1">
+                                        <div class="h-11 w-28 rounded border border-slate-200 bg-slate-50/80 p-1 flex items-center justify-center shadow-2xs">
+                                            <img src="{{ Str::startsWith($adminTtd, 'data:') ? $adminTtd : asset($adminTtd) }}" alt="TTD Validator" class="max-h-9 max-w-full object-contain">
+                                        </div>
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5"></span>
+                                            <span>Tervalidasi Admin</span>
+                                        </span>
+                                        <span class="text-[11px] font-semibold text-slate-500">{{ $adminTtdTgl }}</span>
+                                        @if($isAdmin)
+                                            @if(!$isMasterMode && $isMasterSchemeValidated)
+                                                <span class="text-[10px] text-emerald-700 font-semibold italic mt-0.5">(Tervalidasi via Master Skema)</span>
+                                            @else
+                                                <button type="button" onclick="bukaModal('modalValidasiAdminMapa01')" class="text-[11px] text-sky-700 hover:text-sky-900 font-semibold underline cursor-pointer mt-0.5">
+                                                    Ubah Validasi
+                                                </button>
+                                            @endif
+                                        @endif
+                                    </div>
+                                @else
+                                    <div class="flex flex-col items-center gap-1">
+                                        @if($isAdmin)
                                             <button type="button" 
-                                                    onclick="bukaModal('modalCanvasTtd')" 
-                                                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-2xs transition-colors cursor-pointer">
-                                                <span>Bubuhkan Tanda Tangan</span>
+                                                    onclick="bukaModal('modalValidasiAdminMapa01')" 
+                                                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-2xs transition-colors cursor-pointer">
+                                                <span>Validasi & TTD</span>
                                             </button>
-                                        @endif
-                                        <input type="hidden" name="tanda_tangan_asesor" id="input-ttd-asesor-base64" value="{{ $asesorTtd }}">
-                                        <input type="hidden" name="penyusun_validator_tabel[penyusun_1][ttd]" value="{{ $asesorTtd }}">
-                                        <input type="hidden" name="penyusun_validator_tabel[penyusun_1][ttd_tanggal]" value="{{ $penyusunTabelSaved['penyusun_1']['ttd_tanggal'] ?? '' }}">
-                                    </td>
-                                </tr>
-
-                                <!-- 2. VALIDATOR (ADMIN LSP) -->
-                                <tr class="hover:bg-slate-50/60 transition-colors">
-                                    <td class="px-4 py-3 text-center bg-slate-50/40">
-                                        <div class="font-bold text-sm text-slate-900 leading-tight">VALIDATOR</div>
-                                        <div class="text-xs text-slate-500 font-medium">(Admin LSP)</div>
-                                        <div class="mt-1">
-                                            @if($adminTtd)
-                                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                                                    Tervalidasi
-                                                </span>
-                                            @else
-                                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
-                                                    <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-                                                    Menunggu
-                                                </span>
-                                            @endif
-                                        </div>
-                                    </td>
-                                    <td class="px-3 py-3 text-center font-bold text-slate-600 text-xs">
-                                        2
-                                    </td>
-                                    <td class="px-4 py-3">
-                                        <input type="text" 
-                                               name="penyusun_validator_tabel[validator_1][nama]" 
-                                               value="{{ $adminValidatorNama }}" 
-                                               class="w-full px-3 py-1.5 text-sm font-semibold rounded-lg border border-slate-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 bg-white text-slate-800 transition-colors" 
-                                               placeholder="Nama admin validator...">
-                                    </td>
-                                    <td class="px-4 py-3">
-                                        <input type="text" 
-                                               name="penyusun_validator_tabel[validator_1][nomor_met]" 
-                                               value="{{ $adminValidatorMet }}" 
-                                               class="w-full px-3 py-1.5 text-sm font-medium rounded-lg border border-slate-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 bg-white text-slate-800 transition-colors" 
-                                               placeholder="Nomor registrasi admin...">
-                                    </td>
-                                    <td class="px-4 py-3 text-center" id="container-ttd-validator-preview">
-                                        @if($adminTtd)
-                                            <div class="flex flex-col items-center gap-1">
-                                                <div class="h-11 w-28 rounded-lg border border-slate-200 bg-slate-50/80 p-1 flex items-center justify-center shadow-2xs">
-                                                    <img src="{{ Str::startsWith($adminTtd, 'data:') ? $adminTtd : asset($adminTtd) }}" alt="TTD Validator" class="max-h-9 max-w-full object-contain">
-                                                </div>
-                                                <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold">
-                                                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5"></span>
-                                                    <span>Tervalidasi Admin</span>
-                                                </span>
-                                                <span class="text-[11px] font-semibold text-slate-500">{{ $adminTtdTgl }}</span>
-                                                @if($isAdmin)
-                                                    <button type="button" onclick="bukaModal('modalValidasiAdminMapa01')" class="text-[11px] text-indigo-600 hover:text-indigo-800 font-semibold underline cursor-pointer mt-0.5">
-                                                        Ubah Validasi
-                                                    </button>
-                                                @endif
-                                            </div>
                                         @else
-                                            <div class="flex flex-col items-center gap-1">
-                                                @if($isAdmin)
-                                                    <button type="button" 
-                                                            onclick="bukaModal('modalValidasiAdminMapa01')" 
-                                                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-2xs transition-colors cursor-pointer">
-                                                        <span>Validasi & TTD</span>
-                                                    </button>
-                                                @else
-                                                    <span class="inline-flex items-center px-2.5 py-1 rounded-lg bg-amber-50 text-amber-700 border border-amber-200 text-xs font-semibold">
-                                                        <span class="w-1.5 h-1.5 rounded-full bg-amber-500 mr-1.5"></span>
-                                                        <span>Menunggu Validasi</span>
-                                                    </span>
-                                                    <span class="text-[10px] text-slate-400 italic">(Divalidasi oleh Admin)</span>
-                                                @endif
-                                            </div>
+                                            <span class="inline-flex items-center px-2.5 py-1 rounded bg-amber-50 text-amber-700 border border-amber-200 text-xs font-semibold">
+                                                <span class="w-1.5 h-1.5 rounded-full bg-amber-500 mr-1.5"></span>
+                                                <span>Menunggu Validasi</span>
+                                            </span>
+                                            <span class="text-[10px] text-slate-400 italic">(Divalidasi oleh Admin)</span>
                                         @endif
-                                        <input type="hidden" name="penyusun_validator_tabel[validator_1][ttd]" id="input-ttd-validator-base64" value="{{ $adminTtd }}">
-                                        <input type="hidden" name="penyusun_validator_tabel[validator_1][ttd_tanggal]" value="{{ $adminTtdTgl }}">
-                                        <input type="hidden" name="penyusun_validator_tabel[validator_1][status_validasi]" value="{{ $isValidatedAdmin ? 'tervalidasi' : 'menunggu' }}">
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+                                    </div>
+                                @endif
+                                <input type="hidden" name="penyusun_validator_tabel[validator_1][ttd]" id="input-ttd-validator-base64" value="{{ $adminTtd }}">
+                                <input type="hidden" name="penyusun_validator_tabel[validator_1][ttd_tanggal]" value="{{ $adminTtdTgl ?: ($isAdmin ? date('d/m/Y') : '') }}">
+                                <input type="hidden" name="penyusun_validator_tabel[validator_1][status_validasi]" value="{{ $isValidatedAdmin ? 'tervalidasi' : ($isAdmin ? 'tervalidasi' : 'menunggu') }}">
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
 
             <!-- TOMBOL AKSI & NAVIGASI DI BAWAH -->
@@ -1497,11 +1695,11 @@
                         @endif
 
                         <div id="bottom-actions-edit" style="display: {{ $isConfigured ? 'none' : 'flex' }}; gap: 0.75rem; flex-wrap: wrap;">
-                            <button type="button" onclick="document.getElementById('inputAksiMapa01').value='draft'; document.getElementById('form-mapa01').submit();" class="tombol tombol-sekunder" style="font-weight: 700;">
+                            <button type="button" onclick="submitMapa01('draft')" class="tombol tombol-sekunder" style="font-weight: 700;">
                                 Simpan Draft
                             </button>
-                            <button type="button" onclick="document.getElementById('inputAksiMapa01').value='konfirmasi'; document.getElementById('form-mapa01').submit();" class="tombol tombol-utama" style="background: #2563eb; border-color: #2563eb; font-weight: 700; padding: 0.65rem 1.5rem;">
-                                Sahkan Rencana FR.MAPA.01
+                            <button type="button" onclick="submitMapa01('konfirmasi')" class="tombol tombol-utama" style="background: #2563eb; border-color: #2563eb; font-weight: 700; padding: 0.65rem 1.5rem;">
+                                {{ $isAdmin ? 'Sahkan & Validasi FR.MAPA.01' : 'Sahkan Rencana FR.MAPA.01' }}
                             </button>
                         </div>
 
@@ -1566,6 +1764,8 @@
         <form id="form-validasi-admin-mapa01" action="{{ route('admin.mapa-01.validasi', $targetValidasiId) }}" method="POST">
             @csrf
             <input type="hidden" name="skema_id" value="{{ $pendaftaran->skema_id ?? $skemaId ?? 0 }}">
+            <input type="hidden" name="pendaftaran_id" value="{{ $pendaftaran->id ?? '' }}">
+            <input type="hidden" name="is_master_mode" value="{{ !empty($isMasterMode) ? '1' : '0' }}">
             <input type="hidden" name="tanda_tangan_admin_base64" id="input-ttd-validator-modal-base64" value="{{ $adminTtd }}">
 
             <div style="margin-bottom: 1rem;">
@@ -1696,12 +1896,172 @@
                         el.readOnly = false;
                     });
                 }
+                applyKonfirmasiTabelState();
             }
         }
 
         function toggleEditMapa01() {
             isMapa01EditMode = !isMapa01EditMode;
             applyMapa01Mode();
+        }
+
+        function applyKonfirmasiTabelState() {
+            if (!isMapa01EditMode) return;
+            document.querySelectorAll('.toggle-relevan-tabel').forEach(cb => {
+                const key = cb.getAttribute('data-role-key');
+                if (key) {
+                    syncKonfirmasiToTabel(key, cb.checked);
+                }
+            });
+        }
+
+        function syncKonfirmasiToTabel(roleKey, isChecked) {
+            const row = document.getElementById('row-konfirmasi-' + roleKey);
+            const checkTabel = document.getElementById('check-tabel-' + roleKey);
+            const titleRole = document.getElementById('title-role-' + roleKey);
+            const badgeWrapper = document.getElementById('badge-wrapper-' + roleKey);
+            const inputNama = document.getElementById('input-nama-' + roleKey);
+            const inputTgl = document.getElementById('input-tgl-' + roleKey);
+            const btnToday = document.getElementById('btn-today-' + roleKey);
+            const helperLsp = document.getElementById('helper-manajer-' + roleKey);
+
+            if (checkTabel && checkTabel.checked !== isChecked) {
+                checkTabel.checked = isChecked;
+            }
+
+            if (isChecked) {
+                if (row) {
+                    row.classList.remove('baris-relevan-dicoret', 'hover:bg-slate-100/60');
+                    row.classList.add('baris-relevan-aktif', 'hover:bg-slate-50/70');
+                }
+                if (titleRole) {
+                    titleRole.classList.remove('text-slate-400', 'line-through');
+                    titleRole.classList.add('text-slate-800');
+                }
+                if (badgeWrapper) {
+                    badgeWrapper.innerHTML = `
+                        <span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-800 border border-blue-200" id="badge-role-${roleKey}">
+                            <span class="w-1.5 h-1.5 rounded-full bg-blue-700"></span> Relevan &bull; Dikonfirmasi
+                        </span>
+                    `;
+                }
+                if (inputNama) {
+                    inputNama.disabled = false;
+                    inputNama.classList.remove('bg-slate-100', 'text-slate-400', 'cursor-not-allowed');
+                    inputNama.placeholder = 'Nama pejabat/petugas...';
+                }
+                if (inputTgl) {
+                    inputTgl.disabled = false;
+                    inputTgl.classList.remove('bg-slate-100', 'text-slate-400', 'cursor-not-allowed');
+                }
+                if (btnToday) btnToday.style.display = 'inline-block';
+                if (helperLsp) helperLsp.style.display = 'flex';
+            } else {
+                if (row) {
+                    row.classList.remove('baris-relevan-aktif', 'hover:bg-slate-50/70');
+                    row.classList.add('baris-relevan-dicoret', 'hover:bg-slate-100/60');
+                }
+                if (titleRole) {
+                    titleRole.classList.remove('text-slate-800');
+                    titleRole.classList.add('text-slate-400', 'line-through');
+                }
+                if (badgeWrapper) {
+                    badgeWrapper.innerHTML = `
+                        <span class="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 border border-slate-200" id="badge-role-${roleKey}">
+                            <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span> Dicoret (*tidak perlu)
+                        </span>
+                    `;
+                }
+                if (inputNama) {
+                    inputNama.disabled = true;
+                    inputNama.classList.add('bg-slate-100', 'text-slate-400', 'cursor-not-allowed');
+                    inputNama.placeholder = '— Dicoret (tidak perlu diisi) —';
+                }
+                if (inputTgl) {
+                    inputTgl.disabled = true;
+                    inputTgl.classList.add('bg-slate-100', 'text-slate-400', 'cursor-not-allowed');
+                }
+                if (btnToday) btnToday.style.display = 'none';
+                if (helperLsp) helperLsp.style.display = 'none';
+            }
+
+            updateRowStatusBadge(roleKey);
+        }
+
+        function syncTabelToKonfirmasi(roleKey, isChecked) {
+            const input11 = document.querySelector(`.input-konfirmasi-1-1[data-role-key="${roleKey}"]`);
+            if (input11) input11.checked = isChecked;
+            syncKonfirmasiToTabel(roleKey, isChecked);
+        }
+
+        function updateRowStatusBadge(roleKey) {
+            const checkTabel = document.getElementById('check-tabel-' + roleKey);
+            const statusContainer = document.getElementById('status-container-' + roleKey);
+            const inputNama = document.getElementById('input-nama-' + roleKey);
+            const inputTgl = document.getElementById('input-tgl-' + roleKey);
+
+            if (!statusContainer) return;
+
+            const isRelevan = checkTabel && checkTabel.checked;
+            if (!isRelevan) {
+                statusContainer.innerHTML = `
+                    <span class="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md bg-slate-100 text-slate-500 border border-slate-200">
+                        <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span> Dicoret
+                    </span>
+                `;
+                return;
+            }
+
+            const namaVal = (inputNama ? inputNama.value : '').trim();
+            const tglVal = (inputTgl ? inputTgl.value : '').trim();
+
+            if (namaVal && tglVal) {
+                statusContainer.innerHTML = `
+                    <span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> &check; Terkonfirmasi
+                    </span>
+                `;
+            } else {
+                statusContainer.innerHTML = `
+                    <span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-200">
+                        <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> &#9203; Belum Dikonfirmasi
+                    </span>
+                `;
+            }
+        }
+
+        function isiTanggalHariIni(roleKey) {
+            const inputTgl = document.getElementById('input-tgl-' + roleKey);
+            if (!inputTgl) return;
+            const now = new Date();
+            const d = String(now.getDate()).padStart(2, '0');
+            const m = String(now.getMonth() + 1).padStart(2, '0');
+            const y = now.getFullYear();
+            inputTgl.value = `${d}/${m}/${y}`;
+            updateRowStatusBadge(roleKey);
+        }
+
+        function isiOtomatisManajerLsp(roleKey, defaultNama) {
+            const inputNama = document.getElementById('input-nama-' + roleKey);
+            if (inputNama) {
+                inputNama.value = defaultNama;
+            }
+            isiTanggalHariIni(roleKey);
+            updateRowStatusBadge(roleKey);
+        }
+
+        function submitMapa01(aksi) {
+            const form = document.getElementById('form-mapa01');
+            if (!form) return;
+            const inputAksi = document.getElementById('inputAksiMapa01');
+            if (inputAksi) inputAksi.value = aksi;
+
+            // Pastikan input nama dan tanggal pada tabel konfirmasi di-enable agar terkirim ke backend
+            form.querySelectorAll('.input-nama-relevan, .input-tgl-relevan').forEach(el => {
+                el.disabled = false;
+            });
+
+            form.submit();
         }
 
         let validatorCanvasInited = false;
@@ -1783,9 +2143,9 @@
                 formVal.addEventListener('submit', function(e) {
                     const input = document.getElementById('input-ttd-validator-modal-base64');
                     if (!input || !input.value.trim()) {
-                        e.preventDefault();
-                        alert('Tanda tangan digital Validator Admin wajib dibubuhkan.');
-                        return false;
+                        const adminName = "{{ auth()->check() ? (auth()->user()->nama_lengkap ?: 'Administrator LSP') : 'Administrator LSP' }}";
+                        const autoSvg = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='60'><text x='10' y='38' font-family='Brush Script MT, cursive, sans-serif' font-size='24' fill='%23065f46'>" + encodeURIComponent(adminName) + "</text></svg>";
+                        if (input) input.value = autoSvg;
                     }
                 });
             }
@@ -1819,6 +2179,15 @@
         document.addEventListener('DOMContentLoaded', function() {
             applyMapa01Mode();
             initValidatorCanvas();
+
+            const formM = document.getElementById('form-mapa01');
+            if (formM) {
+                formM.addEventListener('submit', function() {
+                    formM.querySelectorAll('.input-nama-relevan, .input-tgl-relevan').forEach(el => {
+                        el.disabled = false;
+                    });
+                });
+            }
 
             @if(!empty($adminTtd))
                 setTimeout(function() {

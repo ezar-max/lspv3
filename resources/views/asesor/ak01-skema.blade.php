@@ -22,11 +22,11 @@
 
 @section('konten')
 @php
-    $savedBukti = (array) ($masterAk01->bukti_dikumpulkan ?? ['Observasi Praktik Demonstrasi', 'Uji Tertulis (CBT)', 'Tanya Jawab Lisan']);
+    $savedBukti = (array) ($masterAk01->bukti_dikumpulkan ?? []);
     $userSignature = auth()->user()->tanda_tangan;
     $currentSignature = $masterAk01->tanda_tangan_asesor ?? $userSignature;
     $isSigned = !empty($currentSignature);
-    $isConfigured = $masterAk01->exists && ($masterAk01->status === 'selesai' || !empty($masterAk01->updated_at));
+    $isConfigured = $masterAk01->exists && $masterAk01->status === 'selesai';
 @endphp
 
 <div class="max-w-5xl mx-auto px-2 sm:px-4 py-3 space-y-4" x-data="ak01SkemaApp()">
@@ -191,6 +191,7 @@
                     </label>
                     <select name="tuk_type" required 
                             class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 font-medium focus:ring-1 focus:ring-indigo-500 focus:bg-white transition-colors">
+                        <option value="" disabled {{ empty(old('tuk_type', $masterAk01->tuk_type)) ? 'selected' : '' }}>-- Pilih Jenis TUK --</option>
                         <option value="Sewaktu" {{ old('tuk_type', $masterAk01->tuk_type) === 'Sewaktu' ? 'selected' : '' }}>TUK Sewaktu (SMKN 1 Gunungputri / Sekolah Mitra)</option>
                         <option value="Tempat Kerja" {{ old('tuk_type', $masterAk01->tuk_type) === 'Tempat Kerja' ? 'selected' : '' }}>TUK Tempat Kerja / Fasilitas Industri (DUDI)</option>
                         <option value="Mandiri" {{ old('tuk_type', $masterAk01->tuk_type) === 'Mandiri' ? 'selected' : '' }}>TUK Mandiri</option>

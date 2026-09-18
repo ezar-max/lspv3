@@ -811,12 +811,18 @@ class AsesorController extends Controller
         LogAktivitas::catat('Master MAPA.01', 'Menyimpan Master FR.MAPA.01 (' . ($isConfirm ? 'Disahkan' : 'Draft') . ') untuk Skema ' . $skema->kode_skema);
 
         if ($isConfirm) {
+            $suksesMsg = in_array($user->peran, ['admin', 'superadmin'])
+                ? 'Dokumen Master FR.MAPA.01 berhasil disahkan dan langsung tervalidasi oleh Administrator! Silakan lanjutkan untuk meninjau Master Peta Instrumen (FR.MAPA.02).'
+                : 'Master Dokumen FR.MAPA.01 berhasil disahkan! Silakan lanjutkan untuk meninjau dan mengesahkan Master Peta Instrumen (FR.MAPA.02).';
             return redirect()->route('asesor.skema.mapa-02', $skema->id)
-                ->with('sukses', 'Master Dokumen FR.MAPA.01 berhasil disahkan! Silakan lanjutkan untuk meninjau dan mengesahkan Master Peta Instrumen (FR.MAPA.02).');
+                ->with('sukses', $suksesMsg);
         }
 
+        $draftMsg = in_array($user->peran, ['admin', 'superadmin'])
+            ? 'Dokumen Master FR.MAPA.01 berhasil disimpan dan langsung tervalidasi.'
+            : 'Draft Master FR.MAPA.01 berhasil disimpan.';
         return redirect()->route('asesor.skema.mapa-01', $skema->id)
-            ->with('sukses', 'Draft Master FR.MAPA.01 berhasil disimpan.');
+            ->with('sukses', $draftMsg);
     }
 
     /**
@@ -900,8 +906,8 @@ class AsesorController extends Controller
 
         $masterAk01 = MasterAk01::firstOrNew(['skema_id' => $skema->id]);
         if (!$masterAk01->exists) {
-            $masterAk01->tuk_type = 'Sewaktu';
-            $masterAk01->bukti_dikumpulkan = ['Observasi Praktik Demonstrasi', 'Uji Tertulis (CBT)', 'Tanya Jawab Lisan'];
+            $masterAk01->tuk_type = null;
+            $masterAk01->bukti_dikumpulkan = [];
             $masterAk01->status = 'draft';
         }
 
@@ -1180,12 +1186,18 @@ class AsesorController extends Controller
         LogAktivitas::catat('Perencanaan Asesmen (FR.MAPA.01)', 'Menyimpan dokumen FR.MAPA.01 (' . ($isConfirm ? 'Disahkan' : 'Draft') . ') untuk pendaftaran #' . $pendaftaran->nomor_pendaftaran);
 
         if ($isConfirm) {
+            $suksesMsg = in_array($user->peran, ['admin', 'superadmin'])
+                ? 'Dokumen FR.MAPA.01 berhasil disahkan dan langsung tervalidasi oleh Administrator! Silakan lanjutkan untuk meninjau dan mengesahkan Peta Instrumen Asesmen (FR.MAPA 02).'
+                : 'Dokumen FR.MAPA.01 berhasil disahkan! Silakan lanjutkan untuk meninjau dan mengesahkan Peta Instrumen Asesmen (FR.MAPA 02).';
             return redirect()->route('asesor.mapa-02', $pendaftaran->id)
-                ->with('sukses', 'Dokumen FR.MAPA.01 berhasil disahkan! Silakan lanjutkan untuk meninjau dan mengesahkan Peta Instrumen Asesmen (FR.MAPA 02).');
+                ->with('sukses', $suksesMsg);
         }
 
+        $draftMsg = in_array($user->peran, ['admin', 'superadmin'])
+            ? 'Dokumen FR.MAPA.01 berhasil disimpan dan langsung tervalidasi.'
+            : 'Draft FR.MAPA.01 berhasil disimpan.';
         return redirect()->route('asesor.mapa-01', $pendaftaran->id)
-            ->with('sukses', 'Draft FR.MAPA.01 berhasil disimpan.');
+            ->with('sukses', $draftMsg);
     }
 
     public function mapa02($pendaftaranId)

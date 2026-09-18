@@ -81,7 +81,7 @@ class MasterAk01PerSkemaTest extends TestCase
         );
     }
 
-    /** 2. Asesor dapat membuka halaman konfigurasi Master FR.AK.01 */
+    /** 2. Asesor dapat membuka halaman konfigurasi Master FR.AK.01 dalam keadaan kosong */
     public function test_asesor_can_open_master_ak01_page(): void
     {
         $response = $this->actingAs($this->asesor)->get(route('asesor.skema.ak-01', $this->skema->id));
@@ -90,6 +90,10 @@ class MasterAk01PerSkemaTest extends TestCase
         $response->assertSee('MASTER TEMPLATE SKEMA');
         $response->assertSee($this->skema->kode_skema);
         $response->assertSee($this->unit->judul_unit);
+        $response->assertSee('-- Pilih Jenis TUK --');
+        $response->assertDontSee('value="Observasi Praktik Demonstrasi" checked');
+        $response->assertDontSee('value="Uji Tertulis (CBT)" checked');
+        $response->assertDontSee('value="Tanya Jawab Lisan" checked');
     }
 
     /** 3. Asesor dapat menyimpan & mengesahkan Master FR.AK.01 untuk skema */

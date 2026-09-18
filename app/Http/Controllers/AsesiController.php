@@ -1371,6 +1371,8 @@ class AsesiController extends Controller
             'penilaian'
         ]);
 
+        $pendaftaran->syncFromMasterAk01IfAvailable();
+
         // Auto-ACC jika asesi sudah menandatangani FR.AK.01 namun status masih menunggu asesor
         if ($pendaftaran->status_ak01 === 'disetujui_asesi' || (!empty($pendaftaran->tanda_tangan_asesi_ak01) && $pendaftaran->status_ak01 !== 'selesai')) {
             $asesor = $pendaftaran->asesor ?: $pendaftaran->jadwal?->asesor;

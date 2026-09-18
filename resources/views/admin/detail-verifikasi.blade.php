@@ -714,30 +714,30 @@
                     </div>
                     <div class="flex justify-between items-center gap-4 pb-2 border-b border-slate-100">
                         <span class="text-slate-400 font-medium">NIK / No. KTP</span>
-                        <span class="font-mono font-bold text-slate-800">{{ $pendaftaran->asesi->profilAsesi->nik ?? '-' }}</span>
+                        <span class="font-mono font-bold text-slate-800">{{ $pendaftaran->asesi->profilAsesi?->nik ?? '-' }}</span>
                     </div>
                     <div class="flex justify-between items-center gap-4 pb-2 border-b border-slate-100">
                         <span class="text-slate-400 font-medium">Tempat, Tanggal Lahir</span>
                         <span class="font-semibold text-slate-800 text-right">
-                            {{ $pendaftaran->asesi->profilAsesi->tempat_lahir ?? '-' }}, 
-                            {{ $pendaftaran->asesi->profilAsesi->tanggal_lahir ? date('d M Y', strtotime($pendaftaran->asesi->profilAsesi->tanggal_lahir)) : '-' }}
+                            {{ $pendaftaran->asesi->profilAsesi?->tempat_lahir ?? '-' }}, 
+                            {{ $pendaftaran->asesi->profilAsesi?->tanggal_lahir ? date('d M Y', strtotime($pendaftaran->asesi->profilAsesi->tanggal_lahir)) : '-' }}
                         </span>
                     </div>
                     <div class="flex justify-between items-center gap-4 pb-2 border-b border-slate-100">
                         <span class="text-slate-400 font-medium">Jenis Kelamin</span>
                         <span class="font-semibold text-slate-800">
-                            {{ $pendaftaran->asesi->profilAsesi->jenis_kelamin ? (in_array(strtolower($pendaftaran->asesi->profilAsesi->jenis_kelamin), ['l', 'laki-laki']) ? 'Laki-laki' : 'Perempuan') : '-' }}
+                            {{ $pendaftaran->asesi->profilAsesi?->jenis_kelamin ? (in_array(strtolower($pendaftaran->asesi->profilAsesi->jenis_kelamin), ['l', 'laki-laki']) ? 'Laki-laki' : 'Perempuan') : '-' }}
                         </span>
                     </div>
                     <div class="flex justify-between items-start gap-4 pb-2 border-b border-slate-100">
                         <span class="text-slate-400 font-medium">Alamat Domisili</span>
                         <span class="font-medium text-slate-800 text-right max-w-xs leading-relaxed">
-                            {{ $pendaftaran->asesi->profilAsesi->alamat ?? '-' }} (Kode Pos: {{ $pendaftaran->kode_pos ?? '-' }})
+                            {{ $pendaftaran->asesi->profilAsesi?->alamat ?? '-' }} (Kode Pos: {{ $pendaftaran->kode_pos ?? '-' }})
                         </span>
                     </div>
                     <div class="flex justify-between items-start gap-4 pb-2 border-b border-slate-100">
                         <span class="text-slate-400 font-medium">Asal Sekolah / Instansi</span>
-                        <span class="font-semibold text-slate-800 text-right">{{ $pendaftaran->asesi->profilAsesi->nama_sekolah_instansi ?? '-' }}</span>
+                        <span class="font-semibold text-slate-800 text-right">{{ $pendaftaran->asesi->profilAsesi?->nama_sekolah_instansi ?? '-' }}</span>
                     </div>
                     <div class="flex justify-between items-center gap-4 pt-1">
                         <span class="text-slate-400 font-medium">Kontak & WhatsApp</span>
@@ -800,11 +800,18 @@
              CARD MAPA.01: PERENCANAAN AKTIVITAS & PROSES ASESMEN
              ===================================================================== -->
         @php
+            $mapa01Master = \App\Models\Mapa01::where('skema_id', $pendaftaran->skema_id)->whereNull('pendaftaran_id')->first();
+            $penyusunValMaster = $mapa01Master?->penyusun_validator_tabel ?? [];
+            $isMasterValidated = !empty($penyusunValMaster['validator_1']['ttd']) 
+                || (($penyusunValMaster['validator_1']['status_validasi'] ?? '') === 'tervalidasi');
+
             $mapa01Peserta = \App\Models\Mapa01::where('pendaftaran_id', $pendaftaran->id)->first();
             $penyusunValPeserta = $mapa01Peserta?->penyusun_validator_tabel ?? [];
-            $isMapa01PesertaValidated = !empty($penyusunValPeserta['validator_1']['ttd']) 
+            $isPesertaValidated = !empty($penyusunValPeserta['validator_1']['ttd']) 
                 || (($penyusunValPeserta['validator_1']['status_validasi'] ?? '') === 'tervalidasi') 
                 || !empty($pendaftaran->tanda_tangan_admin);
+
+            $isMapa01PesertaValidated = $isMasterValidated || $isPesertaValidated;
         @endphp
         <div class="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div class="flex items-start gap-3.5">
@@ -825,13 +832,17 @@
                         @endif
                     </div>
                     <p class="text-xs text-slate-500 mt-0.5">
-                        Dokumen acuan perencanaan asesmen BNSP untuk peserta ini. Validator Admin LSP dapat meninjau dan mengesahkan secara digital.
+                        @if($isMapa01PesertaValidated)
+                            Dokumen acuan perencanaan asesmen BNSP untuk skema ini telah resmi divalidasi oleh Validator Admin LSP.
+                        @else
+                            Dokumen acuan perencanaan asesmen BNSP untuk peserta ini. Validator Admin LSP dapat meninjau dan mengesahkan secara digital.
+                        @endif
                     </p>
                 </div>
             </div>
             <div class="flex items-center gap-2 shrink-0">
-                <a href="{{ route('asesor.mapa-01', $pendaftaran->id) }}" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl {{ !$isMapa01PesertaValidated ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-2xs' : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200' }} text-xs font-bold transition">
-                    <span>{{ !$isMapa01PesertaValidated ? 'Validasi FR.MAPA.01' : 'Tinjau / Ubah Validasi' }} &rarr;</span>
+                <a href="{{ route('asesor.mapa-01', $pendaftaran->id) }}" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl {{ !$isMapa01PesertaValidated ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-2xs' : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300' }} text-xs font-bold transition">
+                    <span>{{ !$isMapa01PesertaValidated ? 'Validasi FR.MAPA.01' : 'Lihat Dokumen FR.MAPA.01' }} &rarr;</span>
                 </a>
             </div>
         </div>
