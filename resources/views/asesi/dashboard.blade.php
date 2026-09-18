@@ -54,26 +54,40 @@
 @endpush
 
 @section('konten')
-<div class="header-dashboard-asesi">
-    <div class="teks-header-asesi">
-        <h1>Selamat Datang, {{ $pengguna->nama_lengkap }}!</h1>
-        <p>Pantau progress pendaftaran dan jadwal uji kompetensi keahlian Anda secara real-time</p>
+<!-- =========================================================================
+     HEADER DASHBOARD ASESI (BERSIH, TERBUKA & PROFESIONAL)
+     - Tanpa Card Box / Banner Kaku
+     - Tanpa Kotak Avatar Inisial
+     - Tipografi Modern & Aksi Cepat
+     ========================================================================= -->
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+    <div>
+        <h1 class="text-xl sm:text-2xl font-bold text-slate-800 tracking-tight">
+            Selamat Datang, {{ $pengguna->nama_lengkap }}!
+        </h1>
+        <p class="text-xs sm:text-sm text-slate-500 mt-0.5">
+            Pantau progres pendaftaran dan jadwal uji kompetensi keahlian Anda secara real-time.
+        </p>
     </div>
-    <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+
+    <div class="flex items-center gap-3 flex-wrap">
         @if(isset($semuaPendaftaran) && $semuaPendaftaran->count() > 1)
-            <div class="skema-selector-badge">
-                <label style="font-size: 0.75rem; color: #e0e7ff; font-weight: 700;">Skema Aktif:</label>
-                <select onchange="window.location.href='?pendaftaran_id=' + this.value" style="background: #ffffff; color: #0f172a; font-weight: 700; font-size: 0.82rem; border-radius: 6px; padding: 0.25rem 0.5rem; border: none;">
+            <div class="inline-flex items-center gap-2 bg-white border border-slate-200/90 px-3 py-2 rounded-xl text-xs shadow-2xs">
+                <i class="fa-solid fa-graduation-cap text-blue-600"></i>
+                <label class="font-bold text-slate-500 text-[11px]">Skema:</label>
+                <select onchange="window.location.href='?pendaftaran_id=' + this.value" class="bg-transparent border-0 text-slate-800 font-bold text-xs focus:ring-0 cursor-pointer outline-hidden pr-2">
                     @foreach($semuaPendaftaran as $itemP)
                         <option value="{{ $itemP->id }}" {{ (isset($pendaftaranTerakhir) && $pendaftaranTerakhir->id == $itemP->id) ? 'selected' : '' }}>
-                            {{ $itemP->skema->kode_skema ?? 'SKEMA' }} - {{ Str::limit($itemP->skema->nama_skema ?? 'Skema', 22) }}
+                            {{ $itemP->skema->kode_skema ?? 'SKEMA' }} - {{ Str::limit($itemP->skema->nama_skema ?? 'Skema', 24) }}
                         </option>
                     @endforeach
                 </select>
             </div>
         @endif
-        <a href="{{ route('asesi.pendaftaran') }}" class="tombol tombol-sekunder">
-            Daftar Skema Baru
+
+        <a href="{{ route('asesi.pendaftaran') }}" class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold px-4 py-2.5 rounded-xl shadow-xs hover:shadow transition-all">
+            <i class="fa-solid fa-plus text-xs"></i>
+            <span>Daftar Skema Baru</span>
         </a>
     </div>
 </div>
@@ -237,29 +251,6 @@
                     $statusHeader = 'Draft (Belum Dikirim)';
                 }
             @endphp
-
-            <!-- BANNER REVISI FR.APL.02 TRIGGER (ALERT CARD RINGKAS) -->
-            @if($p->isApl02Revision())
-                <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs" style="margin-bottom: 1.25rem;">
-                    <div style="display: flex; align-items: flex-start; gap: 0.75rem;">
-                        <div>
-                            <div style="font-weight: 700; color: #991b1b; font-size: 0.88rem;">Terdapat Butir Belum Kompeten (BK) &bull; Permintaan Revisi FR.APL.02</div>
-                            <p style="font-size: 0.82rem; color: #78350f; margin: 0.15rem 0 0; line-height: 1.4;">
-                                Asesor meminta perbaikan pada butir yang dinilai <strong>Belum Kompeten (BK)</strong>. Silakan periksa catatan asesor dan tautkan kembali bukti pendukung yang relevan.
-                                @if($p->catatan_peninjauan_asesor)
-                                    <span style="display: block; font-style: italic; color: #b45309; margin-top: 0.25rem;">"{{ $p->catatan_peninjauan_asesor }}"</span>
-                                @endif
-                            </p>
-                        </div>
-                    </div>
-                    <a href="{{ route('asesi.tahapan', ['step' => 2, 'pendaftaran_id' => $p->id]) }}" 
-                       class="bg-amber-600 hover:bg-amber-700 text-white text-xs px-3.5 py-2 rounded-lg font-medium inline-flex items-center gap-1.5 shadow-2xs transition-colors shrink-0"
-                       style="text-decoration: none; white-space: nowrap;">
-                        <span>Perbaiki Butir BK</span>
-                        <span>&rarr;</span>
-                    </a>
-                </div>
-            @endif
 
             <!-- HEADER MONITORING -->
             <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.25rem;">

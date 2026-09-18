@@ -407,7 +407,7 @@
                                            class="mt-0.5 text-emerald-600 focus:ring-emerald-500" 
                                            required>
                                     <div class="text-xs leading-snug">
-                                        <div class="font-bold">✓ Asesmen DAPAT Dilanjutkan (Portofolio Memenuhi Syarat - ACC)</div>
+                                        <div class="font-bold">Asesmen DAPAT Dilanjutkan (Portofolio Memenuhi Syarat - ACC)</div>
                                         <div class="text-[11px] opacity-85 mt-0.5">
                                             <span x-show="allVerified">Seluruh KUK terverifikasi Kompeten (K). Asesi dapat langsung lanjut menandatangani kesepakatan asesmen FR.AK.01.</span>
                                             <span x-show="!allVerified">Tidak dapat dipilih karena masih ada <strong class="text-rose-600" x-text="bkCount"></strong> KUK Belum Kompeten (BK).</span>
@@ -425,7 +425,7 @@
                                            class="mt-0.5 text-amber-600 focus:ring-amber-500" 
                                            {{ $isLocked ? 'disabled' : '' }} required>
                                     <div class="text-xs leading-snug">
-                                        <div class="font-bold text-amber-800">⚠️ TIDAK DAPAT Dilanjutkan (Minta Revisi Berkas APL.02)</div>
+                                        <div class="font-bold text-amber-800">TIDAK DAPAT Dilanjutkan (Minta Revisi Berkas APL.02)</div>
                                         <div class="text-[11px] opacity-80 mt-0.5">
                                             <span x-show="!allVerified">Terdapat <strong class="text-rose-700" x-text="bkCount"></strong> butir KUK Belum Kompeten (BK). Berkas APL.02 dikembalikan ke asesi untuk diperbaiki.</span>
                                             <span x-show="allVerified">Berkas APL.02 dikembalikan ke asesi untuk melengkapi atau memperbaiki dokumen bukti yang kurang.</span>
@@ -443,7 +443,7 @@
                                            class="mt-0.5 text-rose-600 focus:ring-rose-500" 
                                            {{ $isLocked ? 'disabled' : '' }} required>
                                     <div class="text-xs leading-snug">
-                                        <div class="font-bold text-rose-800">❌ TIDAK DAPAT DITERIMA (Tolak Permohonan Asesmen)</div>
+                                        <div class="font-bold text-rose-800">TIDAK DAPAT DITERIMA (Tolak Permohonan Asesmen)</div>
                                         <div class="text-[11px] opacity-80 mt-0.5">Asesi tidak memenuhi persyaratan asesmen mandiri dan permohonan sertifikasi skema ini ditolak.</div>
                                     </div>
                                 </label>

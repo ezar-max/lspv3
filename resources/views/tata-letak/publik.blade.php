@@ -37,31 +37,25 @@
             <ul class="nav-menu" id="menuNavigasi">
                 <li><a href="{{ route('beranda') }}#beranda" class="nav-link {{ request()->routeIs('beranda') ? 'aktif' : '' }}">Beranda</a></li>
                 <li><a href="{{ route('beranda') }}#skema" class="nav-link">Skema Keahlian</a></li>
-                <li><a href="{{ route('beranda') }}#berita" class="nav-link">Berita</a></li>
+                <li><a href="{{ route('beranda') }}#berita" class="nav-link">Berita &amp; Pengumuman</a></li>
             </ul>
 
-            <div class="nav-aksi">
-                @auth
-                    <a href="{{ route(auth()->user()->peran . '.dasbor') }}" class="tombol-cta-header">
-                        Dasbor
-                    </a>
-                @else
-                    @if(!request()->routeIs('masuk'))
+            @if(!request()->routeIs('masuk', 'daftar', 'registrasi'))
+                <div class="nav-aksi">
+                    @auth
+                        <a href="{{ route(auth()->user()->peran . '.dasbor') }}" class="tombol-cta-header">
+                            Buka Dasbor
+                        </a>
+                    @else
                         <a href="{{ route('masuk') }}" class="tombol-masuk">
                             Masuk
                         </a>
-                    @endif
-                    @if(!request()->routeIs('registrasi', 'daftar'))
                         <a href="{{ route('daftar') }}" class="tombol-cta-header">
                             Daftar Asesi
                         </a>
-                    @else
-                        <a href="{{ route('masuk') }}" class="tombol-cta-header">
-                            Masuk Portal
-                        </a>
-                    @endif
-                @endauth
-            </div>
+                    @endauth
+                </div>
+            @endif
         </div>
     </nav>
 

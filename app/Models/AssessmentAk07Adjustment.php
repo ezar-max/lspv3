@@ -139,6 +139,35 @@ class AssessmentAk07Adjustment extends Model
     ];
 
     /**
+     * Butir Penyesuaian Standar Acuan BNSP yang Disepakati
+     */
+    public static function defaultChecklistItems(): array
+    {
+        return [
+            1 => [
+                'perlu_penyesuaian' => true,
+                'opsi_dipilih' => ['penyesuaian_instruksi_tertulis', 'bantuan_komunikasi_lisan'],
+                'keterangan' => 'Pemberian klarifikasi instruksi kerja dan materi uji secara lisan dan tertulis dengan bahasa komunikatif yang lugas.',
+            ],
+            4 => [
+                'perlu_penyesuaian' => true,
+                'opsi_dipilih' => ['istirahat_terjadwal'],
+                'keterangan' => 'Penyediaan jeda istirahat berkala di antara observasi demonstrasi praktik dan sesi tanya jawab lisan.',
+            ],
+            6 => [
+                'perlu_penyesuaian' => true,
+                'opsi_dipilih' => ['pencahayaan_khusus', 'ruang_tenang'],
+                'keterangan' => 'Pengkondisian area bengkel/lab praktik dan ruang wawancara yang aman, terang, serta bebas gangguan.',
+            ],
+            8 => [
+                'perlu_penyesuaian' => true,
+                'opsi_dipilih' => ['penyesuaian_waktu_ibadah'],
+                'keterangan' => 'Penyesuaian jadwal pelaksanaan uji kompetensi agar tidak berbenturan dengan waktu ibadah.',
+            ],
+        ];
+    }
+
+    /**
      * Relasi ke data Pendaftaran Asesi
      */
     public function pendaftaran()

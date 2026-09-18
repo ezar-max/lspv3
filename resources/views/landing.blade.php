@@ -34,7 +34,7 @@
             <div class="nav-aksi">
                 @auth
                     <a href="{{ route(auth()->user()->peran . '.dasbor') }}" class="tombol-cta-header">
-                        Dasbor
+                        Buka Dasbor
                     </a>
                 @else
                     <a href="{{ route('masuk') }}" class="tombol-masuk">

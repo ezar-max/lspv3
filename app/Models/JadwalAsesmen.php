@@ -60,6 +60,19 @@ class JadwalAsesmen extends Model
     }
 
     /**
+     * Tanggal Uji dalam bentuk objek Carbon
+     */
+    public function getTanggalUjiCarbonAttribute(): ?\Carbon\Carbon
+    {
+        if (empty($this->tanggal_uji)) {
+            return null;
+        }
+
+        $tz = config('app.timezone', 'Asia/Jakarta');
+        return \Carbon\Carbon::parse($this->tanggal_uji, $tz);
+    }
+
+    /**
      * Waktu Selesai dalam bentuk objek Carbon (Timezone Konsisten)
      */
     public function getWaktuSelesaiCarbonAttribute(): ?\Carbon\Carbon
@@ -72,44 +85,48 @@ class JadwalAsesmen extends Model
         $waktu = $this->waktu_selesai ? substr($this->waktu_selesai, 0, 5) : '23:59';
         $tanggal = \Carbon\Carbon::parse($this->tanggal_uji, $tz)->format('Y-m-d');
 
-        return \Carbon\Carbon::parse("{$tanggal} {$waktu}", $tz);
+        $carbonSelesai = \Carbon\Carbon::parse("{$tanggal} {$waktu}", $tz);
+
+        // Jika waktu selesai <= waktu mulai (misal lintas hari/tengah malam: 23:00 - 00:00 atau 22:00 - 02:00),
+        // maka waktu selesai berada di hari berikutnya (+1 hari)
+        $carbonMulai = $this->waktu_mulai_carbon;
+        if ($carbonMulai && $carbonSelesai->lessThanOrEqualTo($carbonMulai)) {
+            $carbonSelesai->addDay();
+        }
+
+        return $carbonSelesai;
     }
 
     /**
      * Sinkronisasi status seluruh jadwal secara real-time berdasarkan tanggal dan waktu WIB saat ini.
      * Aturan:
      * - 'dibatalkan' tetap 'dibatalkan'
-     * - Waktu saat ini > waktu_selesai -> otomatis 'selesai' (waktu habis)
+     * - Waktu saat ini > waktu_selesai (+ grace period) -> otomatis 'selesai' (waktu habis)
      * - Waktu saat ini di antara waktu_mulai dan waktu_selesai -> otomatis 'berlangsung'
-     * - Waktu saat ini < waktu_mulai -> otomatis 'terjadwal'
+     * - Waktu saat ini < waktu_mulai -> otomatis 'terjadwal' (tidak boleh 'selesai' jika belum mulai)
      */
     public static function syncAllStatuses(): void
     {
         $tz = config('app.timezone', 'Asia/Jakarta');
         $now = \Carbon\Carbon::now($tz);
-        $today = $now->toDateString();
-        $timeNow = $now->format('H:i:s');
-        $timeGraceThreshold = $now->copy()->subMinutes(10)->format('H:i:s');
+        $yesterday = $now->copy()->subDay()->toDateString();
 
-        // 1. Jadwal hari ini yang telah melewati waktu selesai + toleransi 10 menit -> otomatis 'selesai'
-        static::where('status_jadwal', '!=', 'dibatalkan')
-            ->where('status_jadwal', '!=', 'selesai')
-            ->where('tanggal_uji', '=', $today)
-            ->where('waktu_selesai', '<=', $timeGraceThreshold)
+        // 1. Jadwal tanggal lampau (< kemarin) yang berstatus 'terjadwal' -> otomatis 'selesai'
+        static::where('status_jadwal', '=', 'terjadwal')
+            ->where('tanggal_uji', '<', $yesterday)
             ->update(['status_jadwal' => 'selesai']);
 
-        // 2. Jadwal tanggal lampau (< hari ini) yang berstatus 'terjadwal' -> otomatis 'selesai'
-        // (Catatan: Jadwal tanggal lampau yang diset 'berlangsung' oleh Admin LSP dipertahankan sebagai manual override)
-        static::where('status_jadwal', '=', 'terjadwal')
-            ->where('tanggal_uji', '<', $today)
-            ->update(['status_jadwal' => 'selesai']);
+        // 2. Sinkronkan seluruh jadwal yang aktif/relevan (kemarin, hari ini, masa depan, atau yang belum selesai)
+        $kandidatJadwal = static::where('status_jadwal', '!=', 'dibatalkan')
+            ->where(function ($q) use ($yesterday) {
+                $q->where('tanggal_uji', '>=', $yesterday)
+                  ->orWhere('status_jadwal', '!=', 'selesai');
+            })
+            ->get();
 
-        // 3. Jadwal yang sedang dalam rentang waktu pelaksanaan hari ini -> otomatis 'berlangsung'
-        static::where('status_jadwal', '=', 'terjadwal')
-            ->where('tanggal_uji', '=', $today)
-            ->where('waktu_mulai', '<=', $timeNow)
-            ->where('waktu_selesai', '>', $timeNow)
-            ->update(['status_jadwal' => 'berlangsung']);
+        foreach ($kandidatJadwal as $jadwal) {
+            $jadwal->syncRealtimeStatus(true);
+        }
     }
 
     /**
@@ -117,8 +134,8 @@ class JadwalAsesmen extends Model
      */
     public function syncRealtimeStatus(bool $save = true): string
     {
-        if (in_array($this->status_jadwal, ['dibatalkan', 'selesai'])) {
-            return $this->status_jadwal;
+        if ($this->status_jadwal === 'dibatalkan') {
+            return 'dibatalkan';
         }
 
         $tz = config('app.timezone', 'Asia/Jakarta');
@@ -138,9 +155,16 @@ class JadwalAsesmen extends Model
         $newStatus = $this->status_jadwal;
         $endWithGrace = $end->copy()->addMinutes(10);
 
-        if ($now->isAfter($endWithGrace)) {
+        if ($now->isBefore($start)) {
+            // Jadwal belum dimulai: jika statusnya tidak sengaja 'selesai', wajib dikoreksi menjadi 'terjadwal'
+            if ($this->status_jadwal === 'selesai' || empty($this->status_jadwal)) {
+                $newStatus = 'terjadwal';
+            }
+        } elseif ($now->isAfter($endWithGrace)) {
+            // Waktu telah melewati batas toleransi selesai (10 menit) -> otomatis 'selesai'
             $newStatus = 'selesai';
-        } elseif ($this->status_jadwal === 'terjadwal' && $now->between($start, $end)) {
+        } elseif ($this->status_jadwal === 'terjadwal' && $now->between($start, $endWithGrace)) {
+            // Masuk dalam rentang pelaksanaan -> otomatis 'berlangsung'
             $newStatus = 'berlangsung';
         }
 
@@ -254,12 +278,20 @@ class JadwalAsesmen extends Model
      */
     public function isSudahSelesai(bool $isPostRequest = false, int $gracePeriodMinutes = 10): bool
     {
-        if ($this->status_jadwal === 'selesai') {
-            return true;
-        }
-
         if ($this->status_jadwal === 'berlangsung') {
             return false;
+        }
+
+        $start = $this->waktu_mulai_carbon;
+        $now = \Carbon\Carbon::now(config('app.timezone', 'Asia/Jakarta'));
+
+        // Jika waktu mulai masih di masa depan, jadwal belum dimulai, bukan selesai
+        if ($start && $now->isBefore($start)) {
+            return false;
+        }
+
+        if ($this->status_jadwal === 'selesai') {
+            return true;
         }
 
         $end = $this->waktu_selesai_carbon;
@@ -270,8 +302,6 @@ class JadwalAsesmen extends Model
         if ($isPostRequest) {
             $end = $end->copy()->addMinutes($gracePeriodMinutes);
         }
-
-        $now = \Carbon\Carbon::now(config('app.timezone', 'Asia/Jakarta'));
 
         return $now->isAfter($end);
     }
@@ -322,14 +352,16 @@ class JadwalAsesmen extends Model
             ];
         }
 
-        if ($this->status_jadwal === 'selesai' || ($end && $now->isAfter($end))) {
+        // Prioritaskan cek waktu belum dimulai sebelum cek status selesai
+        if ($start && $now->isBefore($start)) {
+            $diffHuman = $start->diffForHumans($now, ['parts' => 2, 'syntax' => \Carbon\CarbonInterface::DIFF_RELATIVE_TO_NOW]);
             return [
-                'status' => 'selesai',
+                'status' => 'belum_mulai',
                 'is_active' => false,
-                'is_before' => false,
-                'is_after' => true,
-                'is_manual' => ($this->status_jadwal === 'selesai'),
-                'pesan' => "Sesi asesmen telah berakhir pada pukul {$fmtSelesai} (Waktu Habis).",
+                'is_before' => true,
+                'is_after' => false,
+                'is_manual' => false,
+                'pesan' => "Ruang uji belum dibuka. Sesi asesmen dijadwalkan pada {$fmtTanggal} pukul {$fmtMulai} ({$diffHuman}).",
                 'mulai_at' => $start,
                 'selesai_at' => $end,
                 'formatted_mulai' => $fmtMulai,
@@ -338,15 +370,14 @@ class JadwalAsesmen extends Model
             ];
         }
 
-        if ($start && $now->isBefore($start)) {
-            $diffHuman = $now->diffForHumans($start, ['parts' => 2, 'syntax' => \Carbon\CarbonInterface::DIFF_RELATIVE_TO_NOW]);
+        if ($this->status_jadwal === 'selesai' || ($end && $now->isAfter($end))) {
             return [
-                'status' => 'belum_mulai',
+                'status' => 'selesai',
                 'is_active' => false,
-                'is_before' => true,
-                'is_after' => false,
-                'is_manual' => false,
-                'pesan' => "Ruang uji belum dibuka. Sesi asesmen dijadwalkan pada {$fmtTanggal} pukul {$fmtMulai} ({$diffHuman}).",
+                'is_before' => false,
+                'is_after' => true,
+                'is_manual' => ($this->status_jadwal === 'selesai'),
+                'pesan' => "Sesi asesmen telah berakhir pada pukul {$fmtSelesai} (Waktu Habis).",
                 'mulai_at' => $start,
                 'selesai_at' => $end,
                 'formatted_mulai' => $fmtMulai,

@@ -101,6 +101,11 @@ class AsesiTahapanController extends Controller
         $isApl02UnderReview = false;
         $isApl02Draft = true;
 
+        $ak07 = null;
+        $criteriaDefinitions = [];
+        $potensiDefinitions = [];
+        $isAk07Selesai = false;
+
         if ($pendaftaran) {
             $isDraft = in_array($pendaftaran->status_pendaftaran, ['draft', 'revisi']);
             $isDiajukan = ($pendaftaran->status_pendaftaran === 'diajukan');
@@ -132,24 +137,92 @@ class AsesiTahapanController extends Controller
             $isDitolakAsesor = $isApl02Rejected;
             $isAccAsesor = $isApl02Approved;
             $isAk01Selesai = (!empty($pendaftaran->tanda_tangan_asesi_ak01) || in_array($pendaftaran->status_ak01, ['disetujui_asesi', 'selesai']));
+
+            if ($isAk01Selesai) {
+                $pendaftaran->syncFromMasterAk07IfAvailable();
+                $pendaftaran->refresh();
+
+                $ak07 = $pendaftaran->ak07Adjustment;
+                $defaultChecklist = \App\Models\AssessmentAk07Adjustment::defaultChecklistItems();
+                $asesorSig = $pendaftaran->tanda_tangan_asesor_ak01 ?? $pendaftaran->asesor?->tanda_tangan;
+                $namaSkema = $pendaftaran->skema->nama_skema ?? 'Skema Sertifikasi';
+
+                if (!$ak07) {
+                    $defaultPotensi = 1;
+                    if ($pendaftaran->jawabanApl02 && $pendaftaran->jawabanApl02->count() > 0) {
+                        $totalJawaban = $pendaftaran->jawabanApl02->count();
+                        $totalBK = $pendaftaran->jawabanApl02->where('nilai_kompetensi', 'BK')->count();
+                        if ($totalBK > 0) {
+                            $defaultPotensi = ($totalBK / $totalJawaban) > 0.3 ? 3 : 2;
+                        }
+                    }
+                    $ak07 = \App\Models\AssessmentAk07Adjustment::create([
+                        'assessment_registration_id' => $pendaftaran->id,
+                        'potensi_asesi' => $defaultPotensi,
+                        'fase_penggunaan' => 'saat_pra_asesmen',
+                        'items_checklist' => $defaultChecklist,
+                        'status' => 'draft',
+                        'acuan_pembanding_disepakati' => "Standar Kompetensi Kerja Nasional Indonesia (SKKNI) {$namaSkema}",
+                        'metode_disepakati' => 'Observasi Demonstrasi & Wawancara',
+                        'instrumen_disepakati' => 'FR.IA.01, FR.IA.03',
+                        'catatan_asesor' => 'Seluruh proses asesmen disepakati dapat dilaksanakan dengan penyesuaian yang wajar sesuai kesepakatan bersama.',
+                        'asesor_signature' => $asesorSig,
+                        'asesor_signed_at' => $asesorSig ? now() : null,
+                    ]);
+                } elseif (empty($ak07->items_checklist)) {
+                    $ak07->update([
+                        'items_checklist' => $defaultChecklist,
+                        'acuan_pembanding_disepakati' => $ak07->acuan_pembanding_disepakati ?? "Standar Kompetensi Kerja Nasional Indonesia (SKKNI) {$namaSkema}",
+                        'metode_disepakati' => $ak07->metode_disepakati ?? 'Observasi Demonstrasi & Wawancara',
+                        'instrumen_disepakati' => $ak07->instrumen_disepakati ?? 'FR.IA.01, FR.IA.03',
+                        'catatan_asesor' => $ak07->catatan_asesor ?? 'Seluruh proses asesmen disepakati dapat dilaksanakan dengan penyesuaian yang wajar sesuai kesepakatan bersama.',
+                        'asesor_signature' => $ak07->asesor_signature ?? $asesorSig,
+                        'asesor_signed_at' => $ak07->asesor_signed_at ?? ($asesorSig ? now() : null),
+                    ]);
+                }
+            } else {
+                $ak07 = $pendaftaran->ak07Adjustment;
+            }
+
+            if ($ak07) {
+                $isAk07Selesai = !empty($ak07->asesi_signature);
+            }
         }
 
-        $currentStep = 1;
+        $criteriaDefinitions = \App\Models\AssessmentAk07Adjustment::CRITERIA_DEFINITIONS;
+        $potensiDefinitions = \App\Models\AssessmentAk07Adjustment::POTENSI_DEFINITIONS;
+
+        $activeStep = 1;
         if ($isAccAdmin && !$isApl02Approved) {
-            $currentStep = 2;
-        } elseif ($isApl02Approved) {
-            $currentStep = 3;
+            $activeStep = 2;
+        } elseif ($isApl02Approved && !$isAk01Selesai) {
+            $activeStep = 3;
+        } elseif ($isAk01Selesai && !$isAk07Selesai) {
+            $activeStep = 4;
+        } elseif ($isAk07Selesai) {
+            $activeStep = 5;
         }
 
-        $requestedStep = (int) $request->get('step', $currentStep);
-        // STRICT BACKEND GUARD: AK.01 (Step 3) HANYA boleh dibuka jika FR.APL.02 sudah disetujui (Approved) oleh Asesor
-        if ($requestedStep === 3 && (!$pendaftaran || !$pendaftaran->isAk01Unlocked())) {
-            return redirect()->route('asesi.tahapan', ['pendaftaran_id' => $pendaftaran?->id, 'step' => 2])
-                ->with('warning', 'Formulir FR.AK.01 belum tersedia. Silakan menunggu Formulir FR.APL.02 disetujui oleh asesor.');
-        }
+        $currentStep = $activeStep;
+        if ($request->filled('step')) {
+            $requestedStep = (int) $request->get('step');
+            // STRICT BACKEND GUARD: AK.01 (Step 3) HANYA boleh dibuka jika FR.APL.02 sudah disetujui (Approved) oleh Asesor
+            if ($requestedStep === 3 && (!$pendaftaran || !$pendaftaran->isAk01Unlocked())) {
+                return redirect()->route('asesi.tahapan', ['pendaftaran_id' => $pendaftaran?->id, 'step' => 2])
+                    ->with('warning', 'Formulir FR.AK.01 belum tersedia. Silakan menunggu Formulir FR.APL.02 disetujui oleh asesor.');
+            }
+            if ($requestedStep === 4 && (!$pendaftaran || !$isAk01Selesai)) {
+                return redirect()->route('asesi.tahapan', ['pendaftaran_id' => $pendaftaran?->id, 'step' => 3])
+                    ->with('warning', 'Formulir FR.AK.07 belum dapat diakses. Silakan selesaikan Formulir FR.AK.01 terlebih dahulu.');
+            }
+            if ($requestedStep === 5 && (!$pendaftaran || !$isAk07Selesai)) {
+                return redirect()->route('asesi.tahapan', ['pendaftaran_id' => $pendaftaran?->id, 'step' => 4])
+                    ->with('warning', 'Halaman tes/ujian belum dapat diakses. Silakan selesaikan Formulir FR.AK.07 terlebih dahulu.');
+            }
 
-        if ($requestedStep >= 1 && $requestedStep <= 3) {
-            $currentStep = $requestedStep;
+            if ($requestedStep >= 1 && $requestedStep <= 5) {
+                $currentStep = $requestedStep;
+            }
         }
 
         $draftData = [
@@ -203,8 +276,9 @@ class AsesiTahapanController extends Controller
         elseif ($isDiajukan && !$isAccAdmin) $progressPersen = 25;
         elseif ($isAccAdmin && ($statusApl02 === 'draft' || $statusApl02 === 'revision')) $progressPersen = 40;
         elseif ($statusApl02 === 'submitted' || $statusApl02 === 'under_review') $progressPersen = 60;
-        elseif ($isApl02Approved && !$isAk01Selesai) $progressPersen = 80;
-        elseif ($isAk01Selesai) $progressPersen = 100;
+        elseif ($isApl02Approved && !$isAk01Selesai) $progressPersen = 75;
+        elseif ($isAk01Selesai && !$isAk07Selesai) $progressPersen = 90;
+        elseif ($isAk07Selesai) $progressPersen = 100;
 
         $dokumenList = $pendaftaran ? $pendaftaran->dokumen : collect();
         $dokumenTeknis = collect($dokumenList)->filter(function ($dok) {
@@ -216,6 +290,77 @@ class AsesiTahapanController extends Controller
             ? $pendaftaran->skema->unitKompetensi->sum(fn($u) => $u->elemenKompetensi->count()) 
             : 0;
 
+        // Data Ujian / Tes Online (FR.IA) untuk Tahap 5
+        $statusSesi = [
+            'bisa_akses' => false,
+            'is_readonly' => true,
+            'status' => 'belum_mulai',
+            'pesan' => 'Jadwal asesmen belum dibuka.'
+        ];
+        $sisaDetik = 5400;
+        $detikMenujuMulai = 0;
+        $soalCbt = [];
+        $soalEsai = [];
+        $panduanPraktik = [];
+        $savedJawabanPg = [];
+        $savedJawabanEsai = [];
+        $savedPraktik = [];
+        $isSubmitted = false;
+        $dokumenPraktik = null;
+        $instrumenAsesi = [];
+        $defaultTab = 'cbt';
+
+        if ($pendaftaran) {
+            if ($pendaftaran->jadwal) {
+                $pendaftaran->jadwal->syncRealtimeStatus();
+                $timeStatus = $pendaftaran->assessment_time_status;
+                $statusSesi = [
+                    'bisa_akses' => $timeStatus['can_access'] ?? false,
+                    'is_readonly' => $timeStatus['is_readonly'] ?? true,
+                    'status' => $timeStatus['status'] ?? 'belum_mulai',
+                    'pesan' => $timeStatus['pesan'] ?? '',
+                    'formatted_mulai' => $timeStatus['formatted_mulai'] ?? '-',
+                    'formatted_selesai' => $timeStatus['formatted_selesai'] ?? '-',
+                    'formatted_tanggal' => $timeStatus['formatted_tanggal'] ?? '-',
+                ];
+                $sisaDetik = $pendaftaran->jadwal->sisa_detik_ujian ?? 5400;
+                $detikMenujuMulai = $pendaftaran->jadwal->detik_menuju_mulai ?? 0;
+            }
+
+            $soalCbt = \App\Http\Controllers\AsesiUjianController::getDaftarSoalCbt($pendaftaran->skema);
+            $soalEsai = \App\Http\Controllers\AsesiUjianController::getDaftarSoalEsai($pendaftaran->skema);
+            $panduanPraktik = \App\Http\Controllers\AsesiUjianController::getPanduanPraktikIa02($pendaftaran->skema);
+
+            $recordIa05 = \App\Models\IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.05')->first();
+            $recordIa06 = \App\Models\IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.06')->first();
+            $recordIa02 = \App\Models\IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.02')->first();
+
+            $savedJawabanPg = $recordIa05 ? ($recordIa05->data_jawaban['jawaban_pg'] ?? []) : [];
+            $savedJawabanEsai = $recordIa06 ? ($recordIa06->data_jawaban['jawaban_esai'] ?? []) : [];
+            $savedPraktik = $recordIa02 ? ($recordIa02->data_jawaban ?? []) : [];
+
+            $isSubmitted = ($recordIa05 && $recordIa05->status === 'submitted') 
+                || ($pendaftaran->status_pendaftaran === 'selesai');
+
+            $dokumenPraktik = $pendaftaran->dokumen ? $pendaftaran->dokumen->where('jenis_dokumen', 'Hasil Proyek / Laporan Praktik FR.IA.02')->first() : null;
+
+            $instrumenAsesi = $pendaftaran->skema ? $pendaftaran->skema->getInstrumenAsesi() : [];
+            $requestedTab = $request->get('tab');
+            if ($requestedTab && in_array($requestedTab, ['cbt', 'esai', 'praktik', 'proyek'])) {
+                $defaultTab = $requestedTab;
+            } elseif ($pendaftaran->skema) {
+                if ($pendaftaran->skema->hasInstrumen('FR.IA.05')) {
+                    $defaultTab = 'cbt';
+                } elseif ($pendaftaran->skema->hasInstrumen('FR.IA.06')) {
+                    $defaultTab = 'esai';
+                } elseif ($pendaftaran->skema->hasInstrumen('FR.IA.02')) {
+                    $defaultTab = 'praktik';
+                } elseif (!empty($instrumenAsesi)) {
+                    $defaultTab = array_key_first($instrumenAsesi);
+                }
+            }
+        }
+
         return view('asesi.tahapan.index', compact(
             'pengguna',
             'profil',
@@ -226,6 +371,7 @@ class AsesiTahapanController extends Controller
             'ditolakSkemaIds',
             'runningSkemaIds',
             'currentStep',
+            'activeStep',
             'isDraft',
             'isDiajukan',
             'isDitolakAdmin',
@@ -234,6 +380,10 @@ class AsesiTahapanController extends Controller
             'isDitolakAsesor',
             'isAccAsesor',
             'isAk01Selesai',
+            'isAk07Selesai',
+            'ak07',
+            'criteriaDefinitions',
+            'potensiDefinitions',
             'statusApl02',
             'isApl02Approved',
             'isApl02Revision',
@@ -249,7 +399,20 @@ class AsesiTahapanController extends Controller
             'dokumenList',
             'dokumenTeknis',
             'progressPersen',
-            'totalElemen'
+            'totalElemen',
+            'statusSesi',
+            'sisaDetik',
+            'detikMenujuMulai',
+            'soalCbt',
+            'soalEsai',
+            'panduanPraktik',
+            'savedJawabanPg',
+            'savedJawabanEsai',
+            'savedPraktik',
+            'isSubmitted',
+            'dokumenPraktik',
+            'instrumenAsesi',
+            'defaultTab'
         ));
     }
 
@@ -891,16 +1054,30 @@ class AsesiTahapanController extends Controller
             }
         }
 
+        if ($request->routeIs('asesi.ak01.sign')) {
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Persetujuan Asesmen (FR.AK.01) telah berhasil ditandatangani. Silakan menunggu sesi asesmen Anda dimulai sesuai jadwal.',
+                    'redirect_url' => route('asesi.dashboard', ['pendaftaran_id' => $pendaftaran->id]),
+                ]);
+            }
+
+            return redirect()->route('asesi.dashboard', ['pendaftaran_id' => $pendaftaran->id])
+                ->with('notif_ak01_selesai', true)
+                ->with('sukses', 'Formulir FR.AK.01 Persetujuan Asesmen & Kerahasiaan telah berhasil ditandatangani. Silakan menunggu sesi asesmen Anda dimulai sesuai jadwal.');
+        }
+
         if ($request->wantsJson() || $request->ajax()) {
             return response()->json([
                 'success' => true,
-                'message' => 'Persetujuan Asesmen (FR.AK.01) telah berhasil ditandatangani. Silakan menunggu sesi asesmen Anda dimulai sesuai jadwal.',
-                'redirect_url' => route('asesi.dashboard', ['pendaftaran_id' => $pendaftaran->id]),
+                'message' => 'Persetujuan Asesmen (FR.AK.01) telah berhasil ditandatangani. Formulir otomatis beralih ke Formulir FR.AK.07 (Penyesuaian Asesmen).',
+                'redirect_url' => route('asesi.tahapan', ['step' => 4, 'pendaftaran_id' => $pendaftaran->id]),
             ]);
         }
 
-        return redirect()->route('asesi.dashboard', ['pendaftaran_id' => $pendaftaran->id])
+        return redirect()->route('asesi.tahapan', ['step' => 4, 'pendaftaran_id' => $pendaftaran->id])
             ->with('notif_ak01_selesai', true)
-            ->with('sukses', 'Formulir FR.AK.01 Persetujuan Asesmen & Kerahasiaan telah berhasil ditandatangani. Silakan menunggu sesi asesmen Anda dimulai sesuai jadwal.');
+            ->with('sukses', 'Formulir FR.AK.01 Persetujuan Asesmen & Kerahasiaan telah berhasil ditandatangani. Formulir langsung beralih ke FR.AK.07 (Penyesuaian Asesmen).');
     }
 }

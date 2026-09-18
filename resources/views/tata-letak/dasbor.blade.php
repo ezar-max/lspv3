@@ -129,20 +129,6 @@
                                         <div class="font-semibold text-xs leading-tight">Tahapan Formulir</div>
                                         <div class="text-[10px] text-slate-400 mt-0.5">Pendaftaran, asesmen mandiri, dan persetujuan</div>
                                     </a>
-
-                                    <a href="{{ route('asesi.ak07') }}" 
-                                       @click="openDropdown = null"
-                                       class="block px-3 py-2 rounded-xl transition-colors {{ request()->routeIs('asesi.ak07*') ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900' }}">
-                                        <div class="font-semibold text-xs leading-tight">Penyesuaian Asesmen (FR.AK.07)</div>
-                                        <div class="text-[10px] text-slate-400 mt-0.5">Ceklis penyesuaian yang wajar & beralasan</div>
-                                    </a>
-
-                                    <a href="{{ route('asesi.ujian') }}" 
-                                       @click="openDropdown = null"
-                                       class="block px-3 py-2 rounded-xl transition-colors {{ request()->routeIs('asesi.ujian*') ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900' }}">
-                                        <div class="font-semibold text-xs leading-tight">Ruang Ujian Online (FR.IA)</div>
-                                        <div class="text-[10px] text-slate-400 mt-0.5">Pelaksanaan tes tertulis CBT dan instrumen asesmen</div>
-                                    </a>
                                 </div>
                             </div>
 
@@ -711,12 +697,6 @@
                         <a href="{{ route('asesi.tahapan') }}" class="block px-3 py-1.5 rounded-lg {{ (request()->routeIs('asesi.tahapan*') || request()->routeIs('asesi.ak01*') || request()->routeIs('asesi.apl02*') || request()->routeIs('asesi.formulir*') || request()->routeIs('asesi.biodata*') || request()->routeIs('asesi.pendaftaran*')) ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-slate-600' }}">
                             Tahapan Formulir
                         </a>
-                        <a href="{{ route('asesi.ak07') }}" class="block px-3 py-1.5 rounded-lg {{ request()->routeIs('asesi.ak07*') ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-slate-600' }}">
-                            Penyesuaian Asesmen (FR.AK.07)
-                        </a>
-                        <a href="{{ route('asesi.ujian') }}" class="block px-3 py-1.5 rounded-lg {{ request()->routeIs('asesi.ujian*') ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-slate-600' }}">
-                            Ruang Ujian Online (FR.IA)
-                        </a>
                     </div>
                     <div class="border-t border-slate-100 pt-1.5 space-y-1">
                         <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-3">Hasil & Dokumen</span>
@@ -859,13 +839,6 @@
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row justify-between items-center gap-3 text-xs text-slate-500">
                 <div>
                     &copy; {{ date('Y') }} <strong>{{ config('lsp.nama_lsp', 'LSP-P1 SMKN 1 Gunungputri') }}</strong> &bull; Lisensi BNSP: <strong class="text-slate-700">{{ config('lsp.nomor_lisensi', 'BNSP-LSP-2629-ID') }}</strong>
-                </div>
-                <div>
-                    <a href="{{ config('lsp.url_cek_lisensi', 'https://bnsp.go.id') }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 text-blue-600 hover:text-blue-800 font-semibold bg-blue-50/70 border border-blue-100 px-3 py-1.5 rounded-lg transition-colors">
-                        <i class="fa-solid fa-shield-check"></i>
-                        <span>Cek Lisensi Resmi di BNSP</span>
-                        <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
-                    </a>
                 </div>
             </div>
         </footer>
@@ -1044,11 +1017,6 @@
             <footer class="footer-dasbor no-print" style="margin-top: 3.5rem; padding: 1.5rem 0 0.5rem 0; border-top: 1px solid var(--biru-soft); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; font-size: 0.82rem; color: var(--abu-teks);">
                 <div>
                     &copy; {{ date('Y') }} <strong>{{ config('lsp.nama_lsp', 'LSP-P1 SMKN 1 Gunungputri') }}</strong> &bull; Lisensi BNSP: <strong style="color: var(--biru-malam);">{{ config('lsp.nomor_lisensi', 'BNSP-LSP-2629-ID') }}</strong> (SK: {{ config('lsp.no_sk_lisensi', 'KEP.1215/BNSP/V/2025') }})
-                </div>
-                <div>
-                    <a href="{{ config('lsp.url_cek_lisensi', 'https://bnsp.go.id') }}" target="_blank" rel="noopener noreferrer" style="color: var(--biru-utama); text-decoration: none; font-weight: 700; display: inline-flex; align-items: center; gap: 0.35rem; background: var(--biru-bg); padding: 0.35rem 0.75rem; border-radius: 6px; border: 1px solid var(--biru-soft);">
-                        <i class="fa-solid fa-shield-check"></i> Cek Lisensi Resmi di BNSP <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 0.7rem;"></i>
-                    </a>
                 </div>
             </footer>
         </main>

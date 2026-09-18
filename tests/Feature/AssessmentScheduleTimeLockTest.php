@@ -348,51 +348,63 @@ class AssessmentScheduleTimeLockTest extends TestCase
     /** 6. Time-Lock: Grace Period (10 minutes) allows submission right after schedule end time */
     public function test_grace_period_allows_submission_within_10_minutes(): void
     {
-        // Suppose schedule ended 4 minutes ago today
-        $now = now();
-        $this->jadwalLas->update([
-            'tanggal_uji' => $now->toDateString(),
-            'waktu_mulai' => $now->copy()->subHours(2)->format('H:i'),
-            'waktu_selesai' => $now->copy()->subMinutes(4)->format('H:i'),
-            'status_jadwal' => 'terjadwal'
-        ]);
+        $now = Carbon::create(2026, 9, 18, 14, 0, 0, config('app.timezone', 'Asia/Jakarta'));
+        Carbon::setTestNow($now);
 
-        // Within grace period (4 min <= 10 min), isSudahSelesai(true, 10) is false
-        $this->assertFalse($this->jadwalLas->isSudahSelesai(true, 10));
+        try {
+            // Suppose schedule ended 4 minutes ago today
+            $this->jadwalLas->update([
+                'tanggal_uji' => $now->toDateString(),
+                'waktu_mulai' => $now->copy()->subHours(2)->format('H:i'),
+                'waktu_selesai' => $now->copy()->subMinutes(4)->format('H:i'),
+                'status_jadwal' => 'terjadwal'
+            ]);
 
-        // Autosave succeeds under grace period
-        $response = $this->actingAs($this->asesiLas)->postJson(route('asesi.ujian.autosave'), [
-            'pendaftaran_id' => $this->pendaftaranLas->id,
-            'tipe' => 'cbt',
-            'no' => 1,
-            'jawaban' => 'A'
-        ]);
-        $response->assertOk();
+            // Within grace period (4 min <= 10 min), isSudahSelesai(true, 10) is false
+            $this->assertFalse($this->jadwalLas->isSudahSelesai(true, 10));
+
+            // Autosave succeeds under grace period
+            $response = $this->actingAs($this->asesiLas)->postJson(route('asesi.ujian.autosave'), [
+                'pendaftaran_id' => $this->pendaftaranLas->id,
+                'tipe' => 'cbt',
+                'no' => 1,
+                'jawaban' => 'A'
+            ]);
+            $response->assertOk();
+        } finally {
+            Carbon::setTestNow(null);
+        }
     }
 
     /** 7. Time-Lock: Submission after grace period expires is rejected */
     public function test_submission_after_grace_period_is_rejected(): void
     {
-        // Suppose schedule ended 30 minutes ago today
-        $now = now();
-        $this->jadwalLas->update([
-            'tanggal_uji' => $now->toDateString(),
-            'waktu_mulai' => $now->copy()->subHours(3)->format('H:i'),
-            'waktu_selesai' => $now->copy()->subMinutes(30)->format('H:i'),
-            'status_jadwal' => 'terjadwal'
-        ]);
+        $now = Carbon::create(2026, 9, 18, 14, 0, 0, config('app.timezone', 'Asia/Jakarta'));
+        Carbon::setTestNow($now);
 
-        // After grace period, isSudahSelesai(true, 10) is true
-        $this->assertTrue($this->jadwalLas->isSudahSelesai(true, 10));
+        try {
+            // Suppose schedule ended 30 minutes ago today
+            $this->jadwalLas->update([
+                'tanggal_uji' => $now->toDateString(),
+                'waktu_mulai' => $now->copy()->subHours(3)->format('H:i'),
+                'waktu_selesai' => $now->copy()->subMinutes(30)->format('H:i'),
+                'status_jadwal' => 'terjadwal'
+            ]);
 
-        // Autosave blocked with 403
-        $response = $this->actingAs($this->asesiLas)->postJson(route('asesi.ujian.autosave'), [
-            'pendaftaran_id' => $this->pendaftaranLas->id,
-            'tipe' => 'cbt',
-            'no' => 1,
-            'jawaban' => 'A'
-        ]);
-        $response->assertStatus(403);
+            // After grace period, isSudahSelesai(true, 10) is true
+            $this->assertTrue($this->jadwalLas->isSudahSelesai(true, 10));
+
+            // Autosave blocked with 403
+            $response = $this->actingAs($this->asesiLas)->postJson(route('asesi.ujian.autosave'), [
+                'pendaftaran_id' => $this->pendaftaranLas->id,
+                'tipe' => 'cbt',
+                'no' => 1,
+                'jawaban' => 'A'
+            ]);
+            $response->assertStatus(403);
+        } finally {
+            Carbon::setTestNow(null);
+        }
     }
 
     /** 8. Time-Lock: Cancelled schedule is rejected */
@@ -451,4 +463,77 @@ class AssessmentScheduleTimeLockTest extends TestCase
         $asesorLiveResp->assertOk();
         $asesorLiveResp->assertSee('Asesmen Dimulai (Sesi Aktif)');
     }
+
+    /** 10. Jadwal yang belum dimulai (termasuk lintas tengah malam: 23:00 - 00:00) tidak boleh berstatus selesai */
+    public function test_unstarted_schedule_with_cross_midnight_or_future_time_is_terjadwal_not_selesai(): void
+    {
+        $now = Carbon::create(2026, 9, 18, 20, 0, 0, config('app.timezone', 'Asia/Jakarta'));
+        Carbon::setTestNow($now);
+
+        try {
+            // Buat jadwal malam ini 20:30 - 00:00 WIB (belum mulai pada jam 20:00)
+            $jadwalMalam = JadwalAsesmen::create([
+                'kode_jadwal' => 'JDW-MIDNIGHT-01',
+                'skema_id' => $this->skemaLas->id,
+                'asesor_id' => $this->asesorLas->id,
+                'nama_tuk' => 'Bengkel Pengelasan Malam',
+                'tanggal_uji' => $now->toDateString(),
+                'waktu_mulai' => $now->copy()->addMinutes(30)->format('H:i'),
+                'waktu_selesai' => '00:00',
+                'kuota' => 10,
+                'status_jadwal' => 'selesai', // disimulasikan sebelumnya salah status 'selesai'
+            ]);
+
+            // Verifikasi waktu selesai carbon adalah hari berikutnya (lintas hari)
+            $this->assertTrue($jadwalMalam->waktu_selesai_carbon->isAfter($jadwalMalam->waktu_mulai_carbon));
+
+            // Karena waktu mulai belum tiba, isBelumMulai() harus true dan isSudahSelesai() harus false
+            $this->assertTrue($jadwalMalam->isBelumMulai());
+            $this->assertFalse($jadwalMalam->isSudahSelesai());
+
+            // Jalankan sinkronisasi status
+            JadwalAsesmen::syncAllStatuses();
+
+            // Status di database wajib terkoreksi menjadi 'terjadwal', BUKAN 'selesai'
+            $jadwalMalamFresh = $jadwalMalam->fresh();
+            $this->assertEquals('terjadwal', $jadwalMalamFresh->status_jadwal);
+            $this->assertEquals('belum_mulai', $jadwalMalamFresh->time_status['status']);
+        } finally {
+            Carbon::setTestNow(null);
+        }
+    }
+
+    /** 11. Halaman Manajemen Jadwal Admin menampilkan lencana 'Terjadwal' untuk sesi yang belum dimulai */
+    public function test_admin_schedule_management_view_shows_terjadwal_for_unstarted_session(): void
+    {
+        $admin = Pengguna::create([
+            'nama_lengkap' => 'Admin Penguji LSP',
+            'email' => 'admin.jadwal@lsp.test',
+            'kata_sandi' => bcrypt('password'),
+            'peran' => 'admin',
+        ]);
+
+        $now = Carbon::now(config('app.timezone', 'Asia/Jakarta'));
+        $futureTime = $now->copy()->addHours(2);
+
+        $jadwalFuture = JadwalAsesmen::create([
+            'kode_jadwal' => 'JDW-FUTURE-99',
+            'skema_id' => $this->skemaLas->id,
+            'asesor_id' => $this->asesorLas->id,
+            'nama_tuk' => 'Bengkel Pengelasan',
+            'tanggal_uji' => $futureTime->toDateString(),
+            'waktu_mulai' => $futureTime->format('H:i'),
+            'waktu_selesai' => $futureTime->copy()->addHours(3)->format('H:i'),
+            'kuota' => 10,
+            'status_jadwal' => 'selesai', // Status awal salah
+        ]);
+
+        $response = $this->actingAs($admin)->get(route('admin.manajemen-jadwal'));
+        $response->assertOk();
+
+        // Harus menampilkan badge Terjadwal dan status di DB sudah menjadi 'terjadwal'
+        $response->assertSee('Terjadwal');
+        $this->assertEquals('terjadwal', $jadwalFuture->fresh()->status_jadwal);
+    }
 }
+

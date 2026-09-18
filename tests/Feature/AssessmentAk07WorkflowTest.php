@@ -391,4 +391,92 @@ class AssessmentAk07WorkflowTest extends TestCase
         $respDetail->assertSee('FR.AK.07');
         $respDetail->assertSee('Ceklis Penyesuaian yang Wajar dan Beralasan');
     }
+
+    /**
+     * 13. Tombol navbar langsung ke FR.AK.07 telah dihapus dari tata-letak navbar
+     */
+    public function test_navbar_does_not_render_ak07_direct_link(): void
+    {
+        $respTahapan = $this->actingAs($this->asesi)->get(route('asesi.tahapan'));
+        $respTahapan->assertStatus(200);
+        $respTahapan->assertDontSee('Penyesuaian Asesmen (FR.AK.07)');
+
+        $respJadwal = $this->actingAs($this->asesi)->get(route('asesi.jadwal'));
+        $respJadwal->assertStatus(200);
+        $respJadwal->assertDontSee('Penyesuaian Asesmen (FR.AK.07)');
+    }
+
+    /**
+     * 14. Setelah mengisi FR.AK.01 di tahapan formulir, asesi langsung otomatis diarahkan ke FR.AK.07 di Step 4
+     */
+    public function test_ak01_completion_in_tahapan_redirects_to_ak07(): void
+    {
+        // Pengiriman form AK.01 dari tahapan formulir
+        $resp = $this->actingAs($this->asesi)->post(route('asesi.tahapan.ak01'), [
+            'pendaftaran_id' => $this->pendaftaran->id,
+            'tanda_tangan_asesi_ak01' => 'signatures/asesi_profil_tersimpan.png',
+        ]);
+
+        $resp->assertRedirect(route('asesi.tahapan', ['step' => 4, 'pendaftaran_id' => $this->pendaftaran->id]));
+        $resp->assertSessionHas('sukses');
+
+        // Pengujian via AJAX
+        $respAjax = $this->actingAs($this->asesi)->postJson(route('asesi.tahapan.ak01'), [
+            'pendaftaran_id' => $this->pendaftaran->id,
+            'tanda_tangan_asesi_ak01' => 'signatures/asesi_profil_tersimpan.png',
+        ]);
+
+        $respAjax->assertStatus(200);
+        $respAjax->assertJson([
+            'success' => true,
+            'redirect_url' => route('asesi.tahapan', ['step' => 4, 'pendaftaran_id' => $this->pendaftaran->id]),
+        ]);
+
+        // Halaman tahapan otomatis beralih dan memuat Formulir FR.AK.07
+        $this->pendaftaran->refresh();
+        $respTahapan = $this->actingAs($this->asesi)->get(route('asesi.tahapan', ['step' => 4, 'pendaftaran_id' => $this->pendaftaran->id]));
+        $respTahapan->assertStatus(200);
+        $respTahapan->assertSee('FR.AK.07');
+        $respTahapan->assertSee('Penyesuaian yang Wajar dan Beralasan');
+    }
+
+    /**
+     * 15. Tombol navbar langsung ke Ruang Ujian Online telah dihapus dari tata-letak navbar
+     */
+    public function test_navbar_does_not_render_ruang_ujian_direct_link(): void
+    {
+        $respTahapan = $this->actingAs($this->asesi)->get(route('asesi.tahapan'));
+        $respTahapan->assertStatus(200);
+        $respTahapan->assertDontSee('Ruang Ujian Online (FR.IA)');
+
+        $respJadwal = $this->actingAs($this->asesi)->get(route('asesi.jadwal'));
+        $respJadwal->assertStatus(200);
+        $respJadwal->assertDontSee('Ruang Ujian Online (FR.IA)');
+    }
+
+    /**
+     * 16. Setelah menandatangani dan submit FR.AK.07, asesi langsung diarahkan ke halaman ujian/tes baru di Step 5
+     */
+    public function test_ak07_completion_in_tahapan_redirects_to_test_page_step_5(): void
+    {
+        // Pastikan AK01 selesai terlebih dahulu
+        $this->pendaftaran->update([
+            'status_ak01' => 'selesai',
+            'tanda_tangan_asesi_ak01' => 'signatures/dummy_asesi.png',
+            'tanda_tangan_asesor_ak01' => 'signatures/profil_asesor_a.png',
+        ]);
+
+        $respSign = $this->actingAs($this->asesi)->post(route('asesi.ak07.sign-asesi', $this->pendaftaran->id), [
+            'tanda_tangan_asesi' => 'signatures/asesi_sign_ak07.png',
+        ]);
+
+        $respSign->assertRedirect(route('asesi.tahapan', ['pendaftaran_id' => $this->pendaftaran->id, 'step' => 5]));
+        $respSign->assertSessionHas('sukses');
+
+        // Buka halaman tahapan tanpa parameter step: otomatis berada di Step 5
+        $respTahapan = $this->actingAs($this->asesi)->get(route('asesi.tahapan', ['pendaftaran_id' => $this->pendaftaran->id]));
+        $respTahapan->assertStatus(200);
+        $respTahapan->assertSee('FR.IA.05 (Ujian Teori CBT PG)');
+        $respTahapan->assertSee('Palet Nomor Soal');
+    }
 }
