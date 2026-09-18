@@ -26,7 +26,7 @@
     $isSignedByAsesi = !empty($pendaftaran->tanda_tangan_asesi_ak01) || in_array($pendaftaran->status_ak01, ['disetujui_asesi', 'selesai']);
     $isSignedByAsesor = !empty($pendaftaran->tanda_tangan_asesor_ak01) || in_array($pendaftaran->status_ak01, ['disetujui_asesor', 'selesai']);
     $isLocked = true; // Formulir kesepakatan selalu read-only untuk Asesi
-    $savedBukti = (array) ($pendaftaran->bukti_dikumpulkan ?? ['Observasi Praktik Demonstrasi', 'Uji Tertulis (CBT)', 'Tanya Jawab Lisan']);
+    $savedBukti = (array) ($pendaftaran->bukti_dikumpulkan ?? []);
 
     // Ambil tanda tangan yang sudah ada secara hierarki:
     // 1. TTD AK.01 jika sudah ada
@@ -353,9 +353,10 @@
                         <span>Jenis Tempat Uji Kompetensi (TUK)</span>
                         <span class="text-[10px] text-slate-500 font-medium bg-slate-100 px-2 py-0.5 rounded-md">Ditetapkan</span>
                     </label>
-                    <input type="hidden" name="tuk_type" value="{{ old('tuk_type', $pendaftaran->tuk_type ?? 'Sewaktu') }}">
+                    <input type="hidden" name="tuk_type" value="{{ old('tuk_type', $pendaftaran->tuk_type ?? '') }}">
                     <select disabled 
                             class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 font-semibold cursor-not-allowed opacity-90">
+                        <option value="" {{ old('tuk_type', $pendaftaran->tuk_type) === null || old('tuk_type', $pendaftaran->tuk_type) === '' ? 'selected' : '' }}></option>
                         <option value="Sewaktu" {{ old('tuk_type', $pendaftaran->tuk_type) === 'Sewaktu' ? 'selected' : '' }}>TUK Sewaktu (SMKN 1 Gunungputri / Sekolah Mitra)</option>
                         <option value="Tempat Kerja" {{ old('tuk_type', $pendaftaran->tuk_type) === 'Tempat Kerja' ? 'selected' : '' }}>TUK Tempat Kerja / Fasilitas Industri (DUDI)</option>
                         <option value="Mandiri" {{ old('tuk_type', $pendaftaran->tuk_type) === 'Mandiri' ? 'selected' : '' }}>TUK Mandiri</option>

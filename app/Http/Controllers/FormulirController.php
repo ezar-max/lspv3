@@ -276,15 +276,12 @@ class FormulirController extends Controller
         $dummy->setRelation('jawabanApl02', collect());
         $dummy->setRelation('iaPenilaian', collect());
 
-        $dummy->tuk_type = 'Sewaktu';
-        $dummy->bukti_dikumpulkan = ['Observasi Praktik Demonstrasi', 'Uji Tertulis (CBT)', 'Tanya Jawab Lisan'];
+        $dummy->tuk_type = null;
+        $dummy->bukti_dikumpulkan = [];
 
         if ($skema->exists) {
             $masterAk01 = MasterAk01::where('skema_id', $skema->id)->first();
             if ($masterAk01) {
-                $dummy->tuk_type = $masterAk01->tuk_type;
-                $dummy->bukti_dikumpulkan = $masterAk01->bukti_dikumpulkan;
-                $dummy->bukti_dikumpulkan_lainnya = $masterAk01->bukti_dikumpulkan_lainnya;
                 $dummy->tanda_tangan_asesor_ak01 = $masterAk01->tanda_tangan_asesor;
                 $dummy->tanggal_ttd_asesor_ak01 = $masterAk01->tanggal_ttd_asesor;
             }
@@ -1150,10 +1147,6 @@ class FormulirController extends Controller
         if (auth()->check() && auth()->user()->peran === 'asesi' && !$pendaftaran->isAk01Unlocked()) {
             return redirect()->route('asesi.tahapan', ['pendaftaran_id' => $pendaftaran->id, 'step' => 2])
                 ->with('warning', 'Formulir FR.AK.01 belum tersedia. Silakan menunggu Formulir FR.APL.02 disetujui oleh asesor.');
-        }
-
-        if ($pendaftaran && $pendaftaran->exists) {
-            $pendaftaran->syncFromMasterAk01IfAvailable();
         }
 
         return view('formulir.fr-ak-01', compact('pendaftaran'));

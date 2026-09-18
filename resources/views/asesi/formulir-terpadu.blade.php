@@ -1521,7 +1521,7 @@
                                 Ditetapkan Asesor / LSP
                             </span>
                         </div>
-                        @php $tukDipilih = $pendaftaran->tuk_type ?? 'Sewaktu'; @endphp
+                        @php $tukDipilih = $pendaftaran->tuk_type ?? ''; @endphp
                         <input type="hidden" name="tuk_type" value="{{ $tukDipilih }}">
                         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
                             <label style="display: flex; align-items: center; gap: 0.5rem; font-weight: 700; cursor: not-allowed; opacity: 0.85;">
@@ -1544,7 +1544,7 @@
                                 Ditetapkan Asesor / LSP
                             </span>
                         </div>
-                        @php $buktiList = (array) ($pendaftaran->bukti_dikumpulkan ?? ['TL : Verifikasi Portofolio', 'L : Observasi Langsung / Praktik']); @endphp
+                        @php $buktiList = (array) ($pendaftaran->bukti_dikumpulkan ?? []); @endphp
                         @foreach($buktiList as $b)
                             <input type="hidden" name="bukti_dikumpulkan[]" value="{{ $b }}">
                         @endforeach
@@ -1570,7 +1570,7 @@
                             <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #475569; margin-bottom: 0.35rem;">Bukti / Metode Lainnya:</label>
                             <input type="hidden" name="bukti_dikumpulkan_lainnya" value="{{ old('bukti_dikumpulkan_lainnya', $pendaftaran->bukti_dikumpulkan_lainnya) }}">
                             <div style="font-size: 0.85rem; padding: 0.4rem 0.75rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: var(--radius-sm); color: #334155;">
-                                {{ $pendaftaran->bukti_dikumpulkan_lainnya ?: 'Tidak ada catatan bukti lainnya.' }}
+                                {{ $pendaftaran->bukti_dikumpulkan_lainnya ?: '' }}
                             </div>
                         </div>
                     </div>

@@ -154,7 +154,7 @@
                 <tr>
                     <td colspan="2" style="font-weight: 600;">TUK</td>
                     <td>:</td>
-                    <td>Sewaktu / Tempat Kerja / Mandiri* (<strong>{{ $pendaftaran->tuk_type ?? 'Sewaktu' }}</strong>)</td>
+                    <td>Sewaktu / Tempat Kerja / Mandiri* (<strong>{{ $pendaftaran->tuk_type ?? '' }}</strong>)</td>
                 </tr>
                 <tr>
                     <td colspan="2" style="font-weight: 600;">Nama Asesor</td>

@@ -232,8 +232,8 @@ class MapaWorkflowService
 
         // Cek master MAPA.02 skema untuk duplikasi matriks peta yang telah diselaraskan
         $master = Mapa02::where('skema_id', $pendaftaran->skema_id)->whereNull('pendaftaran_id')->first();
-        $defaultMatrix = $master?->matriks_peta ?: $this->generateDefaultMatrix($pendaftaran->skema);
-        $defaultCatatan = $master?->catatan_asesor ?: 'Peta instrumen asesmen disusun berdasarkan keselarasan standar kompetensi SKKNI dan perangkat MUK LSP SMKN 1 Gunungputri.';
+        $defaultMatrix = ($master && !empty($master->matriks_peta)) ? $master->matriks_peta : [];
+        $defaultCatatan = $master?->catatan_asesor ?: null;
 
         return Mapa02::create([
             'pendaftaran_id' => $pendaftaran->id,
@@ -258,14 +258,12 @@ class MapaWorkflowService
             return $existing;
         }
 
-        $defaultMatrix = $this->generateDefaultMatrix($skema);
-
-        return Mapa02::create([
+        return new Mapa02([
             'pendaftaran_id' => null,
             'skema_id' => $skema->id,
             'asesor_id' => $asesorId,
-            'matriks_peta' => $defaultMatrix,
-            'catatan_asesor' => 'Peta instrumen asesmen disusun berdasarkan keselarasan standar kompetensi SKKNI dan perangkat MUK LSP SMKN 1 Gunungputri.',
+            'matriks_peta' => [],
+            'catatan_asesor' => null,
             'status_mapa' => 'draft',
         ]);
     }

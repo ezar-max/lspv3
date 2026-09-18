@@ -1766,8 +1766,9 @@
                                     <span>Jenis Tempat Uji Kompetensi (TUK)</span>
                                     <span class="text-slate-500 font-semibold text-[11px] normal-case bg-slate-100 px-2 py-0.5 rounded">Ditetapkan Asesor / LSP</span>
                                 </label>
-                                <input type="hidden" name="tuk_type" value="{{ old('tuk_type', $pendaftaran->tuk_type ?? 'Sewaktu') }}">
+                                <input type="hidden" name="tuk_type" value="{{ old('tuk_type', $pendaftaran->tuk_type ?? '') }}">
                                 <select disabled class="w-full bg-slate-100 border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-800 outline-hidden font-medium opacity-90 cursor-not-allowed">
+                                    <option value="" {{ old('tuk_type', $pendaftaran->tuk_type) === null || old('tuk_type', $pendaftaran->tuk_type) === '' ? 'selected' : '' }}></option>
                                     <option value="Sewaktu" {{ old('tuk_type', $pendaftaran->tuk_type) === 'Sewaktu' ? 'selected' : '' }}>TUK Sewaktu (Sekolah/Mitra)</option>
                                     <option value="Tempat Kerja" {{ old('tuk_type', $pendaftaran->tuk_type) === 'Tempat Kerja' ? 'selected' : '' }}>TUK Tempat Kerja / Industri (DUDI)</option>
                                     <option value="Mandiri" {{ old('tuk_type', $pendaftaran->tuk_type) === 'Mandiri' ? 'selected' : '' }}>TUK Mandiri</option>
@@ -1782,7 +1783,7 @@
                                     <span class="text-slate-500 font-semibold text-[11px] normal-case bg-slate-100 px-2 py-0.5 rounded">Ditetapkan Asesor / LSP</span>
                                 </label>
                                 @php
-                                    $savedBukti = (array) ($pendaftaran->bukti_dikumpulkan ?? ['Observasi Praktik Demonstrasi', 'Uji Tertulis (CBT)', 'Tanya Jawab Lisan']);
+                                    $savedBukti = (array) ($pendaftaran->bukti_dikumpulkan ?? []);
                                 @endphp
                                 @foreach($savedBukti as $b)
                                     <input type="hidden" name="bukti_dikumpulkan[]" value="{{ $b }}">

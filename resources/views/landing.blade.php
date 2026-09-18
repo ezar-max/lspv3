@@ -44,13 +44,73 @@
                         Daftar Asesi
                     </a>
                 @endauth
-                <button type="button" class="tombol-menu-hp" id="tombolMenuHp" aria-label="Buka Menu">
+                <button type="button" class="tombol-menu-hp" id="tombolMenuHp" aria-label="Buka Menu" aria-expanded="false" aria-controls="drawerMobileOverlay">
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
                 </button>
             </div>
             @endif
         </div>
     </nav>
+
+    <!-- MOBILE DRAWER NAVIGATION (Hanya aktif di mobile, 100% tersembunyi di desktop) -->
+    <div class="drawer-mobile-overlay" id="drawerMobileOverlay" style="display: none;" aria-hidden="true">
+        <div class="drawer-mobile-panel" id="drawerMobilePanel" role="dialog" aria-modal="true" aria-label="Menu Navigasi Mobile">
+            <div class="drawer-mobile-header">
+                <div class="drawer-brand">
+                    <img src="{{ asset('logo/logo-lsp.jpeg') }}" alt="Logo LSP SMKN 1 Gunungputri" class="drawer-logo-img">
+                    <span class="drawer-brand-nama">LSP SMKN 1 Gunungputri</span>
+                </div>
+                <button type="button" class="drawer-tombol-tutup" id="drawerTombolTutup" aria-label="Tutup menu navigasi">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <div class="drawer-mobile-body">
+                <ul class="drawer-nav-list">
+                    <li>
+                        <a href="#beranda" class="drawer-nav-link aktif">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                            <span>Beranda</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#skema" class="drawer-nav-link">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                            <span>Skema Keahlian</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#berita" class="drawer-nav-link">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 20H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v1m2 13a2 2 0 0 1-2-2V7m2 13a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"></path></svg>
+                            <span>Berita &amp; Pengumuman</span>
+                        </a>
+                    </li>
+                </ul>
+
+                <div class="drawer-aksi-wadah">
+                    @auth
+                        <a href="{{ route(auth()->user()->peran . '.dasbor') }}" class="drawer-btn-cta">
+                            Dasbor Saya
+                        </a>
+                    @else
+                        <a href="{{ route('masuk') }}" class="drawer-btn-masuk">
+                            Masuk Portal
+                        </a>
+                        <a href="{{ route('daftar') }}" class="drawer-btn-cta">
+                            Daftar Asesi Baru
+                        </a>
+                    @endauth
+                </div>
+
+                <div class="drawer-footer-info">
+                    <p>Lisensi Resmi BNSP-LSP-2629-ID</p>
+                    <p>&copy; {{ date('Y') }} SMKN 1 Gunungputri</p>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- HERO SECTION (Linear Light Aesthetic - Margin Rapi & Pendaran Cahaya) -->
     <header class="hero-publik" id="beranda">
@@ -207,6 +267,7 @@
     <!-- MODAL RINCIAN UNIT SKEMA -->
     <div class="latar-modal" id="modalUnitSkema" role="dialog" aria-modal="true">
         <div class="wadah-modal">
+            <div class="modal-drag-handle" style="display: none;" aria-hidden="true"></div>
             <div class="kepala-modal">
                 <h4 class="judul-modal-unit" id="judulModalUnit">Daftar Unit Kompetensi</h4>
                 <button type="button" class="tombol-tutup-modal" id="tutupModalUnit" aria-label="Tutup">✕</button>
@@ -264,6 +325,14 @@
             </div>
         </div>
     </footer>
+
+    <!-- TOMBOL BACK TO TOP FLOATING (Hanya tampil di mobile/layar kecil saat scroll) -->
+    <button type="button" id="tombolKeAtas" class="tombol-ke-atas" style="display: none;" aria-label="Kembali ke atas">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="19" x2="12" y2="5"></line>
+            <polyline points="5 12 12 5 19 12"></polyline>
+        </svg>
+    </button>
 
     <!-- Berkas JS Khusus Tamu -->
     <script src="{{ asset('js/tamu/beranda.js') }}"></script>

@@ -29,7 +29,7 @@
     $asesorTtd = $mapa02->tanda_tangan_asesor ?? $profileTtd;
     $savedPeta = $mapa02->matriks_peta ?? [];
     $isConfirmed = ($mapa02->status_mapa ?? '') === 'selesai';
-    $isConfigured = !empty($mapa02->exists) && (!empty($savedPeta) || $isConfirmed);
+    $isConfigured = !empty($mapa02->exists) && $isConfirmed;
 @endphp
 
 <div class="max-w-6xl mx-auto px-2 sm:px-4 py-3 space-y-4" x-data="mapa02App()" x-cloak>
@@ -246,14 +246,14 @@
                                         @php
                                             $kKey = $kuk->id;
                                             $savedItem = $savedPeta[$unit->id][$elem->id][$kKey] ?? [];
-                                            $clo = $savedItem['clo'] ?? null;
-                                            $dpt = $savedItem['dpt'] ?? null;
-                                            $pmo = $savedItem['pmo'] ?? 0;
-                                            $dpe = $savedItem['dpe'] ?? null;
-                                            $dpl = $savedItem['dpl'] ?? 0;
-                                            $vp  = $savedItem['vp']  ?? 0;
-                                            $pw  = $savedItem['pw']  ?? 0;
-                                            $crp = $savedItem['crp'] ?? 0;
+                                            $clo = !empty($savedItem['clo']);
+                                            $dpt = !empty($savedItem['dpt']);
+                                            $pmo = !empty($savedItem['pmo']);
+                                            $dpe = !empty($savedItem['dpe']);
+                                            $dpl = !empty($savedItem['dpl']);
+                                            $vp  = !empty($savedItem['vp']);
+                                            $pw  = !empty($savedItem['pw']);
+                                            $crp = !empty($savedItem['crp']);
                                         @endphp
                                         <tr class="hover:bg-slate-50/50 transition-colors">
                                             @if($kIndex === 0)
@@ -312,28 +312,28 @@
                                             KUK belum diinput untuk elemen ini.
                                         </td>
                                         <td class="py-2 px-1 text-center align-middle">
-                                            <input type="checkbox" name="matriks_peta[{{ $unit->id }}][{{ $elem->id }}][elem_only][clo]" value="1" {{ ($savedItem['clo'] ?? 1) ? 'checked' : '' }} class="unit-{{ $unit->id }}-clo rounded-sm text-blue-600 focus:ring-0 cursor-pointer">
+                                            <input type="checkbox" name="matriks_peta[{{ $unit->id }}][{{ $elem->id }}][elem_only][clo]" value="1" {{ !empty($savedItem['clo']) ? 'checked' : '' }} class="unit-{{ $unit->id }}-clo rounded-sm text-blue-600 focus:ring-0 cursor-pointer">
                                         </td>
                                         <td class="py-2 px-1 text-center align-middle">
-                                            <input type="checkbox" name="matriks_peta[{{ $unit->id }}][{{ $elem->id }}][elem_only][dpt]" value="1" {{ ($savedItem['dpt'] ?? 1) ? 'checked' : '' }} class="unit-{{ $unit->id }}-dpt rounded-sm text-blue-600 focus:ring-0 cursor-pointer">
+                                            <input type="checkbox" name="matriks_peta[{{ $unit->id }}][{{ $elem->id }}][elem_only][dpt]" value="1" {{ !empty($savedItem['dpt']) ? 'checked' : '' }} class="unit-{{ $unit->id }}-dpt rounded-sm text-blue-600 focus:ring-0 cursor-pointer">
                                         </td>
                                         <td class="py-2 px-1 text-center align-middle">
-                                            <input type="checkbox" name="matriks_peta[{{ $unit->id }}][{{ $elem->id }}][elem_only][pmo]" value="1" {{ ($savedItem['pmo'] ?? 0) ? 'checked' : '' }} class="unit-{{ $unit->id }}-pmo rounded-sm text-blue-600 focus:ring-0 cursor-pointer">
+                                            <input type="checkbox" name="matriks_peta[{{ $unit->id }}][{{ $elem->id }}][elem_only][pmo]" value="1" {{ !empty($savedItem['pmo']) ? 'checked' : '' }} class="unit-{{ $unit->id }}-pmo rounded-sm text-blue-600 focus:ring-0 cursor-pointer">
                                         </td>
                                         <td class="py-2 px-1 text-center align-middle">
-                                            <input type="checkbox" name="matriks_peta[{{ $unit->id }}][{{ $elem->id }}][elem_only][dpe]" value="1" {{ ($savedItem['dpe'] ?? 1) ? 'checked' : '' }} class="unit-{{ $unit->id }}-dpe rounded-sm text-blue-600 focus:ring-0 cursor-pointer">
+                                            <input type="checkbox" name="matriks_peta[{{ $unit->id }}][{{ $elem->id }}][elem_only][dpe]" value="1" {{ !empty($savedItem['dpe']) ? 'checked' : '' }} class="unit-{{ $unit->id }}-dpe rounded-sm text-blue-600 focus:ring-0 cursor-pointer">
                                         </td>
                                         <td class="py-2 px-1 text-center align-middle">
-                                            <input type="checkbox" name="matriks_peta[{{ $unit->id }}][{{ $elem->id }}][elem_only][dpl]" value="1" {{ ($savedItem['dpl'] ?? 0) ? 'checked' : '' }} class="unit-{{ $unit->id }}-dpl rounded-sm text-blue-600 focus:ring-0 cursor-pointer">
+                                            <input type="checkbox" name="matriks_peta[{{ $unit->id }}][{{ $elem->id }}][elem_only][dpl]" value="1" {{ !empty($savedItem['dpl']) ? 'checked' : '' }} class="unit-{{ $unit->id }}-dpl rounded-sm text-blue-600 focus:ring-0 cursor-pointer">
                                         </td>
                                         <td class="py-2 px-1 text-center align-middle">
-                                            <input type="checkbox" name="matriks_peta[{{ $unit->id }}][{{ $elem->id }}][elem_only][vp]" value="1" {{ ($savedItem['vp'] ?? 0) ? 'checked' : '' }} class="unit-{{ $unit->id }}-vp rounded-sm text-blue-600 focus:ring-0 cursor-pointer">
+                                            <input type="checkbox" name="matriks_peta[{{ $unit->id }}][{{ $elem->id }}][elem_only][vp]" value="1" {{ !empty($savedItem['vp']) ? 'checked' : '' }} class="unit-{{ $unit->id }}-vp rounded-sm text-blue-600 focus:ring-0 cursor-pointer">
                                         </td>
                                         <td class="py-2 px-1 text-center align-middle">
-                                            <input type="checkbox" name="matriks_peta[{{ $unit->id }}][{{ $elem->id }}][elem_only][pw]" value="1" {{ ($savedItem['pw'] ?? 0) ? 'checked' : '' }} class="unit-{{ $unit->id }}-pw rounded-sm text-blue-600 focus:ring-0 cursor-pointer">
+                                            <input type="checkbox" name="matriks_peta[{{ $unit->id }}][{{ $elem->id }}][elem_only][pw]" value="1" {{ !empty($savedItem['pw']) ? 'checked' : '' }} class="unit-{{ $unit->id }}-pw rounded-sm text-blue-600 focus:ring-0 cursor-pointer">
                                         </td>
                                         <td class="py-2 px-1 text-center align-middle">
-                                            <input type="checkbox" name="matriks_peta[{{ $unit->id }}][{{ $elem->id }}][elem_only][crp]" value="1" {{ ($savedItem['crp'] ?? 0) ? 'checked' : '' }} class="unit-{{ $unit->id }}-crp rounded-sm text-blue-600 focus:ring-0 cursor-pointer">
+                                            <input type="checkbox" name="matriks_peta[{{ $unit->id }}][{{ $elem->id }}][elem_only][crp]" value="1" {{ !empty($savedItem['crp']) ? 'checked' : '' }} class="unit-{{ $unit->id }}-crp rounded-sm text-blue-600 focus:ring-0 cursor-pointer">
                                         </td>
                                     </tr>
                                 @endif

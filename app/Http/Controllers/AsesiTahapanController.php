@@ -131,7 +131,6 @@ class AsesiTahapanController extends Controller
 
             $isDitolakAsesor = $isApl02Rejected;
             $isAccAsesor = $isApl02Approved;
-            $pendaftaran->syncFromMasterAk01IfAvailable();
             $isAk01Selesai = (!empty($pendaftaran->tanda_tangan_asesi_ak01) || in_array($pendaftaran->status_ak01, ['disetujui_asesi', 'selesai']));
         }
 
@@ -827,9 +826,6 @@ class AsesiTahapanController extends Controller
                 ->with('error', 'FR.APL.02 harus disetujui Asesor terlebih dahulu sebelum FR.AK.01 dapat diisi.');
         }
 
-        // Sinkronkan data persetujuan asesmen dari Master FR.AK.01 Skema jika ada
-        $pendaftaran->syncFromMasterAk01IfAvailable();
-
         $request->validate([
             'tuk_type' => 'nullable|string|in:Sewaktu,Tempat Kerja,Mandiri',
             'bukti_dikumpulkan' => 'nullable|array',
@@ -873,8 +869,8 @@ class AsesiTahapanController extends Controller
             $asesorTtd = $pendaftaran->tanda_tangan_asesor_ak01 ?: ($asesor?->tanda_tangan ?: 'signatures/verified_asesor_auto.png');
 
             $pendaftaran->update([
-                'tuk_type' => $request->tuk_type ?: ($pendaftaran->tuk_type ?? 'Sewaktu'),
-                'bukti_dikumpulkan' => $request->bukti_dikumpulkan ?: ($pendaftaran->bukti_dikumpulkan ?? ['Uji Praktik / Observasi Demonstrasi', 'Uji Tertulis (CBT)', 'Tanya Jawab Lisan']),
+                'tuk_type' => $request->has('tuk_type') ? $request->tuk_type : $pendaftaran->tuk_type,
+                'bukti_dikumpulkan' => $request->has('bukti_dikumpulkan') ? $request->bukti_dikumpulkan : $pendaftaran->bukti_dikumpulkan,
                 'bukti_dikumpulkan_lainnya' => $request->has('bukti_dikumpulkan_lainnya') ? $request->bukti_dikumpulkan_lainnya : $pendaftaran->bukti_dikumpulkan_lainnya,
                 'tanda_tangan_asesi_ak01' => $ttdPath,
                 'tanggal_ttd_asesi_ak01' => now(),

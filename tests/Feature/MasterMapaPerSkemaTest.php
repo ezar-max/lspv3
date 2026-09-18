@@ -97,7 +97,22 @@ class MasterMapaPerSkemaTest extends TestCase
         $this->assertEquals('draft', $master01->status_mapa);
     }
 
-    /** 3. Asesor dapat membuka dan mengesahkan Master FR.MAPA.02 */
+    /** 3. Master FR.MAPA.02 baru dibuka dalam keadaan kosong dan tidak langsung disimpan ke database */
+    public function test_master_mapa02_starts_blank_and_does_not_persist_records_on_get(): void
+    {
+        $this->assertEquals(0, Mapa02::where('skema_id', $this->skema->id)->count());
+
+        $response = $this->actingAs($this->asesor)->get(route('asesor.skema.mapa-02', $this->skema->id));
+        $response->assertStatus(200);
+
+        // Tidak otomatis membuat record di DB saat baru dibuka
+        $this->assertEquals(0, Mapa02::where('skema_id', $this->skema->id)->count());
+
+        // Pastikan tidak ada instrumen yang tercentang
+        $response->assertDontSee('value="1" checked');
+    }
+
+    /** 4. Asesor dapat membuka dan mengesahkan Master FR.MAPA.02 */
     public function test_asesor_can_open_and_confirm_master_mapa02(): void
     {
         $response = $this->actingAs($this->asesor)->get(route('asesor.skema.mapa-02', $this->skema->id));

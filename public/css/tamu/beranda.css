@@ -52,6 +52,7 @@
 
 html {
   scroll-behavior: smooth;
+  scroll-padding-top: 5rem;
 }
 
 body {
@@ -239,8 +240,8 @@ body {
 .hero-publik {
   position: relative;
   background: var(--putih);
-  padding: 2.75rem 0 3.75rem;
-  /* Margin atas dipersingkat agar tidak terlalu jauh */
+  padding: 5.5rem 0 4.75rem;
+  scroll-margin-top: 5rem;
   overflow: hidden;
   border-bottom: 1px solid rgba(226, 232, 240, 0.6);
   text-align: center;
@@ -479,7 +480,8 @@ body {
    3. SEKSI KONTEN & GRID SKEMA (Modern Compact Card Design)
    ========================================================================== */
 .seksi-konten {
-  padding: 3.5rem 0;
+  padding: 3.75rem 0;
+  scroll-margin-top: 4.5rem;
   position: relative;
 }
 
@@ -1020,46 +1022,524 @@ body {
    9. RESPONSIVE MEDIA QUERIES
    ========================================================================== */
 @media (max-width: 868px) {
-  .nav-menu {
-    display: none;
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
-    background: rgba(255, 255, 255, 0.98);
-    backdrop-filter: blur(16px);
-    flex-direction: column;
-    padding: 1.25rem 1.5rem;
-    border-radius: 0;
-    border-bottom: 1px solid var(--border-halus);
-    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+  /* --- 1. Navigasi & Header Mobile --- */
+  .navbar-wadah {
+    padding: 0.65rem 1rem;
   }
 
-  .nav-menu.buka {
-    display: flex;
+  .nav-menu {
+    display: none !important;
+  }
+
+  .nav-aksi .tombol-cta-header {
+    display: none !important;
+  }
+
+  .tombol-masuk {
+    font-size: 0.8rem;
+    padding: 0.35rem 0.75rem;
+    min-height: 42px;
+    display: inline-flex;
+    align-items: center;
   }
 
   .tombol-menu-hp {
-    display: block;
+    display: inline-flex !important;
+    min-width: 44px;
+    min-height: 44px;
+    align-items: center;
+    justify-content: center;
+    background: rgba(15, 23, 42, 0.05);
+    border-radius: 12px;
+    color: var(--teks-gelap);
+    cursor: pointer;
+    border: 1px solid var(--border-halus);
+    padding: 0;
+    transition: background 0.15s ease, transform 0.15s ease;
   }
 
-  .footer-grid {
-    grid-template-columns: 1fr;
-    gap: 2rem;
-  }
-}
-
-@media (max-width: 640px) {
-  .hero-publik {
-    padding: 2.25rem 0 3rem;
+  .tombol-menu-hp:active {
+    background: rgba(15, 23, 42, 0.1);
+    transform: scale(0.96);
   }
 
-  .hero-judul {
-    font-size: 2rem;
+  .brand-logo-img {
+    width: 32px;
+    height: 32px;
   }
 
   .brand-nama {
-    font-size: 0.85rem;
+    font-size: 0.88rem;
+    max-width: 190px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* --- 2. Mobile Drawer Navigation --- */
+  .drawer-mobile-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.5);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 3000;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+    align-items: stretch;
+    justify-content: flex-end;
+  }
+
+  .drawer-mobile-overlay.aktif {
+    display: flex !important;
+    opacity: 1;
+  }
+
+  .drawer-mobile-panel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 82%;
+    max-width: 340px;
+    background: #ffffff;
+    box-shadow: -8px 0 24px rgba(15, 23, 42, 0.15);
+    display: flex;
+    flex-direction: column;
+    transform: translateX(100%);
+    transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    z-index: 3001;
+  }
+
+  .drawer-mobile-overlay.aktif .drawer-mobile-panel {
+    transform: translateX(0);
+  }
+
+  .drawer-mobile-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.15rem 1.25rem;
+    border-bottom: 1px solid var(--border-halus);
+    background: #ffffff;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+  }
+
+  .drawer-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+  }
+
+  .drawer-logo-img {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    object-fit: cover;
+    border: 1px solid var(--border-halus);
+  }
+
+  .drawer-brand-nama {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--teks-gelap);
+  }
+
+  .drawer-tombol-tutup {
+    width: 44px;
+    height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(15, 23, 42, 0.04);
+    border: none;
+    border-radius: 50%;
+    color: var(--teks-sedang);
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+
+  .drawer-tombol-tutup:active {
+    background: rgba(15, 23, 42, 0.1);
+    color: var(--teks-gelap);
+  }
+
+  .drawer-mobile-body {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    padding: 1.25rem;
+    gap: 1.5rem;
+  }
+
+  .drawer-nav-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .drawer-nav-link {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    padding: 0.75rem 1rem;
+    min-height: 48px;
+    border-radius: 12px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--teks-sedang);
+    text-decoration: none;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+
+  .drawer-nav-link:active,
+  .drawer-nav-link.aktif {
+    background: var(--biru-tint);
+    color: var(--biru-utama);
+    font-weight: 600;
+  }
+
+  .drawer-nav-link svg {
+    color: currentColor;
+    flex-shrink: 0;
+  }
+
+  .drawer-aksi-wadah {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-top: auto;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-halus);
+  }
+
+  .drawer-btn-masuk {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 46px;
+    padding: 0.65rem 1rem;
+    border: 1px solid var(--border-halus);
+    background: #ffffff;
+    color: var(--teks-gelap);
+    font-size: 0.9rem;
+    font-weight: 600;
+    border-radius: 12px;
+    text-decoration: none;
+    transition: background 0.15s ease;
+  }
+
+  .drawer-btn-cta {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 46px;
+    padding: 0.65rem 1rem;
+    background: var(--biru-utama);
+    color: #ffffff;
+    font-size: 0.9rem;
+    font-weight: 600;
+    border-radius: 12px;
+    text-decoration: none;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+  }
+
+  .drawer-footer-info {
+    font-size: 0.72rem;
+    color: var(--teks-abu);
+    text-align: center;
+    line-height: 1.4;
+    padding-top: 0.5rem;
+  }
+
+  /* --- 3. Hero Section Mobile --- */
+  .hero-publik {
+    padding: 2.25rem 1rem 3rem;
+  }
+
+  .hero-glow {
+    width: 100%;
+    height: 300px;
+    top: -10%;
+    filter: blur(30px);
+  }
+
+  .hero-judul {
+    font-size: clamp(1.85rem, 5.5vw, 2.5rem);
+    line-height: 1.2;
+    margin-bottom: 0.85rem;
+  }
+
+  .hero-deskripsi {
+    font-size: 0.92rem;
+    line-height: 1.55;
+    margin-bottom: 1.5rem;
+  }
+
+  .hero-aksi {
+    flex-direction: column;
+    width: 100%;
+    max-width: 320px;
+    margin: 0 auto;
+    gap: 0.65rem;
+  }
+
+  .hero-aksi .tombol-utama,
+  .hero-aksi .tombol-outline {
+    width: 100%;
+    justify-content: center;
+    min-height: 46px;
+    padding: 0.65rem 1.25rem;
+  }
+
+  /* --- 4. Bilah Filter Skema Horizontal --- */
+  .bilah-filter-skema {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    padding: 4px 1rem 12px 1rem;
+    margin: 0 -1rem 1.5rem -1rem;
+    gap: 0.5rem;
+  }
+
+  .bilah-filter-skema::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tombol-filter {
+    flex-shrink: 0;
+    white-space: nowrap;
+    min-height: 44px;
+    padding: 0.55rem 1.1rem;
+    font-size: 0.82rem;
+  }
+
+  /* --- 5. Grid Kartu Skema & Berita --- */
+  .grid-skema-publik {
+    grid-template-columns: 1fr;
+    gap: 0.85rem;
+  }
+
+  .kartu-skema-item {
+    padding: 1.1rem;
+    border-radius: 14px;
+  }
+
+  .tombol-skema-rincian {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+  }
+
+  .grid-berita {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .kartu-berita {
+    padding: 1.15rem;
+    border-radius: 14px;
+  }
+
+  .berita-tautan {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  /* --- 6. Banner CTA Seksi --- */
+  .banner-cta-publik {
+    padding: 2.25rem 1.25rem;
+    border-radius: 18px;
+  }
+
+  .banner-cta-publik h3 {
+    font-size: 1.45rem;
+    line-height: 1.25;
+  }
+
+  .banner-cta-publik p {
+    font-size: 0.88rem;
+    margin-bottom: 1.35rem;
+  }
+
+  .banner-cta-publik .hero-aksi {
+    flex-direction: column;
+    width: 100%;
+    max-width: 300px;
+  }
+
+  /* --- 7. Modal Bottom-Sheet Unit Skema --- */
+  .latar-modal {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .wadah-modal {
+    width: 100%;
+    max-width: 100%;
+    max-height: 85vh;
+    border-radius: 24px 24px 0 0;
+    margin: 0;
+    border-bottom: none;
+    border-left: none;
+    border-right: none;
+    transform: translateY(100%);
+    transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .latar-modal.aktif .wadah-modal {
+    transform: translateY(0);
+  }
+
+  .modal-drag-handle {
+    display: block !important;
+    width: 44px;
+    height: 5px;
+    background: #cbd5e1;
+    border-radius: 9999px;
+    margin: 10px auto 4px auto;
+    flex-shrink: 0;
+  }
+
+  .kepala-modal {
+    padding: 0.75rem 1.25rem 0.5rem 1.25rem;
+  }
+
+  .judul-modal-unit {
+    font-size: 1rem;
+  }
+
+  .tombol-tutup-modal {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: rgba(15, 23, 42, 0.04);
+  }
+
+  .bilah-cari-modal {
+    padding: 0.5rem 1.25rem;
+  }
+
+  .input-cari-unit {
+    min-height: 44px;
+    font-size: 0.88rem;
+  }
+
+  .isi-modal {
+    padding: 0.5rem 1.25rem 1.25rem 1.25rem;
+    max-height: 55vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .kaki-modal {
+    padding: 0.75rem 1.25rem;
+    padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .kaki-modal .tombol-outline {
+    width: 100%;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+  }
+
+  /* --- 8. Tombol Floating Back to Top --- */
+  .tombol-ke-atas {
+    position: fixed;
+    bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px));
+    right: 1.25rem;
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    background: var(--biru-utama);
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 1500;
+    opacity: 0;
+    transform: scale(0.8) translateY(10px);
+    transition: opacity 0.25s ease, transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), background 0.15s ease;
+    pointer-events: none;
+  }
+
+  .tombol-ke-atas.terlihat {
+    display: flex !important;
+    opacity: 1;
+    transform: scale(1) translateY(0);
+    pointer-events: auto;
+  }
+
+  .tombol-ke-atas:active {
+    background: var(--biru-gelap);
+    transform: scale(0.95);
+  }
+
+  /* --- 9. Footer Mobile --- */
+  .footer-grid {
+    grid-template-columns: 1fr;
+    gap: 1.75rem;
+  }
+
+  .footer-publik {
+    padding: 2.75rem 1rem 2rem;
+  }
+
+  .footer-kolom-judul {
+    margin-bottom: 0.75rem;
+  }
+
+  .footer-daftar a {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+}
+
+/* BREAKPOINT PONSEL KECIL (<= 480px) */
+@media (max-width: 480px) {
+  .wadah {
+    padding: 0 1rem;
+  }
+
+  .hero-publik {
+    padding: 2rem 0.75rem 2.5rem;
+  }
+
+  .hero-judul {
+    font-size: 1.68rem;
+    line-height: 1.22;
+  }
+
+  .brand-nama {
+    font-size: 0.82rem;
+    max-width: 150px;
   }
 
   .brand-tag-vokasi {
@@ -1067,6 +1547,16 @@ body {
   }
 
   .banner-cta-publik {
-    padding: 2.5rem 1.25rem;
+    padding: 2rem 1rem;
+  }
+
+  .banner-cta-publik h3 {
+    font-size: 1.3rem;
+  }
+
+  .tabel-unit-modal th,
+  .tabel-unit-modal td {
+    padding: 8px 6px;
+    font-size: 0.78rem;
   }
 }

@@ -24,7 +24,7 @@
 @php
     $isSignedByAsesi = !empty($pendaftaran->tanda_tangan_asesi_ak01) || in_array($pendaftaran->status_ak01, ['disetujui_asesi', 'selesai']);
     $isSignedByAsesor = !empty($pendaftaran->tanda_tangan_asesor_ak01) || in_array($pendaftaran->status_ak01, ['disetujui_asesor', 'selesai']);
-    $savedBukti = (array) ($pendaftaran->bukti_dikumpulkan ?? ['Observasi Praktik Demonstrasi', 'Uji Tertulis (CBT)', 'Tanya Jawab Lisan']);
+    $savedBukti = (array) ($pendaftaran->bukti_dikumpulkan ?? []);
 @endphp
 
 <div class="max-w-5xl mx-auto space-y-5" x-data="asesorAk01App()">
@@ -284,10 +284,11 @@
                     <label class="font-bold text-slate-700 block">
                         Jenis Tempat Uji Kompetensi (TUK) <span class="text-rose-500">*</span>
                     </label>
-                    @php $tukDipilih = old('tuk_type', $pendaftaran->tuk_type ?? 'Sewaktu'); @endphp
+                    @php $tukDipilih = old('tuk_type', $pendaftaran->tuk_type ?? ''); @endphp
                     <select name="tuk_type" 
                             {{ $isSignedByAsesor ? 'disabled' : 'required' }} 
                             class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 font-semibold focus:ring-1 focus:ring-indigo-500 focus:bg-white transition-colors">
+                        <option value="" {{ $tukDipilih === '' ? 'selected' : '' }}></option>
                         <option value="Sewaktu" {{ $tukDipilih === 'Sewaktu' ? 'selected' : '' }}>TUK Sewaktu (SMKN 1 Gunungputri / Sekolah Mitra)</option>
                         <option value="Tempat Kerja" {{ $tukDipilih === 'Tempat Kerja' ? 'selected' : '' }}>TUK Tempat Kerja / Fasilitas Industri (DUDI)</option>
                         <option value="Mandiri" {{ $tukDipilih === 'Mandiri' ? 'selected' : '' }}>TUK Mandiri</option>
