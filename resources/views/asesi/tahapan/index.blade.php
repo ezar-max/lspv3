@@ -2365,24 +2365,11 @@
                 </div>
             @else
                 <!-- Top navigation buttons -->
-                <div class="flex items-center justify-between pb-2 text-xs">
+                <div class="flex items-center justify-start pb-2 text-xs">
                     <button type="button" @click="setStep(4)" class="text-slate-500 hover:text-blue-600 font-medium inline-flex items-center gap-1.5 transition-colors cursor-pointer">
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
                         <span>Lihat Formulir FR.AK.07</span>
                     </button>
-                    <div class="flex items-center gap-3">
-                        <button type="button" @click="setStep(1)" class="text-slate-500 hover:text-blue-600 font-medium transition-colors cursor-pointer">
-                            FR.APL.01
-                        </button>
-                        <span class="text-slate-300">&bull;</span>
-                        <button type="button" @click="setStep(2)" class="text-slate-500 hover:text-blue-600 font-medium transition-colors cursor-pointer">
-                            FR.APL.02
-                        </button>
-                        <span class="text-slate-300">&bull;</span>
-                        <button type="button" @click="setStep(3)" class="text-slate-500 hover:text-blue-600 font-medium transition-colors cursor-pointer">
-                            FR.AK.01
-                        </button>
-                    </div>
                 </div>
 
                 @include('asesi.komponen.halaman-ujian')
