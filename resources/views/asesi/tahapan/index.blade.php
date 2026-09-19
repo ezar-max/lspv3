@@ -2373,7 +2373,7 @@
                     <span class="text-[11px] font-medium text-slate-400">Tahap 5 &bull; Pelaksanaan Ujian & Asesmen (FR.IA)</span>
                 </div>
 
-                @include('asesi.komponen.halaman-ujian')
+                @include('asesi.komponen.halaman-ujian-asesi')
             @endif
         </div>
     </div>

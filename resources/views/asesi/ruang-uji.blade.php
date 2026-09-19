@@ -33,7 +33,7 @@
     @endif
 
     <!-- Halaman Ujian Baru -->
-    @include('asesi.komponen.halaman-ujian')
+    @include('asesi.komponen.halaman-ujian-asesi')
 </div>
 @endsection
 
