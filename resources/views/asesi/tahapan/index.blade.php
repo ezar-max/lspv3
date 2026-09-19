@@ -2365,11 +2365,12 @@
                 </div>
             @else
                 <!-- Top navigation buttons -->
-                <div class="flex items-center justify-start pb-2 text-xs">
-                    <button type="button" @click="setStep(4)" class="text-slate-500 hover:text-blue-600 font-medium inline-flex items-center gap-1.5 transition-colors cursor-pointer">
+                <div class="flex items-center justify-between pb-3 text-xs">
+                    <button type="button" @click="setStep(4)" class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 hover:text-blue-600 font-medium transition-all shadow-2xs cursor-pointer">
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
-                        <span>Lihat Formulir FR.AK.07</span>
+                        <span>Kembali ke Formulir FR.AK.07</span>
                     </button>
+                    <span class="text-[11px] font-medium text-slate-400">Tahap 5 &bull; Pelaksanaan Ujian & Asesmen (FR.IA)</span>
                 </div>
 
                 @include('asesi.komponen.halaman-ujian')

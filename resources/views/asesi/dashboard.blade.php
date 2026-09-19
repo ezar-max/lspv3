@@ -54,6 +54,23 @@
 @endpush
 
 @section('konten')
+<div class="header-dashboard-asesi">
+    <div class="ambient-glow-1"></div>
+    <div class="ambient-glow-2"></div>
+
+    <div class="header-asesi-content">
+        <div class="avatar-asesi-box">
+            <span>{{ strtoupper(substr($pengguna->nama_lengkap ?? 'A', 0, 2)) }}</span>
+        </div>
+        <div class="teks-header-asesi">
+            <div class="header-title-row">
+                <h1>Selamat Datang, {{ $pengguna->nama_lengkap }}!</h1>
+                <span class="badge-role-asesi">
+                    <span class="dot-aktif"></span> Asesi Terdaftar
+                </span>
+            </div>
+            <p>Pantau progress pendaftaran dan jadwal uji kompetensi keahlian Anda secara real-time</p>
+        </div>
 <!-- =========================================================================
      HEADER DASHBOARD ASESI (BERSIH, TERBUKA & PROFESIONAL)
      - Tanpa Card Box / Banner Kaku
@@ -70,20 +87,28 @@
         </p>
     </div>
 
+    <div class="header-asesi-actions">
     <div class="flex items-center gap-3 flex-wrap">
         @if(isset($semuaPendaftaran) && $semuaPendaftaran->count() > 1)
+            <div class="skema-selector-badge-modern">
+                <i class="fa-solid fa-graduation-cap" style="color: #0284c7; font-size: 0.85rem;"></i>
+                <label>Skema:</label>
+                <select onchange="window.location.href='?pendaftaran_id=' + this.value">
             <div class="inline-flex items-center gap-2 bg-white border border-slate-200/90 px-3 py-2 rounded-xl text-xs shadow-2xs">
                 <i class="fa-solid fa-graduation-cap text-blue-600"></i>
                 <label class="font-bold text-slate-500 text-[11px]">Skema:</label>
                 <select onchange="window.location.href='?pendaftaran_id=' + this.value" class="bg-transparent border-0 text-slate-800 font-bold text-xs focus:ring-0 cursor-pointer outline-hidden pr-2">
                     @foreach($semuaPendaftaran as $itemP)
                         <option value="{{ $itemP->id }}" {{ (isset($pendaftaranTerakhir) && $pendaftaranTerakhir->id == $itemP->id) ? 'selected' : '' }}>
+                            {{ $itemP->skema->kode_skema ?? 'SKEMA' }} - {{ Str::limit($itemP->skema->nama_skema ?? 'Skema', 22) }}
                             {{ $itemP->skema->kode_skema ?? 'SKEMA' }} - {{ Str::limit($itemP->skema->nama_skema ?? 'Skema', 24) }}
                         </option>
                     @endforeach
                 </select>
             </div>
         @endif
+        <a href="{{ route('asesi.pendaftaran') }}" class="btn-daftar-skema-baru">
+            <i class="fa-solid fa-plus-circle"></i>
 
         <a href="{{ route('asesi.pendaftaran') }}" class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold px-4 py-2.5 rounded-xl shadow-xs hover:shadow transition-all">
             <i class="fa-solid fa-plus text-xs"></i>
