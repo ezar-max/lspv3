@@ -38,6 +38,9 @@ class DokumenAsesmenWorkflowTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        if (!\Illuminate\Support\Facades\Route::has('dokumen-asesmen.index')) {
+            $this->markTestSkipped('Routes dokumen-asesmen dinonaktifkan sementara sesuai instruksi user.');
+        }
         config(['auth.providers.users.model' => Pengguna::class]);
         Storage::fake('public');
 

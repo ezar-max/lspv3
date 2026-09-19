@@ -245,14 +245,7 @@
                                 <span>Berita Acara & Rekap</span>
                             </a>
 
-                            <!-- Asesor 4. Link: Dokumen Asesmen -->
-                            @php
-                                $isAsesorDokumenActive = request()->routeIs('dokumen-asesmen.*');
-                            @endphp
-                            <a href="{{ route('dokumen-asesmen.index') }}" 
-                               class="px-3.5 py-2 rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer {{ $isAsesorDokumenActive ? 'bg-indigo-50 text-indigo-700 font-bold border border-indigo-100' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium' }}">
-                                <span>Dokumen Asesmen</span>
-                            </a>
+
 
 
 
@@ -311,78 +304,7 @@
                                 </div>
                             </div>
 
-                            <!-- Superadmin 3. Dropdown: Dokumen Asesmen -->
-                            @php
-                                $isSuperadminDokumenActive = request()->routeIs('dokumen-asesmen.*');
-                            @endphp
-                            <div class="relative" @click.outside="if (openDropdown === 'superadmin_dokumen_asesmen') openDropdown = null">
-                                <button type="button" 
-                                        @click="openDropdown = (openDropdown === 'superadmin_dokumen_asesmen' ? null : 'superadmin_dokumen_asesmen')"
-                                        class="px-3.5 py-2 rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer {{ $isSuperadminDokumenActive ? 'bg-rose-50 text-rose-700 font-bold border border-rose-100' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium' }}">
-                                    <span>Dokumen Asesmen</span>
-                                    <svg class="w-3.5 h-3.5 text-slate-400 transition-transform duration-200" :class="openDropdown === 'superadmin_dokumen_asesmen' ? 'rotate-180 text-rose-600' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                                    </svg>
-                                </button>
 
-                                <div x-show="openDropdown === 'superadmin_dokumen_asesmen'" 
-                                     x-transition:enter="transition ease-out duration-150"
-                                     x-transition:enter-start="opacity-0 scale-95 -translate-y-1"
-                                     x-transition:enter-end="opacity-100 scale-100 translate-y-0"
-                                     x-transition:leave="transition ease-in duration-100"
-                                     x-transition:leave-start="opacity-100 scale-100 translate-y-0"
-                                     x-transition:leave-end="opacity-0 scale-95 -translate-y-1"
-                                     class="absolute left-0 mt-2 w-72 rounded-2xl bg-white border border-slate-200/90 shadow-xl p-1.5 z-50 space-y-0.5"
-                                     style="display: none;">
-                                    
-                                    <a href="{{ route('dokumen-asesmen.index') }}" 
-                                       @click="openDropdown = null"
-                                       class="block px-3 py-2 rounded-xl transition-colors {{ request()->routeIs('dokumen-asesmen.index') ? 'bg-rose-50 text-rose-700 font-semibold' : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900' }}">
-                                        <div class="font-semibold text-xs leading-tight flex items-center justify-between">
-                                            <span>Pusat Dokumen Asesmen</span>
-                                            <span class="text-[9px] px-1.5 py-0.2 rounded bg-rose-100 text-rose-700 font-mono">Hub</span>
-                                        </div>
-                                        <div class="text-[10px] text-slate-400 mt-0.5">Audit, reopen versi, & monitoring seluruh dokumen</div>
-                                    </a>
-
-                                    <div class="border-t border-slate-100 my-1"></div>
-
-                                    <a href="{{ route('dokumen-asesmen.index', ['jenis' => 'FR.AK.02']) }}" 
-                                       @click="openDropdown = null"
-                                       class="block px-3 py-1.5 rounded-xl transition-colors hover:bg-slate-50 text-slate-700 hover:text-slate-900">
-                                        <div class="font-semibold text-xs leading-tight">FR.AK.02 &bull; Rekaman Asesmen</div>
-                                        <div class="text-[10px] text-slate-400">Keputusan K/BK unit kompetensi</div>
-                                    </a>
-
-                                    <a href="{{ route('dokumen-asesmen.index', ['jenis' => 'FR.AK.03']) }}" 
-                                       @click="openDropdown = null"
-                                       class="block px-3 py-1.5 rounded-xl transition-colors hover:bg-slate-50 text-slate-700 hover:text-slate-900">
-                                        <div class="font-semibold text-xs leading-tight">FR.AK.03 &bull; Umpan Balik Asesmen</div>
-                                        <div class="text-[10px] text-slate-400">Arsip respon kuesioner asesi</div>
-                                    </a>
-
-                                    <a href="{{ route('dokumen-asesmen.ak05.index') }}" 
-                                       @click="openDropdown = null"
-                                       class="block px-3 py-1.5 rounded-xl transition-colors hover:bg-slate-50 text-slate-700 hover:text-slate-900">
-                                        <div class="font-semibold text-xs leading-tight">FR.AK.05 &bull; Laporan Asesmen</div>
-                                        <div class="text-[10px] text-slate-400">Laporan rekapitulasi sesi uji asesor</div>
-                                    </a>
-
-                                    <a href="{{ route('dokumen-asesmen.ak06.index') }}" 
-                                       @click="openDropdown = null"
-                                       class="block px-3 py-1.5 rounded-xl transition-colors hover:bg-slate-50 text-slate-700 hover:text-slate-900">
-                                        <div class="font-semibold text-xs leading-tight">FR.AK.06 &bull; Meninjau Proses Asesmen</div>
-                                        <div class="text-[10px] text-slate-400">Review mutu 4 prinsip & 5 dimensi</div>
-                                    </a>
-
-                                    <a href="{{ route('dokumen-asesmen.va.index') }}" 
-                                       @click="openDropdown = null"
-                                       class="block px-3 py-1.5 rounded-xl transition-colors hover:bg-slate-50 text-slate-700 hover:text-slate-900">
-                                        <div class="font-semibold text-xs leading-tight">FR.VA &bull; Validasi Asesmen</div>
-                                        <div class="text-[10px] text-slate-400">Validasi independen & perbaikan mutu</div>
-                                    </a>
-                                </div>
-                            </div>
 
                         @else
                             <!-- Admin (Default) 1. Dashboard -->
@@ -471,87 +393,11 @@
                                 </div>
                             </div>
 
-                            <!-- Admin 4. Dropdown: Dokumen Asesmen -->
-                            @php
-                                $isAdminDokumenActive = request()->routeIs('dokumen-asesmen.*');
-                            @endphp
-                            <div class="relative" @click.outside="if (openDropdown === 'admin_dokumen_asesmen') openDropdown = null">
-                                <button type="button" 
-                                        @click="openDropdown = (openDropdown === 'admin_dokumen_asesmen' ? null : 'admin_dokumen_asesmen')"
-                                        class="px-3.5 py-2 rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer {{ $isAdminDokumenActive ? 'bg-emerald-50 text-emerald-700 font-bold border border-emerald-100' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium' }}">
-                                    <span>Dokumen</span>
-                                    <svg class="w-3.5 h-3.5 text-slate-400 transition-transform duration-200" :class="openDropdown === 'admin_dokumen_asesmen' ? 'rotate-180 text-emerald-600' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                                    </svg>
-                                </button>
-
-                                <div x-show="openDropdown === 'admin_dokumen_asesmen'" 
-                                     x-transition:enter="transition ease-out duration-150"
-                                     x-transition:enter-start="opacity-0 scale-95 -translate-y-1"
-                                     x-transition:enter-end="opacity-100 scale-100 translate-y-0"
-                                     x-transition:leave="transition ease-in duration-100"
-                                     x-transition:leave-start="opacity-100 scale-100 translate-y-0"
-                                     x-transition:leave-end="opacity-0 scale-95 -translate-y-1"
-                                     class="absolute left-0 mt-2 w-72 rounded-2xl bg-white border border-slate-200/90 shadow-xl p-1.5 z-50 space-y-0.5"
-                                     style="display: none;">
-                                    
-                                    <a href="{{ route('dokumen-asesmen.index') }}" 
-                                       @click="openDropdown = null"
-                                       class="block px-3 py-2 rounded-xl transition-colors {{ request()->routeIs('dokumen-asesmen.index') ? 'bg-emerald-50 text-emerald-700 font-semibold' : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900' }}">
-                                        <div class="font-semibold text-xs leading-tight flex items-center justify-between">
-                                            <span>Pusat Dokumen Asesmen</span>
-                                            <span class="text-[9px] px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-700 font-mono">Hub</span>
-                                        </div>
-                                        <div class="text-[10px] text-slate-400 mt-0.5">Monitoring status, filter & audit trail seluruh dokumen</div>
-                                    </a>
-
-                                    <div class="border-t border-slate-100 my-1"></div>
-
-                                    <a href="{{ route('dokumen-asesmen.index', ['jenis' => 'FR.AK.02']) }}" 
-                                       @click="openDropdown = null"
-                                       class="block px-3 py-1.5 rounded-xl transition-colors hover:bg-slate-50 text-slate-700 hover:text-slate-900">
-                                        <div class="font-semibold text-xs leading-tight">FR.AK.02 &bull; Rekaman Asesmen</div>
-                                        <div class="text-[10px] text-slate-400">Keputusan K/BK unit kompetensi</div>
-                                    </a>
-
-                                    <a href="{{ route('dokumen-asesmen.index', ['jenis' => 'FR.AK.03']) }}" 
-                                       @click="openDropdown = null"
-                                       class="block px-3 py-1.5 rounded-xl transition-colors hover:bg-slate-50 text-slate-700 hover:text-slate-900">
-                                        <div class="font-semibold text-xs leading-tight">FR.AK.03 &bull; Umpan Balik Asesmen</div>
-                                        <div class="text-[10px] text-slate-400">Arsip respon kuesioner asesi</div>
-                                    </a>
-
-                                    <a href="{{ route('dokumen-asesmen.ak05.index') }}" 
-                                       @click="openDropdown = null"
-                                       class="block px-3 py-1.5 rounded-xl transition-colors hover:bg-slate-50 text-slate-700 hover:text-slate-900">
-                                        <div class="font-semibold text-xs leading-tight">FR.AK.05 &bull; Laporan Asesmen</div>
-                                        <div class="text-[10px] text-slate-400">Laporan rekapitulasi sesi uji asesor</div>
-                                    </a>
-
-                                    <a href="{{ route('dokumen-asesmen.ak06.index') }}" 
-                                       @click="openDropdown = null"
-                                       class="block px-3 py-1.5 rounded-xl transition-colors hover:bg-slate-50 text-slate-700 hover:text-slate-900">
-                                        <div class="font-semibold text-xs leading-tight">FR.AK.06 &bull; Meninjau Proses Asesmen</div>
-                                        <div class="text-[10px] text-slate-400">Review mutu 4 prinsip & 5 dimensi</div>
-                                    </a>
-
-                                    <a href="{{ route('dokumen-asesmen.va.index') }}" 
-                                       @click="openDropdown = null"
-                                       class="block px-3 py-1.5 rounded-xl transition-colors hover:bg-slate-50 text-slate-700 hover:text-slate-900">
-                                        <div class="font-semibold text-xs leading-tight">FR.VA &bull; Validasi Asesmen</div>
-                                        <div class="text-[10px] text-slate-400">Validasi independen & perbaikan mutu</div>
-                                    </a>
-
-                                    <div class="border-t border-slate-100 my-1"></div>
-
-                                    <a href="{{ route('admin.dokumen.index') }}" 
-                                       @click="openDropdown = null"
-                                       class="block px-3 py-1.5 rounded-xl transition-colors hover:bg-slate-50 text-slate-700 hover:text-slate-900">
-                                        <div class="font-semibold text-xs leading-tight">Arsip Berkas & Dokumen Lainnya</div>
-                                        <div class="text-[10px] text-slate-400">Manajemen berkas umum LSP</div>
-                                    </a>
-                                </div>
-                            </div>
+                            <!-- Admin 4. Berkas Umum -->
+                            <a href="{{ route('admin.dokumen.index') }}" 
+                               class="px-3.5 py-2 rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer {{ request()->routeIs('admin.dokumen*') ? 'bg-emerald-50 text-emerald-700 font-bold border border-emerald-100' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium' }}">
+                                <span>Berkas</span>
+                            </a>
 
                             <!-- Admin 5. Informasi -->
                             <a href="{{ route('admin.manajemen-pengumuman') }}" 
@@ -732,12 +578,7 @@
                             Berita Acara & Rekap
                         </a>
                     </div>
-                    <div class="border-t border-slate-100 pt-1.5 space-y-1">
-                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-3">Dokumen</span>
-                        <a href="{{ route('dokumen-asesmen.index') }}" class="block px-3 py-1.5 rounded-lg {{ request()->routeIs('dokumen-asesmen.*') ? 'bg-indigo-50 text-indigo-700 font-semibold' : 'text-slate-600' }}">
-                            Dokumen Asesmen
-                        </a>
-                    </div>
+
 
                 @elseif($peran === 'superadmin')
                     <a href="{{ route('superadmin.dashboard') }}" class="block px-3 py-2 rounded-xl font-medium {{ request()->routeIs('superadmin.dashboard') ? 'bg-rose-50 text-rose-700 font-bold' : 'text-slate-700' }}">
@@ -755,21 +596,7 @@
                             Pengaturan Global
                         </a>
                     </div>
-                    <div class="border-t border-slate-100 pt-1.5 space-y-1">
-                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-3">Dokumen Asesmen</span>
-                        <a href="{{ route('dokumen-asesmen.index') }}" class="block px-3 py-1.5 rounded-lg font-bold text-rose-700 bg-rose-50">
-                            Pusat Dokumen Asesmen (Hub)
-                        </a>
-                        <a href="{{ route('dokumen-asesmen.ak05.index') }}" class="block px-3 py-1.5 rounded-lg text-slate-600">
-                            FR.AK.05 &bull; Laporan Asesmen
-                        </a>
-                        <a href="{{ route('dokumen-asesmen.ak06.index') }}" class="block px-3 py-1.5 rounded-lg text-slate-600">
-                            FR.AK.06 &bull; Meninjau Proses Asesmen
-                        </a>
-                        <a href="{{ route('dokumen-asesmen.va.index') }}" class="block px-3 py-1.5 rounded-lg text-slate-600">
-                            FR.VA &bull; Validasi Asesmen
-                        </a>
-                    </div>
+
                 @else
                     <a href="{{ route('admin.dashboard') }}" class="block px-3 py-2 rounded-xl font-medium {{ request()->routeIs('admin.dashboard') ? 'bg-emerald-50 text-emerald-700 font-bold' : 'text-slate-700' }}">
                         Dashboard
@@ -792,21 +619,7 @@
                             Formulir
                         </a>
                     </div>
-                    <div class="border-t border-slate-100 pt-1.5 space-y-1">
-                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-3">Dokumen</span>
-                        <a href="{{ route('dokumen-asesmen.index') }}" class="block px-3 py-1.5 rounded-lg font-bold text-emerald-700 bg-emerald-50">
-                            Pusat Dokumen Asesmen (Hub)
-                        </a>
-                        <a href="{{ route('dokumen-asesmen.ak05.index') }}" class="block px-3 py-1.5 rounded-lg text-slate-600">
-                            FR.AK.05 &bull; Laporan Asesmen
-                        </a>
-                        <a href="{{ route('dokumen-asesmen.ak06.index') }}" class="block px-3 py-1.5 rounded-lg text-slate-600">
-                            FR.AK.06 &bull; Meninjau Proses Asesmen
-                        </a>
-                        <a href="{{ route('dokumen-asesmen.va.index') }}" class="block px-3 py-1.5 rounded-lg text-slate-600">
-                            FR.VA &bull; Validasi Asesmen
-                        </a>
-                    </div>
+
                     <div class="border-t border-slate-100 pt-1.5 space-y-1">
                         <a href="{{ route('admin.dokumen.index') }}" class="block px-3 py-1.5 rounded-lg {{ (request()->routeIs('admin.dokumen*') || request()->routeIs('formulir.*')) ? 'bg-emerald-50 text-emerald-700 font-semibold' : 'text-slate-600' }}">
                             Berkas Umum

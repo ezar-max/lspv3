@@ -358,9 +358,7 @@ Route::middleware(['auth'])->prefix('formulir')->as('formulir.')->group(function
     Route::get('/mapa-02/{pendaftaranId?}', [FormulirController::class, 'mapa02'])->name('mapa02');
     Route::get('/ak-01/{pendaftaranId?}', [FormulirController::class, 'ak01'])->name('ak01');
     Route::post('/ak-01/simpan/{pendaftaranId}', [FormulirController::class, 'simpanAk01'])->name('ak01.simpan');
-    Route::get('/ak-02/{pendaftaranId?}', function ($pendaftaranId = null) {
-        return redirect()->route('dokumen-asesmen.ak02.show', ['pendaftaranId' => $pendaftaranId ?: 0]);
-    })->name('ak02');
+
     Route::get('/apl-01/{pendaftaranId?}', [FormulirController::class, 'apl01'])->name('apl01');
     Route::get('/apl-02/{pendaftaranId?}', [FormulirController::class, 'apl02'])->name('apl02');
 });
@@ -382,66 +380,7 @@ Route::middleware(['auth'])->group(function () {
     Route::delete('/notifications/{id}', [\App\Http\Controllers\NotificationController::class, 'destroy'])->name('notifications.destroy');
 });
 
-/*
-|--------------------------------------------------------------------------
-| 8. MODUL INTEGRASI DOKUMEN ASESMEN RESMI BNSP
-| FR.AK.02, FR.AK.03, FR.AK.05, FR.AK.06, FR.VA
-|--------------------------------------------------------------------------
-*/
-Route::middleware(['auth'])->prefix('dokumen-asesmen')->as('dokumen-asesmen.')->group(function () {
-    // Pusat Dokumen Asesmen Hub
-    Route::get('/', [\App\Http\Controllers\DokumenAsesmenController::class, 'index'])->name('index');
-    Route::get('/audit-trail/{type}/{id}', [\App\Http\Controllers\DokumenAsesmenController::class, 'auditTrail'])->name('audit-trail');
-    Route::post('/reopen', [\App\Http\Controllers\DokumenAsesmenController::class, 'reopen'])->name('reopen');
 
-    // FR.AK.02 — Rekaman Asesmen Kompetensi
-    Route::prefix('ak-02')->as('ak02.')->group(function () {
-        Route::get('/{pendaftaranId}', [\App\Http\Controllers\AssessmentAk02Controller::class, 'show'])->name('edit');
-        Route::get('/{pendaftaranId}/show', [\App\Http\Controllers\AssessmentAk02Controller::class, 'show'])->name('show');
-        Route::post('/{pendaftaranId}/autosave', [\App\Http\Controllers\AssessmentAk02Controller::class, 'autosave'])->name('autosave');
-        Route::post('/{pendaftaranId}/simpan', [\App\Http\Controllers\AssessmentAk02Controller::class, 'simpan'])->name('simpan');
-        Route::post('/{pendaftaranId}/sign-asesor', [\App\Http\Controllers\AssessmentAk02Controller::class, 'signAsesor'])->name('sign-asesor');
-        Route::post('/{pendaftaranId}/sign-asesi', [\App\Http\Controllers\AssessmentAk02Controller::class, 'signAsesi'])->name('sign-asesi');
-        Route::post('/{pendaftaranId}/ttd-asesi', [\App\Http\Controllers\AssessmentAk02Controller::class, 'signAsesi'])->name('ttd-asesi');
-        Route::post('/{pendaftaranId}/reopen', [\App\Http\Controllers\AssessmentAk02Controller::class, 'reopen'])->name('reopen');
-        Route::get('/{pendaftaranId}/cetak', [\App\Http\Controllers\AssessmentAk02Controller::class, 'cetak'])->name('cetak');
-    });
-
-    // FR.AK.03 — Umpan Balik dan Catatan Asesmen
-    Route::prefix('ak-03')->as('ak03.')->group(function () {
-        Route::get('/{pendaftaranId}', [\App\Http\Controllers\AssessmentAk03Controller::class, 'show'])->name('show');
-        Route::post('/{pendaftaranId}/simpan', [\App\Http\Controllers\AssessmentAk03Controller::class, 'simpan'])->name('simpan');
-        Route::get('/{pendaftaranId}/cetak', [\App\Http\Controllers\AssessmentAk03Controller::class, 'cetak'])->name('cetak');
-    });
-
-    // FR.AK.05 — Laporan Asesmen
-    Route::prefix('ak-05')->as('ak05.')->group(function () {
-        Route::get('/', [\App\Http\Controllers\AssessmentAk05Controller::class, 'index'])->name('index');
-        Route::post('/buat', [\App\Http\Controllers\AssessmentAk05Controller::class, 'create'])->name('create');
-        Route::get('/{id}/edit', [\App\Http\Controllers\AssessmentAk05Controller::class, 'edit'])->name('edit');
-        Route::post('/{id}/sync', [\App\Http\Controllers\AssessmentAk05Controller::class, 'sync'])->name('sync');
-        Route::post('/{id}/simpan', [\App\Http\Controllers\AssessmentAk05Controller::class, 'simpan'])->name('simpan');
-        Route::get('/{id}/cetak', [\App\Http\Controllers\AssessmentAk05Controller::class, 'cetak'])->name('cetak');
-    });
-
-    // FR.AK.06 — Meninjau Proses Asesmen
-    Route::prefix('ak-06')->as('ak06.')->group(function () {
-        Route::get('/', [\App\Http\Controllers\AssessmentAk06Controller::class, 'index'])->name('index');
-        Route::post('/buat', [\App\Http\Controllers\AssessmentAk06Controller::class, 'create'])->name('create');
-        Route::get('/{id}/edit', [\App\Http\Controllers\AssessmentAk06Controller::class, 'edit'])->name('edit');
-        Route::post('/{id}/simpan', [\App\Http\Controllers\AssessmentAk06Controller::class, 'simpan'])->name('simpan');
-        Route::get('/{id}/cetak', [\App\Http\Controllers\AssessmentAk06Controller::class, 'cetak'])->name('cetak');
-    });
-
-    // FR.VA — Memberikan Kontribusi dalam Validasi Asesmen
-    Route::prefix('va')->as('va.')->group(function () {
-        Route::get('/', [\App\Http\Controllers\AssessmentVaController::class, 'index'])->name('index');
-        Route::post('/buat', [\App\Http\Controllers\AssessmentVaController::class, 'create'])->name('create');
-        Route::get('/{id}/wizard', [\App\Http\Controllers\AssessmentVaController::class, 'wizard'])->name('wizard');
-        Route::post('/{id}/step', [\App\Http\Controllers\AssessmentVaController::class, 'saveStep'])->name('save-step');
-        Route::get('/{id}/cetak', [\App\Http\Controllers\AssessmentVaController::class, 'cetak'])->name('cetak');
-    });
-});
 
 /*
 |--------------------------------------------------------------------------

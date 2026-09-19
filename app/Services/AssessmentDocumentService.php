@@ -194,7 +194,7 @@ class AssessmentDocumentService
                 $asesi->notify(new SystemAlert(
                     'Keputusan Asesmen Tersedia',
                     "Asesor telah menetapkan keputusan asesmen pada formulir FR.AK.02. Silakan mengisi formulir umpan balik FR.AK.03.",
-                    route('dokumen-asesmen.ak03.show', $ak02->pendaftaran_id),
+                    \Illuminate\Support\Facades\Route::has('dokumen-asesmen.ak03.show') ? route('dokumen-asesmen.ak03.show', $ak02->pendaftaran_id) : '#',
                     'success'
                 ));
             }
@@ -357,7 +357,7 @@ class AssessmentDocumentService
                     $asesor->notify(new SystemAlert(
                         'Umpan Balik Asesi Dikirim',
                         "Asesi {$ak03->pendaftaran->asesi->nama_lengkap} telah melengkapi dan mengirimkan formulir umpan balik FR.AK.03.",
-                        route('dokumen-asesmen.ak03.show', $ak03->pendaftaran_id),
+                        \Illuminate\Support\Facades\Route::has('dokumen-asesmen.ak03.show') ? route('dokumen-asesmen.ak03.show', $ak03->pendaftaran_id) : '#',
                         'info'
                     ));
                 }

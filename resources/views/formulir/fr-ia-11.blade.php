@@ -339,11 +339,7 @@
             </table>
         </div>
 
-        @include('komponen.navigasi-form-bawah', [
-            'pendaftaranId' => $pendaftaran->id,
-            'prevForm' => ['route' => route('formulir.ia.index', ['kodeForm' => 'FR.IA.10', 'pendaftaranId' => $pendaftaran->id]), 'label' => 'FR.IA.10 Pihak Ketiga'],
-            'nextForm' => ['route' => route('formulir.ak02', $pendaftaran->id), 'label' => 'FR.AK.02 Rekaman Asesmen']
-        ])
+        @include('komponen.navigasi-form-bawah')
 
     </div>
 </div>
