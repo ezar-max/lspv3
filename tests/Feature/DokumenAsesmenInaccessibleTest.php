@@ -64,3 +64,4 @@ class DokumenAsesmenInaccessibleTest extends TestCase
         $this->actingAs($this->asesor)->get('/dokumen-asesmen/va')->assertStatus(404);
     }
 }
+
