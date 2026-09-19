@@ -241,47 +241,8 @@
         }
      }">
 
-    <!-- =========================================================================
-         BANNER INFORMASI WAKTU / STATUS SESI UJIAN
-         ========================================================================= -->
-    @if($pendaftaran && !$pendaftaran->isMapaConfirmed())
-        <div class="bg-amber-50/90 border border-amber-200 rounded-2xl p-4 sm:p-5 flex items-start gap-3.5 shadow-xs">
-            <div class="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-            </div>
-            <div class="text-xs text-amber-900 space-y-1">
-                <strong class="font-bold text-sm block">Rencana Asesmen (MAPA) Sedang Dipersiapkan</strong>
-                <p class="text-amber-800 leading-relaxed">{{ $statusSesi['pesan'] ?? 'Rencana asesmen (FR.MAPA.01 & FR.MAPA.02) belum disahkan asesor. Ruang ujian belum tersedia.' }} Anda dapat meninjau instrumen asesmen di bawah ini terlebih dahulu (mode baca saja).</p>
-            </div>
-        </div>
-    @elseif(($statusSesi['status'] ?? '') === 'belum_mulai')
-        <div class="bg-blue-50/90 border border-blue-200 rounded-2xl p-4 sm:p-5 flex flex-wrap items-center justify-between gap-4 shadow-xs">
-            <div class="flex items-start gap-3.5">
-                <div class="w-9 h-9 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center shrink-0">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                </div>
-                <div class="text-xs text-blue-900 space-y-1">
-                    <strong class="font-bold text-sm block">Sesi Ujian Belum Dimulai (Mode Pratinjau)</strong>
-                    <p class="text-blue-800 leading-relaxed">{{ $statusSesi['pesan'] ?? 'Jadwal asesmen belum memasuki jam pelaksanaan resmi atau belum dibuka oleh Asesor.' }} Anda dapat mempelajari butir instrumen di bawah ini terlebih dahulu (mode baca saja).</p>
-                </div>
-            </div>
-            @if(($detikMenujuMulai ?? 0) > 0)
-                <div class="flex items-center gap-2 bg-white px-3.5 py-2 rounded-xl border border-blue-200 shadow-2xs">
-                    <span class="text-[10px] uppercase font-bold text-blue-600 tracking-wider">Mulai Dalam:</span>
-                    <span class="font-mono font-bold text-sm text-slate-800 tabular-nums" x-text="countdownMulaiDisplay">00:00:00</span>
-                </div>
-            @endif
-        </div>
-    @elseif($isSubmitted || ($statusSesi['status'] ?? '') === 'selesai_dinilai')
-        <div class="bg-emerald-50/90 border border-emerald-200 rounded-2xl p-4 flex items-center gap-3 shadow-xs">
-            <div class="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-            </div>
-            <div class="text-xs text-emerald-900 space-y-0.5">
-                <strong class="font-bold text-sm block">Sesi Asesmen Telah Diselesaikan</strong>
-                <p class="text-emerald-800">{{ $statusSesi['pesan'] ?? 'Jawaban ujian Anda telah berhasil disimpan dan diserahkan kepada Asesor Penguji.' }}</p>
-            </div>
-        </div>
+    @if(($statusSesi['status'] ?? '') === 'mapa_pending')
+        <span class="sr-only">{{ $statusSesi['pesan'] ?? 'Rencana asesmen (FR.MAPA.01 & FR.MAPA.02) belum disahkan asesor.' }}</span>
     @endif
 
     <!-- =========================================================================
