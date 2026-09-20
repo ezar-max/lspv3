@@ -71,6 +71,12 @@ class AssessmentAk07Controller extends Controller
 
         $this->authorizeAsesor($pendaftaran);
 
+        // Pengalihan sistem terpusat: Formulir FR.AK.07 kini dikelola 1 form master per-skema untuk seluruh asesi
+        if ($pendaftaran->skema_id) {
+            return redirect()->route('asesor.skema.ak-07', $pendaftaran->skema_id)
+                ->with('info', 'Formulir FR.AK.07 kini dikelola terpusat per-skema (Master FR.AK.07) untuk seluruh asesi.');
+        }
+
         // Sinkronisasi otomatis dari Master FR.AK.07 Skema jika tersedia
         $pendaftaran->syncFromMasterAk07IfAvailable();
         $pendaftaran->refresh();
@@ -82,8 +88,8 @@ class AssessmentAk07Controller extends Controller
             
             $ak07 = new AssessmentAk07Adjustment([
                 'assessment_registration_id' => $pendaftaran->id,
-                'potensi_asesi' => $defaultPotensi,
-                'fase_penggunaan' => 'saat_pra_asesmen',
+                'potensi_asesi' => null,
+                'fase_penggunaan' => null,
                 'items_checklist' => [],
                 'status' => 'draft',
             ]);
@@ -121,23 +127,29 @@ class AssessmentAk07Controller extends Controller
 
         foreach (AssessmentAk07Adjustment::CRITERIA_DEFINITIONS as $catId => $cat) {
             $catInput = $rawChecklist[$catId] ?? [];
-            $isPerlu = filter_var($catInput['perlu'] ?? false, FILTER_VALIDATE_BOOLEAN) || 
-                       ($catInput['perlu'] ?? '') === '1' || 
-                       ($catInput['perlu'] ?? '') === 'ya';
+            $perluVal = $catInput['perlu'] ?? null;
+            $isPerlu = null;
+
+            if ($perluVal !== null && $perluVal !== '') {
+                $isPerlu = filter_var($perluVal, FILTER_VALIDATE_BOOLEAN) || 
+                           ($perluVal === '1') || 
+                           ($perluVal === 1) ||
+                           ($perluVal === 'ya');
+            }
 
             $opsiDipilih = is_array($catInput['opsi'] ?? null) ? array_values($catInput['opsi']) : [];
             $keterangan = trim($catInput['keterangan'] ?? '');
 
             $formattedChecklist[$catId] = [
                 'perlu_penyesuaian' => $isPerlu,
-                'opsi_dipilih' => $isPerlu ? $opsiDipilih : [],
-                'keterangan' => $isPerlu ? $keterangan : '',
+                'opsi_dipilih' => $isPerlu === true ? $opsiDipilih : [],
+                'keterangan' => $isPerlu === true ? $keterangan : '',
             ];
         }
 
         // Simpan atribut utama
-        $ak07->potensi_asesi = $request->input('potensi_asesi', 1);
-        $ak07->fase_penggunaan = $request->input('fase_penggunaan', 'saat_pra_asesmen');
+        $ak07->potensi_asesi = $request->filled('potensi_asesi') ? (int) $request->input('potensi_asesi') : null;
+        $ak07->fase_penggunaan = $request->input('fase_penggunaan') ?: null;
         $ak07->items_checklist = $formattedChecklist;
         $ak07->acuan_pembanding_disepakati = $request->input('acuan_pembanding_disepakati');
         $ak07->metode_disepakati = $request->input('metode_disepakati');

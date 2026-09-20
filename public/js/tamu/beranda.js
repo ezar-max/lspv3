@@ -70,6 +70,12 @@ document.addEventListener('DOMContentLoaded', () => {
         tutupDrawer();
       });
     });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && drawerOverlay.classList.contains('aktif')) {
+        tutupDrawer();
+      }
+    });
   }
 
   if (menuNavigasi) {

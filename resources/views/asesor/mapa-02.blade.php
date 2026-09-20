@@ -16,6 +16,92 @@
             tr { page-break-inside: avoid; page-break-after: auto; }
             .page-break { page-break-before: always; }
         }
+
+        /* ============================================================
+           MOBILE ONLY (<= 768px)
+           Desktop (>= 769px) is 100% UNTOUCHED and identical to original.
+           ============================================================ */
+        @media (max-width: 768px) {
+            .mapa02-table-wrapper {
+                display: block !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                min-width: 0 !important;
+                overflow-x: auto !important;
+                -webkit-overflow-scrolling: touch !important;
+                touch-action: pan-x pan-y !important;
+                scrollbar-width: thin;
+                scrollbar-color: #cbd5e1 #f8fafc;
+            }
+
+            .mapa02-table-wrapper::-webkit-scrollbar {
+                height: 4px;
+            }
+            .mapa02-table-wrapper::-webkit-scrollbar-thumb {
+                background: #cbd5e1;
+                border-radius: 4px;
+            }
+
+            .mapa02-table {
+                display: table !important;
+                table-layout: fixed !important;
+                width: 560px !important;
+                min-width: 560px !important;
+                max-width: 560px !important;
+                font-size: 11px !important;
+                line-height: 1.3 !important;
+            }
+
+            .mapa02-th-elemen,
+            .mapa02-td-elemen {
+                width: 110px !important;
+                min-width: 110px !important;
+                max-width: 110px !important;
+                padding: 0.4rem 0.35rem !important;
+                font-size: 10px !important;
+                word-break: break-word !important;
+                overflow-wrap: break-word !important;
+                white-space: normal !important;
+            }
+
+            .mapa02-th-kuk,
+            .mapa02-td-kuk {
+                width: 170px !important;
+                min-width: 170px !important;
+                max-width: 170px !important;
+                padding: 0.4rem 0.35rem !important;
+                font-size: 10px !important;
+                word-break: break-word !important;
+                overflow-wrap: break-word !important;
+                white-space: normal !important;
+            }
+
+            /* 8 Kolom Instrumen: masing-masing 35px (8 x 35 = 280px) */
+            /* Total: 110 + 170 + 280 = 560px */
+            .mapa02-th-ia,
+            .mapa02-td-ia {
+                width: 35px !important;
+                min-width: 35px !important;
+                max-width: 35px !important;
+                padding: 0.35rem 0.1rem !important;
+                text-align: center !important;
+            }
+
+            .mapa02-cb {
+                width: 1.15rem !important;
+                height: 1.15rem !important;
+                margin: 0 auto;
+                display: block;
+                cursor: pointer;
+            }
+
+            .mapa02-elem-desc {
+                display: -webkit-box;
+                -webkit-line-clamp: 2;
+                -webkit-box-orient: vertical;
+                overflow: hidden;
+            }
+        }
     </style>
 @endpush
 
@@ -32,7 +118,7 @@
     $isConfigured = !empty($mapa02->exists) && $isConfirmed;
 @endphp
 
-<div class="max-w-6xl mx-auto px-2 sm:px-4 py-3 space-y-4" x-data="mapa02App()" x-cloak>
+<div class="max-w-6xl mx-auto px-2 sm:px-4 py-3 space-y-4 mapa02-container" x-data="mapa02App()" x-cloak>
 
     <!-- =========================================================================
          TOP BREADCRUMB & ACTION BAR
@@ -46,7 +132,7 @@
             <span class="text-slate-800 font-bold">FR.MAPA.02</span>
         </div>
 
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-2 mapa02-top-actions">
             @if(!$isAsesi && $isConfigured)
                 <button type="button" @click="toggleEditMode()" 
                         class="inline-flex items-center px-3 py-1.5 rounded-lg border text-xs font-bold transition-colors"
@@ -101,7 +187,7 @@
         </div>
 
         <!-- Metadata Grid -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 pt-1 text-xs">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 pt-1 text-xs mapa02-meta-grid">
             <div class="bg-slate-50 border border-slate-100 rounded-xl p-2.5 space-y-0.5">
                 <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Skema Sertifikasi</span>
                 <div class="font-bold text-slate-800 truncate" title="{{ $pendaftaran->skema->nama_skema ?? '-' }}">
@@ -143,7 +229,7 @@
     <!-- =========================================================================
          LEGEND INSTRUMEN (COMPACT INLINE)
          ========================================================================= -->
-    <div class="bg-slate-50 rounded-xl border border-slate-200/80 p-3 text-[11px] text-slate-600 flex flex-wrap items-center gap-x-4 gap-y-1.5">
+    <div class="mapa02-legend bg-slate-50 rounded-xl border border-slate-200/80 p-3 text-[11px] text-slate-600 flex flex-wrap items-center gap-x-4 gap-y-1.5">
         <span class="font-bold text-slate-700 uppercase tracking-wider text-[10px] flex items-center gap-1.5">
             <span class="w-1.5 h-1.5 rounded-full bg-blue-600"></span> Legenda Instrumen:
         </span>
@@ -204,7 +290,7 @@
                     </div>
 
                     <!-- Quick Action Buttons Per Unit -->
-                    <div class="flex items-center gap-1.5 no-print shrink-0 self-end sm:self-center" x-show="isEditMode">
+                    <div class="mapa02-quick-actions flex items-center gap-1.5 no-print shrink-0 self-end sm:self-center" x-show="isEditMode">
                         <button type="button" @click="toggleInstrumentForUnit({{ $unit->id }}, 'clo')" class="px-2 py-1 bg-white hover:bg-slate-100 border border-slate-200 rounded-md text-[10px] font-semibold text-slate-700 transition">
                             + Observasi (CLO)
                         </button>
@@ -218,20 +304,31 @@
                 </div>
 
                 <!-- Matriks Tabel Unit -->
-                <div class="overflow-x-auto" x-show="expanded">
-                    <table class="w-full text-left border-collapse text-xs">
+                <div class="overflow-x-auto mapa02-table-wrapper" x-show="expanded">
+                    <!-- Indikator Geser untuk Layar Mobile (Hanya tampil di mobile) -->
+                    <div class="sm:hidden flex items-center justify-between px-3 py-1.5 bg-blue-50/90 border-b border-blue-100 text-[10.5px] text-blue-800 font-medium select-none">
+                        <span class="flex items-center gap-1.5">
+                            <svg class="w-3.5 h-3.5 text-blue-600 animate-pulse shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                            </svg>
+                            <span>Geser tabel ke kanan untuk instrumen</span>
+                        </span>
+                        <span class="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded text-[9px] font-bold shrink-0 uppercase">8 Kolom IA</span>
+                    </div>
+
+                    <table class="w-full text-left border-collapse text-xs mapa02-table">
                         <thead>
                             <tr class="bg-slate-50/50 border-b border-slate-200 text-[11px] font-bold text-slate-600 uppercase tracking-wider">
-                                <th class="py-2.5 px-3 w-1/4 min-w-[180px]">Elemen Kompetensi</th>
-                                <th class="py-2.5 px-3 w-1/3 min-w-[220px]">Kriteria Unjuk Kerja (KUK)</th>
-                                <th class="py-2.5 px-2 text-center w-12" title="IA.01: Ceklis Observasi">CLO</th>
-                                <th class="py-2.5 px-2 text-center w-12" title="IA.02: Tugas Praktik">DPT</th>
-                                <th class="py-2.5 px-2 text-center w-12" title="IA.03: Pertanyaan Pendukung Observasi">PMO</th>
-                                <th class="py-2.5 px-2 text-center w-12" title="IA.05/06: Uji Tertulis CBT & Esai">DPE</th>
-                                <th class="py-2.5 px-2 text-center w-12" title="IA.07: Pertanyaan Lisan">DPL</th>
-                                <th class="py-2.5 px-2 text-center w-12" title="IA.08: Verifikasi Portofolio">VP</th>
-                                <th class="py-2.5 px-2 text-center w-12" title="IA.09: Pertanyaan Wawancara">PW</th>
-                                <th class="py-2.5 px-2 text-center w-12" title="IA.11: Ceklis Reviu Produk">CRP</th>
+                                <th class="py-2.5 px-3 w-1/4 min-w-[180px] mapa02-th-elemen">Elemen Kompetensi</th>
+                                <th class="py-2.5 px-3 w-1/3 min-w-[220px] mapa02-th-kuk">Kriteria Unjuk Kerja (KUK)</th>
+                                <th class="py-2.5 px-2 text-center w-12 mapa02-th-ia" title="IA.01: Ceklis Observasi">CLO</th>
+                                <th class="py-2.5 px-2 text-center w-12 mapa02-th-ia" title="IA.02: Tugas Praktik">DPT</th>
+                                <th class="py-2.5 px-2 text-center w-12 mapa02-th-ia" title="IA.03: Pertanyaan Pendukung Observasi">PMO</th>
+                                <th class="py-2.5 px-2 text-center w-12 mapa02-th-ia" title="IA.05/06: Uji Tertulis CBT & Esai">DPE</th>
+                                <th class="py-2.5 px-2 text-center w-12 mapa02-th-ia" title="IA.07: Pertanyaan Lisan">DPL</th>
+                                <th class="py-2.5 px-2 text-center w-12 mapa02-th-ia" title="IA.08: Verifikasi Portofolio">VP</th>
+                                <th class="py-2.5 px-2 text-center w-12 mapa02-th-ia" title="IA.09: Pertanyaan Wawancara">PW</th>
+                                <th class="py-2.5 px-2 text-center w-12 mapa02-th-ia" title="IA.11: Ceklis Reviu Produk">CRP</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-100 text-slate-800">
@@ -257,44 +354,44 @@
                                         @endphp
                                         <tr class="hover:bg-slate-50/50 transition-colors">
                                             @if($kIndex === 0)
-                                                <td class="py-2.5 px-3 align-top bg-slate-50/30 border-r border-slate-100 font-medium" rowspan="{{ $totalKuk }}">
+                                                <td class="py-2.5 px-3 align-top bg-slate-50/30 border-r border-slate-100 font-medium mapa02-td-elemen" rowspan="{{ $totalKuk }}">
                                                     <span class="font-bold text-slate-900 block leading-tight">
                                                         {{ $elem->nomor_elemen }}. {{ $elem->nama_elemen }}
                                                     </span>
                                                     @if(!empty($elem->pertanyaan_elemen))
-                                                        <span class="text-[10px] text-slate-500 italic block mt-1">"{{ $elem->pertanyaan_elemen }}"</span>
+                                                        <span class="text-[10px] text-slate-500 italic block mt-1 mapa02-elem-desc">"{{ $elem->pertanyaan_elemen }}"</span>
                                                     @endif
                                                 </td>
                                             @endif
-                                            <td class="py-2 px-3 align-top border-r border-slate-100">
+                                            <td class="py-2 px-3 align-top border-r border-slate-100 mapa02-td-kuk">
                                                 <div class="flex items-start gap-1.5">
                                                     <span class="font-bold text-blue-700 shrink-0">{{ $kuk->nomor_kuk }}</span>
                                                     <span class="text-slate-700 leading-snug">{{ $kuk->pernyataan_kuk }}</span>
                                                 </div>
                                             </td>
-                                            <td class="py-2 px-1 text-center align-middle">
-                                                <input type="checkbox" name="matriks_peta[{{ $unit->id }}][{{ $elem->id }}][{{ $kKey }}][clo]" value="1" {{ $clo ? 'checked' : '' }} class="unit-{{ $unit->id }}-clo rounded-sm text-blue-600 focus:ring-0 cursor-pointer">
+                                            <td class="py-2 px-1 text-center align-middle mapa02-td-ia">
+                                                <input type="checkbox" name="matriks_peta[{{ $unit->id }}][{{ $elem->id }}][{{ $kKey }}][clo]" value="1" {{ $clo ? 'checked' : '' }} class="mapa02-cb unit-{{ $unit->id }}-clo rounded-sm text-blue-600 focus:ring-0 cursor-pointer">
                                             </td>
-                                            <td class="py-2 px-1 text-center align-middle">
-                                                <input type="checkbox" name="matriks_peta[{{ $unit->id }}][{{ $elem->id }}][{{ $kKey }}][dpt]" value="1" {{ $dpt ? 'checked' : '' }} class="unit-{{ $unit->id }}-dpt rounded-sm text-blue-600 focus:ring-0 cursor-pointer">
+                                            <td class="py-2 px-1 text-center align-middle mapa02-td-ia">
+                                                <input type="checkbox" name="matriks_peta[{{ $unit->id }}][{{ $elem->id }}][{{ $kKey }}][dpt]" value="1" {{ $dpt ? 'checked' : '' }} class="mapa02-cb unit-{{ $unit->id }}-dpt rounded-sm text-blue-600 focus:ring-0 cursor-pointer">
                                             </td>
-                                            <td class="py-2 px-1 text-center align-middle">
-                                                <input type="checkbox" name="matriks_peta[{{ $unit->id }}][{{ $elem->id }}][{{ $kKey }}][pmo]" value="1" {{ $pmo ? 'checked' : '' }} class="unit-{{ $unit->id }}-pmo rounded-sm text-blue-600 focus:ring-0 cursor-pointer">
+                                            <td class="py-2 px-1 text-center align-middle mapa02-td-ia">
+                                                <input type="checkbox" name="matriks_peta[{{ $unit->id }}][{{ $elem->id }}][{{ $kKey }}][pmo]" value="1" {{ $pmo ? 'checked' : '' }} class="mapa02-cb unit-{{ $unit->id }}-pmo rounded-sm text-blue-600 focus:ring-0 cursor-pointer">
                                             </td>
-                                            <td class="py-2 px-1 text-center align-middle">
-                                                <input type="checkbox" name="matriks_peta[{{ $unit->id }}][{{ $elem->id }}][{{ $kKey }}][dpe]" value="1" {{ $dpe ? 'checked' : '' }} class="unit-{{ $unit->id }}-dpe rounded-sm text-blue-600 focus:ring-0 cursor-pointer">
+                                            <td class="py-2 px-1 text-center align-middle mapa02-td-ia">
+                                                <input type="checkbox" name="matriks_peta[{{ $unit->id }}][{{ $elem->id }}][{{ $kKey }}][dpe]" value="1" {{ $dpe ? 'checked' : '' }} class="mapa02-cb unit-{{ $unit->id }}-dpe rounded-sm text-blue-600 focus:ring-0 cursor-pointer">
                                             </td>
-                                            <td class="py-2 px-1 text-center align-middle">
-                                                <input type="checkbox" name="matriks_peta[{{ $unit->id }}][{{ $elem->id }}][{{ $kKey }}][dpl]" value="1" {{ $dpl ? 'checked' : '' }} class="unit-{{ $unit->id }}-dpl rounded-sm text-blue-600 focus:ring-0 cursor-pointer">
+                                            <td class="py-2 px-1 text-center align-middle mapa02-td-ia">
+                                                <input type="checkbox" name="matriks_peta[{{ $unit->id }}][{{ $elem->id }}][{{ $kKey }}][dpl]" value="1" {{ $dpl ? 'checked' : '' }} class="mapa02-cb unit-{{ $unit->id }}-dpl rounded-sm text-blue-600 focus:ring-0 cursor-pointer">
                                             </td>
-                                            <td class="py-2 px-1 text-center align-middle">
-                                                <input type="checkbox" name="matriks_peta[{{ $unit->id }}][{{ $elem->id }}][{{ $kKey }}][vp]" value="1" {{ $vp ? 'checked' : '' }} class="unit-{{ $unit->id }}-vp rounded-sm text-blue-600 focus:ring-0 cursor-pointer">
+                                            <td class="py-2 px-1 text-center align-middle mapa02-td-ia">
+                                                <input type="checkbox" name="matriks_peta[{{ $unit->id }}][{{ $elem->id }}][{{ $kKey }}][vp]" value="1" {{ $vp ? 'checked' : '' }} class="mapa02-cb unit-{{ $unit->id }}-vp rounded-sm text-blue-600 focus:ring-0 cursor-pointer">
                                             </td>
-                                            <td class="py-2 px-1 text-center align-middle">
-                                                <input type="checkbox" name="matriks_peta[{{ $unit->id }}][{{ $elem->id }}][{{ $kKey }}][pw]" value="1" {{ $pw ? 'checked' : '' }} class="unit-{{ $unit->id }}-pw rounded-sm text-blue-600 focus:ring-0 cursor-pointer">
+                                            <td class="py-2 px-1 text-center align-middle mapa02-td-ia">
+                                                <input type="checkbox" name="matriks_peta[{{ $unit->id }}][{{ $elem->id }}][{{ $kKey }}][pw]" value="1" {{ $pw ? 'checked' : '' }} class="mapa02-cb unit-{{ $unit->id }}-pw rounded-sm text-blue-600 focus:ring-0 cursor-pointer">
                                             </td>
-                                            <td class="py-2 px-1 text-center align-middle">
-                                                <input type="checkbox" name="matriks_peta[{{ $unit->id }}][{{ $elem->id }}][{{ $kKey }}][crp]" value="1" {{ $crp ? 'checked' : '' }} class="unit-{{ $unit->id }}-crp rounded-sm text-blue-600 focus:ring-0 cursor-pointer">
+                                            <td class="py-2 px-1 text-center align-middle mapa02-td-ia">
+                                                <input type="checkbox" name="matriks_peta[{{ $unit->id }}][{{ $elem->id }}][{{ $kKey }}][crp]" value="1" {{ $crp ? 'checked' : '' }} class="mapa02-cb unit-{{ $unit->id }}-crp rounded-sm text-blue-600 focus:ring-0 cursor-pointer">
                                             </td>
                                         </tr>
                                     @endforeach
@@ -303,37 +400,37 @@
                                         $savedItem = $savedPeta[$unit->id][$elem->id]['elem_only'] ?? [];
                                     @endphp
                                     <tr class="hover:bg-slate-50/50 transition-colors">
-                                        <td class="py-2.5 px-3 align-top bg-slate-50/30 border-r border-slate-100 font-medium">
+                                        <td class="py-2.5 px-3 align-top bg-slate-50/30 border-r border-slate-100 font-medium mapa02-td-elemen">
                                             <span class="font-bold text-slate-900 block leading-tight">
                                                 {{ $elem->nomor_elemen }}. {{ $elem->nama_elemen }}
                                             </span>
                                         </td>
-                                        <td class="py-2 px-3 align-top border-r border-slate-100 italic text-slate-400">
+                                        <td class="py-2 px-3 align-top border-r border-slate-100 italic text-slate-400 mapa02-td-kuk">
                                             KUK belum diinput untuk elemen ini.
                                         </td>
-                                        <td class="py-2 px-1 text-center align-middle">
-                                            <input type="checkbox" name="matriks_peta[{{ $unit->id }}][{{ $elem->id }}][elem_only][clo]" value="1" {{ !empty($savedItem['clo']) ? 'checked' : '' }} class="unit-{{ $unit->id }}-clo rounded-sm text-blue-600 focus:ring-0 cursor-pointer">
+                                        <td class="py-2 px-1 text-center align-middle mapa02-td-ia">
+                                            <input type="checkbox" name="matriks_peta[{{ $unit->id }}][{{ $elem->id }}][elem_only][clo]" value="1" {{ !empty($savedItem['clo']) ? 'checked' : '' }} class="mapa02-cb unit-{{ $unit->id }}-clo rounded-sm text-blue-600 focus:ring-0 cursor-pointer">
                                         </td>
-                                        <td class="py-2 px-1 text-center align-middle">
-                                            <input type="checkbox" name="matriks_peta[{{ $unit->id }}][{{ $elem->id }}][elem_only][dpt]" value="1" {{ !empty($savedItem['dpt']) ? 'checked' : '' }} class="unit-{{ $unit->id }}-dpt rounded-sm text-blue-600 focus:ring-0 cursor-pointer">
+                                        <td class="py-2 px-1 text-center align-middle mapa02-td-ia">
+                                            <input type="checkbox" name="matriks_peta[{{ $unit->id }}][{{ $elem->id }}][elem_only][dpt]" value="1" {{ !empty($savedItem['dpt']) ? 'checked' : '' }} class="mapa02-cb unit-{{ $unit->id }}-dpt rounded-sm text-blue-600 focus:ring-0 cursor-pointer">
                                         </td>
-                                        <td class="py-2 px-1 text-center align-middle">
-                                            <input type="checkbox" name="matriks_peta[{{ $unit->id }}][{{ $elem->id }}][elem_only][pmo]" value="1" {{ !empty($savedItem['pmo']) ? 'checked' : '' }} class="unit-{{ $unit->id }}-pmo rounded-sm text-blue-600 focus:ring-0 cursor-pointer">
+                                        <td class="py-2 px-1 text-center align-middle mapa02-td-ia">
+                                            <input type="checkbox" name="matriks_peta[{{ $unit->id }}][{{ $elem->id }}][elem_only][pmo]" value="1" {{ !empty($savedItem['pmo']) ? 'checked' : '' }} class="mapa02-cb unit-{{ $unit->id }}-pmo rounded-sm text-blue-600 focus:ring-0 cursor-pointer">
                                         </td>
-                                        <td class="py-2 px-1 text-center align-middle">
-                                            <input type="checkbox" name="matriks_peta[{{ $unit->id }}][{{ $elem->id }}][elem_only][dpe]" value="1" {{ !empty($savedItem['dpe']) ? 'checked' : '' }} class="unit-{{ $unit->id }}-dpe rounded-sm text-blue-600 focus:ring-0 cursor-pointer">
+                                        <td class="py-2 px-1 text-center align-middle mapa02-td-ia">
+                                            <input type="checkbox" name="matriks_peta[{{ $unit->id }}][{{ $elem->id }}][elem_only][dpe]" value="1" {{ !empty($savedItem['dpe']) ? 'checked' : '' }} class="mapa02-cb unit-{{ $unit->id }}-dpe rounded-sm text-blue-600 focus:ring-0 cursor-pointer">
                                         </td>
-                                        <td class="py-2 px-1 text-center align-middle">
-                                            <input type="checkbox" name="matriks_peta[{{ $unit->id }}][{{ $elem->id }}][elem_only][dpl]" value="1" {{ !empty($savedItem['dpl']) ? 'checked' : '' }} class="unit-{{ $unit->id }}-dpl rounded-sm text-blue-600 focus:ring-0 cursor-pointer">
+                                        <td class="py-2 px-1 text-center align-middle mapa02-td-ia">
+                                            <input type="checkbox" name="matriks_peta[{{ $unit->id }}][{{ $elem->id }}][elem_only][dpl]" value="1" {{ !empty($savedItem['dpl']) ? 'checked' : '' }} class="mapa02-cb unit-{{ $unit->id }}-dpl rounded-sm text-blue-600 focus:ring-0 cursor-pointer">
                                         </td>
-                                        <td class="py-2 px-1 text-center align-middle">
-                                            <input type="checkbox" name="matriks_peta[{{ $unit->id }}][{{ $elem->id }}][elem_only][vp]" value="1" {{ !empty($savedItem['vp']) ? 'checked' : '' }} class="unit-{{ $unit->id }}-vp rounded-sm text-blue-600 focus:ring-0 cursor-pointer">
+                                        <td class="py-2 px-1 text-center align-middle mapa02-td-ia">
+                                            <input type="checkbox" name="matriks_peta[{{ $unit->id }}][{{ $elem->id }}][elem_only][vp]" value="1" {{ !empty($savedItem['vp']) ? 'checked' : '' }} class="mapa02-cb unit-{{ $unit->id }}-vp rounded-sm text-blue-600 focus:ring-0 cursor-pointer">
                                         </td>
-                                        <td class="py-2 px-1 text-center align-middle">
-                                            <input type="checkbox" name="matriks_peta[{{ $unit->id }}][{{ $elem->id }}][elem_only][pw]" value="1" {{ !empty($savedItem['pw']) ? 'checked' : '' }} class="unit-{{ $unit->id }}-pw rounded-sm text-blue-600 focus:ring-0 cursor-pointer">
+                                        <td class="py-2 px-1 text-center align-middle mapa02-td-ia">
+                                            <input type="checkbox" name="matriks_peta[{{ $unit->id }}][{{ $elem->id }}][elem_only][pw]" value="1" {{ !empty($savedItem['pw']) ? 'checked' : '' }} class="mapa02-cb unit-{{ $unit->id }}-pw rounded-sm text-blue-600 focus:ring-0 cursor-pointer">
                                         </td>
-                                        <td class="py-2 px-1 text-center align-middle">
-                                            <input type="checkbox" name="matriks_peta[{{ $unit->id }}][{{ $elem->id }}][elem_only][crp]" value="1" {{ !empty($savedItem['crp']) ? 'checked' : '' }} class="unit-{{ $unit->id }}-crp rounded-sm text-blue-600 focus:ring-0 cursor-pointer">
+                                        <td class="py-2 px-1 text-center align-middle mapa02-td-ia">
+                                            <input type="checkbox" name="matriks_peta[{{ $unit->id }}][{{ $elem->id }}][elem_only][crp]" value="1" {{ !empty($savedItem['crp']) ? 'checked' : '' }} class="mapa02-cb unit-{{ $unit->id }}-crp rounded-sm text-blue-600 focus:ring-0 cursor-pointer">
                                         </td>
                                     </tr>
                                 @endif

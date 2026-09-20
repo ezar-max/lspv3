@@ -685,6 +685,16 @@ class AdminController extends Controller
             abort(403, 'Hanya Administrator atau Super Admin yang dapat memvalidasi dokumen FR.MAPA.01.');
         }
 
+        $request->validate([
+            'validator_nama' => 'required|string|max:255',
+            'validator_nomor_met' => 'required|string|max:100',
+            'catatan_validasi' => 'nullable|string|max:1000',
+            'tanda_tangan_admin_base64' => 'nullable|string',
+        ], [
+            'validator_nama.required' => 'Nama Validator (Admin LSP) wajib diisi.',
+            'validator_nomor_met.required' => 'Nomor Registrasi / NIP Validator wajib diisi.',
+        ]);
+
         $mapa01 = null;
 
         // A. Jika eksplisit validasi Master Skema
@@ -836,6 +846,16 @@ class AdminController extends Controller
         $skemaNama = $mapa01->skema?->nama_skema ?? 'Skema Sertifikasi';
         $targetInfo = $mapa01->pendaftaran_id ? "Pendaftaran #{$mapa01->pendaftaran?->nomor_pendaftaran}" : "Master Skema {$skemaNama}";
         LogAktivitas::catat('Validasi FR.MAPA.01', "Admin {$user->nama_lengkap} memvalidasi dokumen FR.MAPA.01 untuk {$targetInfo}");
+
+        $matriksUnits = (array) ($mapa01->rencana_unit_matriks ?? []);
+        $totalUnits = $mapa01->skema?->unitKompetensi?->count() ?? 0;
+        $isMatrixIncomplete = ($totalUnits > 0 && count($matriksUnits) < $totalUnits);
+        $isPendekatanEmpty = empty($mapa01->pendekatan_asesi);
+
+        if ($isMatrixIncomplete || $isPendekatanEmpty) {
+            return back()->with('sukses', 'Dokumen FR.MAPA.01 berhasil divalidasi dan disahkan oleh Administrator LSP!')
+                         ->with('warning', 'Pemberitahuan Validasi: Terdapat komponen formulir (pendekatan kandidat atau unit kompetensi) yang belum terisi maksimal oleh Asesor.');
+        }
 
         return back()->with('sukses', 'Dokumen FR.MAPA.01 berhasil divalidasi dan disahkan oleh Administrator LSP!');
     }

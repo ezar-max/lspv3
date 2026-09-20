@@ -27,6 +27,22 @@
             <a href="{{ route('asesor.dashboard') }}" class="px-3.5 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold text-xs transition-colors">
                 Ke Dashboard
             </a>
+            @php
+                $activeJadwal = !empty($jadwalId) ? $jadwalOption->firstWhere('id', $jadwalId) : null;
+                $activeSkemaId = $activeJadwal?->skema_id ?? auth()->user()->skema_id ?? $pesertaList->first()?->skema_id;
+            @endphp
+            @if($activeSkemaId)
+                <a href="{{ route('asesor.skema.ak-07', $activeSkemaId) }}" class="px-3.5 py-2 rounded-xl border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs transition-colors inline-flex items-center gap-1.5 shadow-2xs" title="Kelola Master Formulir Penyesuaian Asesmen (1 Form untuk Semua Asesi)">
+                    <i class="fa-solid fa-file-pen text-indigo-600"></i>
+                    <span>Master FR.AK.07</span>
+                </a>
+            @else
+                <a href="{{ route('asesor.mapa') }}" class="px-3.5 py-2 rounded-xl border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs transition-colors inline-flex items-center gap-1.5 shadow-2xs" title="Pusat Formulir Perencanaan (FR.MAPA, AK.01, AK.07)">
+                    <i class="fa-solid fa-file-pen text-indigo-600"></i>
+                    <span>Master FR.AK.07</span>
+                </a>
+            @endif
+            <a href="{{ route('asesor.koreksi-teori', ['jadwal_id' => $jadwalId ?? '']) }}" class="px-3.5 py-2 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 font-semibold text-xs border border-slate-200 transition-colors">
             <a href="{{ route('asesor.koreksi-teori', ['jadwal_id' => $jadwalId ?? '']) }}" class="px-3.5 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs border border-indigo-200 transition-colors">
                 Koreksi Teori (IA.05 & 06)
             </a>
@@ -227,25 +243,25 @@
                                     @endif
                                 </div>
 
-                                <!-- AK.07 Badge -->
+                                <!-- AK.07 Status Badge -->
                                 <div>
                                     @php $ak07P = $p->ak07Adjustment; @endphp
                                     @if($ak07P && $ak07P->isConfirmed())
-                                        <a href="{{ route('asesor.pendaftaran.ak07.edit', $p->id) }}" class="inline-flex items-center px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold hover:bg-emerald-100 transition-colors" title="FR.AK.07 Disetujui & Sah">
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold" title="FR.AK.07 Disetujui & Sah oleh Asesi">
                                             AK.07 Sah
-                                        </a>
+                                        </span>
                                     @elseif($ak07P && !empty($ak07P->asesor_signature))
-                                        <a href="{{ route('asesor.pendaftaran.ak07.edit', $p->id) }}" class="inline-flex items-center px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-bold hover:bg-blue-100 transition-colors" title="FR.AK.07 Ditandatangani Asesor, Menunggu Asesi">
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-bold" title="FR.AK.07 Diselaraskan Master, Menunggu TTD Asesi">
                                             AK.07 Menunggu Asesi
-                                        </a>
+                                        </span>
                                     @elseif($ak07P)
-                                        <a href="{{ route('asesor.pendaftaran.ak07.edit', $p->id) }}" class="inline-flex items-center px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-bold hover:bg-amber-100 transition-colors" title="FR.AK.07 Draf Penyesuaian">
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-bold" title="FR.AK.07 Draf">
                                             AK.07 Draf
-                                        </a>
+                                        </span>
                                     @else
-                                        <a href="{{ route('asesor.pendaftaran.ak07.edit', $p->id) }}" class="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200 text-[10px] font-medium transition-colors" title="Buka / Buat Formulir FR.AK.07">
-                                            FR.AK.07
-                                        </a>
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100 text-slate-500 border border-slate-200 text-[10px] font-medium" title="Belum Ada Penyesuaian Asesmen">
+                                            AK.07
+                                        </span>
                                     @endif
                                 </div>
 
@@ -283,14 +299,6 @@
                             <!-- 6. Aksi Asesor -->
                             <td class="py-3 px-4 text-right whitespace-nowrap">
                                 <div class="inline-flex items-center gap-1.5 justify-end flex-wrap">
-                                    <!-- Tombol FR.AK.07 -->
-                                    <a href="{{ route('asesor.pendaftaran.ak07.edit', $p->id) }}" 
-                                       class="px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 hover:text-blue-600 font-bold text-xs shadow-2xs transition-colors inline-flex items-center gap-1 cursor-pointer"
-                                       title="Buka / Edit Formulir Penyesuaian Yang Beralasan (FR.AK.07)">
-                                        <i class="fa-solid fa-file-pen text-blue-600"></i>
-                                        <span>FR.AK.07</span>
-                                    </a>
-
                                     <!-- Tombol Tunggal Uji -->
                                     @php
                                         $jadwalP = $p->jadwal;

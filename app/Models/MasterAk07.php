@@ -61,8 +61,8 @@ class MasterAk07 extends Model
 
             // Selaraskan data penyesuaian dari master jika belum dikonfirmasi atau masih draft
             if (!$ak07->exists || $ak07->status === 'draft') {
-                $ak07->potensi_asesi = $this->potensi_asesi ?? 1;
-                $ak07->fase_penggunaan = $this->fase_penggunaan ?? 'saat_pra_asesmen';
+                $ak07->potensi_asesi = $this->potensi_asesi;
+                $ak07->fase_penggunaan = $this->fase_penggunaan;
                 $ak07->items_checklist = $this->items_checklist ?? [];
                 $ak07->acuan_pembanding_disepakati = $this->acuan_pembanding_disepakati;
                 $ak07->metode_disepakati = $this->metode_disepakati;

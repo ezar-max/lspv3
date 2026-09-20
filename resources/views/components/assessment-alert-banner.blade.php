@@ -48,17 +48,27 @@
             }
         }
     } elseif ($user->peran === 'asesor') {
-        if (!request()->routeIs('asesor.penilaian*')) {
-            $submittedApl02Count = \App\Models\PendaftaranAsesi::where(function($q) use ($user) {
+        if (!request()->routeIs('asesor.penilaian*') && !request()->routeIs('asesor.input-penilaian*')) {
+            $pendingApl02Query = \App\Models\PendaftaranAsesi::with(['asesi.profilAsesi', 'skema'])
+                ->where(function($q) use ($user) {
                     $q->where('asesor_id', $user->id)
                       ->orWhereHas('jadwal', fn($j) => $j->where('asesor_id', $user->id));
                 })
-                ->whereIn('status_apl02', ['submitted', 'under_review'])
-                ->count();
+                ->whereIn('status_apl02', ['submitted', 'under_review']);
+
+            $submittedApl02Count = (clone $pendingApl02Query)->count();
 
             if ($submittedApl02Count > 0) {
+                $pendingPendaftaran = $pendingApl02Query->orderBy('updated_at', 'desc')->first();
+                $namaAsesi = $pendingPendaftaran?->asesi?->nama_lengkap ?? $pendingPendaftaran?->nama_lengkap;
+                $actionUrl = $pendingPendaftaran ? route('asesor.input-penilaian', $pendingPendaftaran->id) : route('asesor.penilaian');
+
+                $message = ($submittedApl02Count === 1 && $namaAsesi)
+                    ? "Terdapat 1 berkas FR.APL.02 ({$namaAsesi}) yang menunggu peninjauan dan rekomendasi Anda."
+                    : "Terdapat {$submittedApl02Count} berkas FR.APL.02 yang menunggu peninjauan dan rekomendasi Anda.";
+
                 $alert = [
-                    'key' => 'asesor_queue_' . $user->id . '_' . $submittedApl02Count,
+                    'key' => 'asesor_queue_' . $user->id . '_' . ($pendingPendaftaran?->id ?? 0) . '_' . $submittedApl02Count,
                     'icon' => 'fa-solid fa-clipboard-check',
                     'icon_color' => 'text-blue-600',
                     'icon_bg' => 'bg-blue-50 border border-blue-200/70',
@@ -66,10 +76,10 @@
                     'badge_class' => 'bg-blue-50 text-blue-700 border-blue-200/80',
                     'badge_dot' => 'bg-blue-500',
                     'title' => 'Menunggu Verifikasi Asesmen',
-                    'message' => "Terdapat {$submittedApl02Count} berkas FR.APL.02 yang menunggu peninjauan dan rekomendasi Anda.",
+                    'message' => $message,
                     'quote' => null,
                     'action_label' => 'Periksa Sekarang',
-                    'action_url' => route('asesor.penilaian'),
+                    'action_url' => $actionUrl,
                     'btn_class' => 'bg-slate-900 hover:bg-slate-800 text-white',
                     'bar_class' => 'bg-gradient-to-r from-slate-700 to-slate-900',
                 ];

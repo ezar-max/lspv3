@@ -172,8 +172,56 @@
                 </div>
             </div>
 
+            <h3 style="color: var(--biru-malam); margin-top: 2rem; margin-bottom: 1.25rem; border-bottom: 1px solid var(--biru-soft); padding-bottom: 0.5rem;">
+                Tanda Tangan Digital
+            </h3>
+            <p style="font-size: 0.9rem; color: var(--abu-teks); margin-bottom: 1rem;">
+                Tanda tangan ini akan digunakan pada semua formulir sertifikasi (seperti FR.APL.01, FR.AK.01, dll).
+            </p>
+
+            <div style="background: var(--biru-bg); padding: 1.5rem; border-radius: var(--radius-md); border: 1px solid var(--biru-soft); margin-bottom: 1.5rem;">
+                <div style="margin-bottom: 1rem; display: flex; gap: 1.5rem; align-items: center;">
+                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                        <input type="radio" name="ttd_mode" value="upload" id="modeUpload" checked onchange="toggleTtdMode()">
+                        <span>Unggah Gambar (PNG/JPEG)</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                        <input type="radio" name="ttd_mode" value="canvas" id="modeCanvas" onchange="toggleTtdMode()">
+                        <span>Gambar Manual (Canvas)</span>
+                    </label>
+                </div>
+
+                <!-- Mode Upload -->
+                <div id="sectionUpload">
+                    <div class="grup-form">
+                        <label class="label-form">Pilih File Tanda Tangan</label>
+                        <input type="file" name="tanda_tangan" id="ttdUpload" class="input-control" accept="image/png, image/jpeg, image/jpg" onchange="previewTtd(this)">
+                        <small style="color: var(--abu-teks); display: block; margin-top: 0.5rem;">Format: PNG, JPG, JPEG (Maks. 2MB)</small>
+                    </div>
+                    <div id="previewContainer" style="margin-top: 1rem; display: {{ $pengguna->tanda_tangan ? 'block' : 'none' }};">
+                        <span style="display: block; font-size: 0.85rem; color: var(--abu-teks); margin-bottom: 0.5rem;">Preview Tanda Tangan:</span>
+                        <img id="ttdPreview" src="{{ $pengguna->tanda_tangan ? asset($pengguna->tanda_tangan) : '' }}" alt="Preview TTD" style="max-height: 100px; background: #fff; padding: 5px; border: 1px solid #ccc; border-radius: 4px;">
+                    </div>
+                </div>
+
+                <!-- Mode Canvas -->
+                <div id="sectionCanvas" style="display: none;">
+                    <div class="grup-form">
+                        <label class="label-form">Gambar Tanda Tangan Anda di Bawah Ini</label>
+                        <div style="border: 1px solid #ccc; border-radius: 4px; background: #fff; position: relative; overflow: hidden; touch-action: none;">
+                            <canvas id="ttdCanvas" style="width: 100%; height: 200px; display: block;"></canvas>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem;">
+                            <small style="color: var(--abu-teks);">Gunakan mouse atau jari (layar sentuh) untuk menggambar.</small>
+                            <button type="button" class="tombol tombol-sekunder tombol-sm" onclick="clearCanvas()">Bersihkan Canvas</button>
+                        </div>
+                        <input type="hidden" name="tanda_tangan_canvas" id="tanda_tangan_canvas">
+                    </div>
+                </div>
+            </div>
+
             <div style="margin-top: 2.5rem; text-align: right;">
-                <button type="submit" class="tombol tombol-utama">
+                <button type="submit" class="tombol tombol-utama" onclick="prepareSubmit(event)">
                     Simpan Perubahan Biodata
                 </button>
             </div>
@@ -209,4 +257,75 @@
     </div>
 </div>
 @endif
+
+@push('js')
+<script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
+<script>
+    let signaturePad;
+
+    function initSignaturePad() {
+        const canvas = document.getElementById('ttdCanvas');
+        if (!canvas) return;
+
+        function resizeCanvas() {
+            const ratio = Math.max(window.devicePixelRatio || 1, 1);
+            canvas.width = canvas.offsetWidth * ratio;
+            canvas.height = canvas.offsetHeight * ratio;
+            canvas.getContext('2d').scale(ratio, ratio);
+            if (signaturePad) {
+                signaturePad.clear(); 
+            }
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        signaturePad = new SignaturePad(canvas, {
+            backgroundColor: 'rgb(255, 255, 255)',
+            penColor: 'rgb(15, 23, 42)',
+            minWidth: 1.2,
+            maxWidth: 2.5
+        });
+    }
+
+    function toggleTtdMode() {
+        const isCanvas = document.getElementById('modeCanvas').checked;
+        document.getElementById('sectionUpload').style.display = isCanvas ? 'none' : 'block';
+        document.getElementById('sectionCanvas').style.display = isCanvas ? 'block' : 'none';
+
+        if (isCanvas && !signaturePad) {
+            initSignaturePad();
+        }
+    }
+
+    function previewTtd(input) {
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('ttdPreview').src = e.target.result;
+                document.getElementById('previewContainer').style.display = 'block';
+            }
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+
+    function clearCanvas() {
+        if (signaturePad) {
+            signaturePad.clear();
+        }
+    }
+
+    function prepareSubmit(e) {
+        const isCanvas = document.getElementById('modeCanvas').checked;
+        if (isCanvas && signaturePad) {
+            if (signaturePad.isEmpty()) {
+                e.preventDefault();
+                alert('Silakan gambar tanda tangan Anda terlebih dahulu pada canvas.');
+                return false;
+            }
+            document.getElementById('tanda_tangan_canvas').value = signaturePad.toDataURL('image/png');
+        }
+    }
+</script>
+@endpush
 @endsection

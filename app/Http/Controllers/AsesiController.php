@@ -89,6 +89,8 @@ class AsesiController extends Controller
             'pekerjaan' => 'nullable|string|max:100',
             'nama_sekolah_instansi' => 'nullable|string|max:255',
             'tanda_tangan' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+            'tanda_tangan_canvas' => 'nullable|string',
+            'ttd_mode' => 'nullable|in:upload,canvas',
         ]);
 
         $pengguna->update([
@@ -96,7 +98,20 @@ class AsesiController extends Controller
             'nomor_telepon' => $request->nomor_telepon,
         ]);
 
-        if ($request->hasFile('tanda_tangan')) {
+        if ($request->ttd_mode === 'upload' && $request->hasFile('tanda_tangan')) {
+            $file = $request->file('tanda_tangan');
+            $namaFile = 'ttd_asesi_' . $pengguna->id . '_' . time() . '.' . $file->getClientOriginalExtension();
+            $path = $file->storeAs('tanda_tangan', $namaFile, 'public');
+            $pengguna->update(['tanda_tangan' => 'storage/' . $path]);
+        } elseif ($request->ttd_mode === 'canvas' && $request->filled('tanda_tangan_canvas')) {
+            $image_parts = explode(";base64,", $request->tanda_tangan_canvas);
+            if (count($image_parts) == 2) {
+                $image_base64 = base64_decode($image_parts[1]);
+                $namaFile = 'ttd_asesi_' . $pengguna->id . '_' . time() . '.png';
+                \Illuminate\Support\Facades\Storage::disk('public')->put('tanda_tangan/' . $namaFile, $image_base64);
+                $pengguna->update(['tanda_tangan' => 'storage/tanda_tangan/' . $namaFile]);
+            }
+        } elseif ($request->hasFile('tanda_tangan')) {
             $file = $request->file('tanda_tangan');
             $namaFile = 'ttd_asesi_' . $pengguna->id . '_' . time() . '.' . $file->getClientOriginalExtension();
             $path = $file->storeAs('tanda_tangan', $namaFile, 'public');
@@ -1323,7 +1338,7 @@ class AsesiController extends Controller
                         [
                             'elemen_id' => $kukModel->elemen_id,
                             'nilai_kompetensi' => $nilaiKuk,
-                            'is_verified' => false,
+                            'is_verified' => null, // Belum diverifikasi oleh asesor
                         ]
                     );
                 }

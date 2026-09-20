@@ -53,15 +53,20 @@
     </nav>
 
     <!-- MOBILE DRAWER NAVIGATION (Hanya aktif di mobile, 100% tersembunyi di desktop) -->
-    <div class="drawer-mobile-overlay" id="drawerMobileOverlay" style="display: none;" aria-hidden="true">
+    <div class="drawer-mobile-overlay" id="drawerMobileOverlay" aria-hidden="true">
         <div class="drawer-mobile-panel" id="drawerMobilePanel" role="dialog" aria-modal="true" aria-label="Menu Navigasi Mobile">
             <div class="drawer-mobile-header">
                 <div class="drawer-brand">
-                    <img src="{{ asset('logo/logo-lsp.jpeg') }}" alt="Logo LSP SMKN 1 Gunungputri" class="drawer-logo-img">
-                    <span class="drawer-brand-nama">LSP SMKN 1 Gunungputri</span>
+                    <div class="drawer-logo-wrap">
+                        <img src="{{ asset('logo/logo-lsp.jpeg') }}" alt="Logo LSP SMKN 1 Gunungputri" class="drawer-logo-img">
+                    </div>
+                    <div class="drawer-brand-text">
+                        <span class="drawer-brand-nama">LSP SMKN 1 Gunungputri</span>
+                        <span class="drawer-brand-sub">Sertifikasi BNSP Resmi</span>
+                    </div>
                 </div>
                 <button type="button" class="drawer-tombol-tutup" id="drawerTombolTutup" aria-label="Tutup menu navigasi">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                         <line x1="18" y1="6" x2="6" y2="18"></line>
                         <line x1="6" y1="6" x2="18" y2="18"></line>
                     </svg>
@@ -71,20 +76,35 @@
                 <ul class="drawer-nav-list">
                     <li>
                         <a href="#beranda" class="drawer-nav-link aktif">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
-                            <span>Beranda</span>
+                            <div class="drawer-nav-link-left">
+                                <div class="drawer-nav-icon">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                                </div>
+                                <span>Beranda</span>
+                            </div>
+                            <svg class="drawer-nav-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
                         </a>
                     </li>
                     <li>
                         <a href="#skema" class="drawer-nav-link">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
-                            <span>Skema Keahlian</span>
+                            <div class="drawer-nav-link-left">
+                                <div class="drawer-nav-icon">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                                </div>
+                                <span>Skema Keahlian</span>
+                            </div>
+                            <svg class="drawer-nav-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
                         </a>
                     </li>
                     <li>
                         <a href="#berita" class="drawer-nav-link">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 20H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v1m2 13a2 2 0 0 1-2-2V7m2 13a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"></path></svg>
-                            <span>Berita &amp; Pengumuman</span>
+                            <div class="drawer-nav-link-left">
+                                <div class="drawer-nav-icon">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 20H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v1m2 13a2 2 0 0 1-2-2V7m2 13a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"></path></svg>
+                                </div>
+                                <span>Berita &amp; Pengumuman</span>
+                            </div>
+                            <svg class="drawer-nav-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
                         </a>
                     </li>
                 </ul>
@@ -92,20 +112,26 @@
                 <div class="drawer-aksi-wadah">
                     @auth
                         <a href="{{ route(auth()->user()->peran . '.dasbor') }}" class="drawer-btn-cta">
-                            Dasbor Saya
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                            <span>Buka Dasbor Saya</span>
                         </a>
                     @else
                         <a href="{{ route('masuk') }}" class="drawer-btn-masuk">
-                            Masuk Portal
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line></svg>
+                            <span>Masuk Portal</span>
                         </a>
                         <a href="{{ route('daftar') }}" class="drawer-btn-cta">
-                            Daftar Asesi Baru
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
+                            <span>Daftar Asesi Baru</span>
                         </a>
                     @endauth
                 </div>
 
                 <div class="drawer-footer-info">
-                    <p>Lisensi Resmi BNSP-LSP-2629-ID</p>
+                    <div class="drawer-footer-badge">
+                        <span class="drawer-dot-verified"></span>
+                        <span>BNSP-LSP-2629-ID Terlisensi</span>
+                    </div>
                     <p>&copy; {{ date('Y') }} SMKN 1 Gunungputri</p>
                 </div>
             </div>
@@ -131,9 +157,11 @@
                         <span>Jelajahi Skema</span>
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
                     </a>
+                    @guest
                     <a href="{{ route('daftar') }}" class="tombol-outline">
                         Daftar Peserta Asesi
                     </a>
+                    @endguest
                 </div>
             </div>
         </div>
@@ -255,10 +283,17 @@
                     <a href="#skema" class="tombol-outline">
                         Pilih Program Skema
                     </a>
+                    @guest
                     <a href="{{ route('daftar') }}" class="tombol-utama">
                         <span>Daftar Sekarang</span>
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
                     </a>
+                    @else
+                    <a href="{{ route(auth()->user()->peran . '.dasbor') }}" class="tombol-utama">
+                        <span>Buka Dasbor</span>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                    </a>
+                    @endguest
                 </div>
             </div>
         </div>
@@ -312,8 +347,12 @@
                 <div>
                     <h4 class="footer-kolom-judul">Akses &amp; Informasi</h4>
                     <ul class="footer-daftar">
-                        <li><a href="{{ route('masuk') }}">Masuk Portal Asesmen</a></li>
-                        <li><a href="{{ route('daftar') }}">Pendaftaran Peserta Asesi</a></li>
+                        @auth
+                            <li><a href="{{ route(auth()->user()->peran . '.dasbor') }}">Buka Dasbor Saya</a></li>
+                        @else
+                            <li><a href="{{ route('masuk') }}">Masuk Portal Asesmen</a></li>
+                            <li><a href="{{ route('daftar') }}">Pendaftaran Peserta Asesi</a></li>
+                        @endauth
                         <li><a href="https://bnsp.go.id" target="_blank" rel="noopener noreferrer">Website Resmi BNSP</a></li>
                         <li><a href="https://smkn1gunungputri.sch.id" target="_blank" rel="noopener noreferrer">SMKN 1 Gunungputri</a></li>
                     </ul>

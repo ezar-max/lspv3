@@ -521,6 +521,89 @@
     $catatanValidasi = $adminValidatorData['catatan'] ?? null;
 
     $targetValidasiId = !empty($mapa01->id) ? $mapa01->id : (!empty($pendaftaran->id) ? $pendaftaran->id : ($pendaftaran->skema_id ?? 0));
+
+    // Ekstraksi Data Tersimpan untuk Evaluasi Kelengkapan Dokumen (Role Admin)
+    $tujuanDb = strtolower($pendaftaran->tujuan_asesmen ?? '');
+    $tujuanSaved = $mapa01?->tujuan_asesmen ?? ($isMasterMode ? null : ($pendaftaran->tujuan_asesmen ?? null));
+    $pendekatanSaved = (array) ($mapa01?->pendekatan_asesi ?? []);
+    $pelaksanaSaved = (array) ($mapa01?->pelaksana_asesmen ?? []);
+    $konfirmasiSaved = (array) ($mapa01?->konfirmasi_orang_relevan ?? []);
+    $standarIndustriSaved = (array) ($mapa01?->standar_industri ?? []);
+    $matriksSaved = (array) ($mapa01?->rencana_unit_matriks ?? []);
+    $konfirmasiTabelSaved = (array) ($mapa01?->konfirmasi_pihak_relevan_tabel ?? []);
+
+    // Evaluasi Kelengkapan Setiap Komponen FR.MAPA.01
+    $evaluasiMapa01 = [];
+
+    // 1. Pendekatan Asesmen
+    $hasPendekatan = !empty($pendekatanSaved);
+    $evaluasiMapa01[] = [
+        'label' => 'Pendekatan Asesmen Kandidat (Bagian 1.1)',
+        'lengkap' => $hasPendekatan,
+        'keterangan' => $hasPendekatan ? 'Telah dipilih (' . implode(', ', array_slice($pendekatanSaved, 0, 2)) . (count($pendekatanSaved) > 2 ? '...' : '') . ')' : 'Belum ada pendekatan kandidat yang dipilih.'
+    ];
+
+    // 2. Tujuan Asesmen
+    $hasTujuan = !empty($tujuanSaved);
+    $evaluasiMapa01[] = [
+        'label' => 'Tujuan Asesmen (Bagian 1.1)',
+        'lengkap' => $hasTujuan,
+        'keterangan' => $hasTujuan ? 'Tujuan: ' . ucfirst($tujuanSaved) : 'Tujuan asesmen belum ditentukan.'
+    ];
+
+    // 3. Matriks Rencana Unit Kompetensi
+    $totalUnits = $pendaftaran->skema?->unitKompetensi?->count() ?? ($skema->unitKompetensi?->count() ?? 0);
+    $filledUnits = 0;
+    if ($totalUnits > 0) {
+        $unitsList = $pendaftaran->skema?->unitKompetensi ?? ($skema->unitKompetensi ?? collect());
+        foreach ($unitsList as $u) {
+            $mU = $matriksSaved[$u->id] ?? null;
+            if ($mU && (!empty($mU['l']) || !empty($mU['tl']) || !empty($mU['t'])) && !empty($mU['methods'])) {
+                $filledUnits++;
+            }
+        }
+    }
+    $hasMatriks = ($totalUnits > 0 && $filledUnits >= $totalUnits);
+    $evaluasiMapa01[] = [
+        'label' => 'Matriks Rencana Asesmen Unit (Bagian 2)',
+        'lengkap' => $hasMatriks,
+        'keterangan' => $hasMatriks 
+            ? "Seluruh unit kompetensi ({$filledUnits}/{$totalUnits} unit) telah memiliki rencana bukti dan metode." 
+            : ($filledUnits > 0 
+                ? "Rencana unit belum lengkap: baru {$filledUnits} dari {$totalUnits} unit kompetensi yang terisi."
+                : "Belum ada rencana bukti atau metode unit kompetensi yang dikonfigurasi ({$totalUnits} unit).")
+    ];
+
+    // 4. Konfirmasi Orang Relevan
+    $hasPihakRelevan = false;
+    if (!empty($konfirmasiTabelSaved)) {
+        foreach ($konfirmasiTabelSaved as $rk => $rData) {
+            if (!empty($rData['relevan']) && !empty($rData['nama'])) {
+                $hasPihakRelevan = true;
+                break;
+            }
+        }
+    }
+    if (!$hasPihakRelevan && !empty($konfirmasiSaved)) {
+        $hasPihakRelevan = true;
+    }
+    $evaluasiMapa01[] = [
+        'label' => 'Konfirmasi Orang Relevan (Bagian 1.1)',
+        'lengkap' => $hasPihakRelevan,
+        'keterangan' => $hasPihakRelevan ? 'Pihak relevan telah terkonfirmasi.' : 'Belum ada pihak relevan yang dikonfirmasi nama & tanggalnya.'
+    ];
+
+    // 5. Tanda Tangan Asesor Penguji (Penyusun)
+    $hasTtdAsesor = !empty($mapa01?->tanda_tangan_asesor) || !empty($penyusunTabelSaved['penyusun_1']['ttd']);
+    $evaluasiMapa01[] = [
+        'label' => 'Tanda Tangan Asesor Penguji (Penyusun)',
+        'lengkap' => $hasTtdAsesor,
+        'keterangan' => $hasTtdAsesor ? 'Tanda tangan Asesor Penguji telah tersedia.' : 'Asesor Penguji (Penyusun) belum membubuhkan tanda tangan.'
+    ];
+
+    $totalKurang = collect($evaluasiMapa01)->where('lengkap', false)->count();
+    $semuaLengkapKecualiAdmin = ($totalKurang === 0);
+    $adaDataKurang = !$semuaLengkapKecualiAdmin;
 @endphp
 <div class="wadah-mapa01 animasi-slide {{ $isAsesi ? 'mode-read-only-asesi' : '' }}" id="container-mapa01">
     
@@ -608,36 +691,91 @@
         </div>
     @endif
 
-    @if($isValidatedAdmin)
-        <div class="no-print" style="margin-bottom: 1rem; background: #ecfdf5; border: 1.5px solid #a7f3d0; border-radius: 8px; padding: 0.85rem 1.15rem; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap;">
-            <div style="font-size: 0.82rem; color: #065f46;">
-                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.2rem;">
-                    <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #10b981;"></span>
-                    <strong style="color: #064e3b; font-size: 0.88rem;">Dokumen FR.MAPA.01 Telah Tervalidasi & Disahkan</strong>
+    @if($isAdmin)
+        <div class="no-print" style="margin-bottom: 1.25rem; background: {{ $isValidatedAdmin ? '#f0fdf4' : ($semuaLengkapKecualiAdmin ? '#eff6ff' : '#fffbeb') }}; border: 1.5px solid {{ $isValidatedAdmin ? '#86efac' : ($semuaLengkapKecualiAdmin ? '#93c5fd' : '#fcd34d') }}; border-radius: 12px; padding: 1.1rem 1.35rem; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap;">
+                <div style="flex: 1; min-width: 280px;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.35rem; flex-wrap: wrap;">
+                        <span style="display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.2rem 0.65rem; border-radius: 9999px; font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; background: {{ $isValidatedAdmin ? '#dcfce7' : ($semuaLengkapKecualiAdmin ? '#dbeafe' : '#fef3c7') }}; color: {{ $isValidatedAdmin ? '#166534' : ($semuaLengkapKecualiAdmin ? '#1e40af' : '#92400e') }}; border: 1px solid {{ $isValidatedAdmin ? '#bbf7d0' : ($semuaLengkapKecualiAdmin ? '#bfdbfe' : '#fde68a') }};">
+                            @if($isValidatedAdmin)
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                Tervalidasi Resmi (Admin LSP)
+                            @elseif($semuaLengkapKecualiAdmin)
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                Siap Divalidasi &bull; Data Lengkap
+                            @else
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                                Data Belum Lengkap ({{ $totalKurang }} Peringatan)
+                            @endif
+                        </span>
+                        @if(!$isMasterMode && $isMasterSchemeValidated)
+                            <span style="font-size: 0.72rem; color: #047857; font-weight: 700; background: #e6fcf5; padding: 0.2rem 0.5rem; border-radius: 6px; border: 1px solid #c3fae8;">
+                                Valid via Master Skema
+                            </span>
+                        @endif
+                    </div>
+
+                    <h3 style="margin: 0.2rem 0 0.25rem 0; font-size: 1rem; font-weight: 800; color: {{ $isValidatedAdmin ? '#064e3b' : ($semuaLengkapKecualiAdmin ? '#1e3a8a' : '#78350f') }};">
+                        @if($isValidatedAdmin)
+                            Dokumen FR.MAPA.01 Telah Tervalidasi &amp; Disahkan
+                        @elseif($semuaLengkapKecualiAdmin)
+                            Pemberitahuan Validasi: Seluruh Komponen Asesmen Lengkap
+                        @else
+                            Pemberitahuan Validasi: Terdapat {{ $totalKurang }} Bagian yang Belum Lengkap
+                        @endif
+                    </h3>
+
+                    <p style="margin: 0; font-size: 0.82rem; line-height: 1.5; color: {{ $isValidatedAdmin ? '#047857' : ($semuaLengkapKecualiAdmin ? '#1e40af' : '#92400e') }};">
+                        @if($isValidatedAdmin)
+                            Validator: <strong>{{ $adminValidatorNama }}</strong> ({{ $adminValidatorMet }}) pada tanggal <strong>{{ $adminTtdTgl }}</strong>.
+                            @if(!empty($catatanValidasi))
+                                <br><span style="font-style: italic;">Catatan: "{{ $catatanValidasi }}"</span>
+                            @endif
+                        @elseif($semuaLengkapKecualiAdmin)
+                            Seluruh pendekatan, rencana unit matriks, konfirmasi pihak relevan, dan tanda tangan asesor telah lengkap sesuai regulasi BNSP. Silakan lakukan pengesahan validator.
+                        @else
+                            Administrator mendeteksi beberapa data perencanaan belum lengkap. Anda dapat meninjau rincian di bawah atau langsung melengkapinya pada formulir sebelum mengesahkan.
+                        @endif
+                    </p>
                 </div>
-                <span>Validator: <strong>{{ $adminValidatorNama }}</strong> ({{ $adminValidatorMet }}) pada <strong>{{ $adminTtdTgl }}</strong>. Status: <strong>Tervalidasi Resmi (Admin LSP){{ (!$isMasterMode && $isMasterSchemeValidated) ? ' via Master Skema' : '' }}</strong>.</span>
-                @if(!empty($catatanValidasi))
-                    <div style="margin-top: 0.25rem; font-style: italic; color: #047857;">Catatan: "{{ $catatanValidasi }}"</div>
-                @endif
-            </div>
-            @if($isAdmin && ($isMasterMode || !$isMasterSchemeValidated))
-                <button type="button" onclick="bukaModal('modalValidasiAdminMapa01')" class="tombol tombol-sm" style="background: #ffffff; color: #065f46; border: 1px solid #a7f3d0; font-weight: 700;">
-                    Ubah Validasi
-                </button>
-            @endif
-        </div>
-    @elseif($isAdmin)
-        <div class="no-print" style="margin-bottom: 1rem; background: #eff6ff; border: 1.5px solid #bfdbfe; border-radius: 8px; padding: 0.85rem 1.15rem; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap;">
-            <div style="font-size: 0.82rem; color: #1e40af;">
-                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.2rem;">
-                    <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #3b82f6;"></span>
-                    <strong style="color: #1e3a8a; font-size: 0.88rem;">Validasi Dokumen FR.MAPA.01 oleh Administrator LSP</strong>
+
+                <div style="display: flex; gap: 0.65rem; align-items: center; flex-wrap: wrap;">
+                    <button type="button" onclick="toggleRincianValidasiAdmin()" id="btn-toggle-rincian-validasi" style="background: #ffffff; border: 1.2px solid {{ $isValidatedAdmin ? '#86efac' : ($semuaLengkapKecualiAdmin ? '#bfdbfe' : '#fcd34d') }}; color: {{ $isValidatedAdmin ? '#166534' : ($semuaLengkapKecualiAdmin ? '#1e40af' : '#92400e') }}; padding: 0.5rem 0.85rem; border-radius: 8px; font-size: 0.78rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 0.4rem;">
+                        <span id="text-toggle-rincian-validasi">Lihat Cek Kelengkapan</span>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" id="icon-toggle-rincian"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    </button>
+
+                    @if($isAdmin && ($isMasterMode || !$isMasterSchemeValidated))
+                        <button type="button" onclick="bukaModal('modalValidasiAdminMapa01')" class="tombol tombol-sm" style="background: {{ $isValidatedAdmin ? '#ffffff' : '#059669' }}; color: {{ $isValidatedAdmin ? '#065f46' : '#ffffff' }}; border: 1px solid {{ $isValidatedAdmin ? '#a7f3d0' : '#047857' }}; font-weight: 700; padding: 0.5rem 1rem;">
+                            {{ $isValidatedAdmin ? 'Ubah Validasi' : 'Validasi & Sahkan Sekarang' }}
+                        </button>
+                    @endif
                 </div>
-                <span>Anda masuk sebagai Administrator/Verifikator LSP. Silakan periksa kelayakan instrumen dan bubuhkan tanda tangan validasi resmi.</span>
             </div>
-            <button type="button" onclick="bukaModal('modalValidasiAdminMapa01')" class="tombol tombol-sm" style="background: #2563eb; color: #ffffff; border: 1px solid #1d4ed8; font-weight: 700;">
-                Validasi Sekarang
-            </button>
+
+            <!-- RINCIAN CHECKLIST KELENGKAPAN MAPA 01 (COLLAPSIBLE) -->
+            <div id="wadah-rincian-validasi-admin" style="display: {{ $adaDataKurang && !$isValidatedAdmin ? 'block' : 'none' }}; margin-top: 1rem; border-top: 1px solid {{ $isValidatedAdmin ? '#bbf7d0' : ($semuaLengkapKecualiAdmin ? '#bfdbfe' : '#fde68a') }}; padding-top: 0.85rem;">
+                <div style="font-size: 0.76rem; font-weight: 800; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.5rem;">
+                    Status Parameter Kelengkapan Dokumen:
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 0.65rem;">
+                    @foreach($evaluasiMapa01 as $ev)
+                        <div style="display: flex; align-items: flex-start; gap: 0.5rem; background: rgba(255,255,255,0.8); border: 1px solid {{ $ev['lengkap'] ? '#bbf7d0' : '#fecaca' }}; border-radius: 8px; padding: 0.6rem 0.75rem;">
+                            <div style="margin-top: 0.1rem;">
+                                @if($ev['lengkap'])
+                                    <span style="display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%; background: #22c55e; color: #ffffff; font-size: 0.68rem; font-weight: 900;">✓</span>
+                                @else
+                                    <span style="display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%; background: #ef4444; color: #ffffff; font-size: 0.68rem; font-weight: 900;">✕</span>
+                                @endif
+                            </div>
+                            <div style="font-size: 0.78rem; line-height: 1.35;">
+                                <strong style="display: block; color: {{ $ev['lengkap'] ? '#14532d' : '#991b1b' }};">{{ $ev['label'] }}</strong>
+                                <span style="color: #64748b; font-size: 0.74rem;">{{ $ev['keterangan'] }}</span>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
         </div>
     @endif
 
@@ -1768,6 +1906,33 @@
             <input type="hidden" name="is_master_mode" value="{{ !empty($isMasterMode) ? '1' : '0' }}">
             <input type="hidden" name="tanda_tangan_admin_base64" id="input-ttd-validator-modal-base64" value="{{ $adminTtd }}">
 
+            @if($adaDataKurang)
+                <div style="margin-bottom: 1.15rem; background: #fffbeb; border: 1.5px solid #fde68a; border-radius: 10px; padding: 0.85rem 1rem; font-size: 0.8rem; color: #92400e;">
+                    <div style="font-weight: 800; display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.35rem; color: #b45309;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                        <span>Peringatan Kelengkapan Data Formulir ({{ $totalKurang }} Belum Lengkap)</span>
+                    </div>
+                    <p style="margin: 0 0 0.45rem 0; line-height: 1.45;">
+                        Terdapat beberapa komponen yang belum terisi lengkap pada dokumen ini:
+                    </p>
+                    <ul style="margin: 0 0 0.45rem 0; padding-left: 1.25rem; line-height: 1.5;">
+                        @foreach($evaluasiMapa01 as $ev)
+                            @if(!$ev['lengkap'])
+                                <li><strong>{{ $ev['label'] }}:</strong> {{ $ev['keterangan'] }}</li>
+                            @endif
+                        @endforeach
+                    </ul>
+                    <div style="font-size: 0.73rem; color: #78350f; font-style: italic; border-top: 1px dashed #fcd34d; padding-top: 0.35rem;">
+                        * Sebagai Administrator LSP, Anda dapat mengesahkan dokumen setelah memverifikasi keabsahan fisik/berkas terkait.
+                    </div>
+                </div>
+            @else
+                <div style="margin-bottom: 1.15rem; background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 10px; padding: 0.75rem 1rem; font-size: 0.8rem; color: #166534; display: flex; align-items: center; gap: 0.5rem;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                    <span><strong>Data Lengkap:</strong> Seluruh butir data perencanaan asesmen FR.MAPA.01 telah memenuhi standar kelayakan BNSP.</span>
+                </div>
+            @endif
+
             <div style="margin-bottom: 1rem;">
                 <label style="display: block; font-size: 0.78rem; font-weight: 700; color: #334155; margin-bottom: 0.35rem;">
                     Nama Validator (Admin LSP) <span style="color: #dc2626;">*</span>
@@ -2137,19 +2302,73 @@
                     if (input) input.value = '';
                 });
             }
+        }
 
+        function toggleRincianValidasiAdmin() {
+            const wadah = document.getElementById('wadah-rincian-validasi-admin');
+            const text = document.getElementById('text-toggle-rincian-validasi');
+            const icon = document.getElementById('icon-toggle-rincian');
+            if (!wadah) return;
+
+            if (wadah.style.display === 'none' || !wadah.style.display) {
+                wadah.style.display = 'block';
+                if (text) text.textContent = 'Tutup Cek Kelengkapan';
+                if (icon) icon.style.transform = 'rotate(180deg)';
+            } else {
+                wadah.style.display = 'none';
+                if (text) text.textContent = 'Lihat Cek Kelengkapan';
+                if (icon) icon.style.transform = 'rotate(0deg)';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
             const formVal = document.getElementById('form-validasi-admin-mapa01');
             if (formVal) {
                 formVal.addEventListener('submit', function(e) {
-                    const input = document.getElementById('input-ttd-validator-modal-base64');
-                    if (!input || !input.value.trim()) {
+                    const inputNama = formVal.querySelector('input[name="validator_nama"]');
+                    const inputMet = formVal.querySelector('input[name="validator_nomor_met"]');
+                    const inputTtd = document.getElementById('input-ttd-validator-modal-base64');
+
+                    if (!inputNama || !inputNama.value.trim()) {
+                        e.preventDefault();
+                        if (typeof Swal !== 'undefined') {
+                            Swal.fire({
+                                icon: 'warning',
+                                title: 'Nama Validator Belum Diisi',
+                                text: 'Harap masukkan nama lengkap validator sebelum melakukan pengesahan dokumen.',
+                                confirmButtonColor: '#059669'
+                            });
+                        } else {
+                            alert('Nama Validator (Admin LSP) wajib diisi.');
+                        }
+                        inputNama.focus();
+                        return;
+                    }
+
+                    if (!inputMet || !inputMet.value.trim()) {
+                        e.preventDefault();
+                        if (typeof Swal !== 'undefined') {
+                            Swal.fire({
+                                icon: 'warning',
+                                title: 'Nomor Registrasi/NIP Belum Diisi',
+                                text: 'Harap masukkan Nomor Registrasi / NIP validator.',
+                                confirmButtonColor: '#059669'
+                            });
+                        } else {
+                            alert('Nomor Registrasi / NIP Validator wajib diisi.');
+                        }
+                        inputMet.focus();
+                        return;
+                    }
+
+                    if (!inputTtd || !inputTtd.value.trim()) {
                         const adminName = "{{ auth()->check() ? (auth()->user()->nama_lengkap ?: 'Administrator LSP') : 'Administrator LSP' }}";
                         const autoSvg = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='60'><text x='10' y='38' font-family='Brush Script MT, cursive, sans-serif' font-size='24' fill='%23065f46'>" + encodeURIComponent(adminName) + "</text></svg>";
-                        if (input) input.value = autoSvg;
+                        if (inputTtd) inputTtd.value = autoSvg;
                     }
                 });
             }
-        }
+        });
 
         function loadInitialValidatorSig(dataUrl) {
             if (!dataUrl) return;

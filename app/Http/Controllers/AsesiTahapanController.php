@@ -745,7 +745,7 @@ class AsesiTahapanController extends Controller
                         [
                             'elemen_id' => $kukModel->elemen_id,
                             'nilai_kompetensi' => $nilaiKuk,
-                            'is_verified' => false, // Reset verifikasi ke false untuk diperiksa ulang oleh asesor
+                            'is_verified' => null, // Reset verifikasi ke null untuk diperiksa ulang oleh asesor
                         ]
                     );
                 }

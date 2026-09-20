@@ -63,8 +63,8 @@
          ========================================================================= -->
     <div class="min-h-screen flex flex-col justify-between" x-data="{ mobileNavOpen: false, userDropdownOpen: false, openDropdown: null }">
         
-        <!-- TOP STICKY NAVBAR -->
-        <nav class="sticky top-0 z-40 backdrop-blur-md transition-all duration-300" style="background: rgba(255, 255, 255, 0.50); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: none; border-bottom: none; box-shadow: none;">
+        <!-- TOP STICKY NAVBAR (Solid di mobile, transparan glassmorphism di desktop) -->
+        <nav class="sticky top-0 z-40 bg-white border-b border-slate-200/80 lg:border-none lg:bg-white/50 lg:backdrop-blur-md transition-all duration-300">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="flex items-center justify-between h-16 gap-4">
                     
@@ -474,7 +474,7 @@
 
                             <!-- Admin 4. Dropdown: Dokumen Asesmen -->
                             @php
-                                $isAdminDokumenActive = request()->routeIs('dokumen-asesmen.*');
+                                $isAdminDokumenActive = request()->routeIs('dokumen-asesmen.*') || request()->routeIs('admin.dokumen*') || request()->routeIs('formulir.*');
                             @endphp
                             <div class="relative" @click.outside="if (openDropdown === 'admin_dokumen_asesmen') openDropdown = null">
                                 <button type="button" 
@@ -485,11 +485,6 @@
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                                     </svg>
                                 </button>
-                            <!-- Admin 4. Berkas Umum -->
-                            <a href="{{ route('admin.dokumen.index') }}" 
-                               class="px-3.5 py-2 rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer {{ request()->routeIs('admin.dokumen*') ? 'bg-emerald-50 text-emerald-700 font-bold border border-emerald-100' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium' }}">
-                                <span>Berkas</span>
-                            </a>
 
                                 <div x-show="openDropdown === 'admin_dokumen_asesmen'" 
                                      x-transition:enter="transition ease-out duration-150"
@@ -552,7 +547,7 @@
 
                                     <a href="{{ route('admin.dokumen.index') }}" 
                                        @click="openDropdown = null"
-                                       class="block px-3 py-1.5 rounded-xl transition-colors hover:bg-slate-50 text-slate-700 hover:text-slate-900">
+                                       class="block px-3 py-1.5 rounded-xl transition-colors {{ request()->routeIs('admin.dokumen*') ? 'bg-emerald-50 text-emerald-700 font-semibold' : 'hover:bg-slate-50 text-slate-700 hover:text-slate-900' }}">
                                         <div class="font-semibold text-xs leading-tight">Arsip Berkas & Dokumen Lainnya</div>
                                         <div class="text-[10px] text-slate-400">Manajemen berkas umum LSP</div>
                                     </a>
@@ -663,176 +658,609 @@
                     </div>
                 </div>
             </div>
-
-            <!-- MOBILE NAVIGATION DRAWER (ACCORDION / CLEAN TEXT) -->
-            <div x-show="mobileNavOpen" 
-                 x-transition:enter="transition ease-out duration-200"
-                 x-transition:enter-start="opacity-0 -translate-y-2"
-                 x-transition:enter-end="opacity-100 translate-y-0"
-                 x-transition:leave="transition ease-in duration-150"
-                 x-transition:leave-start="opacity-100 translate-y-0"
-                 x-transition:leave-end="opacity-0 -translate-y-2"
-                 class="lg:hidden border-t border-slate-100 bg-white px-4 py-3 space-y-2 text-xs shadow-md"
-                 style="display: none;">
-                <!-- Global Mobile Notifikasi Link -->
-                <a href="{{ route('notifications.index') }}" 
-                   class="flex items-center justify-between px-3 py-2.5 rounded-xl font-bold transition-colors {{ request()->routeIs('notifications.*') ? 'bg-blue-50 text-blue-700' : 'text-slate-700 bg-slate-50/80 hover:bg-slate-100' }}">
-                    <span class="flex items-center gap-2">
-                        <i class="fa-solid fa-bell text-blue-600"></i>
-                        <span>Notifikasi & Pemberitahuan</span>
-                    </span>
-                    @php
-                        $unreadNavbarCount = $user ? $user->unreadNotifications()->count() : 0;
-                    @endphp
-                    @if($unreadNavbarCount > 0)
-                        <span class="px-2 py-0.5 rounded-full bg-rose-500 text-white text-[10px] font-black">
-                            {{ $unreadNavbarCount > 99 ? '99+' : $unreadNavbarCount }} Baru
-                        </span>
-                    @endif
-                </a>
-
-                @if($peran === 'asesi')
-                    <a href="{{ route('asesi.dashboard') }}" class="block px-3 py-2 rounded-xl font-medium {{ request()->routeIs('asesi.dashboard') ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-700' }}">
-                        Dashboard
-                    </a>
-                    <div class="border-t border-slate-100 pt-1.5 space-y-1">
-                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-3">Pelaksanaan Asesmen</span>
-                        <a href="{{ route('asesi.jadwal') }}" class="block px-3 py-1.5 rounded-lg {{ request()->routeIs('asesi.jadwal*') ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-slate-600' }}">
-                            Jadwal & Lokasi Uji
-                        </a>
-                        <a href="{{ route('asesi.tahapan') }}" class="block px-3 py-1.5 rounded-lg {{ (request()->routeIs('asesi.tahapan*') || request()->routeIs('asesi.ak01*') || request()->routeIs('asesi.apl02*') || request()->routeIs('asesi.formulir*') || request()->routeIs('asesi.biodata*') || request()->routeIs('asesi.pendaftaran*')) ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-slate-600' }}">
-                            Tahapan Formulir
-                        </a>
-                    </div>
-                    <div class="border-t border-slate-100 pt-1.5 space-y-1">
-                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-3">Hasil & Dokumen</span>
-                        <a href="{{ route('asesi.hasil') }}" class="block px-3 py-1.5 rounded-lg {{ (request()->routeIs('asesi.hasil*') || request()->routeIs('asesi.hasil-nilai*')) ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-slate-600' }}">
-                            Hasil & Sertifikat
-                        </a>
-                        <a href="{{ route('asesi.dokumen') }}" class="block px-3 py-1.5 rounded-lg {{ request()->routeIs('asesi.dokumen*') ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-slate-600' }}">
-                            Berkas & Bukti Portofolio
-                        </a>
-                    </div>
-                @elseif($peran === 'asesor')
-                    <a href="{{ route('asesor.dashboard') }}" class="block px-3 py-2 rounded-xl font-medium {{ request()->routeIs('asesor.dashboard') ? 'bg-indigo-50 text-indigo-700 font-bold' : 'text-slate-700' }}">
-                        Dashboard
-                    </a>
-                    <div class="border-t border-slate-100 pt-1.5 space-y-1">
-                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-3">Pelaksanaan Asesmen</span>
-                        <a href="{{ route('asesor.jadwal') }}" class="block px-3 py-1.5 rounded-lg {{ request()->routeIs('asesor.jadwal*') ? 'bg-indigo-50 text-indigo-700 font-semibold' : 'text-slate-600' }}">
-                            Jadwal & Penugasan
-                        </a>
-                        <a href="{{ route('asesor.mapa') }}" class="block px-3 py-1.5 rounded-lg {{ (request()->routeIs('asesor.mapa*') || request()->routeIs('asesor.formulir*')) ? 'bg-indigo-50 text-indigo-700 font-semibold' : 'text-slate-600' }}">
-                            Formulir
-                        </a>
-                        <a href="{{ route('asesor.penilaian') }}" class="block px-3 py-1.5 rounded-lg {{ (request()->routeIs('asesor.penilaian*') || request()->routeIs('asesor.daftar-peserta*') || request()->routeIs('asesor.input-penilaian*') || request()->routeIs('asesor.penilaian-live*')) ? 'bg-indigo-50 text-indigo-700 font-semibold' : 'text-slate-600' }}">
-                            Penilaian Peserta (APL.02 & Ujian)
-                        </a>
-                        <a href="{{ route('asesor.koreksi-teori') }}" class="block px-3 py-1.5 rounded-lg {{ request()->routeIs('asesor.koreksi-teori*') ? 'bg-indigo-50 text-indigo-700 font-semibold' : 'text-slate-600' }}">
-                            Koreksi Teori (IA.05 & 06)
-                        </a>
-                    </div>
-                    <div class="border-t border-slate-100 pt-1.5 space-y-1">
-                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-3">Hasil & Rekap</span>
-                        <a href="{{ route('asesor.berita-acara') }}" class="block px-3 py-1.5 rounded-lg {{ request()->routeIs('asesor.berita-acara*') ? 'bg-indigo-50 text-indigo-700 font-semibold' : 'text-slate-600' }}">
-                            Berita Acara & Rekap
-                        </a>
-                    </div>
-                    <div class="border-t border-slate-100 pt-1.5 space-y-1">
-                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-3">Dokumen</span>
-                        <a href="{{ route('dokumen-asesmen.index') }}" class="block px-3 py-1.5 rounded-lg {{ request()->routeIs('dokumen-asesmen.*') ? 'bg-indigo-50 text-indigo-700 font-semibold' : 'text-slate-600' }}">
-                            Dokumen Asesmen
-                        </a>
-                    </div>
-
-
-                @elseif($peran === 'superadmin')
-                    <a href="{{ route('superadmin.dashboard') }}" class="block px-3 py-2 rounded-xl font-medium {{ request()->routeIs('superadmin.dashboard') ? 'bg-rose-50 text-rose-700 font-bold' : 'text-slate-700' }}">
-                        Control Panel
-                    </a>
-                    <div class="border-t border-slate-100 pt-1.5 space-y-1">
-                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-3">Sistem & Keamanan</span>
-                        <a href="{{ route('superadmin.manajemen-pengguna') }}" class="block px-3 py-1.5 rounded-lg {{ request()->routeIs('superadmin.manajemen-pengguna*') ? 'bg-rose-50 text-rose-700 font-semibold' : 'text-slate-600' }}">
-                            Manajemen Akun
-                        </a>
-                        <a href="{{ route('superadmin.log-aktivitas') }}" class="block px-3 py-1.5 rounded-lg {{ request()->routeIs('superadmin.log-aktivitas*') ? 'bg-rose-50 text-rose-700 font-semibold' : 'text-slate-600' }}">
-                            Audit Log Aktivitas
-                        </a>
-                        <a href="{{ route('superadmin.pengaturan-sistem') }}" class="block px-3 py-1.5 rounded-lg {{ request()->routeIs('superadmin.pengaturan-sistem*') ? 'bg-rose-50 text-rose-700 font-semibold' : 'text-slate-600' }}">
-                            Pengaturan Global
-                        </a>
-                    </div>
-                    <div class="border-t border-slate-100 pt-1.5 space-y-1">
-                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-3">Dokumen Asesmen</span>
-                        <a href="{{ route('dokumen-asesmen.index') }}" class="block px-3 py-1.5 rounded-lg font-bold text-rose-700 bg-rose-50">
-                            Pusat Dokumen Asesmen (Hub)
-                        </a>
-                        <a href="{{ route('dokumen-asesmen.ak05.index') }}" class="block px-3 py-1.5 rounded-lg text-slate-600">
-                            FR.AK.05 &bull; Laporan Asesmen
-                        </a>
-                        <a href="{{ route('dokumen-asesmen.ak06.index') }}" class="block px-3 py-1.5 rounded-lg text-slate-600">
-                            FR.AK.06 &bull; Meninjau Proses Asesmen
-                        </a>
-                        <a href="{{ route('dokumen-asesmen.va.index') }}" class="block px-3 py-1.5 rounded-lg text-slate-600">
-                            FR.VA &bull; Validasi Asesmen
-                        </a>
-                    </div>
-
-                @else
-                    <a href="{{ route('admin.dashboard') }}" class="block px-3 py-2 rounded-xl font-medium {{ request()->routeIs('admin.dashboard') ? 'bg-emerald-50 text-emerald-700 font-bold' : 'text-slate-700' }}">
-                        Dashboard
-                    </a>
-                    <div class="border-t border-slate-100 pt-1.5 space-y-1">
-                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-3">Asesi</span>
-                        <a href="{{ route('admin.manajemen-asesi') }}" class="block px-3 py-1.5 rounded-lg {{ (request()->routeIs('admin.manajemen-asesi*') || request()->routeIs('admin.verifikasi*') || request()->routeIs('admin.detail-asesi')) ? 'bg-emerald-50 text-emerald-700 font-semibold' : 'text-slate-600' }}">
-                            Data & Verifikasi
-                        </a>
-                    </div>
-                    <div class="border-t border-slate-100 pt-1.5 space-y-1">
-                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-3">Skema</span>
-                        <a href="{{ route('admin.manajemen-skema') }}" class="block px-3 py-1.5 rounded-lg {{ request()->routeIs('admin.manajemen-skema*') ? 'bg-emerald-50 text-emerald-700 font-semibold' : 'text-slate-600' }}">
-                            Master Skema
-                        </a>
-                        <a href="{{ route('admin.manajemen-jadwal') }}" class="block px-3 py-1.5 rounded-lg {{ request()->routeIs('admin.manajemen-jadwal*') ? 'bg-emerald-50 text-emerald-700 font-semibold' : 'text-slate-600' }}">
-                            Jadwal Asesmen
-                        </a>
-                        <a href="{{ route('admin.master-muk.index') }}" class="block px-3 py-1.5 rounded-lg {{ request()->routeIs('admin.master-muk*') ? 'bg-emerald-50 text-emerald-700 font-semibold' : 'text-slate-600' }}">
-                            Formulir
-                        </a>
-                    </div>
-
-                    <div class="border-t border-slate-100 pt-1.5 space-y-1">
-                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-3">Dokumen</span>
-                        <a href="{{ route('dokumen-asesmen.index') }}" class="block px-3 py-1.5 rounded-lg font-bold text-emerald-700 bg-emerald-50">
-                            Pusat Dokumen Asesmen (Hub)
-                        </a>
-                        <a href="{{ route('dokumen-asesmen.ak05.index') }}" class="block px-3 py-1.5 rounded-lg text-slate-600">
-                            FR.AK.05 &bull; Laporan Asesmen
-                        </a>
-                        <a href="{{ route('dokumen-asesmen.ak06.index') }}" class="block px-3 py-1.5 rounded-lg text-slate-600">
-                            FR.AK.06 &bull; Meninjau Proses Asesmen
-                        </a>
-                        <a href="{{ route('dokumen-asesmen.va.index') }}" class="block px-3 py-1.5 rounded-lg text-slate-600">
-                            FR.VA &bull; Validasi Asesmen
-                        </a>
-                    </div>
-                    <div class="border-t border-slate-100 pt-1.5 space-y-1">
-                        <a href="{{ route('admin.dokumen.index') }}" class="block px-3 py-1.5 rounded-lg {{ (request()->routeIs('admin.dokumen*') || request()->routeIs('formulir.*')) ? 'bg-emerald-50 text-emerald-700 font-semibold' : 'text-slate-600' }}">
-                            Berkas Umum
-                        </a>
-                        <a href="{{ route('admin.manajemen-pengumuman') }}" class="block px-3 py-1.5 rounded-lg {{ request()->routeIs('admin.manajemen-pengumuman*') ? 'bg-emerald-50 text-emerald-700 font-semibold' : 'text-slate-600' }}">
-                            Informasi
-                        </a>
-                        <a href="{{ route('admin.laporan-kelulusan') }}" class="block px-3 py-1.5 rounded-lg {{ request()->routeIs('admin.laporan-kelulusan*') ? 'bg-emerald-50 text-emerald-700 font-semibold' : 'text-slate-600' }}">
-                            Laporan
-                        </a>
-                        <a href="{{ route('admin.manajemen-asesor') }}" class="block px-3 py-1.5 rounded-lg {{ request()->routeIs('admin.manajemen-asesor*') ? 'bg-emerald-50 text-emerald-700 font-semibold' : 'text-slate-600' }}">
-                            Asesor
-                        </a>
-                    </div>
-                @endif
-            </div>
         </nav>
+
+        <!-- Mobile Navigation Backdrop Overlay (Dark & Blur - Full Screen Viewport) -->
+        <div x-show="mobileNavOpen" 
+             x-transition:enter="transition-opacity ease-out duration-300"
+             x-transition:enter-start="opacity-0"
+             x-transition:enter-end="opacity-100"
+             x-transition:leave="transition-opacity ease-in duration-200"
+             x-transition:leave-start="opacity-100"
+             x-transition:leave-end="opacity-0"
+             @click="mobileNavOpen = false"
+             @keydown.escape.window="mobileNavOpen = false"
+             x-effect="document.body.style.overflow = mobileNavOpen ? 'hidden' : ''"
+             class="fixed inset-0 w-screen h-screen bg-slate-950/85 backdrop-blur-xs z-[999] lg:hidden"
+             style="display: none;"
+             aria-hidden="true"></div>
+
+        <!-- MOBILE NAVIGATION SLIDE-OVER DRAWER (FULL-HEIGHT NATIVE FEEL - ZERO TRANSPARENCY) -->
+        <div x-show="mobileNavOpen" 
+             x-transition:enter="transition ease-out duration-300 transform"
+             x-transition:enter-start="translate-x-full"
+             x-transition:enter-end="translate-x-0"
+             x-transition:leave="transition ease-in duration-200 transform"
+             x-transition:leave-start="translate-x-0"
+             x-transition:leave-end="translate-x-full"
+             class="fixed inset-y-0 right-0 w-full max-w-[320px] sm:max-w-[340px] h-screen bg-white z-[1000] shadow-2xl flex flex-col border-l border-slate-200 lg:hidden"
+             style="display: none; background-color: #ffffff !important; opacity: 1 !important;">
+            
+            <!-- 1. Drawer Header -->
+            <div class="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+                    <div class="flex items-center gap-2.5">
+                        <img src="{{ asset('images/logo-lsp.jpeg') }}" alt="Logo LSP" class="h-8 w-8 object-contain rounded-lg border border-slate-200/80 p-0.5 bg-white shadow-xs">
+                        <div class="leading-tight">
+                            <div class="font-bold text-slate-900 text-xs">LSP SMKN 1 Gunungputri</div>
+                            <div class="text-[9px] font-extrabold uppercase tracking-wider {{ $roleBadgeClass }}">
+                                Portal {{ ucfirst($peran ?? 'Pengguna') }}
+                            </div>
+                        </div>
+                    </div>
+                    <button type="button" 
+                            @click="mobileNavOpen = false"
+                            class="w-8 h-8 rounded-lg bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-800 flex items-center justify-center transition-colors cursor-pointer"
+                            aria-label="Tutup Menu">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- 2. User Profile Card -->
+                <div class="p-3.5 bg-slate-50 border-b border-slate-100 flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-2.5 min-w-0">
+                        <div class="w-9 h-9 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-bold flex items-center justify-center text-xs shrink-0 shadow-xs">
+                            {{ strtoupper(substr($user?->nama_lengkap ?? 'U', 0, 2)) }}
+                        </div>
+                        <div class="min-w-0 leading-tight">
+                            <div class="font-bold text-slate-800 text-xs truncate" title="{{ $user?->nama_lengkap }}">
+                                {{ $user?->nama_lengkap ?? 'Pengguna' }}
+                            </div>
+                            <div class="text-[11px] text-slate-500 truncate">{{ $user?->email ?? '-' }}</div>
+                        </div>
+                    </div>
+                    @if($peran === 'asesi')
+                        <a href="{{ route('asesi.profil') }}" 
+                           @click="mobileNavOpen = false"
+                           class="px-2.5 py-1 text-[11px] font-bold text-blue-700 bg-blue-50 border border-blue-200/80 rounded-lg hover:bg-blue-100 transition-colors shrink-0">
+                            Profil
+                        </a>
+                    @endif
+                </div>
+
+                <!-- 3. Scrollable Navigation Menu -->
+                <div class="flex-1 overflow-y-auto px-3 py-3.5 space-y-4 text-xs bg-white">
+                    <!-- Global Notifikasi Link -->
+                    <a href="{{ route('notifications.index') }}" 
+                       @click="mobileNavOpen = false"
+                       class="group flex items-center justify-between px-3 py-2.5 rounded-xl font-semibold transition-all {{ request()->routeIs('notifications.*') ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-700 bg-white border border-slate-200/80 hover:bg-slate-50' }}">
+                        <div class="flex items-center gap-2.5">
+                            <div class="w-7 h-7 rounded-lg flex items-center justify-center {{ request()->routeIs('notifications.*') ? 'bg-blue-700 text-white' : 'bg-slate-100 text-slate-600' }}">
+                                <i class="fa-solid fa-bell text-xs"></i>
+                            </div>
+                            <span>Notifikasi & Pemberitahuan</span>
+                        </div>
+                        @php
+                            $unreadNavbarCount = $user ? $user->unreadNotifications()->count() : 0;
+                        @endphp
+                        @if($unreadNavbarCount > 0)
+                            <span class="px-2 py-0.5 rounded-full {{ request()->routeIs('notifications.*') ? 'bg-white text-blue-700' : 'bg-rose-500 text-white' }} text-[10px] font-black">
+                                {{ $unreadNavbarCount > 99 ? '99+' : $unreadNavbarCount }}
+                            </span>
+                        @else
+                            <i class="fa-solid fa-chevron-right text-[10px] {{ request()->routeIs('notifications.*') ? 'text-blue-300' : 'text-slate-300 group-hover:text-slate-400 group-hover:translate-x-0.5' }} transition-all"></i>
+                        @endif
+                    </a>
+
+                    @if($peran === 'asesi')
+                        <!-- Dashboard Asesi -->
+                        <div>
+                            <a href="{{ route('asesi.dashboard') }}" 
+                               @click="mobileNavOpen = false"
+                               class="group flex items-center justify-between px-3 py-2 rounded-xl transition-all {{ request()->routeIs('asesi.dashboard') ? 'bg-blue-50 text-blue-700 font-bold border border-blue-100' : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900 font-medium' }}">
+                                <div class="flex items-center gap-2.5">
+                                    <div class="w-7 h-7 rounded-lg flex items-center justify-center {{ request()->routeIs('asesi.dashboard') ? 'bg-blue-600 text-white shadow-2xs' : 'bg-slate-100 text-slate-500 group-hover:text-slate-700' }}">
+                                        <i class="fa-solid fa-chart-pie text-[11px]"></i>
+                                    </div>
+                                    <span>Dashboard Asesi</span>
+                                </div>
+                                <i class="fa-solid fa-chevron-right text-[10px] {{ request()->routeIs('asesi.dashboard') ? 'text-blue-500' : 'text-slate-300 group-hover:text-slate-400 group-hover:translate-x-0.5' }} transition-all"></i>
+                            </a>
+                        </div>
+
+                        <!-- Pelaksanaan Asesmen -->
+                        <div>
+                            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2 mb-1.5">Pelaksanaan Asesmen</div>
+                            <div class="space-y-0.5">
+                                <a href="{{ route('asesi.jadwal') }}" 
+                                   @click="mobileNavOpen = false"
+                                   class="group flex items-center justify-between px-3 py-2 rounded-xl transition-all {{ request()->routeIs('asesi.jadwal*') ? 'bg-blue-50 text-blue-700 font-bold border border-blue-100' : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900 font-medium' }}">
+                                    <div class="flex items-center gap-2.5">
+                                        <div class="w-7 h-7 rounded-lg flex items-center justify-center {{ request()->routeIs('asesi.jadwal*') ? 'bg-blue-600 text-white shadow-2xs' : 'bg-slate-100 text-slate-500 group-hover:text-slate-700' }}">
+                                            <i class="fa-solid fa-calendar-days text-[11px]"></i>
+                                        </div>
+                                        <span>Jadwal & Lokasi Uji</span>
+                                    </div>
+                                    <i class="fa-solid fa-chevron-right text-[10px] {{ request()->routeIs('asesi.jadwal*') ? 'text-blue-500' : 'text-slate-300 group-hover:text-slate-400 group-hover:translate-x-0.5' }} transition-all"></i>
+                                </a>
+
+                                @php
+                                    $isTahapanActive = (request()->routeIs('asesi.tahapan*') || request()->routeIs('asesi.ak01*') || request()->routeIs('asesi.apl02*') || request()->routeIs('asesi.formulir*') || request()->routeIs('asesi.biodata*') || request()->routeIs('asesi.pendaftaran*'));
+                                @endphp
+                                <a href="{{ route('asesi.tahapan') }}" 
+                                   @click="mobileNavOpen = false"
+                                   class="group flex items-center justify-between px-3 py-2 rounded-xl transition-all {{ $isTahapanActive ? 'bg-blue-50 text-blue-700 font-bold border border-blue-100' : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900 font-medium' }}">
+                                    <div class="flex items-center gap-2.5">
+                                        <div class="w-7 h-7 rounded-lg flex items-center justify-center {{ $isTahapanActive ? 'bg-blue-600 text-white shadow-2xs' : 'bg-slate-100 text-slate-500 group-hover:text-slate-700' }}">
+                                            <i class="fa-solid fa-clipboard-list text-[11px]"></i>
+                                        </div>
+                                        <span>Tahapan Formulir</span>
+                                    </div>
+                                    <i class="fa-solid fa-chevron-right text-[10px] {{ $isTahapanActive ? 'text-blue-500' : 'text-slate-300 group-hover:text-slate-400 group-hover:translate-x-0.5' }} transition-all"></i>
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- Hasil & Dokumen -->
+                        <div>
+                            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2 mb-1.5">Hasil & Dokumen</div>
+                            <div class="space-y-0.5">
+                                @php
+                                    $isHasilActive = (request()->routeIs('asesi.hasil*') || request()->routeIs('asesi.hasil-nilai*'));
+                                @endphp
+                                <a href="{{ route('asesi.hasil') }}" 
+                                   @click="mobileNavOpen = false"
+                                   class="group flex items-center justify-between px-3 py-2 rounded-xl transition-all {{ $isHasilActive ? 'bg-blue-50 text-blue-700 font-bold border border-blue-100' : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900 font-medium' }}">
+                                    <div class="flex items-center gap-2.5">
+                                        <div class="w-7 h-7 rounded-lg flex items-center justify-center {{ $isHasilActive ? 'bg-blue-600 text-white shadow-2xs' : 'bg-slate-100 text-slate-500 group-hover:text-slate-700' }}">
+                                            <i class="fa-solid fa-award text-[11px]"></i>
+                                        </div>
+                                        <span>Hasil & Sertifikat</span>
+                                    </div>
+                                    <i class="fa-solid fa-chevron-right text-[10px] {{ $isHasilActive ? 'text-blue-500' : 'text-slate-300 group-hover:text-slate-400 group-hover:translate-x-0.5' }} transition-all"></i>
+                                </a>
+
+                                <a href="{{ route('asesi.dokumen') }}" 
+                                   @click="mobileNavOpen = false"
+                                   class="group flex items-center justify-between px-3 py-2 rounded-xl transition-all {{ request()->routeIs('asesi.dokumen*') ? 'bg-blue-50 text-blue-700 font-bold border border-blue-100' : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900 font-medium' }}">
+                                    <div class="flex items-center gap-2.5">
+                                        <div class="w-7 h-7 rounded-lg flex items-center justify-center {{ request()->routeIs('asesi.dokumen*') ? 'bg-blue-600 text-white shadow-2xs' : 'bg-slate-100 text-slate-500 group-hover:text-slate-700' }}">
+                                            <i class="fa-solid fa-folder-open text-[11px]"></i>
+                                        </div>
+                                        <span>Berkas & Portofolio</span>
+                                    </div>
+                                    <i class="fa-solid fa-chevron-right text-[10px] {{ request()->routeIs('asesi.dokumen*') ? 'text-blue-500' : 'text-slate-300 group-hover:text-slate-400 group-hover:translate-x-0.5' }} transition-all"></i>
+                                </a>
+                            </div>
+                        </div>
+
+                    @elseif($peran === 'asesor')
+                        <!-- Dashboard Asesor -->
+                        <div>
+                            <a href="{{ route('asesor.dashboard') }}" 
+                               @click="mobileNavOpen = false"
+                               class="group flex items-center justify-between px-3 py-2 rounded-xl transition-all {{ request()->routeIs('asesor.dashboard') ? 'bg-indigo-50 text-indigo-700 font-bold border border-indigo-100' : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900 font-medium' }}">
+                                <div class="flex items-center gap-2.5">
+                                    <div class="w-7 h-7 rounded-lg flex items-center justify-center {{ request()->routeIs('asesor.dashboard') ? 'bg-indigo-600 text-white shadow-2xs' : 'bg-slate-100 text-slate-500 group-hover:text-slate-700' }}">
+                                        <i class="fa-solid fa-chart-pie text-[11px]"></i>
+                                    </div>
+                                    <span>Dashboard Asesor</span>
+                                </div>
+                                <i class="fa-solid fa-chevron-right text-[10px] {{ request()->routeIs('asesor.dashboard') ? 'text-indigo-500' : 'text-slate-300 group-hover:text-slate-400 group-hover:translate-x-0.5' }} transition-all"></i>
+                            </a>
+                        </div>
+
+                        <!-- Pelaksanaan Asesmen -->
+                        <div>
+                            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2 mb-1.5">Pelaksanaan Asesmen</div>
+                            <div class="space-y-0.5">
+                                <a href="{{ route('asesor.jadwal') }}" 
+                                   @click="mobileNavOpen = false"
+                                   class="group flex items-center justify-between px-3 py-2 rounded-xl transition-all {{ request()->routeIs('asesor.jadwal*') ? 'bg-indigo-50 text-indigo-700 font-bold border border-indigo-100' : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900 font-medium' }}">
+                                    <div class="flex items-center gap-2.5">
+                                        <div class="w-7 h-7 rounded-lg flex items-center justify-center {{ request()->routeIs('asesor.jadwal*') ? 'bg-indigo-600 text-white shadow-2xs' : 'bg-slate-100 text-slate-500 group-hover:text-slate-700' }}">
+                                            <i class="fa-solid fa-calendar-check text-[11px]"></i>
+                                        </div>
+                                        <span>Jadwal & Penugasan</span>
+                                    </div>
+                                    <i class="fa-solid fa-chevron-right text-[10px] {{ request()->routeIs('asesor.jadwal*') ? 'text-indigo-500' : 'text-slate-300 group-hover:text-slate-400 group-hover:translate-x-0.5' }} transition-all"></i>
+                                </a>
+
+                                <a href="{{ route('asesor.mapa') }}" 
+                                   @click="mobileNavOpen = false"
+                                   class="group flex items-center justify-between px-3 py-2 rounded-xl transition-all {{ (request()->routeIs('asesor.mapa*') || request()->routeIs('asesor.formulir*')) ? 'bg-indigo-50 text-indigo-700 font-bold border border-indigo-100' : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900 font-medium' }}">
+                                    <div class="flex items-center gap-2.5">
+                                        <div class="w-7 h-7 rounded-lg flex items-center justify-center {{ (request()->routeIs('asesor.mapa*') || request()->routeIs('asesor.formulir*')) ? 'bg-indigo-600 text-white shadow-2xs' : 'bg-slate-100 text-slate-500 group-hover:text-slate-700' }}">
+                                            <i class="fa-solid fa-file-signature text-[11px]"></i>
+                                        </div>
+                                        <span>Formulir Asesmen</span>
+                                    </div>
+                                    <i class="fa-solid fa-chevron-right text-[10px] {{ (request()->routeIs('asesor.mapa*') || request()->routeIs('asesor.formulir*')) ? 'text-indigo-500' : 'text-slate-300 group-hover:text-slate-400 group-hover:translate-x-0.5' }} transition-all"></i>
+                                </a>
+
+                                @php
+                                    $isPenilaianActive = (request()->routeIs('asesor.penilaian*') || request()->routeIs('asesor.daftar-peserta*') || request()->routeIs('asesor.input-penilaian*') || request()->routeIs('asesor.penilaian-live*'));
+                                @endphp
+                                <a href="{{ route('asesor.penilaian') }}" 
+                                   @click="mobileNavOpen = false"
+                                   class="group flex items-center justify-between px-3 py-2 rounded-xl transition-all {{ $isPenilaianActive ? 'bg-indigo-50 text-indigo-700 font-bold border border-indigo-100' : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900 font-medium' }}">
+                                    <div class="flex items-center gap-2.5">
+                                        <div class="w-7 h-7 rounded-lg flex items-center justify-center {{ $isPenilaianActive ? 'bg-indigo-600 text-white shadow-2xs' : 'bg-slate-100 text-slate-500 group-hover:text-slate-700' }}">
+                                            <i class="fa-solid fa-clipboard-user text-[11px]"></i>
+                                        </div>
+                                        <span>Penilaian Peserta</span>
+                                    </div>
+                                    <i class="fa-solid fa-chevron-right text-[10px] {{ $isPenilaianActive ? 'text-indigo-500' : 'text-slate-300 group-hover:text-slate-400 group-hover:translate-x-0.5' }} transition-all"></i>
+                                </a>
+
+                                <a href="{{ route('asesor.koreksi-teori') }}" 
+                                   @click="mobileNavOpen = false"
+                                   class="group flex items-center justify-between px-3 py-2 rounded-xl transition-all {{ request()->routeIs('asesor.koreksi-teori*') ? 'bg-indigo-50 text-indigo-700 font-bold border border-indigo-100' : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900 font-medium' }}">
+                                    <div class="flex items-center gap-2.5">
+                                        <div class="w-7 h-7 rounded-lg flex items-center justify-center {{ request()->routeIs('asesor.koreksi-teori*') ? 'bg-indigo-600 text-white shadow-2xs' : 'bg-slate-100 text-slate-500 group-hover:text-slate-700' }}">
+                                            <i class="fa-solid fa-file-circle-check text-[11px]"></i>
+                                        </div>
+                                        <span>Koreksi Teori (IA.05 & 06)</span>
+                                    </div>
+                                    <i class="fa-solid fa-chevron-right text-[10px] {{ request()->routeIs('asesor.koreksi-teori*') ? 'text-indigo-500' : 'text-slate-300 group-hover:text-slate-400 group-hover:translate-x-0.5' }} transition-all"></i>
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- Hasil & Dokumen Asesor -->
+                        <div>
+                            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2 mb-1.5">Hasil & Dokumen</div>
+                            <div class="space-y-0.5">
+                                <a href="{{ route('asesor.berita-acara') }}" 
+                                   @click="mobileNavOpen = false"
+                                   class="group flex items-center justify-between px-3 py-2 rounded-xl transition-all {{ request()->routeIs('asesor.berita-acara*') ? 'bg-indigo-50 text-indigo-700 font-bold border border-indigo-100' : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900 font-medium' }}">
+                                    <div class="flex items-center gap-2.5">
+                                        <div class="w-7 h-7 rounded-lg flex items-center justify-center {{ request()->routeIs('asesor.berita-acara*') ? 'bg-indigo-600 text-white shadow-2xs' : 'bg-slate-100 text-slate-500 group-hover:text-slate-700' }}">
+                                            <i class="fa-solid fa-scroll text-[11px]"></i>
+                                        </div>
+                                        <span>Berita Acara & Rekap</span>
+                                    </div>
+                                    <i class="fa-solid fa-chevron-right text-[10px] {{ request()->routeIs('asesor.berita-acara*') ? 'text-indigo-500' : 'text-slate-300 group-hover:text-slate-400 group-hover:translate-x-0.5' }} transition-all"></i>
+                                </a>
+
+                                <a href="{{ route('dokumen-asesmen.index') }}" 
+                                   @click="mobileNavOpen = false"
+                                   class="group flex items-center justify-between px-3 py-2 rounded-xl transition-all {{ request()->routeIs('dokumen-asesmen.*') ? 'bg-indigo-50 text-indigo-700 font-bold border border-indigo-100' : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900 font-medium' }}">
+                                    <div class="flex items-center gap-2.5">
+                                        <div class="w-7 h-7 rounded-lg flex items-center justify-center {{ request()->routeIs('dokumen-asesmen.*') ? 'bg-indigo-600 text-white shadow-2xs' : 'bg-slate-100 text-slate-500 group-hover:text-slate-700' }}">
+                                            <i class="fa-solid fa-folder-tree text-[11px]"></i>
+                                        </div>
+                                        <span>Dokumen Asesmen</span>
+                                    </div>
+                                    <i class="fa-solid fa-chevron-right text-[10px] {{ request()->routeIs('dokumen-asesmen.*') ? 'text-indigo-500' : 'text-slate-300 group-hover:text-slate-400 group-hover:translate-x-0.5' }} transition-all"></i>
+                                </a>
+                            </div>
+                        </div>
+
+                    @elseif($peran === 'superadmin')
+                        <!-- Superadmin Dashboard -->
+                        <div>
+                            <a href="{{ route('superadmin.dashboard') }}" 
+                               @click="mobileNavOpen = false"
+                               class="group flex items-center justify-between px-3 py-2 rounded-xl transition-all {{ request()->routeIs('superadmin.dashboard') ? 'bg-rose-50 text-rose-700 font-bold border border-rose-100' : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900 font-medium' }}">
+                                <div class="flex items-center gap-2.5">
+                                    <div class="w-7 h-7 rounded-lg flex items-center justify-center {{ request()->routeIs('superadmin.dashboard') ? 'bg-rose-600 text-white shadow-2xs' : 'bg-slate-100 text-slate-500 group-hover:text-slate-700' }}">
+                                        <i class="fa-solid fa-shield-halved text-[11px]"></i>
+                                    </div>
+                                    <span>Control Panel</span>
+                                </div>
+                                <i class="fa-solid fa-chevron-right text-[10px] {{ request()->routeIs('superadmin.dashboard') ? 'text-rose-500' : 'text-slate-300 group-hover:text-slate-400 group-hover:translate-x-0.5' }} transition-all"></i>
+                            </a>
+                        </div>
+
+                        <!-- Sistem & Keamanan -->
+                        <div>
+                            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2 mb-1.5">Sistem & Keamanan</div>
+                            <div class="space-y-0.5">
+                                <a href="{{ route('superadmin.manajemen-pengguna') }}" 
+                                   @click="mobileNavOpen = false"
+                                   class="group flex items-center justify-between px-3 py-2 rounded-xl transition-all {{ request()->routeIs('superadmin.manajemen-pengguna*') ? 'bg-rose-50 text-rose-700 font-bold border border-rose-100' : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900 font-medium' }}">
+                                    <div class="flex items-center gap-2.5">
+                                        <div class="w-7 h-7 rounded-lg flex items-center justify-center {{ request()->routeIs('superadmin.manajemen-pengguna*') ? 'bg-rose-600 text-white shadow-2xs' : 'bg-slate-100 text-slate-500 group-hover:text-slate-700' }}">
+                                            <i class="fa-solid fa-users-gear text-[11px]"></i>
+                                        </div>
+                                        <span>Manajemen Akun</span>
+                                    </div>
+                                    <i class="fa-solid fa-chevron-right text-[10px] {{ request()->routeIs('superadmin.manajemen-pengguna*') ? 'text-rose-500' : 'text-slate-300 group-hover:text-slate-400 group-hover:translate-x-0.5' }} transition-all"></i>
+                                </a>
+
+                                <a href="{{ route('superadmin.log-aktivitas') }}" 
+                                   @click="mobileNavOpen = false"
+                                   class="group flex items-center justify-between px-3 py-2 rounded-xl transition-all {{ request()->routeIs('superadmin.log-aktivitas*') ? 'bg-rose-50 text-rose-700 font-bold border border-rose-100' : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900 font-medium' }}">
+                                    <div class="flex items-center gap-2.5">
+                                        <div class="w-7 h-7 rounded-lg flex items-center justify-center {{ request()->routeIs('superadmin.log-aktivitas*') ? 'bg-rose-600 text-white shadow-2xs' : 'bg-slate-100 text-slate-500 group-hover:text-slate-700' }}">
+                                            <i class="fa-solid fa-clock-rotate-left text-[11px]"></i>
+                                        </div>
+                                        <span>Audit Log Aktivitas</span>
+                                    </div>
+                                    <i class="fa-solid fa-chevron-right text-[10px] {{ request()->routeIs('superadmin.log-aktivitas*') ? 'text-rose-500' : 'text-slate-300 group-hover:text-slate-400 group-hover:translate-x-0.5' }} transition-all"></i>
+                                </a>
+
+                                <a href="{{ route('superadmin.pengaturan-sistem') }}" 
+                                   @click="mobileNavOpen = false"
+                                   class="group flex items-center justify-between px-3 py-2 rounded-xl transition-all {{ request()->routeIs('superadmin.pengaturan-sistem*') ? 'bg-rose-50 text-rose-700 font-bold border border-rose-100' : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900 font-medium' }}">
+                                    <div class="flex items-center gap-2.5">
+                                        <div class="w-7 h-7 rounded-lg flex items-center justify-center {{ request()->routeIs('superadmin.pengaturan-sistem*') ? 'bg-rose-600 text-white shadow-2xs' : 'bg-slate-100 text-slate-500 group-hover:text-slate-700' }}">
+                                            <i class="fa-solid fa-sliders text-[11px]"></i>
+                                        </div>
+                                        <span>Pengaturan Global</span>
+                                    </div>
+                                    <i class="fa-solid fa-chevron-right text-[10px] {{ request()->routeIs('superadmin.pengaturan-sistem*') ? 'text-rose-500' : 'text-slate-300 group-hover:text-slate-400 group-hover:translate-x-0.5' }} transition-all"></i>
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- Dokumen Asesmen Superadmin -->
+                        <div>
+                            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2 mb-1.5">Dokumen Asesmen</div>
+                            <div class="space-y-0.5">
+                                <a href="{{ route('dokumen-asesmen.index') }}" 
+                                   @click="mobileNavOpen = false"
+                                   class="group flex items-center justify-between px-3 py-2 rounded-xl transition-all {{ request()->routeIs('dokumen-asesmen.index') ? 'bg-rose-50 text-rose-700 font-bold border border-rose-100' : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900 font-medium' }}">
+                                    <div class="flex items-center gap-2.5">
+                                        <div class="w-7 h-7 rounded-lg flex items-center justify-center {{ request()->routeIs('dokumen-asesmen.index') ? 'bg-rose-600 text-white shadow-2xs' : 'bg-slate-100 text-slate-500 group-hover:text-slate-700' }}">
+                                            <i class="fa-solid fa-folder-tree text-[11px]"></i>
+                                        </div>
+                                        <span>Pusat Dokumen Hub</span>
+                                    </div>
+                                    <i class="fa-solid fa-chevron-right text-[10px] {{ request()->routeIs('dokumen-asesmen.index') ? 'text-rose-500' : 'text-slate-300 group-hover:text-slate-400 group-hover:translate-x-0.5' }} transition-all"></i>
+                                </a>
+
+                                <a href="{{ route('dokumen-asesmen.ak05.index') }}" 
+                                   @click="mobileNavOpen = false"
+                                   class="group flex items-center justify-between px-3 py-2 rounded-xl transition-all {{ request()->routeIs('dokumen-asesmen.ak05.*') ? 'bg-rose-50 text-rose-700 font-bold border border-rose-100' : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900 font-medium' }}">
+                                    <div class="flex items-center gap-2.5">
+                                        <div class="w-7 h-7 rounded-lg flex items-center justify-center {{ request()->routeIs('dokumen-asesmen.ak05.*') ? 'bg-rose-600 text-white shadow-2xs' : 'bg-slate-100 text-slate-500 group-hover:text-slate-700' }}">
+                                            <i class="fa-solid fa-file-lines text-[11px]"></i>
+                                        </div>
+                                        <span>FR.AK.05 &bull; Laporan Asesmen</span>
+                                    </div>
+                                    <i class="fa-solid fa-chevron-right text-[10px] {{ request()->routeIs('dokumen-asesmen.ak05.*') ? 'text-rose-500' : 'text-slate-300 group-hover:text-slate-400 group-hover:translate-x-0.5' }} transition-all"></i>
+                                </a>
+
+                                <a href="{{ route('dokumen-asesmen.ak06.index') }}" 
+                                   @click="mobileNavOpen = false"
+                                   class="group flex items-center justify-between px-3 py-2 rounded-xl transition-all {{ request()->routeIs('dokumen-asesmen.ak06.*') ? 'bg-rose-50 text-rose-700 font-bold border border-rose-100' : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900 font-medium' }}">
+                                    <div class="flex items-center gap-2.5">
+                                        <div class="w-7 h-7 rounded-lg flex items-center justify-center {{ request()->routeIs('dokumen-asesmen.ak06.*') ? 'bg-rose-600 text-white shadow-2xs' : 'bg-slate-100 text-slate-500 group-hover:text-slate-700' }}">
+                                            <i class="fa-solid fa-file-waveform text-[11px]"></i>
+                                        </div>
+                                        <span>FR.AK.06 &bull; Meninjau Asesmen</span>
+                                    </div>
+                                    <i class="fa-solid fa-chevron-right text-[10px] {{ request()->routeIs('dokumen-asesmen.ak06.*') ? 'text-rose-500' : 'text-slate-300 group-hover:text-slate-400 group-hover:translate-x-0.5' }} transition-all"></i>
+                                </a>
+
+                                <a href="{{ route('dokumen-asesmen.va.index') }}" 
+                                   @click="mobileNavOpen = false"
+                                   class="group flex items-center justify-between px-3 py-2 rounded-xl transition-all {{ request()->routeIs('dokumen-asesmen.va.*') ? 'bg-rose-50 text-rose-700 font-bold border border-rose-100' : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900 font-medium' }}">
+                                    <div class="flex items-center gap-2.5">
+                                        <div class="w-7 h-7 rounded-lg flex items-center justify-center {{ request()->routeIs('dokumen-asesmen.va.*') ? 'bg-rose-600 text-white shadow-2xs' : 'bg-slate-100 text-slate-500 group-hover:text-slate-700' }}">
+                                            <i class="fa-solid fa-stamp text-[11px]"></i>
+                                        </div>
+                                        <span>FR.VA &bull; Validasi Asesmen</span>
+                                    </div>
+                                    <i class="fa-solid fa-chevron-right text-[10px] {{ request()->routeIs('dokumen-asesmen.va.*') ? 'text-rose-500' : 'text-slate-300 group-hover:text-slate-400 group-hover:translate-x-0.5' }} transition-all"></i>
+                                </a>
+                            </div>
+                        </div>
+
+                    @else
+                        <!-- Dashboard Admin -->
+                        <div>
+                            <a href="{{ route('admin.dashboard') }}" 
+                               @click="mobileNavOpen = false"
+                               class="group flex items-center justify-between px-3 py-2 rounded-xl transition-all {{ request()->routeIs('admin.dashboard') ? 'bg-emerald-50 text-emerald-700 font-bold border border-emerald-100' : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900 font-medium' }}">
+                                <div class="flex items-center gap-2.5">
+                                    <div class="w-7 h-7 rounded-lg flex items-center justify-center {{ request()->routeIs('admin.dashboard') ? 'bg-emerald-600 text-white shadow-2xs' : 'bg-slate-100 text-slate-500 group-hover:text-slate-700' }}">
+                                        <i class="fa-solid fa-chart-pie text-[11px]"></i>
+                                    </div>
+                                    <span>Dashboard Admin</span>
+                                </div>
+                                <i class="fa-solid fa-chevron-right text-[10px] {{ request()->routeIs('admin.dashboard') ? 'text-emerald-500' : 'text-slate-300 group-hover:text-slate-400 group-hover:translate-x-0.5' }} transition-all"></i>
+                            </a>
+                        </div>
+
+                        <!-- Data Asesi -->
+                        <div>
+                            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2 mb-1.5">Asesi & Verifikasi</div>
+                            <div class="space-y-0.5">
+                                @php
+                                    $isAsesiAdminActive = (request()->routeIs('admin.manajemen-asesi*') || request()->routeIs('admin.verifikasi*') || request()->routeIs('admin.detail-asesi'));
+                                @endphp
+                                <a href="{{ route('admin.manajemen-asesi') }}" 
+                                   @click="mobileNavOpen = false"
+                                   class="group flex items-center justify-between px-3 py-2 rounded-xl transition-all {{ $isAsesiAdminActive ? 'bg-emerald-50 text-emerald-700 font-bold border border-emerald-100' : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900 font-medium' }}">
+                                    <div class="flex items-center gap-2.5">
+                                        <div class="w-7 h-7 rounded-lg flex items-center justify-center {{ $isAsesiAdminActive ? 'bg-emerald-600 text-white shadow-2xs' : 'bg-slate-100 text-slate-500 group-hover:text-slate-700' }}">
+                                            <i class="fa-solid fa-user-check text-[11px]"></i>
+                                        </div>
+                                        <span>Data & Verifikasi Asesi</span>
+                                    </div>
+                                    <i class="fa-solid fa-chevron-right text-[10px] {{ $isAsesiAdminActive ? 'text-emerald-500' : 'text-slate-300 group-hover:text-slate-400 group-hover:translate-x-0.5' }} transition-all"></i>
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- Skema & Jadwal -->
+                        <div>
+                            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2 mb-1.5">Skema & Pelaksanaan</div>
+                            <div class="space-y-0.5">
+                                <a href="{{ route('admin.manajemen-skema') }}" 
+                                   @click="mobileNavOpen = false"
+                                   class="group flex items-center justify-between px-3 py-2 rounded-xl transition-all {{ request()->routeIs('admin.manajemen-skema*') ? 'bg-emerald-50 text-emerald-700 font-bold border border-emerald-100' : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900 font-medium' }}">
+                                    <div class="flex items-center gap-2.5">
+                                        <div class="w-7 h-7 rounded-lg flex items-center justify-center {{ request()->routeIs('admin.manajemen-skema*') ? 'bg-emerald-600 text-white shadow-2xs' : 'bg-slate-100 text-slate-500 group-hover:text-slate-700' }}">
+                                            <i class="fa-solid fa-layer-group text-[11px]"></i>
+                                        </div>
+                                        <span>Master Skema Sertifikasi</span>
+                                    </div>
+                                    <i class="fa-solid fa-chevron-right text-[10px] {{ request()->routeIs('admin.manajemen-skema*') ? 'text-emerald-500' : 'text-slate-300 group-hover:text-slate-400 group-hover:translate-x-0.5' }} transition-all"></i>
+                                </a>
+
+                                <a href="{{ route('admin.manajemen-jadwal') }}" 
+                                   @click="mobileNavOpen = false"
+                                   class="group flex items-center justify-between px-3 py-2 rounded-xl transition-all {{ request()->routeIs('admin.manajemen-jadwal*') ? 'bg-emerald-50 text-emerald-700 font-bold border border-emerald-100' : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900 font-medium' }}">
+                                    <div class="flex items-center gap-2.5">
+                                        <div class="w-7 h-7 rounded-lg flex items-center justify-center {{ request()->routeIs('admin.manajemen-jadwal*') ? 'bg-emerald-600 text-white shadow-2xs' : 'bg-slate-100 text-slate-500 group-hover:text-slate-700' }}">
+                                            <i class="fa-solid fa-calendar-days text-[11px]"></i>
+                                        </div>
+                                        <span>Jadwal Asesmen</span>
+                                    </div>
+                                    <i class="fa-solid fa-chevron-right text-[10px] {{ request()->routeIs('admin.manajemen-jadwal*') ? 'text-emerald-500' : 'text-slate-300 group-hover:text-slate-400 group-hover:translate-x-0.5' }} transition-all"></i>
+                                </a>
+
+                                <a href="{{ route('admin.master-muk.index') }}" 
+                                   @click="mobileNavOpen = false"
+                                   class="group flex items-center justify-between px-3 py-2 rounded-xl transition-all {{ request()->routeIs('admin.master-muk*') ? 'bg-emerald-50 text-emerald-700 font-bold border border-emerald-100' : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900 font-medium' }}">
+                                    <div class="flex items-center gap-2.5">
+                                        <div class="w-7 h-7 rounded-lg flex items-center justify-center {{ request()->routeIs('admin.master-muk*') ? 'bg-emerald-600 text-white shadow-2xs' : 'bg-slate-100 text-slate-500 group-hover:text-slate-700' }}">
+                                            <i class="fa-solid fa-file-signature text-[11px]"></i>
+                                        </div>
+                                        <span>Formulir & MUK</span>
+                                    </div>
+                                    <i class="fa-solid fa-chevron-right text-[10px] {{ request()->routeIs('admin.master-muk*') ? 'text-emerald-500' : 'text-slate-300 group-hover:text-slate-400 group-hover:translate-x-0.5' }} transition-all"></i>
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- Dokumen Asesmen Admin -->
+                        <div>
+                            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2 mb-1.5">Dokumen Asesmen</div>
+                            <div class="space-y-0.5">
+                                <a href="{{ route('dokumen-asesmen.index') }}" 
+                                   @click="mobileNavOpen = false"
+                                   class="group flex items-center justify-between px-3 py-2 rounded-xl transition-all {{ request()->routeIs('dokumen-asesmen.index') ? 'bg-emerald-50 text-emerald-700 font-bold border border-emerald-100' : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900 font-medium' }}">
+                                    <div class="flex items-center gap-2.5">
+                                        <div class="w-7 h-7 rounded-lg flex items-center justify-center {{ request()->routeIs('dokumen-asesmen.index') ? 'bg-emerald-600 text-white shadow-2xs' : 'bg-slate-100 text-slate-500 group-hover:text-slate-700' }}">
+                                            <i class="fa-solid fa-folder-tree text-[11px]"></i>
+                                        </div>
+                                        <span>Pusat Dokumen Hub</span>
+                                    </div>
+                                    <i class="fa-solid fa-chevron-right text-[10px] {{ request()->routeIs('dokumen-asesmen.index') ? 'text-emerald-500' : 'text-slate-300 group-hover:text-slate-400 group-hover:translate-x-0.5' }} transition-all"></i>
+                                </a>
+
+                                <a href="{{ route('dokumen-asesmen.ak05.index') }}" 
+                                   @click="mobileNavOpen = false"
+                                   class="group flex items-center justify-between px-3 py-2 rounded-xl transition-all {{ request()->routeIs('dokumen-asesmen.ak05.*') ? 'bg-emerald-50 text-emerald-700 font-bold border border-emerald-100' : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900 font-medium' }}">
+                                    <div class="flex items-center gap-2.5">
+                                        <div class="w-7 h-7 rounded-lg flex items-center justify-center {{ request()->routeIs('dokumen-asesmen.ak05.*') ? 'bg-emerald-600 text-white shadow-2xs' : 'bg-slate-100 text-slate-500 group-hover:text-slate-700' }}">
+                                            <i class="fa-solid fa-file-lines text-[11px]"></i>
+                                        </div>
+                                        <span>FR.AK.05 &bull; Laporan Asesmen</span>
+                                    </div>
+                                    <i class="fa-solid fa-chevron-right text-[10px] {{ request()->routeIs('dokumen-asesmen.ak05.*') ? 'text-emerald-500' : 'text-slate-300 group-hover:text-slate-400 group-hover:translate-x-0.5' }} transition-all"></i>
+                                </a>
+
+                                <a href="{{ route('dokumen-asesmen.ak06.index') }}" 
+                                   @click="mobileNavOpen = false"
+                                   class="group flex items-center justify-between px-3 py-2 rounded-xl transition-all {{ request()->routeIs('dokumen-asesmen.ak06.*') ? 'bg-emerald-50 text-emerald-700 font-bold border border-emerald-100' : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900 font-medium' }}">
+                                    <div class="flex items-center gap-2.5">
+                                        <div class="w-7 h-7 rounded-lg flex items-center justify-center {{ request()->routeIs('dokumen-asesmen.ak06.*') ? 'bg-emerald-600 text-white shadow-2xs' : 'bg-slate-100 text-slate-500 group-hover:text-slate-700' }}">
+                                            <i class="fa-solid fa-file-waveform text-[11px]"></i>
+                                        </div>
+                                        <span>FR.AK.06 &bull; Meninjau Asesmen</span>
+                                    </div>
+                                    <i class="fa-solid fa-chevron-right text-[10px] {{ request()->routeIs('dokumen-asesmen.ak06.*') ? 'text-emerald-500' : 'text-slate-300 group-hover:text-slate-400 group-hover:translate-x-0.5' }} transition-all"></i>
+                                </a>
+
+                                <a href="{{ route('dokumen-asesmen.va.index') }}" 
+                                   @click="mobileNavOpen = false"
+                                   class="group flex items-center justify-between px-3 py-2 rounded-xl transition-all {{ request()->routeIs('dokumen-asesmen.va.*') ? 'bg-emerald-50 text-emerald-700 font-bold border border-emerald-100' : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900 font-medium' }}">
+                                    <div class="flex items-center gap-2.5">
+                                        <div class="w-7 h-7 rounded-lg flex items-center justify-center {{ request()->routeIs('dokumen-asesmen.va.*') ? 'bg-emerald-600 text-white shadow-2xs' : 'bg-slate-100 text-slate-500 group-hover:text-slate-700' }}">
+                                            <i class="fa-solid fa-stamp text-[11px]"></i>
+                                        </div>
+                                        <span>FR.VA &bull; Validasi Asesmen</span>
+                                    </div>
+                                    <i class="fa-solid fa-chevron-right text-[10px] {{ request()->routeIs('dokumen-asesmen.va.*') ? 'text-emerald-500' : 'text-slate-300 group-hover:text-slate-400 group-hover:translate-x-0.5' }} transition-all"></i>
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- Administrasi & Laporan -->
+                        <div>
+                            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2 mb-1.5">Administrasi & Manajemen</div>
+                            <div class="space-y-0.5">
+                                <a href="{{ route('admin.dokumen.index') }}" 
+                                   @click="mobileNavOpen = false"
+                                   class="group flex items-center justify-between px-3 py-2 rounded-xl transition-all {{ (request()->routeIs('admin.dokumen*') || request()->routeIs('formulir.*')) ? 'bg-emerald-50 text-emerald-700 font-bold border border-emerald-100' : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900 font-medium' }}">
+                                    <div class="flex items-center gap-2.5">
+                                        <div class="w-7 h-7 rounded-lg flex items-center justify-center {{ (request()->routeIs('admin.dokumen*') || request()->routeIs('formulir.*')) ? 'bg-emerald-600 text-white shadow-2xs' : 'bg-slate-100 text-slate-500 group-hover:text-slate-700' }}">
+                                            <i class="fa-solid fa-folder-open text-[11px]"></i>
+                                        </div>
+                                        <span>Berkas Umum LSP</span>
+                                    </div>
+                                    <i class="fa-solid fa-chevron-right text-[10px] {{ (request()->routeIs('admin.dokumen*') || request()->routeIs('formulir.*')) ? 'text-emerald-500' : 'text-slate-300 group-hover:text-slate-400 group-hover:translate-x-0.5' }} transition-all"></i>
+                                </a>
+
+                                <a href="{{ route('admin.manajemen-pengumuman') }}" 
+                                   @click="mobileNavOpen = false"
+                                   class="group flex items-center justify-between px-3 py-2 rounded-xl transition-all {{ request()->routeIs('admin.manajemen-pengumuman*') ? 'bg-emerald-50 text-emerald-700 font-bold border border-emerald-100' : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900 font-medium' }}">
+                                    <div class="flex items-center gap-2.5">
+                                        <div class="w-7 h-7 rounded-lg flex items-center justify-center {{ request()->routeIs('admin.manajemen-pengumuman*') ? 'bg-emerald-600 text-white shadow-2xs' : 'bg-slate-100 text-slate-500 group-hover:text-slate-700' }}">
+                                            <i class="fa-solid fa-bullhorn text-[11px]"></i>
+                                        </div>
+                                        <span>Informasi & Pengumuman</span>
+                                    </div>
+                                    <i class="fa-solid fa-chevron-right text-[10px] {{ request()->routeIs('admin.manajemen-pengumuman*') ? 'text-emerald-500' : 'text-slate-300 group-hover:text-slate-400 group-hover:translate-x-0.5' }} transition-all"></i>
+                                </a>
+
+                                <a href="{{ route('admin.laporan-kelulusan') }}" 
+                                   @click="mobileNavOpen = false"
+                                   class="group flex items-center justify-between px-3 py-2 rounded-xl transition-all {{ request()->routeIs('admin.laporan-kelulusan*') ? 'bg-emerald-50 text-emerald-700 font-bold border border-emerald-100' : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900 font-medium' }}">
+                                    <div class="flex items-center gap-2.5">
+                                        <div class="w-7 h-7 rounded-lg flex items-center justify-center {{ request()->routeIs('admin.laporan-kelulusan*') ? 'bg-emerald-600 text-white shadow-2xs' : 'bg-slate-100 text-slate-500 group-hover:text-slate-700' }}">
+                                            <i class="fa-solid fa-chart-column text-[11px]"></i>
+                                        </div>
+                                        <span>Laporan Kelulusan</span>
+                                    </div>
+                                    <i class="fa-solid fa-chevron-right text-[10px] {{ request()->routeIs('admin.laporan-kelulusan*') ? 'text-emerald-500' : 'text-slate-300 group-hover:text-slate-400 group-hover:translate-x-0.5' }} transition-all"></i>
+                                </a>
+
+                                <a href="{{ route('admin.manajemen-asesor') }}" 
+                                   @click="mobileNavOpen = false"
+                                   class="group flex items-center justify-between px-3 py-2 rounded-xl transition-all {{ request()->routeIs('admin.manajemen-asesor*') ? 'bg-emerald-50 text-emerald-700 font-bold border border-emerald-100' : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900 font-medium' }}">
+                                    <div class="flex items-center gap-2.5">
+                                        <div class="w-7 h-7 rounded-lg flex items-center justify-center {{ request()->routeIs('admin.manajemen-asesor*') ? 'bg-emerald-600 text-white shadow-2xs' : 'bg-slate-100 text-slate-500 group-hover:text-slate-700' }}">
+                                            <i class="fa-solid fa-chalkboard-user text-[11px]"></i>
+                                        </div>
+                                        <span>Data & Surat Tugas Asesor</span>
+                                    </div>
+                                    <i class="fa-solid fa-chevron-right text-[10px] {{ request()->routeIs('admin.manajemen-asesor*') ? 'text-emerald-500' : 'text-slate-300 group-hover:text-slate-400 group-hover:translate-x-0.5' }} transition-all"></i>
+                                </a>
+                            </div>
+                        </div>
+                    @endif
+                </div>
+
+                <!-- 4. Drawer Footer -->
+                <div class="p-3.5 border-t border-slate-100 bg-slate-50 space-y-2">
+                    <a href="{{ route('beranda') }}" 
+                       @click="mobileNavOpen = false"
+                       class="flex items-center justify-center gap-2 w-full px-3 py-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 text-xs font-semibold transition-colors">
+                        <i class="fa-solid fa-globe text-slate-400 text-xs"></i>
+                        <span>Website Publik LSP</span>
+                    </a>
+
+                    <form action="{{ route('keluar') }}" method="POST">
+                        @csrf
+                        <button type="submit" class="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-rose-600 bg-rose-50/80 hover:bg-rose-100 border border-rose-200/60 font-semibold transition-colors text-xs cursor-pointer">
+                            <i class="fa-solid fa-arrow-right-from-bracket text-xs"></i>
+                            <span>Keluar dari Akun</span>
+                        </button>
+                    </form>
+
+                    <div class="text-[10px] text-slate-400 text-center pt-0.5 font-mono">
+                        Lisensi Resmi BNSP-LSP-2629-ID
+                    </div>
+                </div>
+            </div>
 
         <!-- MAIN FULL-WIDTH CONTAINER -->
         <main class="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex-1 animasi-fade">
@@ -1122,5 +1550,6 @@
 
 <!-- JS Khusus Per Halaman -->
 @stack('js')
+@stack('scripts')
 </body>
 </html>

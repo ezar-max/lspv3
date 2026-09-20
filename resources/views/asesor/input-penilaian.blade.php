@@ -88,9 +88,14 @@
             <div class="flex items-center gap-2.5 flex-wrap self-start md:self-center shrink-0">
                 <!-- Live Counter Header Indicator -->
                 <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border font-bold text-xs"
-                      :class="allVerified ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'">
+                      :class="allVerified ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : (bkCount > 0 ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-amber-50 text-amber-700 border-amber-200')">
                     <span x-show="allVerified">✓ Semua KUK Terverifikasi K (<span x-text="verifiedCount + '/' + totalKuk"></span>)</span>
-                    <span x-show="!allVerified"><span x-text="verifiedCount"></span> K &bull; <span x-text="bkCount" class="text-rose-600"></span> BK dari <span x-text="totalKuk"></span> KUK</span>
+                    <span x-show="!allVerified">
+                        <span x-text="verifiedCount"></span> K &bull; 
+                        <span x-text="bkCount" class="text-rose-600"></span> BK
+                        <span x-show="unverifiedCount > 0">&bull; <span x-text="unverifiedCount" class="text-amber-700"></span> Belum Dinilai</span>
+                        dari <span x-text="totalKuk"></span> KUK
+                    </span>
                 </span>
 
                 <!-- Status APL.02 -->
@@ -143,10 +148,26 @@
                         Verifikasi bukti portofolio dan tentukan keputusan K atau BK untuk setiap KUK.
                     </p>
                 </div>
-                <div class="flex items-center gap-2 self-start sm:self-center shrink-0">
+                <div class="flex items-center gap-2 self-start sm:self-center shrink-0 flex-wrap">
                     <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-50 border border-slate-200 text-slate-600 font-semibold text-xs">
                         <span>{{ $pendaftaran->skema->unitKompetensi->count() }} Unit Kompetensi</span>
                     </span>
+                    @if(!$isLocked)
+                        <button type="button" 
+                                @click="setAllK()" 
+                                class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-700 font-bold text-xs transition-colors cursor-pointer shadow-2xs"
+                                title="Tandai semua butir KUK sebagai Kompeten (K)">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                            <span>Tandai Semua K</span>
+                        </button>
+                        <button type="button" 
+                                @click="resetAll()" 
+                                class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-300 text-slate-600 font-semibold text-xs transition-colors cursor-pointer shadow-2xs"
+                                title="Kosongkan semua pilihan verifikasi">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                            <span>Reset</span>
+                        </button>
+                    @endif
                 </div>
             </div>
 
@@ -179,15 +200,17 @@
                             <!-- Kanan: Computed Keputusan Unit (Rules BNSP) & Collapse Button -->
                             <div class="flex items-center gap-2.5 shrink-0 self-end sm:self-center">
                                 <!-- Hidden input to submit unit decision -->
-                                <input type="hidden" name="nilai[{{ $unit->id }}]" :value="unitDecisions['{{ $unit->id }}']">
+                                <input type="hidden" name="nilai[{{ $unit->id }}]" :value="unitDecisions['{{ $unit->id }}'] || ''">
 
                                 <!-- Visual Keputusan Unit Badge (Auto-computed by Alpine based on BNSP rules) -->
-                                <div class="flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-md border shadow-2xs"
-                                     :class="unitDecisions['{{ $unit->id }}'] === 'K' ? 'border-emerald-300 bg-emerald-50/40' : 'border-rose-300 bg-rose-50/40'">
+                                <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-md border shadow-2xs transition-colors"
+                                     :class="unitDecisions['{{ $unit->id }}'] === 'K' ? 'border-emerald-300 bg-emerald-50/60' : (unitDecisions['{{ $unit->id }}'] === 'BK' ? 'border-rose-300 bg-rose-50/60' : 'border-slate-200 bg-slate-100/80')">
                                     <span class="text-[10px] font-bold text-slate-500 uppercase">Keputusan Unit:</span>
                                     <span class="text-xs font-bold inline-flex items-center gap-1"
-                                          :class="unitDecisions['{{ $unit->id }}'] === 'K' ? 'text-emerald-700' : 'text-rose-700'">
-                                        <span x-text="unitDecisions['{{ $unit->id }}'] === 'K' ? 'Kompeten (K)' : 'Belum Kompeten (BK)'"></span>
+                                          :class="unitDecisions['{{ $unit->id }}'] === 'K' ? 'text-emerald-700' : (unitDecisions['{{ $unit->id }}'] === 'BK' ? 'text-rose-700' : 'text-slate-500')">
+                                        <span x-text="unitDecisions['{{ $unit->id }}'] === 'K' ? 'Kompeten (K)' : (unitDecisions['{{ $unit->id }}'] === 'BK' ? 'Belum Kompeten (BK)' : 'Belum Diverifikasi')">
+                                            {{ ($unitDecisions[$unit->id] ?? null) === 'K' ? 'Kompeten (K)' : (($unitDecisions[$unit->id] ?? null) === 'BK' ? 'Belum Kompeten (BK)' : 'Belum Diverifikasi') }}
+                                        </span>
                                     </span>
                                 </div>
 
@@ -410,7 +433,8 @@
                                         <div class="font-bold">Asesmen DAPAT Dilanjutkan (Portofolio Memenuhi Syarat - ACC)</div>
                                         <div class="text-[11px] opacity-85 mt-0.5">
                                             <span x-show="allVerified">Seluruh KUK terverifikasi Kompeten (K). Asesi dapat langsung lanjut menandatangani kesepakatan asesmen FR.AK.01.</span>
-                                            <span x-show="!allVerified">Tidak dapat dipilih karena masih ada <strong class="text-rose-600" x-text="bkCount"></strong> KUK Belum Kompeten (BK).</span>
+                                            <span x-show="!allVerified && unverifiedCount > 0">Tidak dapat dipilih karena masih ada <strong class="text-amber-600" x-text="unverifiedCount"></strong> KUK yang belum dinilai.</span>
+                                            <span x-show="!allVerified && unverifiedCount === 0 && bkCount > 0">Tidak dapat dipilih karena masih ada <strong class="text-rose-600" x-text="bkCount"></strong> KUK Belum Kompeten (BK).</span>
                                         </div>
                                     </div>
                                 </label>
@@ -427,7 +451,8 @@
                                     <div class="text-xs leading-snug">
                                         <div class="font-bold text-amber-800">TIDAK DAPAT Dilanjutkan (Minta Revisi Berkas APL.02)</div>
                                         <div class="text-[11px] opacity-80 mt-0.5">
-                                            <span x-show="!allVerified">Terdapat <strong class="text-rose-700" x-text="bkCount"></strong> butir KUK Belum Kompeten (BK). Berkas APL.02 dikembalikan ke asesi untuk diperbaiki.</span>
+                                            <span x-show="!allVerified && bkCount > 0">Terdapat <strong class="text-rose-700" x-text="bkCount"></strong> butir KUK Belum Kompeten (BK). Berkas APL.02 dikembalikan ke asesi untuk diperbaiki.</span>
+                                            <span x-show="!allVerified && bkCount === 0">Berkas APL.02 dikembalikan ke asesi untuk melengkapi bukti portofolio atau revisi isian.</span>
                                             <span x-show="allVerified">Berkas APL.02 dikembalikan ke asesi untuk melengkapi atau memperbaiki dokumen bukti yang kurang.</span>
                                         </div>
                                     </div>
@@ -547,11 +572,19 @@
                 <!-- Left: Rekapitulasi KUK Realtime BNSP -->
                 <div class="flex items-center gap-2 text-xs w-full md:w-auto justify-between md:justify-start">
                     <span class="px-2.5 py-1 rounded-full font-bold inline-flex items-center gap-1.5"
-                          :class="allVerified ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-amber-100 text-amber-800 border border-amber-200'">
+                          :class="allVerified ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : (bkCount > 0 ? 'bg-rose-100 text-rose-800 border border-rose-200' : 'bg-amber-100 text-amber-800 border border-amber-200')">
                         <span x-show="allVerified">✓ Semua KUK Terverifikasi K (<span x-text="verifiedCount + ' / ' + totalKuk"></span>)</span>
-                        <span x-show="!allVerified"><span x-text="verifiedCount"></span> K &bull; <span x-text="bkCount" class="text-rose-600 font-bold"></span> BK dari <span x-text="totalKuk"></span> KUK</span>
+                        <span x-show="!allVerified">
+                            <span x-text="verifiedCount"></span> K &bull; 
+                            <span x-text="bkCount" class="text-rose-600 font-bold"></span> BK
+                            <span x-show="unverifiedCount > 0">&bull; <span x-text="unverifiedCount" class="text-amber-700 font-bold"></span> Belum Dinilai</span>
+                            dari <span x-text="totalKuk"></span> KUK
+                        </span>
                     </span>
-                    <span class="text-slate-500 font-medium text-[11px] hidden lg:inline" x-show="!allVerified">
+                    <span class="text-slate-500 font-medium text-[11px] hidden lg:inline" x-show="!allVerified && unverifiedCount > 0">
+                        &bull; Silakan tentukan keputusan K/BK untuk setiap butir KUK
+                    </span>
+                    <span class="text-slate-500 font-medium text-[11px] hidden lg:inline" x-show="!allVerified && unverifiedCount === 0 && bkCount > 0">
                         &bull; Ada KUK BK, formulir perlu direvisi asesi
                     </span>
                 </div>
@@ -570,7 +603,7 @@
                             <span>Tolak</span>
                         </button>
 
-                        <!-- Tombol Utama Dinamis: Hijau (ACC) jika semua K, berubah jadi Revisi (Orange/Amber) jika ada KUK yang BK -->
+                        <!-- Tombol Utama Dinamis: Hijau (ACC) jika semua K, Revisi jika ada BK, atau Lengkapi jika masih ada unverified -->
                         <button type="submit" 
                                 id="btn-submit-penilaian-asesor" 
                                 :disabled="saving"
@@ -578,8 +611,8 @@
                                 class="w-1/2 md:w-auto px-5 py-2 rounded-lg font-bold text-xs shadow-xs transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer"
                                 :class="allVerified 
                                     ? 'bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white' 
-                                    : 'bg-amber-600 hover:bg-amber-700 disabled:bg-amber-400 text-white'">
-                            <span x-text="saving ? 'Menyimpan...' : (allVerified ? 'Sahkan & Setujui APL.02 (ACC)' : 'Revisi')"></span>
+                                    : (unverifiedCount > 0 ? 'bg-slate-700 hover:bg-slate-800 disabled:bg-slate-400 text-white' : 'bg-amber-600 hover:bg-amber-700 disabled:bg-amber-400 text-white')">
+                            <span x-text="saving ? 'Menyimpan...' : (allVerified ? 'Sahkan & Setujui APL.02 (ACC)' : (unverifiedCount > 0 ? 'Lengkapi Penilaian (' + unverifiedCount + ' Belum)' : 'Minta Revisi'))"></span>
                         </button>
                     @endif
                 </div>
@@ -773,6 +806,7 @@
             modalCatatanTolak: '',
             verifiedCount: 0,
             bkCount: 0,
+            unverifiedCount: 0,
             allVerified: false,
             saving: false,
             previewUrl: '',
@@ -790,43 +824,94 @@
                 @if($isLocked)
                     return;
                 @endif
-                this.verifiedKuk[kukId] = status;
+                // Jika diklik status yang sama, batalkan pilihan (toggle to null)
+                if (this.verifiedKuk[kukId] === status) {
+                    this.verifiedKuk[kukId] = null;
+                } else {
+                    this.verifiedKuk[kukId] = status;
+                }
                 this.recalculateAll();
+            },
+
+            setAllK() {
+                @if($isLocked)
+                    return;
+                @endif
+                for (let unitId in this.unitKukMap) {
+                    const kukIds = this.unitKukMap[unitId] || [];
+                    for (let kId of kukIds) {
+                        this.verifiedKuk[kId] = 'K';
+                    }
+                }
+                this.recalculateAll();
+            },
+
+            resetAll() {
+                @if($isLocked)
+                    return;
+                @endif
+                if (confirm('Kosongkan semua pilihan verifikasi K/BK?')) {
+                    for (let unitId in this.unitKukMap) {
+                        const kukIds = this.unitKukMap[unitId] || [];
+                        for (let kId of kukIds) {
+                            this.verifiedKuk[kId] = null;
+                        }
+                    }
+                    this.recalculateAll();
+                }
             },
 
             recalculateAll() {
                 let countK = 0;
                 let countBk = 0;
+                let countUnverified = 0;
 
                 // 1. Hitung Status K/BK Per Unit Kompetensi (Rules BNSP)
                 for (let unitId in this.unitKukMap) {
                     const kukIds = this.unitKukMap[unitId] || [];
                     let unitAllK = true;
+                    let unitHasBk = false;
+                    let unitHasUnverified = false;
 
                     for (let kId of kukIds) {
-                        const kukStatus = this.verifiedKuk[kId] || 'BK';
+                        const kukStatus = this.verifiedKuk[kId];
                         if (kukStatus === 'K') {
                             countK++;
-                        } else {
+                        } else if (kukStatus === 'BK') {
                             countBk++;
+                            unitHasBk = true;
+                            unitAllK = false;
+                        } else {
+                            countUnverified++;
+                            unitHasUnverified = true;
                             unitAllK = false;
                         }
                     }
 
-                    // Aturan BNSP: Jika semua KUK dlm 1 unit = K, maka unit = K. Jika ada min 1 BK, unit = BK
-                    this.unitDecisions[unitId] = (kukIds.length > 0 && unitAllK) ? 'K' : 'BK';
+                    // Aturan BNSP:
+                    // Jika ada KUK BK pada unit, unit otomatis BK
+                    // Jika semua KUK pada unit = K, unit otomatis K
+                    // Jika masih ada KUK yang belum dinilai dan tidak ada BK, keputusan unit belum ditentukan (null)
+                    if (unitHasBk) {
+                        this.unitDecisions[unitId] = 'BK';
+                    } else if (kukIds.length > 0 && unitAllK && !unitHasUnverified) {
+                        this.unitDecisions[unitId] = 'K';
+                    } else {
+                        this.unitDecisions[unitId] = null;
+                    }
                 }
 
                 this.verifiedCount = countK;
                 this.bkCount = countBk;
-                this.allVerified = (countBk === 0 && this.totalKuk > 0);
+                this.unverifiedCount = countUnverified;
+                this.allVerified = (countK === this.totalKuk && this.totalKuk > 0 && countBk === 0 && countUnverified === 0);
 
                 // Otomatis sinkronisasi rekomendasi dengan status KUK jika belum diset manual ke 'ditolak'
                 if (this.recommendation !== 'ditolak') {
-                    if (!this.allVerified) {
-                        this.recommendation = 'tidak_dapat_dilanjutkan';
-                    } else {
+                    if (this.allVerified) {
                         this.recommendation = 'dapat_dilanjutkan';
+                    } else {
+                        this.recommendation = 'tidak_dapat_dilanjutkan';
                     }
                 }
 
@@ -909,6 +994,11 @@
             },
 
             handleClickMainButton(event) {
+                if (this.unverifiedCount > 0) {
+                    event.preventDefault();
+                    alert('PERINGATAN: Masih terdapat ' + this.unverifiedCount + ' butir KUK yang belum diverifikasi! Silakan tentukan keputusan K atau BK untuk seluruh butir KUK terlebih dahulu.');
+                    return false;
+                }
                 if (this.allVerified) {
                     this.recommendation = 'dapat_dilanjutkan';
                     const inputAction = document.getElementById('input-action-type');
@@ -1035,6 +1125,13 @@
             },
 
             handleSubmit(e) {
+                // 0. Validasi kelengkapan butir KUK
+                if (this.unverifiedCount > 0 && this.recommendation !== 'ditolak') {
+                    e.preventDefault();
+                    alert('PERINGATAN: Masih terdapat ' + this.unverifiedCount + ' butir KUK yang belum diverifikasi (K/BK)! Silakan lengkapi penilaian seluruh KUK terlebih dahulu.');
+                    return false;
+                }
+
                 // 1. Validasi Keputusan Unit
                 for (let unitId in this.unitDecisions) {
                     if (!this.unitDecisions[unitId] || (this.unitDecisions[unitId] !== 'K' && this.unitDecisions[unitId] !== 'BK')) {
@@ -1048,7 +1145,11 @@
                 if (this.recommendation === 'dapat_dilanjutkan') {
                     if (!this.allVerified) {
                         e.preventDefault();
-                        alert('PERINGATAN: Formulir FR.APL.02 tidak dapat disetujui (ACC) karena masih terdapat butir KUK yang dinilai Belum Kompeten (BK). Silakan gunakan tombol Revisi.');
+                        if (this.unverifiedCount > 0) {
+                            alert('PERINGATAN: Formulir FR.APL.02 tidak dapat disetujui (ACC) karena masih terdapat ' + this.unverifiedCount + ' butir KUK yang belum diverifikasi.');
+                        } else {
+                            alert('PERINGATAN: Formulir FR.APL.02 tidak dapat disetujui (ACC) karena masih terdapat butir KUK yang dinilai Belum Kompeten (BK). Silakan gunakan tombol Revisi.');
+                        }
                         return false;
                     }
 

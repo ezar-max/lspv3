@@ -195,13 +195,13 @@
 
         <!-- 1. POTENSI ASESI & FASE -->
         @php
-            $potensiVal = (int) ($ak07->potensi_asesi ?? 1);
-            $potensiText = $potensiDefinitions[$potensiVal] ?? '-';
-            $faseVal = match($ak07->fase_penggunaan ?? 'saat_pra_asesmen') {
+            $potensiVal = $ak07->potensi_asesi ? (int) $ak07->potensi_asesi : null;
+            $potensiText = $potensiVal && isset($potensiDefinitions[$potensiVal]) ? $potensiDefinitions[$potensiVal] : '-';
+            $faseVal = match($ak07->fase_penggunaan ?? null) {
                 'pra_asesmen' => 'Pra Asesmen',
                 'saat_pra_asesmen' => 'Pada Saat Asesmen',
                 'setelah_pra_asesmen' => 'Setelah Asesmen',
-                default => 'Pada Saat Asesmen'
+                default => '-'
             };
             $savedChecklist = (array) ($ak07->items_checklist ?? []);
         @endphp
@@ -210,7 +210,7 @@
             <tr>
                 <td style="width: 25%; font-weight: 700; background: #f8fafc;">Potensi Asesi</td>
                 <td style="width: 2%; text-align: center;">:</td>
-                <td><strong>Kategori {{ $potensiVal }}:</strong> {{ $potensiText }}</td>
+                <td>@if($potensiVal) <strong>Kategori {{ $potensiVal }}:</strong> {{ $potensiText }} @else <span style="color: #94a3b8;">-</span> @endif</td>
             </tr>
             <tr>
                 <td style="font-weight: 700; background: #f8fafc;">Fase Penggunaan</td>
@@ -237,7 +237,8 @@
                 @foreach($criteriaDefinitions as $catId => $crit)
                     @php
                         $itemSaved = $savedChecklist[$catId] ?? [];
-                        $isPerlu = filter_var($itemSaved['perlu_penyesuaian'] ?? false, FILTER_VALIDATE_BOOLEAN);
+                        $hasStatus = array_key_exists('perlu_penyesuaian', $itemSaved) && $itemSaved['perlu_penyesuaian'] !== null;
+                        $isPerlu = $hasStatus && filter_var($itemSaved['perlu_penyesuaian'], FILTER_VALIDATE_BOOLEAN);
                         $opsiSelected = (array) ($itemSaved['opsi_dipilih'] ?? []);
                         $ket = $itemSaved['keterangan'] ?? '';
                     @endphp
@@ -247,7 +248,9 @@
                             <strong>{{ $crit['title'] }}</strong>
                         </td>
                         <td style="text-align: center;">
-                            @if($isPerlu)
+                            @if(!$hasStatus)
+                                <span style="color: #94a3b8;">-</span>
+                            @elseif($isPerlu)
                                 <span style="font-weight: 800; color: #b45309;">PERLU [&#10003;]</span>
                             @else
                                 <span style="color: #64748b;">Tidak [ &minus; ]</span>
@@ -269,8 +272,10 @@
                                         Catatan: {{ $ket }}
                                     </div>
                                 @endif
-                            @else
+                            @elseif($hasStatus)
                                 <span style="color: #94a3b8; font-style: italic;">Tidak memerlukan penyesuaian khusus.</span>
+                            @else
+                                <span style="color: #94a3b8; font-style: italic;">-</span>
                             @endif
                         </td>
                     </tr>

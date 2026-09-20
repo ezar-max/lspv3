@@ -28,11 +28,12 @@ class JadwalController extends Controller
             'skema_id' => 'required|exists:skema_sertifikasi,id',
             'asesor_id' => 'required|exists:pengguna,id',
             'nama_tuk' => 'required|string|max:255',
-            'tanggal_uji' => 'required|date',
+            'tanggal_uji' => 'required|date|after_or_equal:today',
             'waktu_mulai' => 'required',
             'waktu_selesai' => 'required',
             'kuota' => 'required|integer|min:1|max:50',
         ], [
+            'tanggal_uji.after_or_equal' => 'Tanggal uji tidak boleh di masa lampau. Pilih hari ini atau tanggal mendatang.',
             'kuota.required' => 'Kapasitas kuota asesi wajib diisi (Standar: 10 asesi/asesor/hari).',
             'kuota.max' => 'Kapasitas maksimal satu sesi per asesor disarankan tidak melebihi 50 asesi.',
         ]);

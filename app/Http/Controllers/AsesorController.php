@@ -151,15 +151,50 @@ class AsesorController extends Controller
         ])->header('Cache-Control', 'no-cache, no-store, must-revalidate');
     }
 
-    public function jadwal()
+    public function jadwal(Request $request)
     {
         JadwalAsesmen::syncAllStatuses();
-        $jadwalList = JadwalAsesmen::with(['skema', 'pendaftaranAsesi'])
-            ->where('asesor_id', auth()->id())
-            ->orderBy('tanggal_uji', 'desc')
-            ->paginate(10);
+        $asesorId = auth()->id();
+        $statusFilter = $request->get('status');
+        $search = $request->get('q');
 
-        return view('asesor.jadwal-asesmen', compact('jadwalList'));
+        $query = JadwalAsesmen::with(['skema', 'pendaftaranAsesi'])
+            ->where('asesor_id', $asesorId);
+
+        if (!empty($statusFilter)) {
+            $query->where('status_jadwal', $statusFilter);
+        }
+
+        if (!empty($search)) {
+            $query->where(function ($sub) use ($search) {
+                $sub->where('kode_jadwal', 'like', "%{$search}%")
+                    ->orWhere('nama_tuk', 'like', "%{$search}%")
+                    ->orWhereHas('skema', function ($skemaQ) use ($search) {
+                        $skemaQ->where('nama_skema', 'like', "%{$search}%")
+                               ->orWhere('kode_skema', 'like', "%{$search}%");
+                    });
+            });
+        }
+
+        $jadwalList = $query->orderBy('tanggal_uji', 'desc')
+            ->paginate(10)
+            ->withQueryString();
+
+        // Statistics for summary badges/cards
+        $countSemua = JadwalAsesmen::where('asesor_id', $asesorId)->count();
+        $countBerlangsung = JadwalAsesmen::where('asesor_id', $asesorId)->where('status_jadwal', 'berlangsung')->count();
+        $countTerjadwal = JadwalAsesmen::where('asesor_id', $asesorId)->where('status_jadwal', 'terjadwal')->count();
+        $countSelesai = JadwalAsesmen::where('asesor_id', $asesorId)->where('status_jadwal', 'selesai')->count();
+
+        return view('asesor.jadwal-asesmen', compact(
+            'jadwalList',
+            'countSemua',
+            'countBerlangsung',
+            'countTerjadwal',
+            'countSelesai',
+            'statusFilter',
+            'search'
+        ));
     }
 
     public function daftarPeserta(Request $request)
@@ -288,6 +323,8 @@ class AsesorController extends Controller
                 $unitKukMap[$unit->id] = [];
                 $allKukInUnitAreK = true;
                 $hasAnyKukInUnit = false;
+                $hasAnyUnverifiedInUnit = false;
+                $hasAnyBkInUnit = false;
 
                 foreach ($unit->elemenKompetensi as $elemen) {
                     $elemJawaban = $jawabanMap->get($elemen->id);
@@ -299,17 +336,23 @@ class AsesorController extends Controller
                         $unitKukMap[$unit->id][] = $kuk->id;
                         $vKuk = $verifikasiKukMap->get($kuk->id);
 
-                        if ($vKuk) {
+                        if ($vKuk && $vKuk->is_verified !== null) {
                             $statusKuk = $vKuk->is_verified ? 'K' : 'BK';
                             $initialCatatanKuk[$kuk->id] = $vKuk->catatan_asesor ?? '';
                         } else {
-                            // Default: jika klaim K = K, jika BK = BK
-                            $statusKuk = ($elemKlaim === 'K') ? 'K' : 'BK';
+                            // Default: belum dipilih satupun oleh asesor (null)
+                            $statusKuk = null;
                             $initialCatatanKuk[$kuk->id] = '';
                         }
 
                         $initialVerifiedKuk[$kuk->id] = $statusKuk;
-                        if ($statusKuk !== 'K') {
+                        if ($statusKuk === 'K') {
+                            // K
+                        } elseif ($statusKuk === 'BK') {
+                            $hasAnyBkInUnit = true;
+                            $allKukInUnitAreK = false;
+                        } else {
+                            $hasAnyUnverifiedInUnit = true;
                             $allKukInUnitAreK = false;
                         }
                     }
@@ -320,7 +363,13 @@ class AsesorController extends Controller
                 if ($pUnit && in_array($pUnit->nilai_kompetensi, ['K', 'BK'])) {
                     $unitDecisions[$unit->id] = $pUnit->nilai_kompetensi;
                 } else {
-                    $unitDecisions[$unit->id] = ($hasAnyKukInUnit && $allKukInUnitAreK) ? 'K' : 'BK';
+                    if ($hasAnyBkInUnit) {
+                        $unitDecisions[$unit->id] = 'BK';
+                    } elseif ($hasAnyKukInUnit && $allKukInUnitAreK && !$hasAnyUnverifiedInUnit) {
+                        $unitDecisions[$unit->id] = 'K';
+                    } else {
+                        $unitDecisions[$unit->id] = null;
+                    }
                 }
             }
         }
@@ -406,16 +455,34 @@ class AsesorController extends Controller
             }
         }
 
-        // Jika akan di-ACC (approve), pastikan tidak ada KUK atau Unit yang BK
+        // Jika akan di-ACC (approve), pastikan tidak ada KUK yang belum diverifikasi atau bernilai BK
         if (!$isDitolak && !$isMintaRevisi) {
             $hasBkKuk = false;
+            $hasUnverifiedKuk = false;
             $verifikasiKukInput = $request->input('verifikasi_kuk', []);
-            foreach ($verifikasiKukInput as $valKuk) {
-                if ($valKuk === 'BK' || $valKuk === '0' || $valKuk === 0 || $valKuk === false) {
-                    $hasBkKuk = true;
-                    break;
+
+            if ($pendaftaran->skema && $pendaftaran->skema->unitKompetensi) {
+                foreach ($pendaftaran->skema->unitKompetensi as $unit) {
+                    foreach ($unit->elemenKompetensi as $elemen) {
+                        foreach ($elemen->kriteriaUnjukKerja as $kuk) {
+                            $valKuk = $verifikasiKukInput[$kuk->id] ?? null;
+                            if ($valKuk === null || $valKuk === '') {
+                                $hasUnverifiedKuk = true;
+                                break 3;
+                            }
+                            if ($valKuk === 'BK' || $valKuk === '0' || $valKuk === 0 || $valKuk === false) {
+                                $hasBkKuk = true;
+                                break 3;
+                            }
+                        }
+                    }
                 }
             }
+
+            if ($hasUnverifiedKuk) {
+                return back()->withInput()->with('error', 'Formulir FR.APL.02 tidak dapat disetujui (ACC) karena masih terdapat butir KUK yang belum diverifikasi (K/BK). Pastikan seluruh butir KUK dinilai Kompeten (K).');
+            }
+
             if ($hasBkKuk || in_array('BK', $request->input('nilai', []))) {
                 return back()->withInput()->with('error', 'Formulir FR.APL.02 tidak dapat disetujui (ACC) karena masih terdapat butir KUK yang dinilai Belum Kompeten (BK). Silakan gunakan tombol Revisi.');
             }
@@ -471,7 +538,13 @@ class AsesorController extends Controller
                             $vKukExisting = $existingVerifikasi->get($kuk->id);
                             $klaimKuk = $vKukExisting ? $vKukExisting->nilai_kompetensi : $elemKlaim;
                             $rawVal = $verifikasiInput[$kuk->id] ?? null;
-                            $isVerified = ($rawVal === 'K' || $rawVal === '1' || $rawVal === 1 || $rawVal === true);
+                            if ($rawVal === 'K' || $rawVal === '1' || $rawVal === 1 || $rawVal === true) {
+                                $isVerified = true;
+                            } elseif ($rawVal === 'BK' || $rawVal === '0' || $rawVal === 0 || $rawVal === false) {
+                                $isVerified = false;
+                            } else {
+                                $isVerified = null;
+                            }
                             $catatanKuk = $catatanKukInput[$kuk->id] ?? null;
 
                             \App\Models\VerifikasiKukApl02::updateOrCreate(
@@ -955,8 +1028,9 @@ class AsesorController extends Controller
             $signaturePath = $rawSignature;
         }
 
+        $existingMasterAk01 = MasterAk01::where('skema_id', $skema->id)->first();
         if (empty($signaturePath)) {
-            $signaturePath = $user->tanda_tangan;
+            $signaturePath = $existingMasterAk01->tanda_tangan_asesor ?? $user->tanda_tangan;
         }
 
         $masterAk01 = MasterAk01::updateOrCreate(
@@ -978,8 +1052,8 @@ class AsesorController extends Controller
 
         LogAktivitas::catat('Master AK.01', 'Menetapkan dan mengesahkan Master FR.AK.01 untuk Skema ' . $skema->kode_skema . ' (Diterapkan ke ' . $syncedCount . ' asesi)');
 
-        return redirect()->route('asesor.mapa', ['skema_id' => $skema->id])
-            ->with('sukses', 'Master FR.AK.01 untuk Skema ' . $skema->nama_skema . ' berhasil disimpan dan telah disinkronisasikan ke ' . $syncedCount . ' asesi terdaftar!');
+        return redirect()->route('asesor.skema.ak-01', $skema->id)
+            ->with('sukses', 'Master FR.AK.01 untuk Skema ' . $skema->nama_skema . ' berhasil disimpan dan telah disinkronisasikan ke ' . $syncedCount . ' asesi terdaftar! Formulir sekarang dalam mode terkunci.');
     }
 
     /**
@@ -992,12 +1066,12 @@ class AsesorController extends Controller
 
         $masterAk07 = MasterAk07::firstOrNew(['skema_id' => $skema->id]);
         if (!$masterAk07->exists) {
-            $masterAk07->potensi_asesi = 1;
-            $masterAk07->fase_penggunaan = 'saat_pra_asesmen';
+            $masterAk07->potensi_asesi = null;
+            $masterAk07->fase_penggunaan = null;
             $masterAk07->items_checklist = [];
-            $masterAk07->acuan_pembanding_disepakati = "Standar Kompetensi Kerja Nasional Indonesia (SKKNI) {$skema->nama_skema}";
-            $masterAk07->metode_disepakati = 'Observasi Demonstrasi Langsung & Wawancara Terstruktur';
-            $masterAk07->instrumen_disepakati = 'FR.IA.01 (Observasi Praktik), FR.IA.03 (Pertanyaan Pendukung Observasi)';
+            $masterAk07->acuan_pembanding_disepakati = null;
+            $masterAk07->metode_disepakati = null;
+            $masterAk07->instrumen_disepakati = null;
             $masterAk07->status = 'draft';
         }
 
@@ -1031,20 +1105,27 @@ class AsesorController extends Controller
 
         foreach (\App\Models\AssessmentAk07Adjustment::CRITERIA_DEFINITIONS as $catId => $cat) {
             $catInput = $rawChecklist[$catId] ?? [];
-            $isPerlu = filter_var($catInput['perlu'] ?? false, FILTER_VALIDATE_BOOLEAN) || 
-                       ($catInput['perlu'] ?? '') === '1' || 
-                       ($catInput['perlu'] ?? '') === 'ya';
+            $perluVal = $catInput['perlu'] ?? null;
+            $isPerlu = null;
+
+            if ($perluVal !== null && $perluVal !== '') {
+                $isPerlu = filter_var($perluVal, FILTER_VALIDATE_BOOLEAN) || 
+                           ($perluVal === '1') || 
+                           ($perluVal === 1) ||
+                           ($perluVal === 'ya');
+            }
 
             $opsiDipilih = is_array($catInput['opsi'] ?? null) ? array_values($catInput['opsi']) : [];
             $keterangan = trim($catInput['keterangan'] ?? '');
 
             $formattedChecklist[$catId] = [
                 'perlu_penyesuaian' => $isPerlu,
-                'opsi_dipilih' => $isPerlu ? $opsiDipilih : [],
-                'keterangan' => $isPerlu ? $keterangan : '',
+                'opsi_dipilih' => $isPerlu === true ? $opsiDipilih : [],
+                'keterangan' => $isPerlu === true ? $keterangan : '',
             ];
         }
 
+        $existingMaster = MasterAk07::where('skema_id', $skema->id)->first();
         $rawSignature = $request->input('tanda_tangan_asesor');
         $signaturePath = null;
 
@@ -1068,15 +1149,15 @@ class AsesorController extends Controller
         }
 
         if (empty($signaturePath)) {
-            $signaturePath = $user->tanda_tangan;
+            $signaturePath = $existingMaster->tanda_tangan_asesor ?? $user->tanda_tangan;
         }
 
         $masterAk07 = MasterAk07::updateOrCreate(
             ['skema_id' => $skema->id],
             [
                 'asesor_id' => $user->id,
-                'potensi_asesi' => $request->input('potensi_asesi', 1),
-                'fase_penggunaan' => $request->input('fase_penggunaan', 'saat_pra_asesmen'),
+                'potensi_asesi' => $request->filled('potensi_asesi') ? (int) $request->input('potensi_asesi') : null,
+                'fase_penggunaan' => $request->input('fase_penggunaan') ?: null,
                 'items_checklist' => $formattedChecklist,
                 'acuan_pembanding_disepakati' => $request->input('acuan_pembanding_disepakati'),
                 'metode_disepakati' => $request->input('metode_disepakati'),
@@ -1090,8 +1171,10 @@ class AsesorController extends Controller
 
         $syncedCount = $masterAk07->sinkronkanKePeserta();
 
-        return redirect()->route('asesor.mapa', ['skema_id' => $skema->id])
-            ->with('sukses', 'Master FR.AK.07 untuk Skema ' . $skema->nama_skema . ' berhasil disimpan dan telah disinkronisasikan ke ' . $syncedCount . ' asesi terdaftar!');
+        LogAktivitas::catat('Master AK.07', 'Menetapkan dan mengesahkan Master FR.AK.07 untuk Skema ' . $skema->kode_skema . ' (Diterapkan ke ' . $syncedCount . ' asesi)');
+
+        return redirect()->route('asesor.skema.ak-07', $skema->id)
+            ->with('sukses', 'Master FR.AK.07 untuk Skema ' . $skema->nama_skema . ' berhasil disimpan dan telah disinkronisasikan ke ' . $syncedCount . ' asesi terdaftar! Formulir sekarang dalam mode terkunci.');
     }
 
     public function mapa01($pendaftaranId)

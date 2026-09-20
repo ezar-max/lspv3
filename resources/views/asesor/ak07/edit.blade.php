@@ -23,8 +23,8 @@
     $profileTtd = auth()->user()->tanda_tangan ?: $pendaftaran->tanda_tangan_asesor;
     $isConfirmed = $ak07->isConfirmed();
     $savedChecklist = (array) ($ak07->items_checklist ?? []);
-    $selectedPotensi = (int) ($ak07->potensi_asesi ?? 1);
-    $selectedFase = $ak07->fase_penggunaan ?? 'saat_pra_asesmen';
+    $selectedPotensi = $ak07->potensi_asesi !== null ? (int) $ak07->potensi_asesi : null;
+    $selectedFase = $ak07->fase_penggunaan ?? null;
 @endphp
 
 <div class="max-w-6xl mx-auto px-2 sm:px-4 py-3 space-y-4" x-data="ak07App()" x-cloak>
@@ -156,8 +156,14 @@
 
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 pt-1">
                 @foreach($potensiDefinitions as $pVal => $pLabel)
-                    <label class="relative flex items-start gap-2.5 p-3 rounded-xl border transition-all cursor-pointer text-xs {{ $selectedPotensi === $pVal ? 'border-blue-500 bg-blue-50/50 text-slate-900 font-semibold shadow-2xs' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50/80' }}">
-                        <input type="radio" name="potensi_asesi" value="{{ $pVal }}" {{ $selectedPotensi === $pVal ? 'checked' : '' }} class="mt-0.5 accent-blue-600">
+                    <label class="relative flex items-start gap-2.5 p-3 rounded-xl border transition-all cursor-pointer text-xs"
+                           :class="selectedPotensi === {{ $pVal }} ? 'border-blue-500 bg-blue-50/50 text-slate-900 font-semibold shadow-2xs' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50/80'">
+                        <input type="radio" 
+                               name="potensi_asesi" 
+                               value="{{ $pVal }}" 
+                               @click="selectedPotensi = (selectedPotensi === {{ $pVal }} ? null : {{ $pVal }})"
+                               :checked="selectedPotensi === {{ $pVal }}" 
+                               class="mt-0.5 accent-blue-600">
                         <div class="space-y-0.5 leading-snug">
                             <span class="inline-block px-1.5 py-0.2 rounded bg-slate-200/80 text-[10px] font-bold text-slate-700">Kategori {{ $pVal }}</span>
                             <div class="text-[11px]">{{ $pLabel }}</div>
@@ -183,8 +189,14 @@
                     ];
                 @endphp
                 @foreach($faseList as $fKey => $fInfo)
-                    <label class="relative flex items-start gap-2.5 p-3 rounded-xl border transition-all cursor-pointer {{ $selectedFase === $fKey ? 'border-blue-500 bg-blue-50/50 text-slate-900 font-semibold shadow-2xs' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50/80' }}">
-                        <input type="radio" name="fase_penggunaan" value="{{ $fKey }}" {{ $selectedFase === $fKey ? 'checked' : '' }} class="mt-0.5 accent-blue-600">
+                    <label class="relative flex items-start gap-2.5 p-3 rounded-xl border transition-all cursor-pointer"
+                           :class="selectedFase === '{{ $fKey }}' ? 'border-blue-500 bg-blue-50/50 text-slate-900 font-semibold shadow-2xs' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50/80'">
+                        <input type="radio" 
+                               name="fase_penggunaan" 
+                               value="{{ $fKey }}" 
+                               @click="selectedFase = (selectedFase === '{{ $fKey }}' ? null : '{{ $fKey }}')"
+                               :checked="selectedFase === '{{ $fKey }}'" 
+                               class="mt-0.5 accent-blue-600">
                         <div class="space-y-0.5">
                             <div class="font-bold text-slate-800">{{ $fInfo['title'] }}</div>
                             <div class="text-[11px] text-slate-500 leading-tight">{{ $fInfo['desc'] }}</div>
@@ -196,24 +208,30 @@
 
         <!-- 3. MATRIKS 8 KATEGORI KEBUTUHAN PENYESUAIAN YANG WAJAR STANDAR BNSP -->
         <div class="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-4 sm:p-5 space-y-4">
-            <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 pb-2.5 gap-2">
                 <div class="flex items-center gap-2 text-sm font-bold text-slate-900">
                     <span class="w-6 h-6 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center text-xs font-black">3</span>
                     <span>Matriks Kebutuhan Penyesuaian yang Wajar (8 Kategori BNSP)</span>
                 </div>
-                <span class="text-[11px] text-slate-400 font-medium">Baku Acuan BNSP FR.AK.07</span>
+                <div class="flex items-center gap-1.5">
+                    <button type="button" @click="setSemuaTidakPerlu()" class="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-[11px] transition cursor-pointer">
+                        Set Semua Tidak Perlu
+                    </button>
+                    <button type="button" @click="kosongkanSemuaChecklist()" class="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-500 font-semibold text-[11px] transition cursor-pointer">
+                        Kosongkan Semua
+                    </button>
+                </div>
             </div>
 
             <div class="space-y-3">
                 @foreach($criteriaDefinitions as $cId => $crit)
                     @php
                         $itemSaved = $savedChecklist[$cId] ?? [];
-                        $isPerluSaved = filter_var($itemSaved['perlu_penyesuaian'] ?? false, FILTER_VALIDATE_BOOLEAN);
                         $opsiSaved = (array) ($itemSaved['opsi_dipilih'] ?? []);
                         $ketSaved = $itemSaved['keterangan'] ?? '';
                     @endphp
 
-                    <div class="border border-slate-200 rounded-xl overflow-hidden transition-all" x-data="{ isNeed: {{ $isPerluSaved ? 'true' : 'false' }} }">
+                    <div class="border border-slate-200 rounded-xl overflow-hidden transition-all">
                         <!-- Category Header Bar -->
                         <div class="p-3.5 bg-slate-50/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b border-slate-100">
                             <div class="flex items-center gap-2.5">
@@ -227,19 +245,31 @@
 
                             <!-- Perlu Penyesuaian Switch (Ya / Tidak) -->
                             <div class="inline-flex bg-white p-1 rounded-lg border border-slate-200 shadow-2xs text-xs">
-                                <label class="px-2.5 py-1 rounded-md cursor-pointer transition-all flex items-center gap-1.5 font-bold" :class="!isNeed ? 'bg-slate-700 text-white' : 'text-slate-500 hover:text-slate-800'">
-                                    <input type="radio" name="items_checklist[{{ $cId }}][perlu]" value="0" @change="isNeed = false" :checked="!isNeed" class="sr-only">
+                                <label class="px-2.5 py-1 rounded-md cursor-pointer transition-all flex items-center gap-1.5 font-bold" 
+                                       :class="checklist['{{ $cId }}'] === 'tidak' ? 'bg-slate-700 text-white' : 'text-slate-500 hover:text-slate-800'">
+                                    <input type="radio" 
+                                           name="items_checklist[{{ $cId }}][perlu]" 
+                                           value="0" 
+                                           @click="checklist['{{ $cId }}'] = (checklist['{{ $cId }}'] === 'tidak' ? null : 'tidak')" 
+                                           :checked="checklist['{{ $cId }}'] === 'tidak'" 
+                                           class="sr-only">
                                     <span>Tidak Perlu</span>
                                 </label>
-                                <label class="px-2.5 py-1 rounded-md cursor-pointer transition-all flex items-center gap-1.5 font-bold" :class="isNeed ? 'bg-amber-600 text-white' : 'text-slate-500 hover:text-slate-800'">
-                                    <input type="radio" name="items_checklist[{{ $cId }}][perlu]" value="1" @change="isNeed = true" :checked="isNeed" class="sr-only">
+                                <label class="px-2.5 py-1 rounded-md cursor-pointer transition-all flex items-center gap-1.5 font-bold" 
+                                       :class="checklist['{{ $cId }}'] === 'perlu' ? 'bg-amber-600 text-white' : 'text-slate-500 hover:text-slate-800'">
+                                    <input type="radio" 
+                                           name="items_checklist[{{ $cId }}][perlu]" 
+                                           value="1" 
+                                           @click="checklist['{{ $cId }}'] = (checklist['{{ $cId }}'] === 'perlu' ? null : 'perlu')" 
+                                           :checked="checklist['{{ $cId }}'] === 'perlu'" 
+                                           class="sr-only">
                                     <span>Perlu Penyesuaian</span>
                                 </label>
                             </div>
                         </div>
 
                         <!-- Expandable Options Body when "Perlu" is checked -->
-                        <div x-show="isNeed" x-transition class="p-3.5 bg-amber-50/20 space-y-3 text-xs border-t border-amber-100">
+                        <div x-show="checklist['{{ $cId }}'] === 'perlu'" x-transition class="p-3.5 bg-amber-50/20 space-y-3 text-xs border-t border-amber-100">
                             <div>
                                 <span class="font-bold text-slate-700 block mb-1.5">
                                     Pilih Opsi Bentuk Penyesuaian yang Disepakati:
@@ -278,21 +308,21 @@
                     <label class="font-bold text-slate-700 block">
                         Acuan Pembanding Disepakati:
                     </label>
-                    <textarea name="acuan_pembanding_disepakati" rows="3" class="w-full p-2.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-blue-500" placeholder="Tuliskan standar kompetensi / benchmark pembanding yang disepakati...">{{ old('acuan_pembanding_disepakati', $ak07->acuan_pembanding_disepakati ?? "Standar Kompetensi Kerja Nasional Indonesia (SKKNI) {$pendaftaran->skema->nama_skema}") }}</textarea>
+                    <textarea name="acuan_pembanding_disepakati" rows="3" class="w-full p-2.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-blue-500" placeholder="Contoh: Standar Kompetensi Kerja Nasional Indonesia (SKKNI)...">{{ old('acuan_pembanding_disepakati', $ak07->acuan_pembanding_disepakati) }}</textarea>
                 </div>
 
                 <div class="space-y-1">
                     <label class="font-bold text-slate-700 block">
                         Metode Asesmen Disepakati:
                     </label>
-                    <textarea name="metode_disepakati" rows="3" class="w-full p-2.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-blue-500" placeholder="Tuliskan metode asesmen yang telah disesuaikan...">{{ old('metode_disepakati', $ak07->metode_disepakati ?? 'Observasi Demonstrasi Langsung & Wawancara Terstruktur Klarifikasi') }}</textarea>
+                    <textarea name="metode_disepakati" rows="3" class="w-full p-2.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-blue-500" placeholder="Contoh: Observasi Demonstrasi Langsung & Wawancara Terstruktur...">{{ old('metode_disepakati', $ak07->metode_disepakati) }}</textarea>
                 </div>
 
                 <div class="space-y-1">
                     <label class="font-bold text-slate-700 block">
                         Instrumen Pengganti / Penyesuaian:
                     </label>
-                    <textarea name="instrumen_disepakati" rows="3" class="w-full p-2.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-blue-500" placeholder="Tuliskan instrumen pendukung (FR.IA) yang disesuaikan...">{{ old('instrumen_disepakati', $ak07->instrumen_disepakati ?? 'FR.IA.01 (Observasi Praktik), FR.IA.03 (Pertanyaan Pendukung Observasi)') }}</textarea>
+                    <textarea name="instrumen_disepakati" rows="3" class="w-full p-2.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-blue-500" placeholder="Contoh: FR.IA.01 (Observasi Praktik), FR.IA.03 (Pertanyaan Pendukung Observasi)...">{{ old('instrumen_disepakati', $ak07->instrumen_disepakati) }}</textarea>
                 </div>
             </div>
 
@@ -463,6 +493,32 @@
             signaturePad: null,
             isSubmitting: false,
             showConfirmModal: false,
+            selectedPotensi: {!! json_encode($selectedPotensi) !!},
+            selectedFase: {!! json_encode($selectedFase) !!},
+            checklist: {
+                @foreach($criteriaDefinitions as $cId => $crit)
+                    @php
+                        $itemSaved = $savedChecklist[$cId] ?? null;
+                        $itemState = null;
+                        if ($itemSaved !== null && array_key_exists('perlu_penyesuaian', $itemSaved) && $itemSaved['perlu_penyesuaian'] !== null) {
+                            $itemState = filter_var($itemSaved['perlu_penyesuaian'], FILTER_VALIDATE_BOOLEAN) ? 'perlu' : 'tidak';
+                        }
+                    @endphp
+                    '{{ $cId }}': {!! json_encode($itemState) !!},
+                @endforeach
+            },
+
+            setSemuaTidakPerlu() {
+                for (let cId in this.checklist) {
+                    this.checklist[cId] = 'tidak';
+                }
+            },
+
+            kosongkanSemuaChecklist() {
+                for (let cId in this.checklist) {
+                    this.checklist[cId] = null;
+                }
+            },
 
             init() {
                 this.$nextTick(() => {

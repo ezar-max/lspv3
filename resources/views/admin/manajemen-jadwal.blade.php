@@ -133,7 +133,7 @@
             <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
                 <div class="grup-form">
                     <label class="label-form">Tanggal Uji</label>
-                    <input type="date" name="tanggal_uji" class="input-control" required>
+                    <input type="date" name="tanggal_uji" class="input-control" min="{{ date('Y-m-d') }}" value="{{ old('tanggal_uji') }}" required>
                 </div>
                 <div class="grup-form">
                     <label class="label-form">Waktu Mulai</label>
