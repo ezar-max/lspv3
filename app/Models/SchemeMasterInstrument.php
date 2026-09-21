@@ -167,6 +167,30 @@ class SchemeMasterInstrument extends Model
     }
 
     /**
+     * Dapatkan daftar seluruh alias variasi kode instrumen (ia_05, ia05, FR.IA.05, fr.ia.05, IA.05, dll)
+     */
+    public static function getCodeAliases(?string $code): array
+    {
+        $normalized = self::normalizeCode($code);
+        $clean = str_replace('_', '', $normalized); // e.g. ia05
+        $suffix = substr($clean, 2);
+        $upperDot = 'FR.IA.' . strtoupper($suffix);
+        $lowerDot = 'fr.ia.' . strtolower($suffix);
+        $shortUpperDot = 'IA.' . strtoupper($suffix);
+        $shortLowerDot = 'ia.' . strtolower($suffix);
+
+        return array_values(array_unique([
+            $normalized,
+            $clean,
+            strtoupper($clean),
+            $upperDot,
+            $lowerDot,
+            $shortUpperDot,
+            $shortLowerDot,
+        ]));
+    }
+
+    /**
      * Ambil metadata BNSP baku untuk kode tertentu
      */
     public static function getBnspInfo(?string $code): array

@@ -16,6 +16,33 @@
         $asesiNama = $pendaftaran->asesi->nama_lengkap ?? 'Nama Asesi';
         $asesorTtd = $pendaftaran->tanda_tangan_asesor ?? (auth()->user()->tanda_tangan ?? null);
         $asesiTtd = $pendaftaran->tanda_tangan_asesi ?? null;
+
+        $savedSpecs = $savedData['spesifikasi'] ?? [];
+        $judulProyekVal = $savedData['judul_proyek'] ?? ($pendaftaran->skema ? 'Proyek Terstruktur ' . ($pendaftaran->skema->nama_skema ?? '') : 'Proyek Terstruktur');
+        
+        if (empty($savedSpecs)) {
+            if (isset($masterSpecs) && $masterSpecs->count() > 0) {
+                foreach ($masterSpecs as $mIdx => $ms) {
+                    $savedSpecs[$mIdx] = [
+                        'lingkup' => $ms->spec_name,
+                        'tanya' => 'Bagaimana Anda memenuhi standar toleransi ' . $ms->standard_tolerance . ' pada aspek ini?',
+                        'jawab' => 'Asesi mendemonstrasikan hasil sesuai standar spesifikasi kerja.',
+                        'kuk' => 'Standar Mutu Proyek',
+                        'pencapaian' => 'K',
+                    ];
+                }
+            } elseif ($pendaftaran->skema && $pendaftaran->skema->unitKompetensi && $pendaftaran->skema->unitKompetensi->count() > 0) {
+                foreach ($pendaftaran->skema->unitKompetensi as $uIdx => $u) {
+                    $savedSpecs[$uIdx] = [
+                        'lingkup' => $u->judul_unit,
+                        'tanya' => 'Bagaimana keterkaitan implementasi unit ' . $u->kode_unit . ' terhadap hasil proyek yang Anda susun?',
+                        'jawab' => 'Asesi menjelaskan alur pengerjaan dan pembuktian kinerja dengan tepat.',
+                        'kuk' => $u->kode_unit,
+                        'pencapaian' => 'K',
+                    ];
+                }
+            }
+        }
     @endphp
 
     <!-- ACTION BAR ATAS -->
@@ -25,7 +52,7 @@
         'pendaftaranId' => $pendaftaran->id,
         'isAsesi' => $isAsesi,
         'saveLabel' => 'Simpan Formulir',
-        'saveAction' => "alert('Penilaian Proyek Singkat (FR.IA.04B) berhasil disimpan!')"
+        'saveFormId' => 'form-ia-04b'
     ])
 
     @if($isAsesi)
@@ -37,7 +64,9 @@
         ])
     @endif
 
-    <div class="dokumen-kertas">
+    <form id="form-ia-04b" method="POST" action="{{ route('formulir.ia.simpan', ['kodeForm' => 'FR.IA.04B', 'pendaftaranId' => $pendaftaran->id]) }}">
+        @csrf
+        <div class="dokumen-kertas">
         
         <!-- KOP RESMI DOKUMEN STANDAR BNSP -->
         @include('komponen.kop-formulir-bnsp', [
@@ -70,7 +99,7 @@
             <tr>
                 <td colspan="2" style="font-weight: 600;">Judul Kegiatan Terstruktur</td>
                 <td>:</td>
-                <td><input type="text" class="input-inline-bnsp" value="Implementasi Proyek Pengembangan Modul Aplikasi Berbasis Web" style="font-weight: 600;"></td>
+                <td><input type="text" name="judul_proyek" class="input-inline-bnsp" value="{{ $judulProyekVal }}" style="font-weight: 600;" {{ $isAsesi ? "readonly" : "" }}></td>
             </tr>
             <tr>
                 <td colspan="2" style="font-weight: 600;">Nama Asesor</td>
@@ -104,6 +133,7 @@
             </ul>
         </div>
 
+
         <!-- TABEL ASPEK PENILAIAN -->
         <table class="tabel-bnsp" style="font-size: 0.85rem;">
             <thead>
@@ -120,56 +150,41 @@
                 </tr>
             </thead>
             <tbody>
-                @php
-                    $aspekContoh = [
-                        [
-                            'lingkup' => 'Persiapan Lingkungan & Struktur Proyek',
-                            'tanya' => 'Bagaimana Anda menentukan struktur folder dan library yang digunakan dalam proyek ini?',
-                            'jawab' => 'Struktur folder disesuaikan dengan arsitektur standar MVC dan library diintegrasikan melalui package manager.',
-                            'kuk' => 'Unit 1, Elemen 1 (KUK 1.1, 1.2)'
-                        ],
-                        [
-                            'lingkup' => 'Implementasi Algoritma & Logika Pemrograman',
-                            'tanya' => 'Jelaskan logika percabangan dan manipulasi data yang Anda terapkan pada fungsi utama aplikasi!',
-                            'jawab' => 'Menggunakan conditional logic if/else serta perulangan untuk memproses array data secara efisien.',
-                            'kuk' => 'Unit 1, Elemen 2 (KUK 2.1, 2.2)'
-                        ],
-                        [
-                            'lingkup' => 'Pengujian & Penanganan Error (Debugging)',
-                            'tanya' => 'Jika terjadi error atau input yang tidak valid dari pengguna, bagaimana sistem Anda menanganinya?',
-                            'jawab' => 'Diterapkan validasi input request serta blok try-catch untuk menangani exception dan memberikan feedback yang jelas.',
-                            'kuk' => 'Unit 2, Elemen 1 (KUK 1.1)'
-                        ]
-                    ];
-                @endphp
-
-                @foreach($aspekContoh as $idx => $asp)
+                @forelse($savedSpecs as $idx => $asp)
+                    @php
+                        $pencapaianVal = $asp['pencapaian'] ?? ($isAsesi ? 'K' : null);
+                    @endphp
                     <tr>
                         <td style="font-weight: 600; color: #0f172a;">
-                            {{ $idx + 1 }}. {{ $asp['lingkup'] }}
+                            <input type="text" name="spesifikasi[{{ $idx }}][lingkup]" class="input-inline-bnsp" value="{{ $asp['lingkup'] ?? '' }}" placeholder="Lingkup penyajian..." {{ $isAsesi ? 'readonly' : '' }}>
                         </td>
                         <td>
                             <div style="margin-bottom: 0.35rem;">
                                 <strong style="color: #0284c7; display: block;">Pertanyaan:</strong>
-                                <textarea class="input-inline-bnsp" rows="2" style="font-size: 0.8rem;">{{ $asp['tanya'] }}</textarea>
+                                <textarea name="spesifikasi[{{ $idx }}][tanya]" class="input-inline-bnsp" rows="2" style="font-size: 0.8rem;" {{ $isAsesi ? 'readonly' : '' }}>{{ $asp['tanya'] ?? '' }}</textarea>
                             </div>
                             <div>
                                 <strong style="color: #059669; display: block;">Tanggapan:</strong>
-                                <textarea class="input-inline-bnsp" rows="2" style="font-size: 0.8rem;">{{ $asp['jawab'] }}</textarea>
+                                <textarea name="spesifikasi[{{ $idx }}][jawab]" class="input-inline-bnsp" rows="2" style="font-size: 0.8rem;" {{ $isAsesi ? 'readonly' : '' }}>{{ $asp['jawab'] ?? '' }}</textarea>
                             </div>
                         </td>
                         <td>
-                            <input type="text" class="input-inline-bnsp" value="{{ $asp['kuk'] }}" style="font-size: 0.8rem; font-weight: 600;">
+                            <input type="text" name="spesifikasi[{{ $idx }}][kuk]" class="input-inline-bnsp" value="{{ $asp['kuk'] ?? '' }}" style="font-size: 0.8rem; font-weight: 600;" {{ $isAsesi ? 'readonly' : '' }}>
                         </td>
                         <td style="text-align: center; vertical-align: middle;">
-                            <input type="checkbox" checked style="width: 16px; height: 16px; accent-color: #059669;">
+                            <input type="radio" name="spesifikasi[{{ $idx }}][pencapaian]" value="K" {{ $pencapaianVal === 'K' ? 'checked' : '' }} style="width: 16px; height: 16px; accent-color: #059669;" {{ $isAsesi ? 'disabled' : '' }}>
                         </td>
                         <td style="text-align: center; vertical-align: middle;">
-                            <input type="checkbox" style="width: 16px; height: 16px; accent-color: #dc2626;">
+                            <input type="radio" name="spesifikasi[{{ $idx }}][pencapaian]" value="BK" {{ $pencapaianVal === 'BK' ? 'checked' : '' }} style="width: 16px; height: 16px; accent-color: #dc2626;" {{ $isAsesi ? 'disabled' : '' }}>
                         </td>
                     </tr>
-                @endforeach
-            </tbody>
+                @empty
+                    <tr>
+                        <td colspan="5" style="text-align: center; color: #64748b; font-style: italic; padding: 1rem;">
+                            Belum ada aspek penilaian proyek singkat yang dikonfigurasi di database.
+                        </td>
+                    </tr>
+                @endforelse</tbody>
         </table>
 
         <!-- REKOMENDASI ASESOR -->
@@ -177,20 +192,24 @@
             <tr>
                 <td style="width: 25%; font-weight: 700; background: #f8fafc;">Rekomendasi Asesor:</td>
                 <td>
-                    <div style="margin-bottom: 0.5rem;">
-                        Asesi telah memenuhi/belum memenuhi pencapaian seluruh kriteria unjuk kerja, direkomendasikan:
+                    <div style="display: flex; align-items: center; gap: 1.5rem; margin-bottom: 0.75rem;">
+                        <label style="display: inline-flex; align-items: center; gap: 0.35rem; font-weight: 600; font-size: 0.88rem; cursor: pointer;">
+                            <input type="radio" name="rekomendasi" value="K" {{ ($iaRecord->rekomendasi ?? 'K') === 'K' ? 'checked' : '' }} {{ $isAsesi ? 'disabled' : '' }}>
+                            <span style="color: #16a34a;">Kompeten (K)</span>
+                        </label>
+                        <label style="display: inline-flex; align-items: center; gap: 0.35rem; font-weight: 600; font-size: 0.88rem; cursor: pointer;">
+                            <input type="radio" name="rekomendasi" value="BK" {{ ($iaRecord->rekomendasi ?? '') === 'BK' ? 'checked' : '' }} {{ $isAsesi ? 'disabled' : '' }}>
+                            <span style="color: #dc2626;">Belum Kompeten (BK)</span>
+                        </label>
                     </div>
-                    <div style="display: flex; gap: 2rem;">
-                        <label style="display: flex; align-items: center; gap: 0.4rem; font-weight: 700; color: #059669; cursor: pointer;">
-                            <input type="radio" name="rekomendasi_proyek" value="kompeten" checked style="width: 16px; height: 16px; accent-color: #059669;"> Kompeten
-                        </label>
-                        <label style="display: flex; align-items: center; gap: 0.4rem; font-weight: 700; color: #dc2626; cursor: pointer;">
-                            <input type="radio" name="rekomendasi_proyek" value="belum_kompeten" style="width: 16px; height: 16px; accent-color: #dc2626;"> Belum Kompeten
-                        </label>
+                    <div>
+                        <label style="font-weight: 700; font-size: 0.85rem; color: #0f172a; display: block; margin-bottom: 0.25rem;">Catatan Asesor:</label>
+                        <textarea name="catatan" class="input-inline-bnsp" rows="2" placeholder="Catatan kesimpulan penilaian proyek..." {{ $isAsesi ? 'readonly' : '' }}>{{ $iaRecord->catatan_asesor ?? '' }}</textarea>
                     </div>
                 </td>
             </tr>
         </table>
+        </form>
 
         <!-- PENGESAHAN ASESI & ASESOR -->
         <table class="tabel-bnsp" style="margin-bottom: 2rem;">

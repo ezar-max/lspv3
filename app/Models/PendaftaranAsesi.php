@@ -623,6 +623,12 @@ class PendaftaranAsesi extends Model
         ];
     }
 
+    public function hasMapa02Config(): bool
+    {
+        $mapa02 = $this->getEffectiveMapa02();
+        return !empty($mapa02?->matriks_peta);
+    }
+
     public function isInstrumenAktif($kodeForm)
     {
         $info = $this->instrumen_aktif;

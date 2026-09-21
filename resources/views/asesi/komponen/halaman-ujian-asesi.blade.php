@@ -336,7 +336,7 @@
         <!-- Tab Navigasi Segmented (Smooth & Sleek) -->
         <div class="px-5 py-2.5 bg-slate-50/40">
             <div class="inline-flex p-1 bg-slate-100 rounded-xl border border-slate-200/80 gap-1 overflow-x-auto max-w-full text-xs">
-                @if(!empty($instrumenAsesi['cbt']) && !empty($soalCbt))
+                @if(!empty($instrumenAsesi['cbt']))
                     <button type="button" 
                             @click="activeTab = 'cbt'"
                             class="px-3.5 py-1.5 rounded-lg font-semibold transition-all duration-150 flex items-center gap-2 shrink-0 cursor-pointer"
@@ -349,7 +349,7 @@
                     </button>
                 @endif
 
-                @if(!empty($instrumenAsesi['esai']) && !empty($soalEsai))
+                @if(!empty($instrumenAsesi['esai']))
                     <button type="button" 
                             @click="activeTab = 'esai'"
                             class="px-3.5 py-1.5 rounded-lg font-semibold transition-all duration-150 flex items-center gap-2 shrink-0 cursor-pointer"
@@ -380,13 +380,14 @@
     <!-- =========================================================================
          TAB 1: FR.IA.05 CBT PILIHAN GANDA (ANIMATED, RINGAN, NON-DARK)
          ========================================================================= -->
-    @if(!empty($instrumenAsesi['cbt']) && !empty($soalCbt))
+    @if(!empty($instrumenAsesi['cbt']))
         <div x-show="activeTab === 'cbt'" 
              x-transition:enter="transition ease-out duration-200"
              x-transition:enter-start="opacity-0 translate-y-1"
              x-transition:enter-end="opacity-100 translate-y-0"
              class="space-y-4">
             
+            @if(!empty($soalCbt))
             <div class="grid grid-cols-1 lg:grid-cols-4 gap-5 items-start">
                 
                 <!-- SISI KIRI: LEMBAR PERTANYAAN (3/4 LEBAR) -->
@@ -428,34 +429,20 @@
                                 @foreach(($item['opsi'] ?? []) as $opsiKey => $opsiText)
                                     <label class="group relative flex items-start gap-3.5 p-4 rounded-xl border transition-all duration-150 cursor-pointer select-none"
                                            :class="jawabanPg[{{ $no }}] === '{{ $opsiKey }}' 
-                                                    ? 'border-blue-600 bg-blue-50/50 text-slate-900 shadow-2xs ring-1 ring-blue-600/30' 
-                                                    : 'border-slate-200/90 bg-white hover:border-slate-300 hover:bg-slate-50/70 text-slate-700'">
-                                        <input type="radio" 
-                                               name="soal_pg_{{ $no }}" 
-                                               value="{{ $opsiKey }}"
-                                               :checked="jawabanPg[{{ $no }}] === '{{ $opsiKey }}'"
-                                               @change="pilihJawabanPg({{ $no }}, '{{ $opsiKey }}')"
-                                               :disabled="isReadonly"
-                                               class="sr-only">
-
-                                        <!-- Badge Huruf Pilihan (A, B, C, D) -->
-                                        <div class="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 transition-all duration-150 mt-0.5"
-                                             :class="jawabanPg[{{ $no }}] === '{{ $opsiKey }}'
-                                                      ? 'bg-blue-600 text-white shadow-2xs'
-                                                      : 'bg-slate-100 text-slate-600 group-hover:bg-slate-200/80 group-hover:text-slate-800'">
-                                            {{ $opsiKey }}
+                                                    ? 'bg-blue-50/70 border-blue-500 text-blue-900 shadow-2xs ring-1 ring-blue-500/30' 
+                                                    : 'bg-slate-50/50 border-slate-200/80 hover:bg-slate-50 hover:border-slate-300 text-slate-700'">
+                                        <div class="pt-0.5">
+                                            <input type="radio" 
+                                                   name="jawaban_pg_{{ $no }}" 
+                                                   value="{{ $opsiKey }}"
+                                                   :disabled="isReadonly"
+                                                   x-model="jawabanPg[{{ $no }}]"
+                                                   @change="simpanJawabanPg({{ $no }}, '{{ $opsiKey }}')"
+                                                   class="w-4 h-4 text-blue-600 border-slate-300 focus:ring-blue-500 cursor-pointer">
                                         </div>
-
-                                        <!-- Teks Opsi Jawaban -->
-                                        <div class="flex-1 text-sm sm:text-[15px] leading-relaxed pt-1 font-normal">
+                                        <div class="flex-1 text-xs sm:text-sm font-medium leading-relaxed">
+                                            <span class="font-bold mr-1.5 uppercase text-slate-900">{{ $opsiKey }}.</span>
                                             {{ $opsiText }}
-                                        </div>
-
-                                        <!-- Indikator Checkmark Terpilih -->
-                                        <div class="shrink-0 mt-1" x-show="jawabanPg[{{ $no }}] === '{{ $opsiKey }}'" x-transition.opacity>
-                                            <div class="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-2xs">
-                                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
-                                            </div>
                                         </div>
                                     </label>
                                 @endforeach
@@ -553,18 +540,29 @@
                 </div>
 
             </div>
+            @else
+                <div class="p-8 text-center bg-white rounded-2xl border border-slate-200 shadow-xs space-y-3">
+                    <div class="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                    </div>
+                    <h4 class="font-bold text-slate-800 text-sm">Bank Soal Pilihan Ganda Belum Tersedia</h4>
+                    <p class="text-xs text-slate-500 max-w-md mx-auto">
+                        Asesor atau Admin belum mengonfigurasi bank soal CBT (FR.IA.05) untuk skema ini di database. Silakan konfirmasikan kepada Asesor Penguji Anda.
+                    </p>
+                </div>
+            @endif
         </div>
     @endif
-
     <!-- =========================================================================
          TAB 2: FR.IA.06 ESAI TERTULIS (ANIMATED & RINGKAS)
          ========================================================================= -->
-    @if(!empty($instrumenAsesi['esai']) && !empty($soalEsai))
+    @if(!empty($instrumenAsesi['esai']))
         <div x-show="activeTab === 'esai'" 
              x-transition:enter="transition ease-out duration-200"
              x-transition:enter-start="opacity-0 translate-y-1"
              x-transition:enter-end="opacity-100 translate-y-0"
              class="space-y-4">
+            @if(!empty($soalEsai))
             
             <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-6 sm:p-7 space-y-5">
                 <div class="border-b border-slate-100 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
@@ -610,6 +608,17 @@
                     @endforeach
                 </div>
             </div>
+            @else
+                <div class="p-8 text-center bg-white rounded-2xl border border-slate-200 shadow-xs space-y-3">
+                    <div class="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                    </div>
+                    <h4 class="font-bold text-slate-800 text-sm">Bank Soal Esai Belum Tersedia</h4>
+                    <p class="text-xs text-slate-500 max-w-md mx-auto">
+                        Asesor atau Admin belum mengonfigurasi butir soal esai (FR.IA.06) untuk skema ini di database. Silakan konfirmasikan kepada Asesor Penguji Anda.
+                    </p>
+                </div>
+            @endif
         </div>
     @endif
 
@@ -633,15 +642,62 @@
                 </p>
             </div>
 
-            <!-- Petunjuk Kerja Praktik -->
-            <div class="p-5 rounded-2xl bg-blue-50/40 border border-blue-200/70 space-y-2.5">
-                <div class="flex items-center gap-2 text-blue-900 font-bold text-xs uppercase tracking-wider">
-                    <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                    <span>Skenario & Instruksi Kerja Demonstrasi:</span>
+            <!-- Petunjuk Kerja Praktik dari Database -->
+            <div class="p-5 rounded-2xl bg-blue-50/40 border border-blue-200/70 space-y-3">
+                <div class="flex items-center justify-between gap-2 border-b border-blue-200/50 pb-2">
+                    <div class="flex items-center gap-2 text-blue-900 font-bold text-xs uppercase tracking-wider">
+                        <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        <span>{{ $panduanPraktik['judul_tugas'] ?? 'Tugas Praktik Demonstrasi' }}</span>
+                    </div>
+                    @if(!empty($panduanPraktik['waktu_menit']))
+                        <span class="text-[11px] font-bold text-blue-800 bg-blue-100 px-2.5 py-0.5 rounded-full">
+                            {{ $panduanPraktik['waktu_menit'] }} Menit
+                        </span>
+                    @endif
                 </div>
-                <p class="text-slate-700 text-xs sm:text-sm leading-relaxed">
-                    {{ $panduanPraktik['instruksi'] ?? 'Laksanakan observasi demonstrasi kerja sesuai SOP teknis dan instruksi yang diberikan oleh Asesor Penguji di tempat uji kompetensi.' }}
-                </p>
+
+                @if(!empty($panduanPraktik['skenario']))
+                    <div>
+                        <span class="text-[11px] font-bold text-blue-900 block mb-0.5">Skenario Penugasan:</span>
+                        <p class="text-slate-700 text-xs sm:text-sm leading-relaxed whitespace-pre-line">
+                            {{ $panduanPraktik['skenario'] }}
+                        </p>
+                    </div>
+                @else
+                    <p class="text-slate-500 text-xs italic">
+                        Skenario tugas praktik demonstrasi (FR.IA.02) belum dikonfigurasi di database oleh Asesor/Admin.
+                    </p>
+                @endif
+
+                @if(!empty($panduanPraktik['peralatan_bahan']))
+                    <div class="pt-2 border-t border-blue-200/50">
+                        <span class="text-[11px] font-bold text-blue-900 block mb-1">Peralatan & Bahan:</span>
+                        @if(is_array($panduanPraktik['peralatan_bahan']))
+                            <ul class="list-disc pl-5 text-xs text-slate-700 space-y-0.5">
+                                @foreach($panduanPraktik['peralatan_bahan'] as $alat)
+                                    <li>{{ $alat }}</li>
+                                @endforeach
+                            </ul>
+                        @else
+                            <p class="text-xs text-slate-700 whitespace-pre-line">{{ $panduanPraktik['peralatan_bahan'] }}</p>
+                        @endif
+                    </div>
+                @endif
+
+                @if(!empty($panduanPraktik['instruksi_kerja']))
+                    <div class="pt-2 border-t border-blue-200/50">
+                        <span class="text-[11px] font-bold text-blue-900 block mb-1">Langkah / Instruksi Kerja:</span>
+                        @if(is_array($panduanPraktik['instruksi_kerja']))
+                            <ol class="list-decimal pl-5 text-xs text-slate-700 space-y-1">
+                                @foreach($panduanPraktik['instruksi_kerja'] as $step)
+                                    <li>{{ $step }}</li>
+                                @endforeach
+                            </ol>
+                        @else
+                            <p class="text-xs text-slate-700 whitespace-pre-line">{{ $panduanPraktik['instruksi_kerja'] }}</p>
+                        @endif
+                    </div>
+                @endif
             </div>
 
             <!-- Form Upload Bukti / Hasil Proyek Praktik -->

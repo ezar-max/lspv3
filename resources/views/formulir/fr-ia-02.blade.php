@@ -25,7 +25,7 @@
         'pendaftaranId' => $pendaftaran->id,
         'isAsesi' => $isAsesi,
         'saveLabel' => 'Simpan Formulir',
-        'saveAction' => "alert('Formulir FR.IA.02 berhasil disimpan!')"
+        'saveFormId' => 'form-ia-02'
     ])
 
     @if($isAsesi)
@@ -96,6 +96,16 @@
             </ol>
         </div>
 
+        <form id="form-ia-02" method="POST" action="{{ route('formulir.ia.simpan', ['kodeForm' => 'FR.IA.02', 'pendaftaranId' => $pendaftaran->id]) }}">
+            @csrf
+            @php
+                $judulTugasVal = $dataPraktik['judul_tugas'] ?? ($pendaftaran->skema ? 'Tugas Praktik Demonstrasi ' . $pendaftaran->skema->nama_skema : 'Tugas Praktik Demonstrasi');
+                $skenarioVal = $dataPraktik['skenario'] ?? '';
+                $peralatanVal = is_array($dataPraktik['peralatan_bahan'] ?? null) ? implode("\n", $dataPraktik['peralatan_bahan']) : ($dataPraktik['peralatan_bahan'] ?? '');
+                $durasiVal = $dataPraktik['durasi_waktu'] ?? '120 Menit';
+                $instruksiVal = is_array($dataPraktik['instruksi_kerja'] ?? null) ? implode("\n", $dataPraktik['instruksi_kerja']) : ($dataPraktik['instruksi_kerja'] ?? '');
+            @endphp
+
         <!-- B. SKENARIO TUGAS PRAKTIK DEMONSTRASI -->
         <div style="margin-bottom: 1.5rem;">
             <div style="font-weight: 800; font-size: 0.95rem; color: #0f172a; margin-bottom: 0.75rem;">B. Skenario Tugas Praktik Demonstrasi</div>
@@ -128,23 +138,33 @@
                 </tbody>
             </table>
 
-            <!-- DETAIL SKENARIO PRAKTIK -->
+            <!-- DETAIL SKENARIO PRAKTIK (DATABASE DRIVEN) -->
             <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 4px; padding: 1rem; margin-bottom: 1.5rem;">
                 <div style="margin-bottom: 0.85rem;">
-                    <label style="font-weight: 700; font-size: 0.88rem; display: block; margin-bottom: 0.35rem; color: #0f172a;">Skenario Tugas Praktik Demonstrasi:</label>
-                    <textarea class="input-inline-bnsp" rows="4" placeholder="Tuliskan skenario tugas praktik yang harus didemonstrasikan oleh asesi...">Anda diminta untuk mendemonstrasikan implementasi modul program aplikasi sesuai dengan standar kompetensi kerja dan spesifikasi teknis yang telah ditentukan dalam lembar kerja.</textarea>
+                    <label style="font-weight: 700; font-size: 0.88rem; display: block; margin-bottom: 0.35rem; color: #0f172a;">Judul Tugas Praktik:</label>
+                    <input type="text" name="judul_tugas" class="input-inline-bnsp" value="{{ $judulTugasVal }}" placeholder="Masukkan judul tugas praktik..." {{ $isAsesi ? 'readonly' : '' }}>
                 </div>
                 <div style="margin-bottom: 0.85rem;">
-                    <label style="font-weight: 700; font-size: 0.88rem; display: block; margin-bottom: 0.35rem; color: #0f172a;">Perlengkapan dan Peralatan :</label>
-                    <input type="text" class="input-inline-bnsp" value="Komputer/Laptop, IDE/Editor Kode, Browser, Koneksi Internet, Lembar Kerja Soal Praktik" placeholder="Sebutkan alat & bahan...">
+                    <label style="font-weight: 700; font-size: 0.88rem; display: block; margin-bottom: 0.35rem; color: #0f172a;">Skenario Tugas Praktik Demonstrasi:</label>
+                    <textarea name="skenario" class="input-inline-bnsp" rows="4" placeholder="{{ $isAsesi ? 'Skenario penugasan praktik belum diisi oleh Asesor di sistem.' : 'Tuliskan skenario penugasan demonstrasi praktik kerja yang harus diselesaikan oleh asesi...' }}" {{ $isAsesi ? 'readonly' : '' }}>{{ $skenarioVal }}</textarea>
+                </div>
+                <div style="margin-bottom: 0.85rem;">
+                    <label style="font-weight: 700; font-size: 0.88rem; display: block; margin-bottom: 0.35rem; color: #0f172a;">Perlengkapan dan Peralatan (pisahkan baris baru):</label>
+                    <textarea name="peralatan_bahan" class="input-inline-bnsp" rows="3" placeholder="{{ $isAsesi ? 'Daftar alat dan bahan belum diisi.' : 'Sebutkan alat, bahan uji, APD, dan peralatan yang diperlukan (satu per baris)...' }}" {{ $isAsesi ? 'readonly' : '' }}>{{ $peralatanVal }}</textarea>
+                </div>
+                <div style="margin-bottom: 0.85rem;">
+                    <label style="font-weight: 700; font-size: 0.88rem; display: block; margin-bottom: 0.35rem; color: #0f172a;">Durasi Waktu Praktik:</label>
+                    <input type="text" name="durasi_waktu" class="input-inline-bnsp" value="{{ $durasiVal }}" placeholder="Contoh: 120 Menit" {{ $isAsesi ? 'readonly' : '' }}>
                 </div>
                 <div>
-                    <label style="font-weight: 700; font-size: 0.88rem; display: block; margin-bottom: 0.35rem; color: #0f172a;">Durasi Waktu :</label>
-                    <input type="text" class="input-inline-bnsp" value="120 Menit (2 Jam)" placeholder="Durasi waktu praktik...">
+                    <label style="font-weight: 700; font-size: 0.88rem; display: block; margin-bottom: 0.35rem; color: #0f172a;">Langkah / Instruksi Kerja (pisahkan baris baru):</label>
+                    <textarea name="instruksi_kerja" class="input-inline-bnsp" rows="5" placeholder="{{ $isAsesi ? 'Instruksi kerja belum diisi.' : 'Tuliskan butir instruksi kerja yang wajib didemonstrasikan asesi (satu per baris)...' }}" {{ $isAsesi ? 'readonly' : '' }}>{{ $instruksiVal }}</textarea>
                 </div>
             </div>
 
         </div>
+
+        </form>
 
         <!-- PENGESAHAN ASESI & ASESOR -->
         <table class="tabel-bnsp" style="margin-bottom: 2rem;">

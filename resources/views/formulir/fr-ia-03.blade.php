@@ -30,6 +30,7 @@
         'pendaftaranId' => $pendaftaran->id,
         'isAsesi' => $isAsesi,
         'showSave' => $isAsesor,
+        'showSave' => !$isAsesi,
         'saveLabel' => 'Simpan Formulir',
         'saveFormId' => 'form-ia-03',
         'signed' => (bool)$asesiTtd,
@@ -139,6 +140,9 @@
                                         $valPertanyaan = $savedPertanyaan[$kuk->id] ?? $defaultPertanyaan;
                                         $valRespon = $savedRespon[$kuk->id] ?? 'Asesi dapat menjelaskan prosedur teknis dengan tepat, runtut, dan sesuai standar SOP kerja.';
                                         $valPencapaian = $savedPencapaian[$kuk->id] ?? null;
+                                        $valPertanyaan = $savedPertanyaan[$kuk->id] ?? ($masterQuestions[$kuk->id] ?? ('Jelaskan prosedur dan pertimbangan utama Anda saat mengeksekusi langkah kerja pada kriteria unjuk kerja ' . $kuk->nomor_kuk . ' ini?'));
+                                        $valRespon = $savedRespon[$kuk->id] ?? ($isAsesi ? 'Asesi dapat menjelaskan prosedur teknis dengan tepat, runtut, dan sesuai standar SOP kerja.' : '');
+                                        $valPencapaian = $savedPencapaian[$kuk->id] ?? ($isAsesi ? 'M' : null);
                                     @endphp
                                     <tr>
                                         <td style="text-align: center; font-weight: 700; vertical-align: top;">{{ $qCount }}.</td>
@@ -151,16 +155,20 @@
                                                     Pertanyaan Asesor:
                                                 </label>
                                                 <textarea name="pertanyaan[{{ $kuk->id }}]" class="input-inline-bnsp" rows="2" placeholder="Ketikkan pertanyaan lisan spesifik dari asesor di sini..." {{ !$isAsesor ? 'readonly' : '' }} style="font-size: 0.84rem; background: {{ $isAsesor ? '#ffffff' : '#f8fafc' }};">{{ $valPertanyaan }}</textarea>
+                                                <textarea name="pertanyaan[{{ $kuk->id }}]" class="input-inline-bnsp" rows="2" placeholder="Ketikkan pertanyaan lisan spesifik dari asesor di sini..." {{ $isAsesi ? 'readonly' : '' }} style="font-size: 0.84rem; background: {{ !$isAsesi ? '#ffffff' : '#f8fafc' }};">{{ $valPertanyaan }}</textarea>
                                             </div>
                                         </td>
                                         <td>
                                             <textarea name="respon[{{ $kuk->id }}]" class="input-inline-bnsp" rows="3" placeholder="Tuliskan tanggapan / respon lisan asesi..." {{ !$isAsesor ? 'readonly' : '' }} style="font-size: 0.84rem;">{{ $valRespon }}</textarea>
+                                            <textarea name="respon[{{ $kuk->id }}]" class="input-inline-bnsp" rows="3" placeholder="{{ $isAsesi ? 'Tanggapan lisan dicatat asesor...' : 'Tuliskan tanggapan / respon lisan asesi...' }}" {{ $isAsesi ? 'readonly' : '' }} style="font-size: 0.84rem;">{{ $valRespon }}</textarea>
                                         </td>
                                         <td style="text-align: center; vertical-align: middle;">
                                             <input type="radio" name="pencapaian[{{ $kuk->id }}]" value="M" {{ $valPencapaian === 'M' ? 'checked' : '' }} class="checkbox-bnsp checkbox-bnsp-hijau" {{ !$isAsesor ? 'disabled' : '' }}>
+                                            <input type="radio" name="pencapaian[{{ $kuk->id }}]" value="M" {{ $valPencapaian === 'M' ? 'checked' : '' }} class="checkbox-bnsp checkbox-bnsp-hijau" {{ $isAsesi ? 'disabled' : '' }}>
                                         </td>
                                         <td style="text-align: center; vertical-align: middle;">
                                             <input type="radio" name="pencapaian[{{ $kuk->id }}]" value="BM" {{ $valPencapaian === 'BM' ? 'checked' : '' }} class="checkbox-bnsp checkbox-bnsp-merah" {{ !$isAsesor ? 'disabled' : '' }}>
+                                            <input type="radio" name="pencapaian[{{ $kuk->id }}]" value="BM" {{ $valPencapaian === 'BM' ? 'checked' : '' }} class="checkbox-bnsp checkbox-bnsp-merah" {{ $isAsesi ? 'disabled' : '' }}>
                                         </td>
                                     </tr>
                                     @php $qCount++; @endphp

@@ -26,7 +26,7 @@
         'pendaftaranId' => $pendaftaran->id,
         'isAsesi' => $isAsesi,
         'saveLabel' => 'Simpan Formulir',
-        'saveAction' => "alert('Formulir FR.IA.01 berhasil disimpan!')",
+        'saveFormId' => 'form-ia-01',
         'signed' => (bool)$asesiTtd,
         'signedLabel' => 'Hasil Terverifikasi & Ditandatangani',
         'signRoute' => route('formulir.ia.simpan-ttd-asesi', ['kodeForm' => 'FR.IA.01', 'pendaftaranId' => $pendaftaran->id]),
@@ -101,6 +101,15 @@
                 <li>Isilah kolom KUK sesuai dengan Unit Kompetensi / SKKNI.</li>
             </ul>
         </div>
+
+        <form id="form-ia-01" method="POST" action="{{ route('formulir.ia.simpan', ['kodeForm' => 'FR.IA.01', 'pendaftaranId' => $pendaftaran->id]) }}">
+            @csrf
+            @php
+                $standarMap = $savedData['standar_industri'] ?? [];
+                $pencapaianMap = $savedData['pencapaian'] ?? [];
+                $lanjutMap = $savedData['penilaian_lanjut'] ?? [];
+                $catatanKukMap = $savedData['catatan_kuk'] ?? [];
+            @endphp
 
         <!-- KELOMPOK PEKERJAAN -->
         <table class="tabel-bnsp" style="margin-bottom: 1.5rem;">
@@ -184,20 +193,25 @@
                                                 @endif
                                             </td>
                                         @endif
+                                        @php
+                                            $curStandar = $standarMap[$kuk->id] ?? ('SKKNI ' . $unit->kode_unit);
+                                            $curPencapaian = $pencapaianMap[$kuk->id] ?? null;
+                                            $curLanjut = $lanjutMap[$kuk->id] ?? '';
+                                        @endphp
                                         <td>
                                             <strong style="color: #0284c7;">{{ $kuk->nomor_kuk }}</strong> {{ $kuk->pernyataan_kuk }}
                                         </td>
                                         <td>
-                                            <input type="text" class="input-inline-bnsp" value="SKKNI {{ $unit->kode_unit }}" style="font-size: 0.78rem;">
+                                            <input type="text" name="standar_industri[{{ $kuk->id }}]" class="input-inline-bnsp" value="{{ $curStandar }}" style="font-size: 0.78rem;" {{ $isAsesi ? 'readonly' : '' }}>
                                         </td>
                                         <td style="text-align: center; vertical-align: middle;">
-                                            <input type="checkbox" checked style="width: 16px; height: 16px; accent-color: #059669;">
+                                            <input type="radio" name="pencapaian[{{ $kuk->id }}]" value="K" {{ $curPencapaian === 'K' || ($curPencapaian === null && $isAsesi) ? 'checked' : '' }} style="width: 16px; height: 16px; accent-color: #059669;" {{ $isAsesi ? 'disabled' : '' }}>
                                         </td>
                                         <td style="text-align: center; vertical-align: middle;">
-                                            <input type="checkbox" style="width: 16px; height: 16px; accent-color: #dc2626;">
+                                            <input type="radio" name="pencapaian[{{ $kuk->id }}]" value="BK" {{ $curPencapaian === 'BK' ? 'checked' : '' }} style="width: 16px; height: 16px; accent-color: #dc2626;" {{ $isAsesi ? 'disabled' : '' }}>
                                         </td>
                                         <td>
-                                            <input type="text" class="input-inline-bnsp" placeholder="Catatan..." style="font-size: 0.78rem;">
+                                            <input type="text" name="penilaian_lanjut[{{ $kuk->id }}]" class="input-inline-bnsp" value="{{ $curLanjut }}" placeholder="Catatan..." style="font-size: 0.78rem;" {{ $isAsesi ? 'readonly' : '' }}>
                                         </td>
                                     </tr>
                                 @endforeach
@@ -223,8 +237,23 @@
         <!-- UMPAN BALIK DAN PENGESAHAN -->
         <div style="margin-top: 1.5rem; margin-bottom: 1.5rem;">
             <div style="font-weight: 700; font-size: 0.95rem; margin-bottom: 0.4rem; color: #0f172a;">Umpan Balik / Catatan Asesor:</div>
-            <textarea class="input-inline-bnsp" rows="3" placeholder="Tuliskan umpan balik untuk asesi...">{{ $iaRecord->catatan_asesor ?? 'Seluruh instruksi kerja dan demonstrasi praktik telah diobservasi dengan baik sesuai standar kompetensi SKKNI.' }}</textarea>
+            <textarea name="umpan_balik" class="input-inline-bnsp" rows="3" placeholder="Tuliskan umpan balik untuk asesi..." {{ $isAsesi ? 'readonly' : '' }}>{{ $iaRecord->catatan_asesor ?? ($savedData['umpan_balik'] ?? 'Seluruh instruksi kerja dan demonstrasi praktik telah diobservasi dengan baik sesuai standar kompetensi SKKNI.') }}</textarea>
+            
+            <div style="margin-top: 0.85rem; padding: 0.75rem 1rem; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 4px;">
+                <div style="font-weight: 700; font-size: 0.88rem; color: #0f172a; margin-bottom: 0.35rem;">Rekomendasi Keputusan Asesor:</div>
+                <div style="display: flex; align-items: center; gap: 1.5rem;">
+                    <label style="display: inline-flex; align-items: center; gap: 0.35rem; font-weight: 600; font-size: 0.85rem; cursor: pointer;">
+                        <input type="radio" name="rekomendasi" value="K" {{ ($iaRecord->rekomendasi ?? 'K') === 'K' ? 'checked' : '' }} {{ $isAsesi ? 'disabled' : '' }}>
+                        <span style="color: #16a34a;">Kompeten (K)</span>
+                    </label>
+                    <label style="display: inline-flex; align-items: center; gap: 0.35rem; font-weight: 600; font-size: 0.85rem; cursor: pointer;">
+                        <input type="radio" name="rekomendasi" value="BK" {{ ($iaRecord->rekomendasi ?? '') === 'BK' ? 'checked' : '' }} {{ $isAsesi ? 'disabled' : '' }}>
+                        <span style="color: #dc2626;">Belum Kompeten (BK)</span>
+                    </label>
+                </div>
+            </div>
         </div>
+        </form>
 
         <!-- PENGESAHAN ASESI & ASESOR -->
         <table class="tabel-bnsp" style="margin-bottom: 2rem;">

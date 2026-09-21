@@ -25,7 +25,7 @@
         'pendaftaranId' => $pendaftaran->id,
         'isAsesi' => $isAsesi,
         'saveLabel' => 'Simpan Formulir',
-        'saveAction' => "alert('Formulir FR.IA.04A berhasil disimpan!')"
+        'saveFormId' => 'form-ia-04a'
     ])
 
     @if($isAsesi)
@@ -123,7 +123,16 @@
             </tbody>
         </table>
 
-        <!-- INSTRUKSI PROYEK SINGKAT -->
+        <!-- INSTRUKSI PROYEK SINGKAT (DATABASE DRIVEN) -->
+        <form id="form-ia-04a" method="POST" action="{{ route('formulir.ia.simpan', ['kodeForm' => 'FR.IA.04A', 'pendaftaranId' => $pendaftaran->id]) }}">
+            @csrf
+            @php
+                $skenarioVal = $dataProyek['skenario'] ?? '';
+                $waktuVal = $dataProyek['waktu_menit'] ?? 90;
+                $demoVal = $dataProyek['demonstrasi'] ?? '';
+                $waktuDemoVal = $dataProyek['waktu_demo'] ?? 30;
+                $umpanBalikVal = $dataProyek['umpan_balik'] ?? ($iaRecord->catatan_asesor ?? '');
+            @endphp
         <table class="tabel-bnsp">
             <tr>
                 <td style="width: 30%; font-weight: 700; background: #f8fafc;">
@@ -133,10 +142,10 @@
                     <div style="margin-bottom: 0.5rem; font-weight: 600; color: #0f172a;">
                         Skenario proyek singkat / kegiatan terstruktur lainnya yang berisikan data informasi, lingkup bahasan dan instruksi untuk asesi
                     </div>
-                    <textarea class="input-inline-bnsp" rows="5" placeholder="Tuliskan detail skenario proyek singkat dan instruksi untuk asesi...">Buatlah modul aplikasi berbasis web yang mengimplementasikan struktur data dan algoritma sesuai dokumen spesifikasi teknis, kemudian siapkan slide presentasi singkat untuk memaparkan alur logika program dan arsitektur data yang telah Anda bangun.</textarea>
+                    <textarea name="skenario" class="input-inline-bnsp" rows="5" placeholder="{{ $isAsesi ? 'Skenario penugasan proyek belum diisi oleh Asesor di sistem.' : 'Tuliskan detail skenario proyek singkat dan instruksi untuk asesi...' }}" {{ $isAsesi ? 'readonly' : '' }}>{{ $skenarioVal }}</textarea>
                     <div style="margin-top: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">
                         <strong style="font-size: 0.85rem;">Waktu :</strong>
-                        <input type="text" class="input-inline-bnsp" value="90 Menit" style="max-width: 150px;">
+                        <input type="text" name="waktu_menit" class="input-inline-bnsp" value="{{ $waktuVal }} Menit" style="max-width: 150px;" {{ $isAsesi ? 'readonly' : '' }}>
                     </div>
                 </td>
             </tr>
@@ -148,12 +157,10 @@
                     <div style="margin-bottom: 0.5rem; font-weight: 600; color: #0f172a;">
                         Hasil proyek singkat / kegiatan terstruktur lainnya
                     </div>
-                    <textarea class="input-inline-bnsp" rows="4" placeholder="Tuliskan hal-hal yang perlu didemonstrasikan atau dipresentasikan...">1. Demonstrasi fungsionalitas kode program yang telah berjalan tanpa error.
-2. Penjelasan alur algoritma percabangan dan perulangan.
-3. Menjawab pertanyaan teknis yang diajukan oleh asesor kompetensi.</textarea>
+                    <textarea name="demonstrasi" class="input-inline-bnsp" rows="4" placeholder="{{ $isAsesi ? 'Poin demonstrasi belum diisi oleh Asesor.' : 'Tuliskan hal-hal yang perlu didemonstrasikan atau dipresentasikan oleh asesi...' }}" {{ $isAsesi ? 'readonly' : '' }}>{{ $demoVal }}</textarea>
                     <div style="margin-top: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">
                         <strong style="font-size: 0.85rem;">Waktu :</strong>
-                        <input type="text" class="input-inline-bnsp" value="30 Menit" style="max-width: 150px;">
+                        <input type="text" name="waktu_demo" class="input-inline-bnsp" value="{{ $waktuDemoVal }} Menit" style="max-width: 150px;" {{ $isAsesi ? 'readonly' : '' }}>
                     </div>
                 </td>
             </tr>
@@ -162,10 +169,11 @@
                     Umpan Balik Untuk Asesi:
                 </td>
                 <td>
-                    <textarea class="input-inline-bnsp" rows="3" placeholder="Tuliskan catatan umpan balik pelaksanaan proyek singkat..."></textarea>
+                    <textarea name="umpan_balik" class="input-inline-bnsp" rows="3" placeholder="Tuliskan catatan umpan balik pelaksanaan proyek singkat..." {{ $isAsesi ? 'readonly' : '' }}>{{ $umpanBalikVal }}</textarea>
                 </td>
             </tr>
         </table>
+        </form></table>
 
         <!-- TANDA TANGAN PENGESAHAN -->
         <table class="tabel-bnsp" style="margin-bottom: 1.5rem;">

@@ -55,10 +55,9 @@ class AsesiUjianController extends Controller
     {
         if (!$skema) return [];
 
-        // 1. Cek apakah ada master instrumen di database
         $inst = SchemeMasterInstrument::with(['questionBanks.kriteriaUnjukKerja'])
             ->where('skema_id', $skema->id)
-            ->whereIn('instrument_code', ['ia05', 'FR.IA.05', 'fr.ia.05', 'IA.05', 'ia.05'])
+            ->whereIn('instrument_code', SchemeMasterInstrument::getCodeAliases('ia_05'))
             ->where('is_active', true)
             ->first();
 
@@ -82,63 +81,7 @@ class AsesiUjianController extends Controller
             return $list;
         }
 
-        // 2. Fallback cerdas berdasarkan Unit Kompetensi & Elemen SKKNI skema aktif
-        $fallbackList = [];
-        $no = 1;
-        
-        $units = $skema->unitKompetensi()->with('elemenKompetensi.kriteriaUnjukKerja')->get();
-
-        foreach ($units as $unit) {
-            foreach ($unit->elemenKompetensi as $elemen) {
-                $kukList = $elemen->kriteriaUnjukKerja;
-                $kukUtama = $kukList->first();
-
-                // Buat butir soal objektif per elemen
-                $fallbackList[$no] = [
-                    'no' => $no,
-                    'id' => 'gen_' . $no,
-                    'unit_kode' => $unit->kode_unit,
-                    'unit_judul' => $unit->judul_unit,
-                    'elemen_nama' => $elemen->nama_elemen,
-                    'kuk' => $kukUtama ? "KUK {$kukUtama->nomor_kuk} - {$kukUtama->pernyataan_kuk}" : "Elemen: {$elemen->nama_elemen}",
-                    'pertanyaan' => "Dalam pelaksanaan unit '{$unit->judul_unit}', pada saat melakukan tahap {$elemen->nama_elemen}, tindakan yang paling tepat sesuai Standar Operasional Prosedur (SOP) dan K3 adalah...",
-                    'opsi' => [
-                        'A' => "Melakukan pemeriksaan parameter awal, memakai APD lengkap, dan memastikan lingkungan kerja aman sebelum memulai.",
-                        'B' => "Langsung mengoperasikan peralatan tanpa memeriksa buku manual atau petunjuk kerja.",
-                        'C' => "Mengabaikan penggunaan alat pelindung diri (APD) jika pekerjaan hanya berlangsung singkat.",
-                        'D' => "Menyerahkan seluruh persiapan teknis kepada asisten tanpa pengecekan ulang kalibrasi alat.",
-                        'E' => "Mengubah spesifikasi teknis benda kerja tanpa persetujuan penanggung jawab TUK."
-                    ],
-                    'kunci' => 'A',
-                    'gambar' => null,
-                ];
-                $no++;
-
-                if ($no > 25) break 2;
-            }
-        }
-
-        if (empty($fallbackList)) {
-            for ($i = 1; $i <= 10; $i++) {
-                $fallbackList[$i] = [
-                    'no' => $i,
-                    'id' => 'gen_' . $i,
-                    'kuk' => 'Standar Kompetensi Kejuruan Terpadu BNSP',
-                    'pertanyaan' => "Pertanyaan Standar Uji Teori Kejuruan No. {$i}: Dalam menerapkan prosedur keselamatan dan kesehatan kerja (K3) serta kualitas hasil kerja pada skema {$skema->nama_skema}, langkah utama yang wajib dilakukan adalah...",
-                    'opsi' => [
-                        'A' => "Menerapkan SOP kerja yang terstandarisasi, melakukan inspeksi alat, dan mencatat log hasil kerja secara berkala.",
-                        'B' => "Bekerja secara mandiri tanpa mematuhi pedoman gambar kerja atau instruksi teknis.",
-                        'C' => "Menunda pelaporan kerusakan peralatan hingga seluruh proses pengujian berakhir.",
-                        'D' => "Menggunakan peralatan kerja tidak sesuai peruntukan fungsi aslinya.",
-                        'E' => "Menonaktifkan sistem proteksi pengaman mesin untuk mempercepat waktu produksi."
-                    ],
-                    'kunci' => 'A',
-                    'gambar' => null,
-                ];
-            }
-        }
-
-        return $fallbackList;
+        return [];
     }
 
     /**
@@ -150,7 +93,7 @@ class AsesiUjianController extends Controller
 
         $inst = SchemeMasterInstrument::with(['questionBanks.kriteriaUnjukKerja'])
             ->where('skema_id', $skema->id)
-            ->whereIn('instrument_code', ['ia06', 'FR.IA.06', 'fr.ia.06', 'IA.06', 'ia.06'])
+            ->whereIn('instrument_code', SchemeMasterInstrument::getCodeAliases('ia_06'))
             ->where('is_active', true)
             ->first();
 
@@ -166,90 +109,86 @@ class AsesiUjianController extends Controller
                     'id' => $q->id,
                     'pertanyaan' => $q->question_text,
                     'kunci_referensi' => $q->correct_answer,
+                    'kunci' => $q->correct_answer,
                     'kuk' => $q->kriteriaUnjukKerja ? "KUK {$q->kriteriaUnjukKerja->nomor_kuk} - {$q->kriteriaUnjukKerja->pernyataan_kuk}" : 'Standar Kriteria Unjuk Kerja BNSP',
                 ];
             }
             return $list;
         }
 
-        return [
-            1 => [
-                'no' => 1,
-                'kuk' => 'Penerapan K3 dan Persiapan Alat/Bahan',
-                'pertanyaan' => "Jelaskan langkah-langkah persiapan kerja dan penerapan K3 (Keselamatan dan Kesehatan Kerja) yang wajib Anda lakukan sebelum mengoperasikan peralatan pada skema sertifikasi '{$skema->nama_skema}'!",
-                'kunci_referensi' => "Pemeriksaan APD lengkap, pengecekan kondisi fisik mesin/alat kerja, pembersihan area kerja, dan verifikasi ketersediaan material sesuai lembar kerja."
-            ],
-            2 => [
-                'no' => 2,
-                'kuk' => 'Prosedur Teknis & Penanganan Kendala (Troubleshooting)',
-                'pertanyaan' => "Apabila saat proses pengerjaan benda kerja/tugas terjadi penyimpangan toleransi ukuran atau ketidaksesuaian hasil kerja, sebutkan dan jelaskan tindakan korektif (troubleshooting) yang harus Anda ambil sesuai SOP!",
-                'kunci_referensi' => "Menghentikan proses, mengidentifikasi penyebab deviasi (kalibrasi/tool/setting parameter), berkonsultasi dengan asesor/supervisor, dan melakukan penyesuaian setting secara terukur."
-            ],
-            3 => [
-                'no' => 3,
-                'kuk' => 'Pengujian Mutu & Pelaporan Hasil Kerja',
-                'pertanyaan' => "Uraikan bagaimana cara Anda melakukan pemeriksaan mutu akhir (quality inspection) terhadap hasil kerja demonstrasi praktik serta bagaimana Anda menyusun laporannya!",
-                'kunci_referensi' => "Menggunakan alat ukur presisi terkalibrasi, membandingkan hasil riil dengan lembar spesifikasi gambar kerja, serta mencatat hasil verifikasi pada formulir laporan kerja."
-            ]
-        ];
+        return [];
     }
 
     /**
-     * Mengambil panduan penugasan praktik (FR.IA.02)
+     * Mengambil panduan & skenario tugas praktik demonstrasi (FR.IA.02) dari database
      */
-    public static function getPanduanPraktikIa02($skema)
+    public static function getPanduanPraktikIa02($skema, $pendaftaran = null)
     {
-        if (!$skema) return [];
+        if (!$skema && !$pendaftaran) return [];
+        $skemaId = $skema?->id ?? ($pendaftaran?->skema_id ?? null);
 
-        $inst = SchemeMasterInstrument::where('skema_id', $skema->id)
-            ->whereIn('instrument_code', ['ia02', 'FR.IA.02', 'fr.ia.02', 'IA.02', 'ia.02'])
-            ->where('is_active', true)
-            ->first();
+        // 1. Cek dari formulir penilaian spesifik pendaftaran jika ada
+        if ($pendaftaran && $pendaftaran->id) {
+            $ia02 = IaPenilaian::where('pendaftaran_id', $pendaftaran->id)
+                ->whereIn('kode_formulir', ['FR.IA.02', 'ia02', 'ia_02'])
+                ->first();
 
-        if ($inst && !empty($inst->additional_metadata)) {
-            $meta = is_array($inst->additional_metadata) ? $inst->additional_metadata : json_decode($inst->additional_metadata, true);
-            return [
-                'judul_tugas' => $meta['judul_tugas'] ?? $inst->title ?? 'Tugas Praktik Demonstrasi',
-                'waktu_menit' => $inst->time_limit_minutes ?? 120,
-                'skema_nama' => $skema->nama_skema,
-                'skema_kode' => $skema->kode_skema,
-                'skenario' => $meta['skenario'] ?? null,
-                'instruksi_kerja' => $meta['instruksi_kerja'] ?? ($inst->instructions ? explode("\n", $inst->instructions) : []),
-                'peralatan_bahan' => $meta['peralatan_bahan'] ?? [],
-                'standar_hasil' => $meta['standar_hasil'] ?? [],
-            ];
+            if ($ia02 && !empty($ia02->data_jawaban)) {
+                $dj = $ia02->data_jawaban;
+                if (!empty($dj['skenario']) || !empty($dj['judul_tugas']) || !empty($dj['instruksi_kerja'])) {
+                    return [
+                        'judul_tugas' => $dj['judul_tugas'] ?? 'Tugas Praktik Demonstrasi',
+                        'waktu_menit' => (int) preg_replace('/[^0-9]/', '', (string)($dj['durasi_waktu'] ?? '120')) ?: 120,
+                        'skema_nama' => $skema?->nama_skema ?? $pendaftaran->skema?->nama_skema ?? 'Skema Sertifikasi',
+                        'skema_kode' => $skema?->kode_skema ?? $pendaftaran->skema?->kode_skema ?? '',
+                        'skenario' => $dj['skenario'] ?? null,
+                        'instruksi_kerja' => is_array($dj['instruksi_kerja'] ?? null) ? $dj['instruksi_kerja'] : array_filter(array_map('trim', preg_split('/\r\n|\r|\n/', (string)($dj['instruksi_kerja'] ?? '')))),
+                        'peralatan_bahan' => is_array($dj['peralatan_bahan'] ?? null) ? $dj['peralatan_bahan'] : array_filter(array_map('trim', preg_split('/\r\n|\r|\n/', (string)($dj['peralatan_bahan'] ?? '')))),
+                        'standar_hasil' => $dj['standar_hasil'] ?? [],
+                    ];
+                }
+            }
         }
 
+        // 2. Cek dari master instrumen skema di database
+        if ($skemaId) {
+            $inst = SchemeMasterInstrument::where('skema_id', $skemaId)
+                ->whereIn('instrument_code', SchemeMasterInstrument::getCodeAliases('ia_02'))
+                ->where('is_active', true)
+                ->first();
+
+            if ($inst && !empty($inst->additional_metadata)) {
+                $meta = is_array($inst->additional_metadata) ? $inst->additional_metadata : json_decode($inst->additional_metadata, true);
+                if (!empty($meta['skenario']) || !empty($meta['judul_tugas']) || !empty($meta['instruksi_kerja'])) {
+                    return [
+                        'judul_tugas' => $meta['judul_tugas'] ?? $inst->title ?? 'Tugas Praktik Demonstrasi',
+                        'waktu_menit' => $inst->time_limit_minutes ?? 120,
+                        'skema_nama' => $skema?->nama_skema ?? 'Skema Sertifikasi',
+                        'skema_kode' => $skema?->kode_skema ?? '',
+                        'skenario' => $meta['skenario'] ?? null,
+                        'instruksi_kerja' => $meta['instruksi_kerja'] ?? ($inst->instructions ? array_filter(array_map('trim', explode("\n", $inst->instructions))) : []),
+                        'peralatan_bahan' => $meta['peralatan_bahan'] ?? [],
+                        'standar_hasil' => $meta['standar_hasil'] ?? [],
+                    ];
+                }
+            }
+        }
+
+        // 3. Jika belum dikonfigurasi di database, kembalikan data kosong
         return [
-            'judul_tugas' => 'Tugas Praktik Demonstrasi Kerja di Bengkel / Lab TUK',
-            'waktu_menit' => 120,
-            'skema_nama' => $skema->nama_skema ?? 'Skema Kejuruan BNSP',
-            'skema_kode' => $skema->kode_skema ?? 'BNSP-SKEMA',
-            'skenario' => 'Laksanakan penugasan praktik kerja sesuai SOP dan gambar kerja standar.',
-            'instruksi_kerja' => [
-                'Periksa kelengkapan alat pelindung diri (APD) dan kenakan secara benar sebelum memasuki area kerja.',
-                'Pelajari gambar kerja / spesifikasi teknis dan SOP demonstrasi yang telah disiapkan oleh Asesor di TUK.',
-                'Lakukan pemeriksaan kelaikan peralatan, bahan baku, dan lakukan kalibrasi alat ukur sebelum digunakan.',
-                'Laksanakan tugas praktik kerja secara mandiri, aman, dan efisien dengan mematuhi batas toleransi ukuran yang ditentukan.',
-                'Lakukan inspeksi mandiri hasil kerja dan buat dokumentasi foto/laporan ringkas hasil demonstrasi.',
-                'Bersihkan area kerja (5R/5S) dan serahkan benda kerja/laporan hasil praktik kepada Asesor Penguji.'
-            ],
-            'peralatan_bahan' => [
-                'Alat Pelindung Diri (Kacamata safety/kedok las, masker, sarung tangan, sepatu safety, wearpack/apron).',
-                'Mesin / perangkat kerja utama sesuai unit kompetensi kejuruan di TUK.',
-                'Alat ukur presisi (Jangka sorong / welding gauge / multimeter / instrumen uji terkait).',
-                'Material / bahan uji praktik dan lembar gambar kerja terstandar.'
-            ],
-            'standar_hasil' => [
-                'Benda kerja sesuai ukuran toleransi standar spesifikasi.',
-                'Bebas dari cacat kritis yang membahayakan fungsi struktur.',
-                'Laporan kerja atau lembar verifikasi terisi lengkap dan tertib 5R.'
-            ]
+            'judul_tugas' => null,
+            'waktu_menit' => null,
+            'skema_nama' => $skema?->nama_skema ?? '',
+            'skema_kode' => $skema?->kode_skema ?? '',
+            'skenario' => null,
+            'instruksi_kerja' => [],
+            'peralatan_bahan' => [],
+            'standar_hasil' => [],
         ];
     }
 
     /**
-     * Mengambil daftar pertanyaan lisan / wawancara (FR.IA.03 / FR.IA.07)
+     * Mengambil daftar pertanyaan lisan / wawancara (FR.IA.03 / FR.IA.07) dari database
      */
     public static function getDaftarPertanyaanLisan($skema)
     {
@@ -257,7 +196,10 @@ class AsesiUjianController extends Controller
 
         $inst = SchemeMasterInstrument::with(['questionBanks.kriteriaUnjukKerja'])
             ->where('skema_id', $skema->id)
-            ->whereIn('instrument_code', ['ia03', 'ia07', 'FR.IA.03', 'FR.IA.07', 'fr.ia.03', 'fr.ia.07', 'IA.03', 'IA.07'])
+            ->whereIn('instrument_code', array_merge(
+                SchemeMasterInstrument::getCodeAliases('ia_03'),
+                SchemeMasterInstrument::getCodeAliases('ia_07')
+            ))
             ->where('is_active', true)
             ->first();
 
@@ -279,31 +221,9 @@ class AsesiUjianController extends Controller
             return $list;
         }
 
-        return [
-            1 => [
-                'no' => 1,
-                'tanya' => 'Sebutkan faktor risiko K3 utama pada unit kerja yang Anda demonstrasikan dan jelaskan tindakan mitigasi yang wajib diambil!',
-                'kunci' => 'Asesi harus dapat menyebutkan bahaya listrik/api/mekanik, penggunaan APD wajib, dan prosedur darurat.',
-                'kuk' => 'Standar Keselamatan Kerja & Prosedur K3',
-            ],
-            2 => [
-                'no' => 2,
-                'tanya' => 'Bagaimana prosedur Anda memastikan peralatan kerja terkalibrasi dan siap pakai sebelum digunakan?',
-                'kunci' => 'Melakukan inspeksi visual, verifikasi batas masa berlaku kalibrasi alat ukur, dan uji fungsional awal tanpa beban.',
-                'kuk' => 'Pemeriksaan Kelaikan & Kalibrasi Alat',
-            ],
-            3 => [
-                'no' => 3,
-                'tanya' => 'Jika terjadi penyimpangan toleransi pada hasil pengerjaan, apa langkah korektif sistematis yang Anda tempuh?',
-                'kunci' => 'Mengidentifikasi akar penyebab deviasi, melakukan penyesuaian parameter, dan melapor kepada supervisor/asesor.',
-                'kuk' => 'Penanganan Deviasi Mutu & Troubleshooting',
-            ]
-        ];
+        return [];
     }
 
-    /**
-     * Halaman Utama Ruang Ujian Terpadu Asesi (FR.IA)
-     */
     public function index(Request $request)
     {
         $user = auth()->user();
@@ -381,7 +301,7 @@ class AsesiUjianController extends Controller
         $savedPraktik = [];
         $dokumenPraktik = null;
         if ($hasPraktik) {
-            $panduanPraktik = self::getPanduanPraktikIa02($pendaftaran->skema);
+            $panduanPraktik = self::getPanduanPraktikIa02($pendaftaran->skema, $pendaftaran);
             $recordIa02 = IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.02')->first();
             $savedPraktik = $recordIa02 ? ($recordIa02->data_jawaban ?? []) : [];
             $dokumenPraktik = $pendaftaran->dokumen ? $pendaftaran->dokumen->where('jenis_dokumen', 'Hasil Proyek / Laporan Praktik FR.IA.02')->first() : null;

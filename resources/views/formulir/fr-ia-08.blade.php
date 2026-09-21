@@ -26,7 +26,7 @@
         'namaForm' => 'FR.IA.08 Verifikasi Portofolio',
         'pendaftaranId' => $pendaftaran->id,
         'canSubmit' => !$isAsesi,
-        'submitOnClick' => "simpanNotifikasiFormulir('FR.IA.08')",
+        'saveFormId' => 'form-ia-08',
         'submitLabel' => 'Simpan Formulir',
         'canSignAsesi' => $isAsesi && !$asesiTtd,
         'signAsesiRoute' => route('formulir.ia.simpan-ttd-asesi', ['kodeForm' => 'FR.IA.08', 'pendaftaranId' => $pendaftaran->id]),
@@ -99,6 +99,39 @@
             </ul>
         </div>
 
+        <form id="form-ia-08" method="POST" action="{{ route('formulir.ia.simpan', ['kodeForm' => 'FR.IA.08', 'pendaftaranId' => $pendaftaran->id]) }}">
+            @csrf
+            @php
+                $savedDocs = $savedData['dokumen_portofolio'] ?? [];
+                if (empty($savedDocs)) {
+                    $docList = [];
+                    if ($pendaftaran->buktiApl02 && $pendaftaran->buktiApl02->count() > 0) {
+                        foreach ($pendaftaran->buktiApl02 as $b) {
+                            $docList[] = $b->nama_dokumen ?: ($b->jenis_dokumen ?? 'Dokumen Portofolio Asesi');
+                        }
+                    }
+                    if ($pendaftaran->dokumen && $pendaftaran->dokumen->count() > 0) {
+                        foreach ($pendaftaran->dokumen as $d) {
+                            $docList[] = $d->nama_dokumen ?: ($d->jenis_dokumen ?? 'Lampiran Dokumen Teknis');
+                        }
+                    }
+                    $docList = array_unique(array_filter($docList));
+                    if (!empty($docList)) {
+                        foreach (array_values($docList) as $dIdx => $dNama) {
+                            $savedDocs[$dIdx] = [
+                                'nama' => $dNama,
+                                'valid' => 'ya',
+                                'asli' => 'ya',
+                                'terkini' => 'ya',
+                                'memadai' => 'ya',
+                            ];
+                        }
+                    }
+                }
+                $savedKlarifikasi = $savedData['klarifikasi_elemen'] ?? [];
+                $buktiTambahanVal = $savedData['bukti_tambahan'] ?? ($iaRecord->catatan_asesor ?? '');
+            @endphp
+
         <!-- TABEL ATURAN BUKTI (VATM) -->
         <table class="tabel-bnsp" style="font-size: 0.85rem;">
             <thead>
@@ -121,30 +154,35 @@
                 </tr>
             </thead>
             <tbody>
-                @php
-                    $buktiContoh = [
-                        'Sertifikat Pelatihan / Workshop Pemrograman Aplikasi',
-                        'Laporan Proyek Pengembangan Sistem / Source Code Repository',
-                        'Surat Keterangan Pengalaman Kerja / Magang Industri Terkait',
-                        'Logbook Aktivitas Pekerjaan / Transkrip Nilai Praktik'
-                    ];
-                @endphp
-                @foreach($buktiContoh as $bIdx => $bTeks)
+                @forelse($savedDocs as $bIdx => $bItem)
+                    @php
+                        $bNama = is_array($bItem) ? ($bItem['nama'] ?? 'Dokumen Bukti ' . ($bIdx + 1)) : $bItem;
+                        $vValid = is_array($bItem) ? ($bItem['valid'] ?? 'ya') : 'ya';
+                        $vAsli = is_array($bItem) ? ($bItem['asli'] ?? 'ya') : 'ya';
+                        $vTerkini = is_array($bItem) ? ($bItem['terkini'] ?? 'ya') : 'ya';
+                        $vMemadai = is_array($bItem) ? ($bItem['memadai'] ?? 'ya') : 'ya';
+                    @endphp
                     <tr>
                         <td>
-                            <strong>{{ $bIdx + 1 }}.</strong> {{ $bTeks }}
+                            <strong>{{ $bIdx + 1 }}.</strong> {{ $bNama }}
+                            <input type="hidden" name="dokumen_portofolio[{{ $bIdx }}][nama]" value="{{ $bNama }}">
                         </td>
-                        <td style="text-align: center;"><input type="checkbox" checked class="checkbox-bnsp checkbox-bnsp-hijau"></td>
-                        <td style="text-align: center;"><input type="checkbox" class="checkbox-bnsp checkbox-bnsp-merah"></td>
-                        <td style="text-align: center;"><input type="checkbox" checked class="checkbox-bnsp checkbox-bnsp-hijau"></td>
-                        <td style="text-align: center;"><input type="checkbox" class="checkbox-bnsp checkbox-bnsp-merah"></td>
-                        <td style="text-align: center;"><input type="checkbox" checked class="checkbox-bnsp checkbox-bnsp-hijau"></td>
-                        <td style="text-align: center;"><input type="checkbox" class="checkbox-bnsp checkbox-bnsp-merah"></td>
-                        <td style="text-align: center;"><input type="checkbox" checked class="checkbox-bnsp checkbox-bnsp-hijau"></td>
-                        <td style="text-align: center;"><input type="checkbox" class="checkbox-bnsp checkbox-bnsp-merah"></td>
+                        <td style="text-align: center;"><input type="radio" name="dokumen_portofolio[{{ $bIdx }}][valid]" value="ya" {{ $vValid === 'ya' ? 'checked' : '' }} {{ $isAsesi ? 'disabled' : '' }}></td>
+                        <td style="text-align: center;"><input type="radio" name="dokumen_portofolio[{{ $bIdx }}][valid]" value="tidak" {{ $vValid === 'tidak' ? 'checked' : '' }} {{ $isAsesi ? 'disabled' : '' }}></td>
+                        <td style="text-align: center;"><input type="radio" name="dokumen_portofolio[{{ $bIdx }}][asli]" value="ya" {{ $vAsli === 'ya' ? 'checked' : '' }} {{ $isAsesi ? 'disabled' : '' }}></td>
+                        <td style="text-align: center;"><input type="radio" name="dokumen_portofolio[{{ $bIdx }}][asli]" value="tidak" {{ $vAsli === 'tidak' ? 'checked' : '' }} {{ $isAsesi ? 'disabled' : '' }}></td>
+                        <td style="text-align: center;"><input type="radio" name="dokumen_portofolio[{{ $bIdx }}][terkini]" value="ya" {{ $vTerkini === 'ya' ? 'checked' : '' }} {{ $isAsesi ? 'disabled' : '' }}></td>
+                        <td style="text-align: center;"><input type="radio" name="dokumen_portofolio[{{ $bIdx }}][terkini]" value="tidak" {{ $vTerkini === 'tidak' ? 'checked' : '' }} {{ $isAsesi ? 'disabled' : '' }}></td>
+                        <td style="text-align: center;"><input type="radio" name="dokumen_portofolio[{{ $bIdx }}][memadai]" value="ya" {{ $vMemadai === 'ya' ? 'checked' : '' }} {{ $isAsesi ? 'disabled' : '' }}></td>
+                        <td style="text-align: center;"><input type="radio" name="dokumen_portofolio[{{ $bIdx }}][memadai]" value="tidak" {{ $vMemadai === 'tidak' ? 'checked' : '' }} {{ $isAsesi ? 'disabled' : '' }}></td>
                     </tr>
-                @endforeach
-            </tbody>
+                @empty
+                    <tr>
+                        <td colspan="9" style="text-align: center; color: #64748b; font-style: italic; padding: 1rem;">
+                            Asesi belum mengunggah dokumen portofolio di sistem.
+                        </td>
+                    </tr>
+                @endforelse</tbody>
         </table>
 
         <!-- SUBSTANSI WAWANCARA TINDAK LANJUT -->
@@ -165,9 +203,12 @@
             <tbody>
                 @forelse($pendaftaran->skema->unitKompetensi as $uIdx => $unit)
                     @foreach($unit->elemenKompetensi as $eIdx => $elem)
+                        @php
+                            $isKlarifikasi = isset($savedKlarifikasi[$elem->id]) || empty($savedData);
+                        @endphp
                         <tr>
                             <td style="text-align: center; vertical-align: middle;">
-                                <input type="checkbox" checked class="checkbox-bnsp checkbox-bnsp-hijau">
+                                <input type="checkbox" name="klarifikasi_elemen[{{ $elem->id }}]" value="1" {{ $isKlarifikasi ? 'checked' : '' }} class="checkbox-bnsp checkbox-bnsp-hijau" {{ $isAsesi ? 'disabled' : '' }}>
                             </td>
                             <td>
                                 <strong>{{ $unit->kode_unit }}</strong><br>
@@ -193,7 +234,7 @@
             <label style="font-weight: 700; font-size: 0.88rem; display: block; margin-bottom: 0.35rem; color: #0f172a;">
                 Bukti tambahan diperlukan pada unit / elemen kompetensi sebagai berikut:
             </label>
-            <textarea class="input-inline-bnsp" rows="3" placeholder="Tuliskan jika terdapat bukti tambahan yang dipersyaratkan...">Bukti tambahan berupa dokumentasi implementasi source code dan rekaman demonstrasi program aplikasi.</textarea>
+            <textarea name="bukti_tambahan" class="input-inline-bnsp" rows="3" placeholder="Tuliskan jika terdapat bukti tambahan yang dipersyaratkan..." {{ $isAsesi ? 'readonly' : '' }}>{{ $buktiTambahanVal }}</textarea>
         </div>
 
         <!-- REKOMENDASI ASESOR -->
@@ -203,25 +244,20 @@
                 <td>
                     <div style="margin-bottom: 0.75rem;">
                         <label style="display: flex; align-items: flex-start; gap: 0.5rem; cursor: pointer; font-weight: 600; color: #059669;">
-                            <input type="radio" name="rekomendasi_cvp" value="kompeten" checked style="margin-top: 0.2rem; accent-color: #059669;">
+                            <input type="radio" name="rekomendasi" value="K" {{ ($iaRecord->rekomendasi ?? 'K') === 'K' ? 'checked' : '' }} style="margin-top: 0.2rem; accent-color: #059669;" {{ $isAsesi ? 'disabled' : '' }}>
                             <span>Asesi telah memenuhi pencapaian seluruh kriteria unjuk kerja, direkomendasikan <strong>KOMPETEN</strong></span>
                         </label>
                     </div>
                     <div>
                         <label style="display: flex; align-items: flex-start; gap: 0.5rem; cursor: pointer; font-weight: 600; color: #dc2626;">
-                            <input type="radio" name="rekomendasi_cvp" value="observasi_langsung" style="margin-top: 0.2rem; accent-color: #dc2626;">
-                            <span>Asesi belum memenuhi pencapaian seluruh kriteria unjuk kerja, direkomendasikan <strong>OBSERVASI LANGSUNG / KEGIATAN TERSTRUKTUR*)</strong> pada:</span>
+                            <input type="radio" name="rekomendasi" value="BK" {{ ($iaRecord->rekomendasi ?? '') === 'BK' ? 'checked' : '' }} style="margin-top: 0.2rem; accent-color: #dc2626;" {{ $isAsesi ? 'disabled' : '' }}>
+                            <span>Asesi belum memenuhi aturan bukti (VATM), direkomendasikan <strong>BELUM KOMPETEN</strong> (perlu asesmen lanjutan)</span>
                         </label>
-                        <div style="padding-left: 1.5rem; margin-top: 0.35rem; font-size: 0.82rem; color: #475569;">
-                            Kelompok Pekerjaan : <input type="text" class="input-inline-bnsp" style="max-width: 200px; display: inline-block; padding: 0.2rem 0.4rem;"><br>
-                            Unit : <input type="text" class="input-inline-bnsp" style="max-width: 200px; display: inline-block; padding: 0.2rem 0.4rem; margin-top: 0.2rem;"><br>
-                            Elemen : <input type="text" class="input-inline-bnsp" style="max-width: 200px; display: inline-block; padding: 0.2rem 0.4rem; margin-top: 0.2rem;"><br>
-                            KUK : <input type="text" class="input-inline-bnsp" style="max-width: 200px; display: inline-block; padding: 0.2rem 0.4rem; margin-top: 0.2rem;">
-                        </div>
                     </div>
                 </td>
             </tr>
         </table>
+        </form>
 
         <!-- PENGESAHAN ASESI & ASESOR -->
         <table class="tabel-bnsp">

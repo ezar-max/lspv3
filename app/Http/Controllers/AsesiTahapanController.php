@@ -355,7 +355,7 @@ class AsesiTahapanController extends Controller
             $savedPraktik = [];
             $dokumenPraktik = null;
             if ($hasPraktik) {
-                $panduanPraktik = \App\Http\Controllers\AsesiUjianController::getPanduanPraktikIa02($pendaftaran->skema);
+                $panduanPraktik = \App\Http\Controllers\AsesiUjianController::getPanduanPraktikIa02($pendaftaran->skema, $pendaftaran);
                 $recordIa02 = \App\Models\IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.02')->first();
                 $savedPraktik = $recordIa02 ? ($recordIa02->data_jawaban ?? []) : [];
                 $dokumenPraktik = $pendaftaran->dokumen ? $pendaftaran->dokumen->where('jenis_dokumen', 'Hasil Proyek / Laporan Praktik FR.IA.02')->first() : null;

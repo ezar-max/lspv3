@@ -368,8 +368,9 @@ class FormulirController extends Controller
         if (!$pendaftaran) {
             return $this->redirectFallback('Silakan pilih atau daftarkan skema sertifikasi terlebih dahulu.');
         }
-        $iaRecord = IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.01')->first();
-        return view('formulir.fr-ia-01', compact('pendaftaran', 'iaRecord'));
+        $iaRecord = $pendaftaran->id ? IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.01')->first() : null;
+        $savedData = $iaRecord ? ($iaRecord->data_jawaban ?? []) : [];
+        return view('formulir.fr-ia-01', compact('pendaftaran', 'iaRecord', 'savedData'));
     }
 
     public function ia02(Request $request, $pendaftaranId = null)
@@ -378,7 +379,26 @@ class FormulirController extends Controller
         if (!$pendaftaran) {
             return $this->redirectFallback('Silakan pilih atau daftarkan skema sertifikasi terlebih dahulu.');
         }
-        return view('formulir.fr-ia-02', compact('pendaftaran'));
+        $iaRecord = $pendaftaran->id ? IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.02')->first() : null;
+        $masterInst = \App\Models\SchemeMasterInstrument::where('skema_id', $pendaftaran->skema_id)
+            ->whereIn('instrument_code', \App\Models\SchemeMasterInstrument::getCodeAliases('ia_02'))
+            ->first();
+
+        $meta = $masterInst ? ($masterInst->additional_metadata ?? []) : [];
+        if (is_string($meta)) $meta = json_decode($meta, true) ?: [];
+
+        $saved = $iaRecord ? ($iaRecord->data_jawaban ?? []) : [];
+        $dataPraktik = [
+            'judul_tugas' => $saved['judul_tugas'] ?? ($meta['judul_tugas'] ?? ($masterInst?->title ?? 'Tugas Praktik Demonstrasi')),
+            'skenario' => $saved['skenario'] ?? ($meta['skenario'] ?? 'Anda diminta untuk mendemonstrasikan tugas praktik kerja sesuai dengan standar operasional prosedur (SOP) dan kriteria unjuk kerja yang berlaku.'),
+            'peralatan_bahan' => $saved['peralatan_bahan'] ?? ($meta['peralatan_bahan'] ?? 'Peralatan dan bahan praktik standar sesuai unit kompetensi kejuruan.'),
+            'durasi_waktu' => $saved['durasi_waktu'] ?? ($meta['durasi_waktu'] ?? (($masterInst?->time_limit_minutes ?? 120) . ' Menit (2 Jam)')),
+            'instruksi_kerja' => $saved['instruksi_kerja'] ?? ($meta['instruksi_kerja'] ?? ($masterInst?->instructions ? explode("\n", $masterInst->instructions) : [])),
+            'standar_hasil' => $saved['standar_hasil'] ?? ($meta['standar_hasil'] ?? []),
+            'catatan' => $saved['catatan'] ?? ($iaRecord->catatan_asesor ?? ''),
+        ];
+
+        return view('formulir.fr-ia-02', compact('pendaftaran', 'iaRecord', 'masterInst', 'dataPraktik'));
     }
 
     public function ia03(Request $request, $pendaftaranId = null)
@@ -387,8 +407,13 @@ class FormulirController extends Controller
         if (!$pendaftaran) {
             return $this->redirectFallback('Silakan pilih atau daftarkan skema sertifikasi terlebih dahulu.');
         }
-        $iaRecord = IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.03')->first();
-        return view('formulir.fr-ia-03', compact('pendaftaran', 'iaRecord'));
+        $iaRecord = $pendaftaran->id ? IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.03')->first() : null;
+        $masterInst = \App\Models\SchemeMasterInstrument::with('questionBanks')
+            ->where('skema_id', $pendaftaran->skema_id)
+            ->whereIn('instrument_code', \App\Models\SchemeMasterInstrument::getCodeAliases('ia_03'))
+            ->first();
+        $masterQuestions = $masterInst ? $masterInst->questionBanks : collect();
+        return view('formulir.fr-ia-03', compact('pendaftaran', 'iaRecord', 'masterInst', 'masterQuestions'));
     }
 
     /* =========================================================================
@@ -401,7 +426,21 @@ class FormulirController extends Controller
         if (!$pendaftaran) {
             return $this->redirectFallback('Silakan pilih atau daftarkan skema sertifikasi terlebih dahulu.');
         }
-        return view('formulir.fr-ia-04a', compact('pendaftaran'));
+        $iaRecord = $pendaftaran->id ? IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.04A')->first() : null;
+        $masterInst = \App\Models\SchemeMasterInstrument::where('skema_id', $pendaftaran->skema_id)
+            ->whereIn('instrument_code', \App\Models\SchemeMasterInstrument::getCodeAliases('ia_04a'))
+            ->first();
+        $meta = $masterInst ? ($masterInst->additional_metadata ?? []) : [];
+        if (is_string($meta)) $meta = json_decode($meta, true) ?: [];
+        $saved = $iaRecord ? ($iaRecord->data_jawaban ?? []) : [];
+        $dataProyek = [
+            'judul_proyek' => $saved['judul_proyek'] ?? ($meta['judul_proyek'] ?? ($masterInst?->title ?? 'Penjelasan Proyek Singkat / Kegiatan Terstruktur')),
+            'skenario' => $saved['skenario'] ?? ($meta['skenario'] ?? 'Laksanakan proyek singkat sesuai batasan waktu dan spesifikasi teknis kerja.'),
+            'instruksi_terstruktur' => $saved['instruksi_terstruktur'] ?? ($meta['instruksi_terstruktur'] ?? ($masterInst?->instructions ? explode("\n", $masterInst->instructions) : [])),
+            'durasi_waktu' => $saved['durasi_waktu'] ?? ($meta['durasi_waktu'] ?? (($masterInst?->time_limit_minutes ?? 180) . ' Menit (3 Jam)')),
+            'peralatan_bahan' => $saved['peralatan_bahan'] ?? ($meta['peralatan_bahan'] ?? 'Perangkat dan bahan proyek yang relevan.'),
+        ];
+        return view('formulir.fr-ia-04a', compact('pendaftaran', 'iaRecord', 'masterInst', 'dataProyek'));
     }
 
     public function ia04b(Request $request, $pendaftaranId = null)
@@ -410,8 +449,14 @@ class FormulirController extends Controller
         if (!$pendaftaran) {
             return $this->redirectFallback('Silakan pilih atau daftarkan skema sertifikasi terlebih dahulu.');
         }
-        $iaRecord = IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.04B')->first();
-        return view('formulir.fr-ia-04b', compact('pendaftaran', 'iaRecord'));
+        $iaRecord = $pendaftaran->id ? IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.04B')->first() : null;
+        $masterInst = \App\Models\SchemeMasterInstrument::with('productSpecifications')
+            ->where('skema_id', $pendaftaran->skema_id)
+            ->whereIn('instrument_code', \App\Models\SchemeMasterInstrument::getCodeAliases('ia_04b'))
+            ->first();
+        $masterSpecs = $masterInst ? $masterInst->productSpecifications : collect();
+        $savedData = $iaRecord ? ($iaRecord->data_jawaban ?? []) : [];
+        return view('formulir.fr-ia-04b', compact('pendaftaran', 'iaRecord', 'masterInst', 'masterSpecs', 'savedData'));
     }
 
     public function ia11(Request $request, $pendaftaranId = null)
@@ -420,8 +465,9 @@ class FormulirController extends Controller
         if (!$pendaftaran) {
             return $this->redirectFallback('Silakan pilih atau daftarkan skema sertifikasi terlebih dahulu.');
         }
-        $iaRecord = IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.11')->first();
-        return view('formulir.fr-ia-11', compact('pendaftaran', 'iaRecord'));
+        $iaRecord = $pendaftaran->id ? IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.11')->first() : null;
+        $savedData = $iaRecord ? ($iaRecord->data_jawaban ?? []) : [];
+        return view('formulir.fr-ia-11', compact('pendaftaran', 'iaRecord', 'savedData'));
     }
 
     /* =========================================================================
@@ -432,7 +478,7 @@ class FormulirController extends Controller
     public static function getSoalIa05($skemaId = null)
     {
         $query = \App\Models\SchemeMasterInstrument::with(['questionBanks.kriteriaUnjukKerja'])
-            ->where('instrument_code', 'ia05')
+            ->whereIn('instrument_code', \App\Models\SchemeMasterInstrument::getCodeAliases('ia_05'))
             ->where('is_active', true);
 
         if ($skemaId) {
@@ -456,9 +502,7 @@ class FormulirController extends Controller
                         'gambar' => $q->image_path,
                     ];
                 }
-                if (!empty($list)) {
-                    return $list;
-                }
+                return $list;
             }
         } else {
             $inst = $query->first();
@@ -476,36 +520,17 @@ class FormulirController extends Controller
                         'gambar' => $q->image_path,
                     ];
                 }
-                if (!empty($list)) {
-                    return $list;
-                }
+                return $list;
             }
         }
 
-        $defaultSample = [
-            1 => [
-                'no' => 1,
-                'pertanyaan' => 'Dalam penerapan standar operasional prosedur di tempat kerja, langkah awal yang harus dipastikan sebelum memulai pengoperasian peralatan adalah...',
-                'opsi' => [
-                    'a' => 'Memeriksa kelengkapan alat pelindung diri (APD) dan kesiapan alat',
-                    'b' => 'Langsung menyalakan saklar daya utama tanpa pengawasan',
-                    'c' => 'Mengabaikan petunjuk instruksi kerja',
-                    'd' => 'Menyerahkan tugas kepada operator lain tanpa koordinasi',
-                ],
-                'kunci' => 'a',
-                'kuk' => 'KUK 1.1 - Instruksi kerja dan K3 diidentifikasi',
-                'pembahasan' => 'Pemeriksaan APD dan kesiapan alat merupakan prosedur K3 standar sebelum operasional.',
-                'gambar' => null,
-            ],
-        ];
-
-        return $defaultSample;
+        return [];
     }
 
     public static function getSoalIa06($skemaId = null)
     {
         $query = \App\Models\SchemeMasterInstrument::with(['questionBanks.kriteriaUnjukKerja'])
-            ->where('instrument_code', 'ia06')
+            ->whereIn('instrument_code', \App\Models\SchemeMasterInstrument::getCodeAliases('ia_06'))
             ->where('is_active', true);
 
         if ($skemaId) {
@@ -526,9 +551,7 @@ class FormulirController extends Controller
                         'kuk' => $q->kriteriaUnjukKerja ? "KUK {$q->kriteriaUnjukKerja->nomor_kuk} - {$q->kriteriaUnjukKerja->pernyataan_kuk}" : 'Standar Kompetensi Kejuruan',
                     ];
                 }
-                if (!empty($list)) {
-                    return $list;
-                }
+                return $list;
             }
         } else {
             $inst = $query->first();
@@ -543,26 +566,17 @@ class FormulirController extends Controller
                         'kuk' => $q->kriteriaUnjukKerja ? "KUK {$q->kriteriaUnjukKerja->nomor_kuk} - {$q->kriteriaUnjukKerja->pernyataan_kuk}" : 'Standar Kompetensi Kejuruan',
                     ];
                 }
-                if (!empty($list)) {
-                    return $list;
-                }
+                return $list;
             }
         }
 
-        return [
-            1 => [
-                'no' => 1,
-                'pertanyaan' => 'Jelaskan tahapan prosedur keselamatan dan kesehatan kerja (K3) yang wajib diterapkan sebelum memulai pekerjaan!',
-                'kunci_referensi' => '1. Identifikasi potensi bahaya di area kerja; 2. Gunakan APD sesuai standar; 3. Periksa kondisi peralatan dan lingkungan kerja.',
-                'kuk' => 'KUK 1.1 - Prosedur K3 diidentifikasi',
-            ],
-        ];
+        return [];
     }
 
     public static function getSoalIa07($skemaId = null)
     {
         $query = \App\Models\SchemeMasterInstrument::with(['questionBanks.kriteriaUnjukKerja'])
-            ->where('instrument_code', 'ia07')
+            ->whereIn('instrument_code', \App\Models\SchemeMasterInstrument::getCodeAliases('ia_07'))
             ->where('is_active', true);
 
         if ($skemaId) {
@@ -583,9 +597,7 @@ class FormulirController extends Controller
                         'kuk' => $q->kriteriaUnjukKerja ? "KUK {$q->kriteriaUnjukKerja->nomor_kuk} - {$q->kriteriaUnjukKerja->pernyataan_kuk}" : 'Standar Kompetensi Kejuruan',
                     ];
                 }
-                if (!empty($list)) {
-                    return $list;
-                }
+                return $list;
             }
         } else {
             $inst = $query->first();
@@ -600,20 +612,11 @@ class FormulirController extends Controller
                         'kuk' => $q->kriteriaUnjukKerja ? "KUK {$q->kriteriaUnjukKerja->nomor_kuk} - {$q->kriteriaUnjukKerja->pernyataan_kuk}" : 'Standar Kompetensi Kejuruan',
                     ];
                 }
-                if (!empty($list)) {
-                    return $list;
-                }
+                return $list;
             }
         }
 
-        return [
-            1 => [
-                'no' => 1,
-                'pertanyaan' => 'Bagaimana tindakan yang Anda lakukan jika terjadi kondisi darurat atau penyimpangan prosedur operasional saat bekerja?',
-                'kunci_rujukan' => 'Menghentikan proses kerja sementara, melapor kepada penanggung jawab, dan mengikuti SOP tanggap darurat.',
-                'kuk' => 'KUK 1.1 - Prosedur penanganan darurat diterapkan',
-            ],
-        ];
+        return [];
     }
 
     public function ia05a(Request $request, $pendaftaranId = null)
@@ -718,7 +721,8 @@ class FormulirController extends Controller
             return $this->redirectFallback('Silakan pilih atau daftarkan skema sertifikasi terlebih dahulu.');
         }
         $iaRecord = IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.08')->first();
-        return view('formulir.fr-ia-08', compact('pendaftaran', 'iaRecord'));
+        $savedData = $iaRecord ? ($iaRecord->data_jawaban ?? []) : [];
+        return view('formulir.fr-ia-08', compact('pendaftaran', 'iaRecord', 'savedData'));
     }
 
     public function ia09(Request $request, $pendaftaranId = null)
@@ -728,7 +732,8 @@ class FormulirController extends Controller
             return $this->redirectFallback('Silakan pilih atau daftarkan skema sertifikasi terlebih dahulu.');
         }
         $iaRecord = IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.09')->first();
-        return view('formulir.fr-ia-09', compact('pendaftaran', 'iaRecord'));
+        $savedData = $iaRecord ? ($iaRecord->data_jawaban ?? []) : [];
+        return view('formulir.fr-ia-09', compact('pendaftaran', 'iaRecord', 'savedData'));
     }
 
     public function ia10(Request $request, $pendaftaranId = null)
@@ -738,6 +743,7 @@ class FormulirController extends Controller
             return $this->redirectFallback('Silakan pilih atau daftarkan skema sertifikasi terlebih dahulu.');
         }
         $iaRecord = IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.10')->first();
+        $savedData = $iaRecord ? ($iaRecord->data_jawaban ?? []) : [];
         
         // Generate guest token jika belum ada
         if (!$iaRecord || empty($iaRecord->token_akses)) {
@@ -765,7 +771,7 @@ class FormulirController extends Controller
         }
 
         $magicLink = route('formulir.ia10.guest', $iaRecord->token_akses);
-        return view('formulir.fr-ia-10', compact('pendaftaran', 'iaRecord', 'magicLink'));
+        return view('formulir.fr-ia-10', compact('pendaftaran', 'iaRecord', 'savedData', 'magicLink'));
     }
 
     /**
@@ -863,8 +869,12 @@ class FormulirController extends Controller
             abort_unless($isAssigned, 403, 'Akses Ditolak: Anda tidak ditugaskan untuk pendaftaran ini.');
         }
 
-        abort_unless($pendaftaran->isInstrumenAktif($kodeForm), 422,
-            'Instrumen ini tidak aktif pada MAPA.02 untuk pendaftaran tersebut.');
+        // Cek instrumen aktif (admin/superadmin dilewati; asesor dicek bila ada konfigurasi MAPA.02)
+        if ($user && !in_array($user->peran, ['admin', 'superadmin'])) {
+            if ($pendaftaran->hasMapa02Config() && !$pendaftaran->isInstrumenAktif($kodeForm)) {
+                abort(422, 'Instrumen ini tidak aktif pada MAPA.02 untuk pendaftaran tersebut.');
+            }
+        }
 
         $dataPayload = $request->except(['_token', 'tanda_tangan']);
         $tandaTangan = $request->tanda_tangan ?? ($user->tanda_tangan ?? null);
@@ -872,9 +882,153 @@ class FormulirController extends Controller
         $suksesMsg = 'Data ' . $kodeForm . ' berhasil disimpan ke sistem.';
 
         /* ---------------------------------------------------------------------
-           1. AUTO-GRADING UNTUK UJIAN PILIHAN GANDA (FR.IA.05C)
+           1. CEKLIS OBSERVASI AKTIVITAS (FR.IA.01)
            --------------------------------------------------------------------- */
-        if ($kodeForm === 'FR.IA.05C') {
+        if ($kodeForm === 'FR.IA.01') {
+            $rekomendasi = $request->input('rekomendasi', 'K');
+            $catatan = $request->input('umpan_balik', $request->input('catatan', 'Seluruh instruksi kerja dan demonstrasi praktik telah diobservasi.'));
+            $dataPayload = [
+                'standar_industri' => $request->input('standar_industri', []),
+                'pencapaian' => $request->input('pencapaian', []),
+                'penilaian_lanjut' => $request->input('penilaian_lanjut', []),
+                'catatan_kuk' => $request->input('catatan_kuk', []),
+                'umpan_balik' => $catatan,
+                'saved_at' => now()->toDateTimeString(),
+            ];
+            $suksesMsg = 'Ceklis Observasi Aktivitas (FR.IA.01) berhasil disimpan.';
+        }
+
+        /* ---------------------------------------------------------------------
+           2. TUGAS PRAKTIK DEMONSTRASI (FR.IA.02)
+           --------------------------------------------------------------------- */
+        elseif ($kodeForm === 'FR.IA.02') {
+            $rekomendasi = $request->input('rekomendasi', 'K');
+            $catatan = $request->input('catatan', '');
+            $dataPayload = [
+                'judul_tugas' => $request->input('judul_tugas'),
+                'skenario' => $request->input('skenario'),
+                'peralatan_bahan' => $request->input('peralatan_bahan'),
+                'durasi_waktu' => $request->input('durasi_waktu'),
+                'instruksi_kerja' => $request->input('instruksi_kerja'),
+                'catatan' => $catatan,
+                'saved_at' => now()->toDateTimeString(),
+            ];
+
+            // Sinkronkan ke SchemeMasterInstrument agar Asesi di Ruang Uji / Tahap 5 langsung mendapatkannya
+            if ($pendaftaran->skema_id) {
+                $inst = \App\Models\SchemeMasterInstrument::where('skema_id', $pendaftaran->skema_id)
+                    ->whereIn('instrument_code', \App\Models\SchemeMasterInstrument::getCodeAliases('ia_02'))
+                    ->first();
+                if (!$inst) {
+                    $inst = \App\Models\SchemeMasterInstrument::create([
+                        'skema_id' => $pendaftaran->skema_id,
+                        'instrument_code' => 'ia_02',
+                        'title' => $request->input('judul_tugas') ?: 'Tugas Praktik Demonstrasi',
+                        'is_active' => true,
+                    ]);
+                }
+                $meta = $inst->additional_metadata ?? [];
+                if (!is_array($meta)) $meta = json_decode($meta, true) ?: [];
+
+                if ($request->filled('judul_tugas')) $meta['judul_tugas'] = $request->input('judul_tugas');
+                if ($request->filled('skenario')) $meta['skenario'] = $request->input('skenario');
+                if ($request->filled('peralatan_bahan')) {
+                    $meta['peralatan_bahan'] = is_array($request->peralatan_bahan) 
+                        ? $request->peralatan_bahan 
+                        : array_filter(array_map('trim', preg_split('/\r\n|\r|\n/', (string)$request->peralatan_bahan)));
+                }
+                if ($request->filled('instruksi_kerja')) {
+                    $meta['instruksi_kerja'] = is_array($request->instruksi_kerja)
+                        ? $request->instruksi_kerja
+                        : array_filter(array_map('trim', preg_split('/\r\n|\r|\n/', (string)$request->instruksi_kerja)));
+                }
+                if ($request->filled('durasi_waktu')) {
+                    $numMinutes = (int) preg_replace('/[^0-9]/', '', (string)$request->input('durasi_waktu'));
+                    if ($numMinutes > 0) $inst->time_limit_minutes = $numMinutes;
+                    $meta['durasi_waktu'] = $request->input('durasi_waktu');
+                }
+                $inst->additional_metadata = $meta;
+                if ($request->filled('judul_tugas')) $inst->title = $request->input('judul_tugas');
+                $inst->save();
+            }
+
+            $suksesMsg = 'Tugas Praktik Demonstrasi (FR.IA.02) berhasil disimpan dan disinkronkan ke bank instrumen skema.';
+        }
+
+        /* ---------------------------------------------------------------------
+           3. PERTANYAAN MENDUKUNG OBSERVASI (FR.IA.03)
+           --------------------------------------------------------------------- */
+        elseif ($kodeForm === 'FR.IA.03') {
+            $rekomendasi = $request->input('rekomendasi', 'K');
+            $catatan = $request->input('catatan', '');
+            $dataPayload = [
+                'pertanyaan' => $request->input('pertanyaan', []),
+                'respon' => $request->input('respon', []),
+                'pencapaian' => $request->input('pencapaian', []),
+                'rekomendasi' => $rekomendasi,
+                'catatan' => $catatan,
+                'saved_at' => now()->toDateTimeString(),
+            ];
+            $suksesMsg = 'Pertanyaan Mendukung Observasi (FR.IA.03) berhasil disimpan.';
+        }
+
+        /* ---------------------------------------------------------------------
+           4. INSTRUKSI TERSTRUKTUR & PENILAIAN PROYEK (FR.IA.04A & FR.IA.04B)
+           --------------------------------------------------------------------- */
+        elseif ($kodeForm === 'FR.IA.04A') {
+            $rekomendasi = $request->input('rekomendasi', 'K');
+            $catatan = $request->input('umpan_balik', $request->input('catatan', ''));
+            $dataPayload = [
+                'skenario' => $request->input('skenario'),
+                'waktu_menit' => $request->input('waktu_menit', 90),
+                'demonstrasi' => $request->input('demonstrasi'),
+                'waktu_demo' => $request->input('waktu_demo', 30),
+                'umpan_balik' => $catatan,
+                'saved_at' => now()->toDateTimeString(),
+            ];
+
+            // Sinkronkan ke SchemeMasterInstrument (ia_04a)
+            if ($pendaftaran->skema_id) {
+                $inst = \App\Models\SchemeMasterInstrument::where('skema_id', $pendaftaran->skema_id)
+                    ->whereIn('instrument_code', \App\Models\SchemeMasterInstrument::getCodeAliases('ia_04a'))
+                    ->first();
+                if (!$inst) {
+                    $inst = \App\Models\SchemeMasterInstrument::create([
+                        'skema_id' => $pendaftaran->skema_id,
+                        'instrument_code' => 'ia_04a',
+                        'title' => 'Penjelasan Proyek Singkat (DIT)',
+                        'is_active' => true,
+                    ]);
+                }
+                $meta = $inst->additional_metadata ?? [];
+                if (!is_array($meta)) $meta = json_decode($meta, true) ?: [];
+                if ($request->filled('skenario')) $meta['skenario'] = $request->input('skenario');
+                if ($request->filled('waktu_menit')) $meta['waktu_menit'] = (int) preg_replace('/[^0-9]/', '', (string)$request->input('waktu_menit'));
+                if ($request->filled('demonstrasi')) $meta['demonstrasi'] = $request->input('demonstrasi');
+                if ($request->filled('waktu_demo')) $meta['waktu_demo'] = (int) preg_replace('/[^0-9]/', '', (string)$request->input('waktu_demo'));
+                $inst->additional_metadata = $meta;
+                $inst->save();
+            }
+
+            $suksesMsg = 'Penjelasan Proyek Singkat (FR.IA.04A) berhasil disimpan dan disinkronkan ke bank instrumen skema.';
+        }
+        elseif ($kodeForm === 'FR.IA.04B') {
+            $rekomendasi = $request->input('rekomendasi', 'K');
+            $catatan = $request->input('catatan', '');
+            $dataPayload = [
+                'judul_proyek' => $request->input('judul_proyek'),
+                'spesifikasi' => $request->input('spesifikasi', []),
+                'rekomendasi' => $rekomendasi,
+                'catatan' => $catatan,
+                'saved_at' => now()->toDateTimeString(),
+            ];
+            $suksesMsg = 'Penilaian Proyek Singkat (FR.IA.04B) berhasil disimpan.';
+        }
+
+        /* ---------------------------------------------------------------------
+           5. AUTO-GRADING UNTUK UJIAN PILIHAN GANDA (FR.IA.05C) & KUNCI ASESOR (FR.IA.05B / FR.IA.05A)
+           --------------------------------------------------------------------- */
+        elseif ($kodeForm === 'FR.IA.05C') {
             $masterSoal = self::getSoalIa05($pendaftaran->skema_id);
             $jawabanAsesi = $request->input('jawaban', []);
             $totalSoal = count($masterSoal);
@@ -901,7 +1055,7 @@ class FormulirController extends Controller
             $detailHasil = [];
 
             foreach ($masterSoal as $no => $item) {
-                $kunci = strtoupper(trim($item['kunci']));
+                $kunci = strtoupper(trim($item['kunci'] ?? ''));
                 $pilihan = isset($jawabanAsesi[$no]) ? strtoupper(trim($jawabanAsesi[$no])) : null;
                 $isBenar = ($pilihan !== null && $pilihan === $kunci);
 
@@ -954,7 +1108,7 @@ class FormulirController extends Controller
         }
 
         /* ---------------------------------------------------------------------
-           2. WORKFLOW UJIAN ESAI (FR.IA.06C)
+           6. WORKFLOW UJIAN ESAI (FR.IA.06C)
            --------------------------------------------------------------------- */
         elseif ($kodeForm === 'FR.IA.06C') {
             $existingRecord = IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.06C')->first();
@@ -970,12 +1124,11 @@ class FormulirController extends Controller
 
                 // Validasi: Seluruh butir soal esai wajib dijawab
                 foreach ($masterSoal as $no => $item) {
-                    if (!isset($jawabanEsai[$no]) || trim($jawabanEsai[$no]) === '') {
+                    if (!isset($jawabanEsai[$no]) || trim((string)$jawabanEsai[$no]) === '') {
                         return back()->withInput()->with('error', 'Gagal mengirim: Soal Esai No. ' . $no . ' belum Anda jawab. Seluruh butir soal esai wajib diisi sebelum mengumpulkan.');
                     }
                 }
 
-                // Asesi mengumpulkan lembar jawaban -> status = submitted
                 $status = 'submitted';
                 $rekomendasi = 'Menunggu Evaluasi';
                 $catatan = 'Lembar jawaban esai telah dikirimkan oleh asesi pada ' . now()->format('d-m-Y H:i') . ' dan siap dievaluasi oleh asesor.';
@@ -987,7 +1140,6 @@ class FormulirController extends Controller
                 ];
                 $suksesMsg = 'Jawaban Ujian Esai (FR.IA.06C) berhasil dikumpulkan dan dikunci! Status: Menunggu Koreksi oleh Asesor.';
             } else {
-                // Asesor melakukan penilaian / grading -> status = completed
                 $status = 'completed';
                 $rekomendasi = $request->input('rekomendasi', 'K');
                 $catatan = $request->input('catatan', 'Seluruh butir soal esai telah dinilai dan memenuhi kriteria unjuk kerja.');
@@ -1009,7 +1161,7 @@ class FormulirController extends Controller
         }
 
         /* ---------------------------------------------------------------------
-           3. WORKFLOW PERTANYAAN LISAN / DPL (FR.IA.07)
+           7. WORKFLOW PERTANYAAN LISAN / DPL (FR.IA.07)
            --------------------------------------------------------------------- */
         elseif ($kodeForm === 'FR.IA.07') {
             $status = 'completed';
@@ -1025,7 +1177,126 @@ class FormulirController extends Controller
         }
 
         /* ---------------------------------------------------------------------
-           4. DEFAULT UNTUK FORMULIR LAINNYA
+           8. CEKLIS VERIFIKASI PORTOFOLIO (FR.IA.08)
+           --------------------------------------------------------------------- */
+        elseif ($kodeForm === 'FR.IA.08') {
+            $status = 'completed';
+            $rekomendasi = $request->input('rekomendasi', 'K');
+            $catatan = $request->input('catatan', $request->input('bukti_tambahan', ''));
+            $dataPayload = [
+                'dokumen_portofolio' => $request->input('dokumen_portofolio', []),
+                'klarifikasi_elemen' => $request->input('klarifikasi_elemen', []),
+                'bukti_tambahan' => $request->input('bukti_tambahan'),
+                'rekomendasi' => $rekomendasi,
+                'catatan' => $catatan,
+                'saved_at' => now()->toDateTimeString(),
+            ];
+            $suksesMsg = 'Ceklis Verifikasi Portofolio (FR.IA.08) berhasil disimpan.';
+        }
+
+        /* ---------------------------------------------------------------------
+           9. PERTANYAAN WAWANCARA (FR.IA.09)
+           --------------------------------------------------------------------- */
+        elseif ($kodeForm === 'FR.IA.09') {
+            $status = 'completed';
+            $rekomendasi = $request->input('rekomendasi', 'K');
+            $catatan = $request->input('catatan', $request->input('kesimpulan', ''));
+            $dataPayload = [
+                'pertanyaan_wawancara' => $request->input('pertanyaan_wawancara', []),
+                'kesimpulan' => $request->input('kesimpulan'),
+                'rekomendasi' => $rekomendasi,
+                'catatan' => $catatan,
+                'saved_at' => now()->toDateTimeString(),
+            ];
+            $suksesMsg = 'Pertanyaan Wawancara (FR.IA.09) berhasil disimpan.';
+        }
+
+        /* ---------------------------------------------------------------------
+           10. VERIFIKASI PIHAK KETIGA (FR.IA.10)
+           --------------------------------------------------------------------- */
+        elseif ($kodeForm === 'FR.IA.10') {
+            $status = 'completed';
+            $rekomendasi = $request->input('rekomendasi', 'K');
+            $catatan = $request->input('catatan', '');
+            $dataPayload = [
+                'supervisor' => [
+                    'nama' => $request->input('nama_supervisor'),
+                    'jabatan' => $request->input('jabatan'),
+                    'tempat_kerja' => $request->input('tempat_kerja'),
+                    'alamat' => $request->input('alamat'),
+                    'telepon' => $request->input('telepon'),
+                ],
+                'pertanyaan_k3_performa' => [
+                    'q_k3' => $request->input('q_k3'),
+                    'q_tim' => $request->input('q_tim'),
+                    'q_kelola' => $request->input('q_kelola'),
+                    'q_adaptasi' => $request->input('q_adaptasi'),
+                    'q_respon' => $request->input('q_respon'),
+                    'q_kontak' => $request->input('q_kontak'),
+                ],
+                'wawancara' => [
+                    'hubungan' => $request->input('hubungan'),
+                    'lama_bekerja' => $request->input('lama_bekerja'),
+                    'kedekatan' => $request->input('kedekatan'),
+                    'pengalaman_teknis' => $request->input('pengalaman_teknis'),
+                    'testimoni_kinerja' => $request->input('testimoni_kinerja'),
+                    'kebutuhan_pelatihan' => $request->input('kebutuhan_pelatihan'),
+                    'catatan_tambahan' => $request->input('catatan_tambahan'),
+                ],
+                'rekomendasi' => $rekomendasi,
+                'catatan' => $catatan,
+                'saved_at' => now()->toDateTimeString(),
+            ];
+            $suksesMsg = 'Verifikasi Pihak Ketiga (FR.IA.10) berhasil disimpan.';
+        }
+
+        /* ---------------------------------------------------------------------
+           11. CEKLIS MENINJAU ASESMEN / REVIU PRODUK (FR.IA.11)
+           --------------------------------------------------------------------- */
+        elseif ($kodeForm === 'FR.IA.11') {
+            $status = 'completed';
+            $rekomendasi = $request->input('rekomendasi', 'K');
+            $rekomendasi = $request->input('rekomendasi', $request->input('rekomendasi_crp', 'kompeten'));
+            $catatan = $request->input('catatan', '');
+            $dataPayload = [
+                'data_teknis' => [
+                    'nama_produk' => $request->input('nama_produk'),
+                    'standar_industri' => $request->input('standar_industri'),
+                    'dimensi_format' => $request->input('dimensi_format'),
+                    'bahan_teknologi' => $request->input('bahan_teknologi'),
+                    'kapasitas_ukuran' => $request->input('kapasitas_ukuran'),
+                    'data_teknis' => $request->input('data_teknis_detail'),
+                    'tgl_pengoperasian' => $request->input('tgl_pengoperasian'),
+                    'gambar_produk' => $request->input('gambar_produk'),
+                ],
+                'reviu_spesifikasi' => $request->input('reviu_spesifikasi', []),
+                'reviu_dimensi' => $request->input('reviu_dimensi', []),
+                'rekomendasi' => $rekomendasi,
+                'observasi_detail' => [
+                    'kelompok_pekerjaan' => $request->input('obs_kelompok_pekerjaan'),
+                    'unit' => $request->input('obs_unit'),
+                    'elemen' => $request->input('obs_elemen'),
+                    'kuk' => $request->input('obs_kuk'),
+                ],
+                'validator' => [
+                    'penyusun_2_nama' => $request->input('penyusun_2_nama'),
+                    'penyusun_2_met' => $request->input('penyusun_2_met'),
+                    'penyusun_2_ttd' => $request->input('penyusun_2_ttd'),
+                    'validator_1_nama' => $request->input('validator_1_nama'),
+                    'validator_1_met' => $request->input('validator_1_met'),
+                    'validator_1_ttd' => $request->input('validator_1_ttd'),
+                    'validator_2_nama' => $request->input('validator_2_nama'),
+                    'validator_2_met' => $request->input('validator_2_met'),
+                    'validator_2_ttd' => $request->input('validator_2_ttd'),
+                ],
+                'catatan' => $catatan,
+                'saved_at' => now()->toDateTimeString(),
+            ];
+            $suksesMsg = 'Ceklis Reviu Produk (FR.IA.11) berhasil disimpan.';
+        }
+
+        /* ---------------------------------------------------------------------
+           12. DEFAULT UNTUK FORMULIR LAINNYA
            --------------------------------------------------------------------- */
         else {
             $rekomendasi = $request->rekomendasi ?? ($request->rekomendasi_cvp ?? ($request->rekomendasi_crp ?? 'K'));
@@ -1052,9 +1323,6 @@ class FormulirController extends Controller
         return back()->with('sukses', $suksesMsg);
     }
 
-    /**
-     * Action Simpan Tanda Tangan & Verifikasi Hasil Penilaian oleh Asesi
-     */
     public function simpanTtdAsesiIa(Request $request, $kodeForm, $pendaftaranId)
     {
         $user = auth()->user();
@@ -1066,6 +1334,11 @@ class FormulirController extends Controller
         $kodeForm = strtoupper(trim($kodeForm));
         abort_unless($pendaftaran->isInstrumenAktif($kodeForm), 422,
             'Instrumen ini tidak aktif pada MAPA.02 untuk pendaftaran tersebut.');
+
+        if ($pendaftaran->hasMapa02Config()) {
+            abort_unless($pendaftaran->isInstrumenAktif($kodeForm), 422,
+                'Instrumen ini tidak aktif pada MAPA.02 untuk pendaftaran tersebut.');
+        }
 
         $tandaTangan = $request->tanda_tangan ?? ($user->tanda_tangan ?? ($pendaftaran->tanda_tangan_asesi ?? null));
 
