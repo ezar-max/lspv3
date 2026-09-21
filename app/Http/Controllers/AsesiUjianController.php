@@ -353,38 +353,51 @@ class AsesiUjianController extends Controller
         $sisaDetik = $pendaftaran->jadwal ? $pendaftaran->jadwal->sisa_detik_ujian : 5400;
         $detikMenujuMulai = $pendaftaran->jadwal ? $pendaftaran->jadwal->detik_menuju_mulai : 0;
 
-        $soalCbt = self::getDaftarSoalCbt($pendaftaran->skema);
-        $soalEsai = self::getDaftarSoalEsai($pendaftaran->skema);
-        $panduanPraktik = self::getPanduanPraktikIa02($pendaftaran->skema);
+        $instrumenAsesi = $pendaftaran->getInstrumenAsesi();
+        $hasCbt = isset($instrumenAsesi['cbt']);
+        $hasEsai = isset($instrumenAsesi['esai']);
+        $hasPraktik = isset($instrumenAsesi['praktik']);
 
-        $recordIa05 = IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.05')->first();
-        $recordIa06 = IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.06')->first();
-        $recordIa02 = IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.02')->first();
+        $soalCbt = [];
+        $recordIa05 = null;
+        $savedJawabanPg = [];
+        if ($hasCbt) {
+            $soalCbt = self::getDaftarSoalCbt($pendaftaran->skema);
+            $recordIa05 = IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.05')->first();
+            $savedJawabanPg = $recordIa05 ? ($recordIa05->data_jawaban['jawaban_pg'] ?? []) : [];
+        }
 
-        $savedJawabanPg = $recordIa05 ? ($recordIa05->data_jawaban['jawaban_pg'] ?? []) : [];
-        $savedJawabanEsai = $recordIa06 ? ($recordIa06->data_jawaban['jawaban_esai'] ?? []) : [];
-        $savedPraktik = $recordIa02 ? ($recordIa02->data_jawaban ?? []) : [];
+        $soalEsai = [];
+        $recordIa06 = null;
+        $savedJawabanEsai = [];
+        if ($hasEsai) {
+            $soalEsai = self::getDaftarSoalEsai($pendaftaran->skema);
+            $recordIa06 = IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.06')->first();
+            $savedJawabanEsai = $recordIa06 ? ($recordIa06->data_jawaban['jawaban_esai'] ?? []) : [];
+        }
+
+        $panduanPraktik = [];
+        $recordIa02 = null;
+        $savedPraktik = [];
+        $dokumenPraktik = null;
+        if ($hasPraktik) {
+            $panduanPraktik = self::getPanduanPraktikIa02($pendaftaran->skema);
+            $recordIa02 = IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.02')->first();
+            $savedPraktik = $recordIa02 ? ($recordIa02->data_jawaban ?? []) : [];
+            $dokumenPraktik = $pendaftaran->dokumen ? $pendaftaran->dokumen->where('jenis_dokumen', 'Hasil Proyek / Laporan Praktik FR.IA.02')->first() : null;
+        }
 
         $isSubmitted = ($recordIa05 && $recordIa05->status === 'submitted') 
             || ($pendaftaran->status_pendaftaran === 'selesai');
 
-        $dokumenPraktik = $pendaftaran->dokumen->where('jenis_dokumen', 'Hasil Proyek / Laporan Praktik FR.IA.02')->first();
-
-        $instrumenAsesi = $pendaftaran->skema ? $pendaftaran->skema->getInstrumenAsesi() : [];
-        $defaultTab = 'cbt';
+        $availableTabs = array_keys($instrumenAsesi);
         $requestedTab = $request->get('tab');
-        if ($requestedTab && in_array($requestedTab, ['cbt', 'esai', 'praktik', 'proyek'])) {
+        if ($requestedTab && in_array($requestedTab, $availableTabs)) {
             $defaultTab = $requestedTab;
-        } elseif ($pendaftaran->skema) {
-            if ($pendaftaran->skema->hasInstrumen('FR.IA.05')) {
-                $defaultTab = 'cbt';
-            } elseif ($pendaftaran->skema->hasInstrumen('FR.IA.06')) {
-                $defaultTab = 'esai';
-            } elseif ($pendaftaran->skema->hasInstrumen('FR.IA.02')) {
-                $defaultTab = 'praktik';
-            } elseif (!empty($instrumenAsesi)) {
-                $defaultTab = array_key_first($instrumenAsesi);
-            }
+        } elseif (!empty($availableTabs)) {
+            $defaultTab = $availableTabs[0];
+        } else {
+            $defaultTab = 'praktik';
         }
 
         return view('asesi.ruang-uji', compact(

@@ -336,7 +336,7 @@
         <!-- Tab Navigasi Segmented (Smooth & Sleek) -->
         <div class="px-5 py-2.5 bg-slate-50/40">
             <div class="inline-flex p-1 bg-slate-100 rounded-xl border border-slate-200/80 gap-1 overflow-x-auto max-w-full text-xs">
-                @if(!empty($soalCbt))
+                @if(!empty($instrumenAsesi['cbt']) && !empty($soalCbt))
                     <button type="button" 
                             @click="activeTab = 'cbt'"
                             class="px-3.5 py-1.5 rounded-lg font-semibold transition-all duration-150 flex items-center gap-2 shrink-0 cursor-pointer"
@@ -349,7 +349,7 @@
                     </button>
                 @endif
 
-                @if(!empty($soalEsai))
+                @if(!empty($instrumenAsesi['esai']) && !empty($soalEsai))
                     <button type="button" 
                             @click="activeTab = 'esai'"
                             class="px-3.5 py-1.5 rounded-lg font-semibold transition-all duration-150 flex items-center gap-2 shrink-0 cursor-pointer"
@@ -362,15 +362,17 @@
                     </button>
                 @endif
 
-                <button type="button" 
-                        @click="activeTab = 'praktik'"
-                        class="px-3.5 py-1.5 rounded-lg font-semibold transition-all duration-150 flex items-center gap-2 shrink-0 cursor-pointer"
-                        :class="activeTab === 'praktik' ? 'bg-white text-blue-700 shadow-xs border border-slate-200/70' : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'">
-                    <span>FR.IA.02 (Tugas Praktik Demonstrasi)</span>
-                    @if($dokumenPraktik)
-                        <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-                    @endif
-                </button>
+                @if(!empty($instrumenAsesi['praktik']))
+                    <button type="button" 
+                            @click="activeTab = 'praktik'"
+                            class="px-3.5 py-1.5 rounded-lg font-semibold transition-all duration-150 flex items-center gap-2 shrink-0 cursor-pointer"
+                            :class="activeTab === 'praktik' ? 'bg-white text-blue-700 shadow-xs border border-slate-200/70' : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'">
+                        <span>FR.IA.02 (Tugas Praktik Demonstrasi)</span>
+                        @if($dokumenPraktik)
+                            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                        @endif
+                    </button>
+                @endif
             </div>
         </div>
     </div>
@@ -378,7 +380,7 @@
     <!-- =========================================================================
          TAB 1: FR.IA.05 CBT PILIHAN GANDA (ANIMATED, RINGAN, NON-DARK)
          ========================================================================= -->
-    @if(!empty($soalCbt))
+    @if(!empty($instrumenAsesi['cbt']) && !empty($soalCbt))
         <div x-show="activeTab === 'cbt'" 
              x-transition:enter="transition ease-out duration-200"
              x-transition:enter-start="opacity-0 translate-y-1"
@@ -557,7 +559,7 @@
     <!-- =========================================================================
          TAB 2: FR.IA.06 ESAI TERTULIS (ANIMATED & RINGKAS)
          ========================================================================= -->
-    @if(!empty($soalEsai))
+    @if(!empty($instrumenAsesi['esai']) && !empty($soalEsai))
         <div x-show="activeTab === 'esai'" 
              x-transition:enter="transition ease-out duration-200"
              x-transition:enter-start="opacity-0 translate-y-1"
@@ -614,6 +616,7 @@
     <!-- =========================================================================
          TAB 3: FR.IA.02 TUGAS PRAKTIK DEMONSTRASI (ANIMATED & STREAMLINED)
          ========================================================================= -->
+    @if(!empty($instrumenAsesi['praktik']))
     <div x-show="activeTab === 'praktik'" 
          x-transition:enter="transition ease-out duration-200"
          x-transition:enter-start="opacity-0 translate-y-1"
@@ -688,6 +691,7 @@
             </div>
         </div>
     </div>
+    @endif
 
     <!-- =========================================================================
          MODAL KONFIRMASI PENGUMPULAN FINAL (LIGHT BACKDROP, SMOOTH ANIMATION)
@@ -723,23 +727,35 @@
 
             <!-- Ringkasan Statistik Pengerjaan -->
             <div class="bg-slate-50/80 border border-slate-200/80 rounded-xl p-4 text-xs space-y-2.5">
-                <div class="flex justify-between items-center">
-                    <span class="text-slate-600">Soal Teori CBT (FR.IA.05):</span>
-                    <span class="font-bold text-slate-900"><span x-text="getTotalTerjawabCbt()"></span> / {{ $totalSoalCbt }} Terjawab</span>
-                </div>
-                @if($totalSoalEsai > 0)
+                @if(!empty($instrumenAsesi['cbt']))
+                    <div class="flex justify-between items-center">
+                        <span class="text-slate-600">Soal Teori CBT (FR.IA.05):</span>
+                        <span class="font-bold text-slate-900"><span x-text="getTotalTerjawabCbt()"></span> / {{ $totalSoalCbt }} Terjawab</span>
+                    </div>
+                @endif
+                @if(!empty($instrumenAsesi['esai']) && $totalSoalEsai > 0)
                     <div class="flex justify-between items-center">
                         <span class="text-slate-600">Soal Esai (FR.IA.06):</span>
                         <span class="font-bold text-slate-900"><span x-text="getTotalTerjawabEsai()"></span> / {{ $totalSoalEsai }} Terjawab</span>
                     </div>
                 @endif
+                @if(!empty($instrumenAsesi['praktik']))
+                    <div class="flex justify-between items-center">
+                        <span class="text-slate-600">Laporan Praktik (FR.IA.02):</span>
+                        <span class="font-bold {{ $dokumenPraktik ? 'text-emerald-600' : 'text-slate-500' }}">
+                            {{ $dokumenPraktik ? 'Sudah Diunggah' : 'Belum Ada File / Catatan' }}
+                        </span>
+                    </div>
+                @endif
             </div>
 
             <!-- Peringatan jika ada soal belum terjawab -->
-            <div x-show="getUnansweredCbt() > 0" class="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 flex items-start gap-2">
-                <svg class="w-4 h-4 text-amber-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-                <span>Masih ada <strong x-text="getUnansweredCbt()"></strong> butir soal CBT yang belum terjawab.</span>
-            </div>
+            @if(!empty($instrumenAsesi['cbt']))
+                <div x-show="getUnansweredCbt() > 0" class="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 flex items-start gap-2">
+                    <svg class="w-4 h-4 text-amber-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                    <span>Masih ada <strong x-text="getUnansweredCbt()"></strong> butir soal CBT yang belum terjawab.</span>
+                </div>
+            @endif
 
             <p class="text-xs text-slate-500 leading-relaxed">
                 Setelah formulir dikumpulkan, Anda tidak dapat mengubah jawaban kembali. Seluruh hasil akan langsung disimpan dan diserahkan kepada Asesor Penguji.

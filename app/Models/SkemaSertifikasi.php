@@ -68,6 +68,16 @@ class SkemaSertifikasi extends Model
         return $this->hasOne(MasterAk07::class, 'skema_id');
     }
 
+    public function mapa01()
+    {
+        return $this->hasOne(Mapa01::class, 'skema_id')->whereNull('pendaftaran_id');
+    }
+
+    public function mapa02()
+    {
+        return $this->hasOne(Mapa02::class, 'skema_id')->whereNull('pendaftaran_id');
+    }
+
     /**
      * Normalisasi kode instrumen ke format canonical internal (contoh: 'FR.IA.01' -> 'ia01')
      */
@@ -114,6 +124,50 @@ class SkemaSertifikasi extends Model
         }
 
         // Fallback jika belum dikonfigurasi di master: standar vokasi BNSP mencakup IA.01, IA.02, IA.03, IA.05, IA.06
+        // Cek apakah ada konfigurasi FR.MAPA.02 skema
+        $mapa02 = $this->relationLoaded('mapa02') ? $this->mapa02 : $this->mapa02()->first();
+        if ($mapa02 && !empty($mapa02->matriks_peta) && is_array($mapa02->matriks_peta)) {
+            $hasClo = false;
+            $hasDpt = false;
+            $hasPmo = false;
+            $hasDpe = false;
+            $hasDpl = false;
+            $hasVp = false;
+            $hasPw = false;
+            $hasCrp = false;
+
+            foreach ($mapa02->matriks_peta as $unitData) {
+                if (is_array($unitData)) {
+                    foreach ($unitData as $elemData) {
+                        if (is_array($elemData)) {
+                            foreach ($elemData as $item) {
+                                if (is_array($item)) {
+                                    if (!empty($item['clo'])) $hasClo = true;
+                                    if (!empty($item['dpt'])) $hasDpt = true;
+                                    if (!empty($item['pmo'])) $hasPmo = true;
+                                    if (!empty($item['dpe'])) $hasDpe = true;
+                                    if (!empty($item['dpl'])) $hasDpl = true;
+                                    if (!empty($item['vp']))  $hasVp  = true;
+                                    if (!empty($item['pw']))  $hasPw  = true;
+                                    if (!empty($item['crp'])) $hasCrp = true;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            if ($target === 'ia01') return $hasClo;
+            if ($target === 'ia02') return $hasDpt || $hasClo;
+            if ($target === 'ia03' || $target === 'ia07') return $hasPmo || $hasDpl;
+            if ($target === 'ia05' || $target === 'ia06') return $hasDpe;
+            if ($target === 'ia08') return $hasVp;
+            if ($target === 'ia09') return $hasPw;
+            if ($target === 'ia11') return $hasCrp;
+            if ($target === 'ia04a' || $target === 'ia04') return false;
+        }
+
+        // Fallback jika belum dikonfigurasi di master maupun MAPA: standar vokasi BNSP mencakup IA.01, IA.02, IA.03, IA.05, IA.06
         return in_array($target, ['ia01', 'ia02', 'ia03', 'ia05', 'ia06']);
     }
 

@@ -246,23 +246,33 @@
                                 <!-- AK.07 Status Badge -->
                                 <div>
                                     @php $ak07P = $p->ak07Adjustment; @endphp
+                                    <a href="{{ route('asesor.pendaftaran.ak07.edit', $p->id) }}" class="inline-block group" title="Buka Formulir FR.AK.07 Peserta">
                                     @if($ak07P && $ak07P->isConfirmed())
                                         <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold" title="FR.AK.07 Disetujui & Sah oleh Asesi">
                                             AK.07 Sah
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold group-hover:bg-emerald-100 transition-colors" title="FR.AK.07 Disetujui & Sah oleh Asesi">
+                                            FR.AK.07 Sah
                                         </span>
                                     @elseif($ak07P && !empty($ak07P->asesor_signature))
                                         <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-bold" title="FR.AK.07 Diselaraskan Master, Menunggu TTD Asesi">
                                             AK.07 Menunggu Asesi
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-bold group-hover:bg-blue-100 transition-colors" title="FR.AK.07 Diselaraskan Master, Menunggu TTD Asesi">
+                                            FR.AK.07 Menunggu Asesi
                                         </span>
                                     @elseif($ak07P)
                                         <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-bold" title="FR.AK.07 Draf">
                                             AK.07 Draf
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-bold group-hover:bg-amber-100 transition-colors" title="FR.AK.07 Draf">
+                                            FR.AK.07 Draf
                                         </span>
                                     @else
                                         <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100 text-slate-500 border border-slate-200 text-[10px] font-medium" title="Belum Ada Penyesuaian Asesmen">
                                             AK.07
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100 text-slate-500 border border-slate-200 text-[10px] font-medium group-hover:bg-slate-200 transition-colors" title="Belum Ada Penyesuaian Asesmen">
+                                            FR.AK.07
                                         </span>
                                     @endif
+                                    </a>
                                 </div>
 
                                 <!-- Assessment Live Badge -->

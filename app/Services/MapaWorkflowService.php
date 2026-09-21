@@ -822,24 +822,28 @@ class MapaWorkflowService
         }
 
         return DB::transaction(function () use ($skema, $sanitizedMatrix, $catatan, $rawSignature, $isConfirm, $asesorId) {
-            $adminTtds = Pengguna::whereIn('peran', ['admin', 'superadmin'])->pluck('tanda_tangan')->filter()->toArray();
-            if ($rawSignature && in_array($rawSignature, $adminTtds, true)) {
-                $rawSignature = null;
-            }
+            $currentUser = auth()->user();
+            $isAdmin = $currentUser && in_array($currentUser->peran, ['admin', 'superadmin']);
 
+            // Simpan tanda tangan yang dikirimkan (profil atau canvas digital)
             $ttdPath = $this->saveSignatureFile($rawSignature, null, 'mapa02_master_' . $skema->id);
+
+            // Jika belum ada file tersimpan tapi dikonfirmasi:
             if (empty($ttdPath) && $isConfirm) {
-                if (auth()->check() && auth()->user()->peran === 'asesor') {
-                    $ttdPath = auth()->user()->tanda_tangan;
+                if ($isAdmin) {
+                    $ttdPath = $currentUser->tanda_tangan;
+                } elseif ($currentUser && $currentUser->peran === 'asesor') {
+                    $ttdPath = $currentUser->tanda_tangan;
                 } else {
-                    $asesorUser = Pengguna::find($asesorId) ?: Pengguna::where('peran', 'asesor')->where('skema_id', $skema->id)->first();
-                    $ttdPath = $asesorUser?->tanda_tangan;
+                    $signerUser = Pengguna::find($asesorId) ?: Pengguna::where('peran', 'asesor')->where('skema_id', $skema->id)->first();
+                    $ttdPath = $signerUser?->tanda_tangan;
                 }
             }
 
+            // Fallback tanda tangan digital SVG jika profil kosong
             if ($isConfirm && empty($ttdPath)) {
-                $asesorUser = (auth()->check() && auth()->user()->peran === 'asesor') ? auth()->user() : (Pengguna::find($asesorId) ?: Pengguna::where('peran', 'asesor')->where('skema_id', $skema->id)->first());
-                $nama = $asesorUser ? $asesorUser->nama_lengkap : 'Asesor Penguji';
+                $signerUser = $isAdmin ? $currentUser : (($currentUser && $currentUser->peran === 'asesor') ? $currentUser : (Pengguna::find($asesorId) ?: Pengguna::where('peran', 'asesor')->where('skema_id', $skema->id)->first()));
+                $nama = $signerUser ? $signerUser->nama_lengkap : ($isAdmin ? 'Administrator LSP' : 'Asesor Penguji');
                 $svgSig = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="220" height="60"><text x="10" y="38" font-family="Brush Script MT, cursive, sans-serif" font-size="26" fill="%231e3a8a">' . urlencode($nama) . '</text></svg>';
                 $ttdPath = $this->saveSignatureFile($svgSig, null, 'mapa02_master_' . $skema->id) ?: $svgSig;
             }

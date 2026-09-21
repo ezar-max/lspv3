@@ -80,8 +80,10 @@
                     <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">No. Reg: {{ $pendaftaran->nomor_pendaftaran }}</span>
                     <span class="text-slate-300">&bull;</span>
                     <a href="{{ route('asesor.skema.ak-07', $pendaftaran->skema_id) }}" target="_blank" class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition shadow-2xs" title="Buka Master Formulir Penyesuaian Asesmen (FR.AK.07)">
+                    <a href="{{ route('asesor.pendaftaran.ak07.edit', $pendaftaran->id) }}" target="_blank" class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition shadow-2xs" title="Buka Formulir Penyesuaian Asesmen Peserta (FR.AK.07)">
                         <i class="fa-solid fa-file-pen text-indigo-600"></i>
                         <span>Master FR.AK.07</span>
+                        <span>FR.AK.07</span>
                     </a>
 
                     @if($pendaftaran->jadwal)

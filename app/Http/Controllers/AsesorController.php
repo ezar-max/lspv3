@@ -15,6 +15,7 @@ use App\Models\Pengguna;
 use App\Models\MasterAk01;
 use App\Models\MasterAk07;
 use App\Models\SchemeMasterInstrument;
+use App\Notifications\SystemAlert;
 use App\Services\MapaWorkflowService;
 use Illuminate\Http\Request;
 
@@ -905,14 +906,33 @@ class AsesorController extends Controller
     {
         $user = auth()->user();
         $skema = $this->authorizeSkemaAccess((int) $skemaId);
+        $isAdmin = in_array($user->peran, ['admin', 'superadmin']);
 
-        $schemeAsesor = ($user->peran === 'asesor') 
-            ? $user 
-            : (Pengguna::where('peran', 'asesor')->where('skema_id', $skema->id)->first()
-               ?? Pengguna::where('peran', 'asesor')->first());
-        $effectiveAsesorId = $schemeAsesor?->id ?? $user->id;
+        // Jika dibikin/dibuka di admin, gunakan data admin.
+        // Jika dibuka di asesor, jangan diubah (tetap gunakan asesor).
+        if ($isAdmin) {
+            $effectiveAsesorId = $user->id;
+            $schemeAsesor = $user;
+        } else {
+            $schemeAsesor = ($user->peran === 'asesor') 
+                ? $user 
+                : (Pengguna::where('peran', 'asesor')->where('skema_id', $skema->id)->first()
+                   ?? Pengguna::where('peran', 'asesor')->first());
+            $effectiveAsesorId = $schemeAsesor?->id ?? $user->id;
+        }
 
         $mapa02 = $this->mapaService->getOrCreateMasterMapa02($skema, $effectiveAsesorId);
+
+        // Jika dokumen master sudah tersimpan dan ada asesor/pembuatnya:
+        if ($mapa02->exists && $mapa02->asesor) {
+            if ($isAdmin) {
+                // Di portal admin, selalu gunakan identitas admin yang sedang aktif
+                $schemeAsesor = $user;
+            } else {
+                // Untuk asesor, jangan diubah (tetap gunakan asesor)
+                $schemeAsesor = $mapa02->asesor;
+            }
+        }
 
         $pendaftaran = new PendaftaranAsesi([
             'id' => 0,
@@ -940,12 +960,19 @@ class AsesorController extends Controller
     {
         $user = auth()->user();
         $skema = $this->authorizeSkemaAccess((int) $skemaId);
+        $isAdmin = in_array($user->peran, ['admin', 'superadmin']);
 
-        $schemeAsesor = ($user->peran === 'asesor') 
-            ? $user 
-            : (Pengguna::where('peran', 'asesor')->where('skema_id', $skema->id)->first()
-               ?? Pengguna::where('peran', 'asesor')->first());
-        $effectiveAsesorId = $schemeAsesor?->id ?? $user->id;
+        // Jika dibikin di admin, ttd & id harus data admin.
+        // Jika di asesor, jangan diubah (tetap asesor).
+        if ($isAdmin) {
+            $effectiveAsesorId = $user->id;
+        } else {
+            $schemeAsesor = ($user->peran === 'asesor') 
+                ? $user 
+                : (Pengguna::where('peran', 'asesor')->where('skema_id', $skema->id)->first()
+                   ?? Pengguna::where('peran', 'asesor')->first());
+            $effectiveAsesorId = $schemeAsesor?->id ?? $user->id;
+        }
 
         $isConfirm = $request->input('aksi') === 'konfirmasi';
 
@@ -1052,7 +1079,7 @@ class AsesorController extends Controller
 
         LogAktivitas::catat('Master AK.01', 'Menetapkan dan mengesahkan Master FR.AK.01 untuk Skema ' . $skema->kode_skema . ' (Diterapkan ke ' . $syncedCount . ' asesi)');
 
-        return redirect()->route('asesor.skema.ak-01', $skema->id)
+        return redirect()->route('asesor.mapa', ['skema_id' => $skema->id])
             ->with('sukses', 'Master FR.AK.01 untuk Skema ' . $skema->nama_skema . ' berhasil disimpan dan telah disinkronisasikan ke ' . $syncedCount . ' asesi terdaftar! Formulir sekarang dalam mode terkunci.');
     }
 
@@ -1173,7 +1200,7 @@ class AsesorController extends Controller
 
         LogAktivitas::catat('Master AK.07', 'Menetapkan dan mengesahkan Master FR.AK.07 untuk Skema ' . $skema->kode_skema . ' (Diterapkan ke ' . $syncedCount . ' asesi)');
 
-        return redirect()->route('asesor.skema.ak-07', $skema->id)
+        return redirect()->route('asesor.mapa', ['skema_id' => $skema->id])
             ->with('sukses', 'Master FR.AK.07 untuk Skema ' . $skema->nama_skema . ' berhasil disimpan dan telah disinkronisasikan ke ' . $syncedCount . ' asesi terdaftar! Formulir sekarang dalam mode terkunci.');
     }
 
@@ -1265,6 +1292,42 @@ class AsesorController extends Controller
             $isConfirm,
             $effectiveAsesorId
         );
+
+        if ($isConfirm && $user->peran === 'asesor') {
+            $mapa01 = $pendaftaran->fresh(['skema', 'mapa01']);
+            $validatorData = $mapa01?->mapa01?->penyusun_validator_tabel['validator_1'] ?? [];
+            $isAlreadyValidated = !empty($validatorData['ttd']) || ($validatorData['status_validasi'] ?? null) === 'tervalidasi';
+
+            if (!$isAlreadyValidated) {
+                $admins = Pengguna::whereIn('peran', ['admin', 'superadmin'])
+                    ->where('aktif', true)
+                    ->get();
+
+                foreach ($admins as $admin) {
+                    $hasPendingNotification = $admin->notifications()
+                        ->where('type', SystemAlert::class)
+                        ->get()
+                        ->contains(function ($notification) use ($pendaftaran) {
+                            return ($notification->data['metadata']['mapa01_pendaftaran_id'] ?? null) == $pendaftaran->id
+                                && ($notification->data['metadata']['status'] ?? null) === 'menunggu_validasi';
+                        });
+
+                    if (!$hasPendingNotification) {
+                        $admin->notify(new SystemAlert(
+                            'FR.MAPA.01 Menunggu Validasi',
+                            'Asesor ' . ($user->nama_lengkap ?: 'Asesor') . ' telah mengesahkan FR.MAPA.01 untuk peserta ' . ($pendaftaran->asesi?->nama_lengkap ?: 'Asesi') . '. Dokumen menunggu validasi Admin LSP.',
+                            route('asesor.mapa-01', $pendaftaran->id),
+                            'warning',
+                            [
+                                'mapa01_pendaftaran_id' => $pendaftaran->id,
+                                'skema_id' => $pendaftaran->skema_id,
+                                'status' => 'menunggu_validasi',
+                            ]
+                        ));
+                    }
+                }
+            }
+        }
 
         LogAktivitas::catat('Perencanaan Asesmen (FR.MAPA.01)', 'Menyimpan dokumen FR.MAPA.01 (' . ($isConfirm ? 'Disahkan' : 'Draft') . ') untuk pendaftaran #' . $pendaftaran->nomor_pendaftaran);
 

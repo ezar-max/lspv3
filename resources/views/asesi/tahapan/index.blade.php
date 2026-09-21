@@ -826,6 +826,7 @@
                                         @php
                                             $jwn = $jawabanMap->get($eData->id);
                                             $valSaved = $jwn ? $jwn->nilai_kompetensi : 'K';
+                                            $valSaved = $jwn ? $jwn->nilai_kompetensi : null;
                                         @endphp
                                         @if($eData->kriteriaUnjukKerja && $eData->kriteriaUnjukKerja->count() > 0)
                                             @foreach($eData->kriteriaUnjukKerja as $kData)
@@ -842,10 +843,29 @@
                                                     }
                                                 @endphp
                                                 '{{ $kData->id }}': '{{ $kukStatusVal }}',
+                                                '{{ $kData->id }}': '{{ $kukStatusVal ?? '' }}',
                                             @endforeach
                                         @else
                                             'elem_{{ $eData->id }}': '{{ $valSaved }}',
+                                            'elem_{{ $eData->id }}': '{{ $valSaved ?? '' }}',
                                         @endif
+                                    @endforeach
+                                @endforeach
+                            @endif
+                        },
+                        elemenKuks: {
+                            @if($pendaftaran && $pendaftaran->skema)
+                                @foreach($pendaftaran->skema->unitKompetensi as $uData)
+                                    @foreach($uData->elemenKompetensi as $eData)
+                                        '{{ $eData->id }}': [
+                                            @if($eData->kriteriaUnjukKerja && $eData->kriteriaUnjukKerja->count() > 0)
+                                                @foreach($eData->kriteriaUnjukKerja as $kData)
+                                                    '{{ $kData->id }}',
+                                                @endforeach
+                                            @else
+                                                'elem_{{ $eData->id }}',
+                                            @endif
+                                        ],
                                     @endforeach
                                 @endforeach
                             @endif
@@ -854,6 +874,12 @@
                         getElemenVal(elemenId, kukIds) {
                             if (!kukIds || kukIds.length === 0) {
                                 return this.penilaianKuk['elem_' + elemenId] || 'K';
+                                return this.penilaianKuk['elem_' + elemenId] || '';
+                            }
+                            for (let id of kukIds) {
+                                if (!this.penilaianKuk[id]) {
+                                    return '';
+                                }
                             }
                             for (let id of kukIds) {
                                 if (this.penilaianKuk[id] === 'BK') {
@@ -869,9 +895,17 @@
                         },
                         get totalTerisi() {
                             return this.totalElemen;
+                            let count = 0;
+                            for (let elemId in this.elemenKuks) {
+                                let kukKeys = this.elemenKuks[elemId];
+                                let allFilled = kukKeys.length > 0 && kukKeys.every(k => this.penilaianKuk[k] === 'K' || this.penilaianKuk[k] === 'BK');
+                                if (allFilled) count++;
+                            }
+                            return count;
                         },
                         get isComplete() {
                             return true;
+                            return this.totalElemen > 0 && this.totalTerisi === this.totalElemen;
                         },
                         setAllKGlobal() {
                             @if($isApl02Draft || $isApl02Revision)
@@ -1155,6 +1189,7 @@
                                         @php
                                             $jawaban = $jawabanMap->get($elemen->id);
                                             $nilaiSaved = $jawaban ? $jawaban->nilai_kompetensi : 'K';
+                                            $nilaiSaved = $jawaban ? $jawaban->nilai_kompetensi : null;
                                             $listBukti = $buktiApl02Map->get($elemen->id, collect());
                                             $isLockedForm = ($isApl02Approved || $isApl02Submitted || $isApl02UnderReview || $isApl02Rejected);
 
@@ -1287,6 +1322,7 @@
                                                                    :checked="penilaianKuk['elem_{{ $elemen->id }}'] === 'K'" 
                                                                    {{ $isLockedForm ? 'disabled' : '' }}
                                                                    class="peer hidden apl02-radio-k" required>
+                                                                   class="peer hidden apl02-radio-k">
                                                             <span class="inline-flex items-center justify-center px-3 py-1 rounded-md text-xs transition-all duration-150 select-none border"
                                                                   :class="penilaianKuk['elem_{{ $elemen->id }}'] === 'K' 
                                                                       ? 'bg-emerald-600 text-white font-semibold shadow-xs border-emerald-600' 
@@ -1305,6 +1341,7 @@
                                                                    :checked="penilaianKuk['elem_{{ $elemen->id }}'] === 'BK'" 
                                                                    {{ $isLockedForm ? 'disabled' : '' }}
                                                                    class="peer hidden custom-radio-bk" required>
+                                                                   class="peer hidden custom-radio-bk">
                                                             <span class="inline-flex items-center justify-center px-3 py-1 rounded-md text-xs transition-all duration-150 select-none border"
                                                                   :class="penilaianKuk['elem_{{ $elemen->id }}'] === 'BK' 
                                                                       ? 'bg-rose-600 text-white font-semibold shadow-xs border-rose-600' 
@@ -2514,6 +2551,24 @@
     let targetElemenIdForApl01 = null;
 
     function bukaModalSubmitApl02() {
+        const form = document.getElementById('form-apl02-asesmen');
+        if (form && form._x_dataStack && form._x_dataStack[0]) {
+            const alpineData = form._x_dataStack[0];
+            if (!alpineData.isComplete) {
+                const sisa = (alpineData.totalElemen || 0) - (alpineData.totalTerisi || 0);
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Formulir Belum Lengkap',
+                        text: `Masih ada ${sisa} elemen kompetensi yang belum dinilai. Harap lengkapi penilaian mandiri (K / BK) pada seluruh butir KUK terlebih dahulu sebelum mengirim.`,
+                        confirmButtonColor: '#2563eb'
+                    });
+                } else {
+                    alert(`Masih ada ${sisa} elemen kompetensi yang belum dinilai. Harap lengkapi penilaian mandiri terlebih dahulu.`);
+                }
+                return;
+            }
+        }
         const modal = document.getElementById('modal-konfirmasi-submit-apl02');
         if (modal) {
             modal.classList.remove('hidden');

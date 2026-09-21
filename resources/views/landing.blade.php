@@ -242,7 +242,7 @@
                 @forelse($daftarBerita as $berita)
                     <article class="kartu-berita reveal">
                         @if($berita->gambar)
-                            <a href="{{ route('berita.detail', $berita->slug) }}" class="berita-gambar-wadah">
+                            <a href="{{ route('publik.berita.detail', $berita->slug) }}" class="berita-gambar-wadah">
                                 <img src="{{ asset($berita->gambar) }}" alt="{{ $berita->judul }}" loading="lazy">
                             </a>
                         @endif
@@ -255,12 +255,12 @@
                             </span>
                         </div>
                         <h3 class="berita-judul">
-                            <a href="{{ route('berita.detail', $berita->slug) }}" style="color: inherit; text-decoration: none;">
+                            <a href="{{ route('publik.berita.detail', $berita->slug) }}" style="color: inherit; text-decoration: none;">
                                 {{ $berita->judul }}
                             </a>
                         </h3>
                         <p class="berita-ringkasan">{{ $berita->ringkasan ?: \Illuminate\Support\Str::limit(strip_tags($berita->konten), 120) }}</p>
-                        <a href="{{ route('berita.detail', $berita->slug) }}" class="berita-tautan">
+                        <a href="{{ route('publik.berita.detail', $berita->slug) }}" class="berita-tautan">
                             Baca selengkapnya &rarr;
                         </a>
                     </article>

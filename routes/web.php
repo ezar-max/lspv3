@@ -24,7 +24,6 @@ Route::get('/skema', [PublikController::class, 'daftarSkema'])->name('publik.ske
 Route::get('/skema/{id}', [PublikController::class, 'detailSkema'])->name('publik.skema.detail');
 Route::get('/berita', [PublikController::class, 'daftarBerita'])->name('publik.berita');
 Route::get('/berita/{slug}', [PublikController::class, 'detailBerita'])->name('publik.berita.detail');
-Route::get('/berita/{slug}', [PublikController::class, 'detailBerita'])->name('berita.detail');
 Route::get('/api/skema/{id}/units', [PublikController::class, 'apiSkemaUnits'])->name('api.skema.units');
 Route::get('/kontak', [PublikController::class, 'kontak'])->name('kontak');
 
@@ -228,6 +227,7 @@ Route::middleware(['auth', 'peran:admin'])->prefix('admin')->as('admin.')->group
 
     // Pengaturan Sistem (Alias/Legacy)
     Route::get('/pengaturan', [AdminController::class, 'manajemenAsesor'])->name('pengaturan-sistem');
+    Route::get('/pengaturan', [AdminController::class, 'pengaturanSistem'])->name('pengaturan-sistem');
     Route::post('/pengaturan', [AdminController::class, 'simpanPengaturanSistem'])->name('pengaturan-sistem.simpan');
 
     // ==========================================
@@ -251,6 +251,7 @@ Route::middleware(['auth', 'peran:admin'])->prefix('admin')->as('admin.')->group
         Route::delete('/legalitas/{id}', [\App\Http\Controllers\DokumenAdminController::class, 'hapusLegalitas'])->name('legalitas.hapus');
 
         // Bundel Asesmen & Rekap Portofolio Lengkap
+        Route::get('/bundel/{pendaftaranId}/cetak', [\App\Http\Controllers\DokumenAdminController::class, 'cetakBundelAsesmen'])->name('bundel.cetak');
     });
 });
 
@@ -447,9 +448,11 @@ Route::middleware(['auth'])->prefix('dokumen-asesmen')->as('dokumen-asesmen.')->
 /*
 |--------------------------------------------------------------------------
 | 9. FALLBACK ROUTE: PUBLIC STORAGE ACCESS (PROTECTION FOR WINDOWS/DEV)
+| 9. SECURED STORAGE ACCESS (PROTECTED FALLBACK FOR WINDOWS/DEV)
 |--------------------------------------------------------------------------
 | Memastikan seluruh berkas bukti, tanda tangan, dan dokumen asesi di storage
 | dapat diakses secara langsung jika web server tidak mengikuti symlink/junction.
+| Menyajikan berkas publik & terproteksi dengan validasi traversal dan otorisasi dokumen.
 */
 Route::get('/storage/{path}', function ($path) {
     $fullPath = storage_path('app/public/' . $path);
@@ -458,3 +461,6 @@ Route::get('/storage/{path}', function ($path) {
     }
     return response()->file($fullPath);
 })->where('path', '.*')->name('storage.fallback');
+Route::get('/storage/{path}', [\App\Http\Controllers\StorageFileController::class, 'show'])
+    ->where('path', '.*')
+    ->name('storage.fallback');

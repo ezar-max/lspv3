@@ -122,10 +122,28 @@ class PendaftaranAsesi extends Model
             || !empty($this->tanda_tangan_asesor_ak01);
     }
 
-    public function isMapaConfirmed(): bool
+    public function getEffectiveMapa01()
     {
         $m01 = $this->relationLoaded('mapa01') ? $this->mapa01 : $this->mapa01()->first();
+        if (!$m01 && $this->skema_id) {
+            $m01 = Mapa01::where('skema_id', $this->skema_id)->whereNull('pendaftaran_id')->latest()->first();
+        }
+        return $m01;
+    }
+
+    public function getEffectiveMapa02()
+    {
         $m02 = $this->relationLoaded('mapa02') ? $this->mapa02 : $this->mapa02()->first();
+        if (!$m02 && $this->skema_id) {
+            $m02 = Mapa02::where('skema_id', $this->skema_id)->whereNull('pendaftaran_id')->latest()->first();
+        }
+        return $m02;
+    }
+
+    public function isMapaConfirmed(): bool
+    {
+        $m01 = $this->getEffectiveMapa01();
+        $m02 = $this->getEffectiveMapa02();
 
         return ($m01 && $m01->status_mapa === 'selesai') && ($m02 && $m02->status_mapa === 'selesai');
     }
@@ -442,11 +460,18 @@ class PendaftaranAsesi extends Model
         }
 
         $bukti = (array) ($this->bukti_dikumpulkan ?? []);
+        if (empty($bukti)) {
+            $masterAk01 = MasterAk01::where('skema_id', $this->skema_id)->first();
+            if ($masterAk01 && !empty($masterAk01->bukti_dikumpulkan)) {
+                $bukti = (array) $masterAk01->bukti_dikumpulkan;
+            }
+        }
         $buktiStr = implode(' ', $bukti);
         $hasAk01Config = !empty($bukti);
 
         // Periksa data perencanaan peta instrumen MAPA-02 jika ada
         $mapa02 = $this->relationLoaded('mapa02') ? $this->mapa02 : $this->mapa02()->first();
+        $mapa02 = $this->getEffectiveMapa02();
         $matriksPeta = $mapa02 ? ($mapa02->matriks_peta ?? []) : [];
         $hasMapa02Config = !empty($matriksPeta);
 
@@ -487,12 +512,27 @@ class PendaftaranAsesi extends Model
         $hasIa02 = Str::contains($buktiStr, ['Observasi Langsung', 'L : ', 'Praktik', 'Tugas Praktik']) || $mapaHasDpt || (!$hasAk01Config && !$hasMapa02Config && ($this->skema ? $this->skema->hasInstrumen('FR.IA.02') : true));
         $hasIa03 = Str::contains($buktiStr, ['Observasi Langsung', 'L : ', 'Praktik', 'PMO']) || $mapaHasPmo || (!$hasAk01Config && !$hasMapa02Config && ($this->skema ? $this->skema->hasInstrumen('FR.IA.03') : true));
         $hasL = $hasIa01 || $hasIa02 || $hasIa03;
+        // Cek jika skema memiliki SchemeMasterInstrument aktif eksplisit
+        $hasMasterInstruments = $this->skema ? $this->skema->masterInstruments()->where('is_active', true)->exists() : false;
 
         // 2. Portofolio / Pengalaman Kerja (TL) -> FR.IA.08, FR.IA.09, FR.IA.10
         $hasIa08 = Str::contains($buktiStr, ['Portofolio', 'TL : ', 'Verifikasi']) || $mapaHasVp;
         $hasIa09 = Str::contains($buktiStr, ['Wawancara', 'Portofolio', 'Hasil Pertanyaan Wawancara']) || $mapaHasPw;
         $hasIa10 = Str::contains($buktiStr, ['Portofolio', 'Pihak Ketiga', 'Verifikasi']);
         $hasTL = $hasIa08 || $hasIa09 || $hasIa10;
+        if ($hasMasterInstruments) {
+            $hasIa01 = $this->skema->hasInstrumen('FR.IA.01');
+            $hasIa02 = $this->skema->hasInstrumen('FR.IA.02');
+            $hasIa03 = $this->skema->hasInstrumen('FR.IA.03');
+            $hasIa04 = $this->skema->hasInstrumen('FR.IA.04A');
+            $hasIa04 = $this->skema->hasInstrumen('FR.IA.04A') || $this->skema->hasInstrumen('FR.IA.04');
+            $hasIa05 = $this->skema->hasInstrumen('FR.IA.05');
+            $hasIa06 = $this->skema->hasInstrumen('FR.IA.06');
+            $hasIa07 = $this->skema->hasInstrumen('FR.IA.07');
+            $hasIa08 = $this->skema->hasInstrumen('FR.IA.08');
+            $hasIa09 = $this->skema->hasInstrumen('FR.IA.09');
+            $hasIa10 = $this->skema->hasInstrumen('FR.IA.10');
+            $hasIa11 = $this->skema->hasInstrumen('FR.IA.11');
 
         // 3. Tes Teori / Pengetahuan (T) -> FR.IA.05, FR.IA.06, FR.IA.07
         $hasTTertulis = Str::contains($buktiStr, ['Tertulis', 'Soal Esai', 'Pilihan Ganda', 'T : Tes Tertulis']) || $mapaHasDpe || (!$hasAk01Config && !$hasMapa02Config && ($this->skema ? ($this->skema->hasInstrumen('FR.IA.05') || $this->skema->hasInstrumen('FR.IA.06')) : true));
@@ -500,11 +540,40 @@ class PendaftaranAsesi extends Model
         $hasIa05 = $hasTTertulis;
         $hasIa06 = $hasTTertulis;
         $hasIa07 = $hasTLisan;
+            $hasL = $hasIa01 || $hasIa02 || $hasIa03;
+            $hasTL = $hasIa08 || $hasIa09 || $hasIa10;
+            $hasTTertulis = $hasIa05 || $hasIa06;
+            $hasTLisan = $hasIa07 || $hasIa03;
+            $hasProyek = $hasIa04 || $hasIa11;
+        } else {
+            // 1. Observasi Langsung (L) -> FR.IA.01, FR.IA.02, FR.IA.03
+            $hasIa01 = Str::contains($buktiStr, ['Observasi Langsung', 'L : ', 'Praktik']) || $mapaHasClo || (!$hasAk01Config && !$hasMapa02Config && ($this->skema ? $this->skema->hasInstrumen('FR.IA.01') : true));
+            $hasIa02 = Str::contains($buktiStr, ['Observasi Langsung', 'L : ', 'Praktik', 'Tugas Praktik']) || $mapaHasDpt || $mapaHasClo || (!$hasAk01Config && !$hasMapa02Config && ($this->skema ? $this->skema->hasInstrumen('FR.IA.02') : true));
+            $hasIa03 = Str::contains($buktiStr, ['Observasi Langsung', 'L : ', 'Praktik', 'PMO']) || $mapaHasPmo || (!$hasAk01Config && !$hasMapa02Config && ($this->skema ? $this->skema->hasInstrumen('FR.IA.03') : true));
+            $hasL = $hasIa01 || $hasIa02 || $hasIa03;
 
         // 4. Proyek / Produk Khusus -> FR.IA.04A/B, FR.IA.11
         $hasIa04 = Str::contains($buktiStr, ['Kegiatan Terstruktur', 'Proyek', 'TOR']) || (!$hasAk01Config && !$hasMapa02Config && ($this->skema ? $this->skema->hasInstrumen('FR.IA.04A') : false));
         $hasIa11 = Str::contains($buktiStr, ['Reviu Produk', 'Produk', 'Hasil Reviu Produk']) || $mapaHasCrp || (!$hasAk01Config && !$hasMapa02Config && ($this->skema ? $this->skema->hasInstrumen('FR.IA.11') : false));
         $hasProyek = $hasIa04 || $hasIa11;
+            // 2. Portofolio / Pengalaman Kerja (TL) -> FR.IA.08, FR.IA.09, FR.IA.10
+            $hasIa08 = Str::contains($buktiStr, ['Portofolio', 'TL : ', 'Verifikasi']) || $mapaHasVp;
+            $hasIa09 = Str::contains($buktiStr, ['Wawancara', 'Portofolio', 'Hasil Pertanyaan Wawancara']) || $mapaHasPw;
+            $hasIa10 = Str::contains($buktiStr, ['Portofolio', 'Pihak Ketiga', 'Verifikasi']);
+            $hasTL = $hasIa08 || $hasIa09 || $hasIa10;
+
+            // 3. Tes Teori / Pengetahuan (T) -> FR.IA.05, FR.IA.06, FR.IA.07
+            $hasTTertulis = Str::contains($buktiStr, ['Tertulis', 'Soal Esai', 'Pilihan Ganda', 'T : Tes Tertulis']) || $mapaHasDpe || (!$hasAk01Config && !$hasMapa02Config && ($this->skema ? ($this->skema->hasInstrumen('FR.IA.05') || $this->skema->hasInstrumen('FR.IA.06')) : true));
+            $hasTLisan = Str::contains($buktiStr, ['Lisan', 'Hasil Pertanyaan Lisan', 'T : Tes Lisan']) || $mapaHasDpl || (!$hasAk01Config && !$hasMapa02Config && ($this->skema ? $this->skema->hasInstrumen('FR.IA.07') : false));
+            $hasIa05 = $hasTTertulis;
+            $hasIa06 = $hasTTertulis;
+            $hasIa07 = $hasTLisan;
+
+            // 4. Proyek / Produk Khusus -> FR.IA.04A/B, FR.IA.11
+            $hasIa04 = Str::contains($buktiStr, ['Kegiatan Terstruktur', 'Proyek', 'TOR']) || (!$hasAk01Config && !$hasMapa02Config && ($this->skema ? $this->skema->hasInstrumen('FR.IA.04A') : false));
+            $hasIa11 = Str::contains($buktiStr, ['Reviu Produk', 'Produk', 'Hasil Reviu Produk']) || $mapaHasCrp || (!$hasAk01Config && !$hasMapa02Config && ($this->skema ? $this->skema->hasInstrumen('FR.IA.11') : false));
+            $hasProyek = $hasIa04 || $hasIa11;
+        }
 
         $aktif = [];
         if ($hasIa01) $aktif[] = 'FR.IA.01';
@@ -563,11 +632,81 @@ class PendaftaranAsesi extends Model
     }
 
     /**
+     * Dapatkan daftar formulir asesmen yang relevan untuk dikerjakan Asesi
+     */
+    public function getInstrumenAsesi(): array
+    {
+        $allDefinitions = [
+            'cbt' => [
+                'kode' => 'FR.IA.05',
+                'key' => 'ia05',
+                'tab' => 'cbt',
+                'judul' => 'Ujian Teori CBT Pilihan Ganda',
+                'label' => 'FR.IA.05 (Ujian Teori CBT PG)',
+                'icon' => 'fa-list-check',
+                'badge' => 'CBT PG',
+            ],
+            'esai' => [
+                'kode' => 'FR.IA.06',
+                'key' => 'ia06',
+                'tab' => 'esai',
+                'judul' => 'Ujian Tertulis Esai & Kasus',
+                'label' => 'FR.IA.06 (Ujian Tertulis Esai)',
+                'icon' => 'fa-pen-to-square',
+                'badge' => 'Esai',
+            ],
+            'praktik' => [
+                'kode' => 'FR.IA.02',
+                'key' => 'ia02',
+                'tab' => 'praktik',
+                'judul' => 'Tugas Praktik Demonstrasi',
+                'label' => 'FR.IA.02 (Tugas Praktik Demonstrasi)',
+                'icon' => 'fa-screwdriver-wrench',
+                'badge' => 'Praktik',
+            ],
+            'proyek' => [
+                'kode' => 'FR.IA.04A',
+                'key' => 'ia04a',
+                'tab' => 'proyek',
+                'judul' => 'Penugasan Proyek Singkat / TOR',
+                'label' => 'FR.IA.04A (Proyek / TOR)',
+                'icon' => 'fa-diagram-project',
+                'badge' => 'Proyek',
+            ],
+        ];
+
+        $result = [];
+        if ($this->isInstrumenAktif('FR.IA.05')) {
+            $result['cbt'] = $allDefinitions['cbt'];
+        }
+        if ($this->isInstrumenAktif('FR.IA.06')) {
+            $result['esai'] = $allDefinitions['esai'];
+        }
+        if ($this->isInstrumenAktif('FR.IA.02')) {
+            $result['praktik'] = $allDefinitions['praktik'];
+        }
+        if ($this->isInstrumenAktif('FR.IA.04A') || $this->isInstrumenAktif('FR.IA.04')) {
+            $result['proyek'] = $allDefinitions['proyek'];
+        }
+
+        // Fallback jika belum terkonfigurasi di MAPA / AK-01 tapi skema memiliki instrumen
+        if (empty($result) && $this->skema) {
+            if ($this->skema->hasInstrumen('FR.IA.05')) $result['cbt'] = $allDefinitions['cbt'];
+            if ($this->skema->hasInstrumen('FR.IA.06')) $result['esai'] = $allDefinitions['esai'];
+            if ($this->skema->hasInstrumen('FR.IA.02')) $result['praktik'] = $allDefinitions['praktik'];
+            if ($this->skema->hasInstrumen('FR.IA.04A')) $result['proyek'] = $allDefinitions['proyek'];
+        }
+
+        return $result;
+    }
+
+    /**
      * Dapatkan status instrumen aktif khusus untuk suatu Unit Kompetensi berdasarkan FR.MAPA.02
      */
     public function getInstrumenPerUnit($unitId): array
     {
         $mapa02 = $this->relationLoaded('mapa02') ? $this->mapa02 : $this->mapa02()->first();
+        $mapa02 = $this->getEffectiveMapa02();
         $unitMatriks = $mapa02?->matriks_peta[$unitId] ?? [];
 
         $flags = [

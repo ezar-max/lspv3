@@ -4,6 +4,47 @@
 
 @push('css')
     <link rel="stylesheet" href="{{ asset('css/admin/dashboard-admin.css') }}">
+    <style>
+        .modal-overlay {
+            backdrop-filter: blur(8px) !important;
+            -webkit-backdrop-filter: blur(8px) !important;
+            background: rgba(15, 23, 42, 0.65) !important;
+            transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.25s !important;
+            overscroll-behavior: contain !important;
+        }
+        .modal-konten-modern {
+            background: #ffffff;
+            border-radius: 20px;
+            box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25), 0 0 0 1px rgba(226, 232, 240, 0.9);
+            border: none;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            max-height: 88vh;
+            height: auto;
+            transform: scale(0.96) translateY(8px);
+            transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+            overscroll-behavior: contain;
+        }
+        .modal-konten-modern form,
+        .modal-konten-modern > form {
+            display: flex;
+            flex-direction: column;
+            flex: 1 1 auto;
+            min-height: 0;
+            overflow: hidden;
+        }
+        .modal-overlay.terbuka .modal-konten-modern {
+            transform: scale(1) translateY(0);
+        }
+        .modal-scroll-body {
+            flex: 1 1 auto;
+            min-height: 0;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            scrollbar-width: thin;
+        }
+    </style>
 @endpush
 
 @section('konten')
@@ -169,68 +210,185 @@
 
                                 <!-- MODAL EDIT ASESOR -->
                                 <div class="modal-overlay" id="modalEditAsesor_{{ $asesor->id }}">
-                                    <div class="modal-konten text-left max-w-md">
-                                        <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
-                                            <h3 class="font-bold text-sm text-slate-900">
-                                                Edit Akun Asesor: {{ $asesor->nama_lengkap }}
-                                            </h3>
-                                            <button type="button" onclick="tutupModal('modalEditAsesor_{{ $asesor->id }}')" class="text-slate-400 hover:text-slate-600 text-lg">&times;</button>
+                                    <div class="modal-konten-modern w-[95vw] max-w-2xl text-left">
+                                        <!-- Modal Header -->
+                                        <div class="px-6 py-4 sm:py-5 bg-white border-b border-slate-100 flex items-center justify-between gap-4 shrink-0">
+                                            <div class="flex items-center gap-3.5">
+                                                <div class="w-11 h-11 rounded-2xl bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center shrink-0 shadow-2xs">
+                                                    <i class="fa-solid fa-user-pen text-base"></i>
+                                                </div>
+                                                <div>
+                                                    <div class="flex items-center gap-2">
+                                                        <h3 class="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight">
+                                                            Edit Akun Asesor
+                                                        </h3>
+                                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                                            ID #{{ $asesor->id }}
+                                                        </span>
+                                                    </div>
+                                                    <p class="text-xs text-slate-500 mt-0.5">{{ $asesor->nama_lengkap }} ({{ $asesor->email }})</p>
+                                                </div>
+                                            </div>
+                                            <button type="button" 
+                                                    onclick="tutupModal('modalEditAsesor_{{ $asesor->id }}')" 
+                                                    aria-label="Tutup modal"
+                                                    class="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-400 hover:text-slate-700 transition-colors flex items-center justify-center cursor-pointer">
+                                                <i class="fa-solid fa-xmark text-sm"></i>
+                                            </button>
                                         </div>
 
-                                        <form action="{{ route('admin.asesor.ubah', $asesor->id) }}" method="POST" class="space-y-3.5">
+                                        <form action="{{ route('admin.asesor.ubah', $asesor->id) }}" method="POST" class="flex flex-col flex-1 min-h-0 overflow-hidden">
                                             @csrf
 
-                                            <div>
-                                                <label class="block text-[11px] font-bold text-slate-700 mb-1">Nama Lengkap & Gelar <span class="text-rose-500">*</span></label>
-                                                <input type="text" name="nama_lengkap" required value="{{ $asesor->nama_lengkap }}" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-emerald-500">
+                                            <div class="modal-scroll-body p-6 space-y-5 bg-slate-50/50">
+                                                <!-- SEKSI 1: IDENTITAS & KREDENSIAL -->
+                                                <div class="bg-white rounded-2xl border border-slate-200/90 p-5 space-y-4 shadow-2xs">
+                                                    <div class="flex items-center gap-2 border-b border-slate-100 pb-3">
+                                                        <span class="w-6 h-6 rounded-lg bg-indigo-50 text-indigo-700 font-extrabold text-xs flex items-center justify-center">1</span>
+                                                        <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Identitas & Akses Login</h4>
+                                                    </div>
+
+                                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                        <div>
+                                                            <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                                                                Nama Lengkap & Gelar <span class="text-rose-500">*</span>
+                                                            </label>
+                                                            <div class="relative">
+                                                                <i class="fa-regular fa-user absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
+                                                                <input type="text" 
+                                                                       name="nama_lengkap" 
+                                                                       required 
+                                                                       value="{{ $asesor->nama_lengkap }}" 
+                                                                       class="w-full pl-9 pr-3.5 py-2.5 bg-slate-50/60 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:bg-white focus:outline-none focus:border-indigo-500 focus:ring-3 focus:ring-indigo-500/10 hover:border-slate-300 transition-all shadow-2xs">
+                                                            </div>
+                                                        </div>
+
+                                                        <div>
+                                                            <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                                                                Alamat Email Login <span class="text-rose-500">*</span>
+                                                            </label>
+                                                            <div class="relative">
+                                                                <i class="fa-regular fa-envelope absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
+                                                                <input type="email" 
+                                                                       name="email" 
+                                                                       required 
+                                                                       value="{{ $asesor->email }}" 
+                                                                       class="w-full pl-9 pr-3.5 py-2.5 bg-slate-50/60 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:bg-white focus:outline-none focus:border-indigo-500 focus:ring-3 focus:ring-indigo-500/10 hover:border-slate-300 transition-all shadow-2xs">
+                                                            </div>
+                                                        </div>
+
+                                                        <div>
+                                                            <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                                                                Kata Sandi Baru <span class="text-[10px] text-slate-400 font-normal">(Kosongkan jika tetap)</span>
+                                                            </label>
+                                                            <div class="relative">
+                                                                <i class="fa-solid fa-lock absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
+                                                                <input type="password" 
+                                                                       id="sandi_edit_asesor_{{ $asesor->id }}" 
+                                                                       name="kata_sandi" 
+                                                                       placeholder="Minimal 6 karakter" 
+                                                                       class="w-full pl-9 pr-10 py-2.5 bg-slate-50/60 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder:text-slate-400 placeholder:font-normal focus:bg-white focus:outline-none focus:border-indigo-500 focus:ring-3 focus:ring-indigo-500/10 hover:border-slate-300 transition-all shadow-2xs">
+                                                                <button type="button" 
+                                                                        onclick="toggleSandiVisibility('sandi_edit_asesor_{{ $asesor->id }}', this)" 
+                                                                        aria-label="Tampilkan sandi"
+                                                                        class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 rounded-lg transition-colors cursor-pointer">
+                                                                    <i class="fa-regular fa-eye text-xs"></i>
+                                                                </button>
+                                                            </div>
+                                                        </div>
+
+                                                        <div>
+                                                            <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                                                                No. Telepon / WhatsApp
+                                                            </label>
+                                                            <div class="relative">
+                                                                <i class="fa-brands fa-whatsapp absolute left-3.5 top-1/2 -translate-y-1/2 text-emerald-500 text-xs pointer-events-none"></i>
+                                                                <input type="text" 
+                                                                       name="nomor_telepon" 
+                                                                       value="{{ $asesor->nomor_telepon }}" 
+                                                                       placeholder="Contoh: 081234567890" 
+                                                                       class="w-full pl-9 pr-3.5 py-2.5 bg-slate-50/60 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder:text-slate-400 placeholder:font-normal focus:bg-white focus:outline-none focus:border-indigo-500 focus:ring-3 focus:ring-indigo-500/10 hover:border-slate-300 transition-all shadow-2xs">
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- SEKSI 2: KUALIFIKASI, SKEMA & KEAKTIFAN -->
+                                                <div class="bg-white rounded-2xl border border-slate-200/90 p-5 space-y-4 shadow-2xs">
+                                                    <div class="flex items-center gap-2 border-b border-slate-100 pb-3">
+                                                        <span class="w-6 h-6 rounded-lg bg-indigo-50 text-indigo-700 font-extrabold text-xs flex items-center justify-center">2</span>
+                                                        <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Kualifikasi, Skema & Keaktifan</h4>
+                                                    </div>
+
+                                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                        <div>
+                                                            <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                                                                No. Registrasi MET (BNSP)
+                                                            </label>
+                                                            <div class="relative">
+                                                                <i class="fa-solid fa-id-card absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
+                                                                <input type="text" 
+                                                                       name="nomor_registrasi" 
+                                                                       value="{{ $asesor->nomor_registrasi }}" 
+                                                                       placeholder="Contoh: MET.000.001234.2024" 
+                                                                       class="w-full pl-9 pr-3.5 py-2.5 bg-slate-50/60 border border-slate-200 rounded-xl text-xs font-mono font-semibold text-slate-800 placeholder:text-slate-400 placeholder:font-normal placeholder:font-sans focus:bg-white focus:outline-none focus:border-indigo-500 focus:ring-3 focus:ring-indigo-500/10 hover:border-slate-300 transition-all shadow-2xs">
+                                                            </div>
+                                                        </div>
+
+                                                        <div>
+                                                            <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                                                                Skema Sertifikasi (Tugas Asesor)
+                                                            </label>
+                                                            <div class="relative">
+                                                                <i class="fa-solid fa-layer-group absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
+                                                                <select name="skema_id" 
+                                                                        class="w-full pl-9 pr-8 py-2.5 bg-slate-50/60 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:bg-white focus:outline-none focus:border-indigo-500 focus:ring-3 focus:ring-indigo-500/10 hover:border-slate-300 transition-all shadow-2xs cursor-pointer appearance-none truncate">
+                                                                    <option value="">-- Bebas / Semua Skema --</option>
+                                                                    @foreach($skemaList as $skema)
+                                                                        <option value="{{ $skema->id }}" {{ $asesor->skema_id == $skema->id ? 'selected' : '' }}>
+                                                                            {{ $skema->kode_skema }} - {{ $skema->nama_skema }}
+                                                                        </option>
+                                                                    @endforeach
+                                                                </select>
+                                                                <i class="fa-solid fa-chevron-down absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-[10px] pointer-events-none"></i>
+                                                            </div>
+                                                        </div>
+
+                                                        <div class="sm:col-span-2 pt-1">
+                                                            <label class="flex items-center gap-3.5 p-3.5 rounded-xl border border-slate-200 hover:border-emerald-300 bg-slate-50/60 hover:bg-emerald-50/20 cursor-pointer transition-all">
+                                                                <input type="checkbox" 
+                                                                       name="aktif" 
+                                                                       value="1" 
+                                                                       {{ $asesor->aktif ? 'checked' : '' }} 
+                                                                       class="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer">
+                                                                <div>
+                                                                    <div class="text-xs font-bold text-slate-800 flex items-center gap-2">
+                                                                        <span>Status Akun Asesor Aktif</span>
+                                                                        @if($asesor->aktif)
+                                                                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700">Aktif</span>
+                                                                        @else
+                                                                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-700">Non-Aktif</span>
+                                                                        @endif
+                                                                    </div>
+                                                                    <div class="text-[11px] text-slate-400 mt-0.5">Asesor dapat login ke portal dasbor, menerima jadwal uji, dan melakukan asesmen mandiri.</div>
+                                                                </div>
+                                                            </label>
+                                                        </div>
+                                                    </div>
+                                                </div>
                                             </div>
 
-                                            <div>
-                                                <label class="block text-[11px] font-bold text-slate-700 mb-1">Alamat Email Login <span class="text-rose-500">*</span></label>
-                                                <input type="email" name="email" required value="{{ $asesor->email }}" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-emerald-500">
-                                            </div>
-
-                                            <div>
-                                                <label class="block text-[11px] font-bold text-slate-700 mb-1">Skema Sertifikasi (Tugas Asesor)</label>
-                                                <select name="skema_id" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-emerald-500">
-                                                    <option value="">-- Bebas / Semua Skema --</option>
-                                                    @foreach($skemaList as $skema)
-                                                        <option value="{{ $skema->id }}" {{ $asesor->skema_id == $skema->id ? 'selected' : '' }}>
-                                                            {{ $skema->kode_skema }} - {{ $skema->nama_skema }}
-                                                        </option>
-                                                    @endforeach
-                                                </select>
-                                                <div class="text-[10px] text-slate-400 mt-1">Asesor ini difokuskan untuk mengurus 1 skema sertifikasi tertentu.</div>
-                                            </div>
-
-                                            <div>
-                                                <label class="block text-[11px] font-bold text-slate-700 mb-1">No. Registrasi MET (BNSP)</label>
-                                                <input type="text" name="nomor_registrasi" value="{{ $asesor->nomor_registrasi }}" placeholder="Contoh: MET.000.001234.2024" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-emerald-500">
-                                            </div>
-
-                                            <div>
-                                                <label class="block text-[11px] font-bold text-slate-700 mb-1">No. Telepon / WhatsApp</label>
-                                                <input type="text" name="nomor_telepon" value="{{ $asesor->nomor_telepon }}" placeholder="08xxxxxxxxxx" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-emerald-500">
-                                            </div>
-
-                                            <div>
-                                                <label class="block text-[11px] font-bold text-slate-700 mb-1">Kata Sandi Baru (Kosongkan jika tidak diubah)</label>
-                                                <input type="password" name="kata_sandi" placeholder="Minimal 6 karakter" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-emerald-500">
-                                            </div>
-
-                                            <div class="pt-1">
-                                                <label class="inline-flex items-center gap-2 cursor-pointer">
-                                                    <input type="checkbox" name="aktif" value="1" {{ $asesor->aktif ? 'checked' : '' }} class="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500">
-                                                    <span class="text-xs font-semibold text-slate-800">Akun Asesor Aktif (Bisa Login & Menguji)</span>
-                                                </label>
-                                            </div>
-
-                                            <div class="pt-3 flex justify-end gap-2 border-t border-slate-100">
-                                                <button type="button" onclick="tutupModal('modalEditAsesor_{{ $asesor->id }}')" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold">
+                                            <!-- Modal Footer -->
+                                            <div class="px-6 py-4 bg-white border-t border-slate-200/80 flex items-center justify-end gap-2.5 shrink-0">
+                                                <button type="button" 
+                                                        onclick="tutupModal('modalEditAsesor_{{ $asesor->id }}')" 
+                                                        class="px-4 py-2.5 rounded-xl bg-white hover:bg-slate-100 text-slate-700 font-semibold text-xs border border-slate-200 shadow-2xs transition-colors cursor-pointer">
                                                     Batal
                                                 </button>
-                                                <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold">
-                                                    Simpan Perubahan
+                                                <button type="submit" 
+                                                        class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98] text-white font-bold text-xs shadow-xs transition-all cursor-pointer">
+                                                    <i class="fa-solid fa-check text-xs"></i>
+                                                    <span>Simpan Perubahan</span>
                                                 </button>
                                             </div>
                                         </form>
@@ -264,65 +422,213 @@
 
 <!-- MODAL TAMBAH ASESOR -->
 <div class="modal-overlay" id="modalTambahAsesor">
-    <div class="modal-konten text-left max-w-md">
-        <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
-            <h3 class="font-bold text-sm text-slate-900 flex items-center gap-2">
-                <i class="fa-solid fa-user-plus text-emerald-600"></i>
-                <span>Tambah Akun Asesor Baru</span>
-            </h3>
-            <button type="button" onclick="tutupModal('modalTambahAsesor')" class="text-slate-400 hover:text-slate-600 text-lg">&times;</button>
+    <div class="modal-konten-modern w-[95vw] max-w-2xl">
+        <!-- Modal Header -->
+        <div class="px-6 py-4 sm:py-5 bg-white border-b border-slate-100 flex items-center justify-between gap-4 shrink-0">
+            <div class="flex items-center gap-3.5">
+                <div class="w-11 h-11 rounded-2xl bg-emerald-50 border border-emerald-100 text-emerald-600 flex items-center justify-center shrink-0 shadow-2xs">
+                    <i class="fa-solid fa-user-plus text-base"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h3 class="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight">
+                            Tambah Akun Asesor Baru
+                        </h3>
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            BNSP
+                        </span>
+                    </div>
+                    <p class="text-xs text-slate-500 mt-0.5">Daftarkan akun asesor kompetensi baru & penugasan skema sertifikasi</p>
+                </div>
+            </div>
+            <button type="button" 
+                    onclick="tutupModal('modalTambahAsesor')" 
+                    aria-label="Tutup modal"
+                    class="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-400 hover:text-slate-700 transition-colors flex items-center justify-center cursor-pointer">
+                <i class="fa-solid fa-xmark text-sm"></i>
+            </button>
         </div>
 
-        <form action="{{ route('admin.asesor.simpan') }}" method="POST" class="space-y-3.5">
+        <form action="{{ route('admin.asesor.simpan') }}" method="POST" class="flex flex-col flex-1 min-h-0 overflow-hidden">
             @csrf
 
-            <div>
-                <label class="block text-[11px] font-bold text-slate-700 mb-1">Nama Lengkap & Gelar <span class="text-rose-500">*</span></label>
-                <input type="text" name="nama_lengkap" required placeholder="Contoh: Drs. Ahmad Subagja, M.Pd., Met." class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-emerald-500">
+            <div class="modal-scroll-body p-6 space-y-5 bg-slate-50/50">
+                <!-- SEKSI 1: AKUN & KREDENSIAL -->
+                <div class="bg-white rounded-2xl border border-slate-200/90 p-5 space-y-4 shadow-2xs">
+                    <div class="flex items-center gap-2 border-b border-slate-100 pb-3">
+                        <span class="w-6 h-6 rounded-lg bg-emerald-50 text-emerald-700 font-extrabold text-xs flex items-center justify-center">1</span>
+                        <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Identitas & Akses Login</h4>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                                Nama Lengkap & Gelar <span class="text-rose-500">*</span>
+                            </label>
+                            <div class="relative">
+                                <i class="fa-regular fa-user absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
+                                <input type="text" 
+                                       name="nama_lengkap" 
+                                       required 
+                                       placeholder="Contoh: Drs. Ahmad Subagja, M.Pd., Met." 
+                                       class="w-full pl-9 pr-3.5 py-2.5 bg-slate-50/60 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder:text-slate-400 placeholder:font-normal focus:bg-white focus:outline-none focus:border-emerald-500 focus:ring-3 focus:ring-emerald-500/10 hover:border-slate-300 transition-all shadow-2xs">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                                Alamat Email Login <span class="text-rose-500">*</span>
+                            </label>
+                            <div class="relative">
+                                <i class="fa-regular fa-envelope absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
+                                <input type="email" 
+                                       name="email" 
+                                       required 
+                                       placeholder="asesor@smkn1gunungputri.sch.id" 
+                                       class="w-full pl-9 pr-3.5 py-2.5 bg-slate-50/60 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder:text-slate-400 placeholder:font-normal focus:bg-white focus:outline-none focus:border-emerald-500 focus:ring-3 focus:ring-emerald-500/10 hover:border-slate-300 transition-all shadow-2xs">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                                Kata Sandi Initial <span class="text-rose-500">*</span>
+                            </label>
+                            <div class="relative">
+                                <i class="fa-solid fa-lock absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
+                                <input type="password" 
+                                       id="sandi_tambah_asesor" 
+                                       name="kata_sandi" 
+                                       required 
+                                       placeholder="Minimal 6 karakter" 
+                                       class="w-full pl-9 pr-10 py-2.5 bg-slate-50/60 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder:text-slate-400 placeholder:font-normal focus:bg-white focus:outline-none focus:border-emerald-500 focus:ring-3 focus:ring-emerald-500/10 hover:border-slate-300 transition-all shadow-2xs">
+                                <button type="button" 
+                                        onclick="toggleSandiVisibility('sandi_tambah_asesor', this)" 
+                                        aria-label="Tampilkan sandi"
+                                        class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 rounded-lg transition-colors cursor-pointer">
+                                    <i class="fa-regular fa-eye text-xs"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                                No. Telepon / WhatsApp
+                            </label>
+                            <div class="relative">
+                                <i class="fa-brands fa-whatsapp absolute left-3.5 top-1/2 -translate-y-1/2 text-emerald-500 text-xs pointer-events-none"></i>
+                                <input type="text" 
+                                       name="nomor_telepon" 
+                                       placeholder="Contoh: 081234567890" 
+                                       class="w-full pl-9 pr-3.5 py-2.5 bg-slate-50/60 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder:text-slate-400 placeholder:font-normal focus:bg-white focus:outline-none focus:border-emerald-500 focus:ring-3 focus:ring-emerald-500/10 hover:border-slate-300 transition-all shadow-2xs">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SEKSI 2: REGISTRASI & PENUGASAN SKEMA -->
+                <div class="bg-white rounded-2xl border border-slate-200/90 p-5 space-y-4 shadow-2xs">
+                    <div class="flex items-center gap-2 border-b border-slate-100 pb-3">
+                        <span class="w-6 h-6 rounded-lg bg-emerald-50 text-emerald-700 font-extrabold text-xs flex items-center justify-center">2</span>
+                        <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Kualifikasi & Penugasan Skema</h4>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                                No. Registrasi MET (BNSP)
+                            </label>
+                            <div class="relative">
+                                <i class="fa-solid fa-id-card absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
+                                <input type="text" 
+                                       name="nomor_registrasi" 
+                                       placeholder="Contoh: MET.000.001234.2024" 
+                                       class="w-full pl-9 pr-3.5 py-2.5 bg-slate-50/60 border border-slate-200 rounded-xl text-xs font-mono font-semibold text-slate-800 placeholder:text-slate-400 placeholder:font-normal placeholder:font-sans focus:bg-white focus:outline-none focus:border-emerald-500 focus:ring-3 focus:ring-emerald-500/10 hover:border-slate-300 transition-all shadow-2xs">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                                Skema Sertifikasi (Tugas Asesor)
+                            </label>
+                            <div class="relative">
+                                <i class="fa-solid fa-layer-group absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
+                                <select name="skema_id" 
+                                        class="w-full pl-9 pr-8 py-2.5 bg-slate-50/60 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:bg-white focus:outline-none focus:border-emerald-500 focus:ring-3 focus:ring-emerald-500/10 hover:border-slate-300 transition-all shadow-2xs cursor-pointer appearance-none truncate">
+                                    <option value="">-- Bebas / Semua Skema Sertifikasi --</option>
+                                    @foreach($skemaList as $skema)
+                                        <option value="{{ $skema->id }}">
+                                            {{ $skema->kode_skema }} - {{ $skema->nama_skema }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                                <i class="fa-solid fa-chevron-down absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-[10px] pointer-events-none"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Info Alert -->
+                    <div class="flex items-start gap-3 p-3.5 rounded-xl bg-emerald-50/70 border border-emerald-100 text-slate-600 text-xs leading-relaxed">
+                        <div class="w-6 h-6 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 mt-0.5 text-xs font-bold">
+                            <i class="fa-solid fa-info"></i>
+                        </div>
+                        <div class="text-[11px] text-slate-600">
+                            <span class="font-bold text-slate-800">Catatan:</span> Satu asesor dapat difokuskan untuk 1 skema sertifikasi tertentu atau dibebaskan untuk semua skema. Akun yang baru dibuat otomatis aktif dan dapat langsung digunakan untuk login dan pengujian.
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <div>
-                <label class="block text-[11px] font-bold text-slate-700 mb-1">Alamat Email Login <span class="text-rose-500">*</span></label>
-                <input type="email" name="email" required placeholder="asesor@smkn1gunungputri.sch.id" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-emerald-500">
-            </div>
-
-            <div>
-                <label class="block text-[11px] font-bold text-slate-700 mb-1">Skema Sertifikasi (Tugas Asesor)</label>
-                <select name="skema_id" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-emerald-500">
-                    <option value="">-- Bebas / Semua Skema --</option>
-                    @foreach($skemaList as $skema)
-                        <option value="{{ $skema->id }}">
-                            {{ $skema->kode_skema }} - {{ $skema->nama_skema }}
-                        </option>
-                    @endforeach
-                </select>
-                <div class="text-[10px] text-slate-400 mt-1">Satu asesor dapat difokuskan untuk mengurus 1 skema sertifikasi tertentu.</div>
-            </div>
-
-            <div>
-                <label class="block text-[11px] font-bold text-slate-700 mb-1">Kata Sandi Initial <span class="text-rose-500">*</span></label>
-                <input type="password" name="kata_sandi" required placeholder="Minimal 6 karakter" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-emerald-500">
-            </div>
-
-            <div>
-                <label class="block text-[11px] font-bold text-slate-700 mb-1">No. Registrasi MET (BNSP)</label>
-                <input type="text" name="nomor_registrasi" placeholder="Contoh: MET.000.001234.2024" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-emerald-500">
-            </div>
-
-            <div>
-                <label class="block text-[11px] font-bold text-slate-700 mb-1">No. Telepon / WhatsApp</label>
-                <input type="text" name="nomor_telepon" placeholder="08xxxxxxxxxx" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-emerald-500">
-            </div>
-
-            <div class="pt-3 flex justify-end gap-2 border-t border-slate-100">
-                <button type="button" onclick="tutupModal('modalTambahAsesor')" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold">
+            <!-- Modal Footer -->
+            <div class="px-6 py-4 bg-white border-t border-slate-200/80 flex items-center justify-end gap-2.5 shrink-0">
+                <button type="button" 
+                        onclick="tutupModal('modalTambahAsesor')" 
+                        class="px-4 py-2.5 rounded-xl bg-white hover:bg-slate-100 text-slate-700 font-semibold text-xs border border-slate-200 shadow-2xs transition-colors cursor-pointer">
                     Batal
                 </button>
-                <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold">
-                    Simpan Akun Asesor
+                <button type="submit" 
+                        class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white font-bold text-xs shadow-xs transition-all cursor-pointer">
+                    <i class="fa-solid fa-user-plus text-xs"></i>
+                    <span>Simpan Akun Asesor</span>
                 </button>
             </div>
         </form>
     </div>
 </div>
 @endsection
+
+@push('js')
+<script>
+    function toggleSandiVisibility(inputId, btn) {
+        const input = document.getElementById(inputId);
+        if (!input) return;
+        const icon = btn.querySelector('i');
+        if (input.type === 'password') {
+            input.type = 'text';
+            if (icon) {
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            }
+        } else {
+            input.type = 'password';
+            if (icon) {
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        // Klik di luar konten modal (pada overlay) untuk menutup modal
+        document.querySelectorAll('.modal-overlay').forEach(overlay => {
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) {
+                    overlay.classList.remove('terbuka');
+                    if (typeof sinkronkanStatusBodyModal === 'function') {
+                        sinkronkanStatusBodyModal();
+                    }
+                }
+            });
+        });
+    });
+</script>
+@endpush

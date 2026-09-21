@@ -685,16 +685,6 @@ class AdminController extends Controller
             abort(403, 'Hanya Administrator atau Super Admin yang dapat memvalidasi dokumen FR.MAPA.01.');
         }
 
-        $request->validate([
-            'validator_nama' => 'required|string|max:255',
-            'validator_nomor_met' => 'required|string|max:100',
-            'catatan_validasi' => 'nullable|string|max:1000',
-            'tanda_tangan_admin_base64' => 'nullable|string',
-        ], [
-            'validator_nama.required' => 'Nama Validator (Admin LSP) wajib diisi.',
-            'validator_nomor_met.required' => 'Nomor Registrasi / NIP Validator wajib diisi.',
-        ]);
-
         $mapa01 = null;
 
         // A. Jika eksplisit validasi Master Skema
@@ -774,6 +764,16 @@ class AdminController extends Controller
 
             return back()->with('info', 'Dokumen FR.MAPA.01 untuk skema sertifikasi ini sudah berstatus tervalidasi melalui Master Skema.');
         }
+
+        $request->validate([
+            'validator_nama' => 'required|string|max:255',
+            'validator_nomor_met' => 'required|string|max:100',
+            'catatan_validasi' => 'nullable|string|max:1000',
+            'tanda_tangan_admin_base64' => 'nullable|string',
+        ], [
+            'validator_nama.required' => 'Nama Validator (Admin LSP) wajib diisi.',
+            'validator_nomor_met.required' => 'Nomor Registrasi / NIP Validator wajib diisi.',
+        ]);
 
         $ttdAdmin = $request->tanda_tangan_admin_base64 ?: $user->tanda_tangan;
         if ($request->tanda_tangan_admin_base64) {

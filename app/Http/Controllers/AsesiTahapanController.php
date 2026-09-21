@@ -327,37 +327,51 @@ class AsesiTahapanController extends Controller
                 $detikMenujuMulai = $pendaftaran->jadwal->detik_menuju_mulai ?? 0;
             }
 
-            $soalCbt = \App\Http\Controllers\AsesiUjianController::getDaftarSoalCbt($pendaftaran->skema);
-            $soalEsai = \App\Http\Controllers\AsesiUjianController::getDaftarSoalEsai($pendaftaran->skema);
-            $panduanPraktik = \App\Http\Controllers\AsesiUjianController::getPanduanPraktikIa02($pendaftaran->skema);
+            $instrumenAsesi = $pendaftaran->getInstrumenAsesi();
+            $hasCbt = isset($instrumenAsesi['cbt']);
+            $hasEsai = isset($instrumenAsesi['esai']);
+            $hasPraktik = isset($instrumenAsesi['praktik']);
 
-            $recordIa05 = \App\Models\IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.05')->first();
-            $recordIa06 = \App\Models\IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.06')->first();
-            $recordIa02 = \App\Models\IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.02')->first();
+            $soalCbt = [];
+            $recordIa05 = null;
+            $savedJawabanPg = [];
+            if ($hasCbt) {
+                $soalCbt = \App\Http\Controllers\AsesiUjianController::getDaftarSoalCbt($pendaftaran->skema);
+                $recordIa05 = \App\Models\IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.05')->first();
+                $savedJawabanPg = $recordIa05 ? ($recordIa05->data_jawaban['jawaban_pg'] ?? []) : [];
+            }
 
-            $savedJawabanPg = $recordIa05 ? ($recordIa05->data_jawaban['jawaban_pg'] ?? []) : [];
-            $savedJawabanEsai = $recordIa06 ? ($recordIa06->data_jawaban['jawaban_esai'] ?? []) : [];
-            $savedPraktik = $recordIa02 ? ($recordIa02->data_jawaban ?? []) : [];
+            $soalEsai = [];
+            $recordIa06 = null;
+            $savedJawabanEsai = [];
+            if ($hasEsai) {
+                $soalEsai = \App\Http\Controllers\AsesiUjianController::getDaftarSoalEsai($pendaftaran->skema);
+                $recordIa06 = \App\Models\IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.06')->first();
+                $savedJawabanEsai = $recordIa06 ? ($recordIa06->data_jawaban['jawaban_esai'] ?? []) : [];
+            }
+
+            $panduanPraktik = [];
+            $recordIa02 = null;
+            $savedPraktik = [];
+            $dokumenPraktik = null;
+            if ($hasPraktik) {
+                $panduanPraktik = \App\Http\Controllers\AsesiUjianController::getPanduanPraktikIa02($pendaftaran->skema);
+                $recordIa02 = \App\Models\IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.02')->first();
+                $savedPraktik = $recordIa02 ? ($recordIa02->data_jawaban ?? []) : [];
+                $dokumenPraktik = $pendaftaran->dokumen ? $pendaftaran->dokumen->where('jenis_dokumen', 'Hasil Proyek / Laporan Praktik FR.IA.02')->first() : null;
+            }
 
             $isSubmitted = ($recordIa05 && $recordIa05->status === 'submitted') 
                 || ($pendaftaran->status_pendaftaran === 'selesai');
 
-            $dokumenPraktik = $pendaftaran->dokumen ? $pendaftaran->dokumen->where('jenis_dokumen', 'Hasil Proyek / Laporan Praktik FR.IA.02')->first() : null;
-
-            $instrumenAsesi = $pendaftaran->skema ? $pendaftaran->skema->getInstrumenAsesi() : [];
+            $availableTabs = array_keys($instrumenAsesi);
             $requestedTab = $request->get('tab');
-            if ($requestedTab && in_array($requestedTab, ['cbt', 'esai', 'praktik', 'proyek'])) {
+            if ($requestedTab && in_array($requestedTab, $availableTabs)) {
                 $defaultTab = $requestedTab;
-            } elseif ($pendaftaran->skema) {
-                if ($pendaftaran->skema->hasInstrumen('FR.IA.05')) {
-                    $defaultTab = 'cbt';
-                } elseif ($pendaftaran->skema->hasInstrumen('FR.IA.06')) {
-                    $defaultTab = 'esai';
-                } elseif ($pendaftaran->skema->hasInstrumen('FR.IA.02')) {
-                    $defaultTab = 'praktik';
-                } elseif (!empty($instrumenAsesi)) {
-                    $defaultTab = array_key_first($instrumenAsesi);
-                }
+            } elseif (!empty($availableTabs)) {
+                $defaultTab = $availableTabs[0];
+            } else {
+                $defaultTab = 'praktik';
             }
         }
 

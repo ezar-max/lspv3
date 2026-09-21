@@ -71,10 +71,10 @@ class AssessmentAk07Controller extends Controller
 
         $this->authorizeAsesor($pendaftaran);
 
-        // Pengalihan sistem terpusat: Formulir FR.AK.07 kini dikelola 1 form master per-skema untuk seluruh asesi
-        if ($pendaftaran->skema_id) {
+        // Opsi pengalihan ke Master Skema jika diminta secara eksplisit melalui parameter query
+        if (request()->boolean('master') && $pendaftaran->skema_id) {
             return redirect()->route('asesor.skema.ak-07', $pendaftaran->skema_id)
-                ->with('info', 'Formulir FR.AK.07 kini dikelola terpusat per-skema (Master FR.AK.07) untuk seluruh asesi.');
+                ->with('info', 'Membuka konfigurasi Master FR.AK.07 untuk skema sertifikasi.');
         }
 
         // Sinkronisasi otomatis dari Master FR.AK.07 Skema jika tersedia

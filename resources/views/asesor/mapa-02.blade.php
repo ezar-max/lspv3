@@ -108,14 +108,38 @@
 @section('konten')
 @php
     $isAsesi = auth()->check() && auth()->user()->peran === 'asesi';
+    $isAdmin = auth()->check() && in_array(auth()->user()->peran, ['admin', 'superadmin']);
     $isMasterMode = !empty($isMasterMode) || (isset($pendaftaran) && (empty($pendaftaran->id) || $pendaftaran->id === 0));
-    $asesorNama = $pendaftaran->asesor->nama_lengkap ?? auth()->user()->nama_lengkap;
-    $asesorMet = $pendaftaran->asesor->nomor_registrasi ?? auth()->user()->nomor_registrasi ?? 'MET.000.001234';
-    $profileTtd = auth()->user()->tanda_tangan ?: $pendaftaran->tanda_tangan_asesor;
-    $asesorTtd = $mapa02->tanda_tangan_asesor ?? $profileTtd;
+
+    // Cek apakah MAPA 02 ini dibuat oleh Admin atau sedang dibuat/dikelola oleh Admin
+    $isSignedByAdmin = false;
+    if ($isMasterMode) {
+        if ($isAdmin) {
+            $isSignedByAdmin = true;
+        } elseif ($mapa02 && $mapa02->asesor && in_array($mapa02->asesor->peran, ['admin', 'superadmin'])) {
+            $isSignedByAdmin = true;
+        }
+    }
+
+    if ($isMasterMode && $isSignedByAdmin) {
+        $pengesahUser = ($isAdmin && auth()->check()) 
+            ? auth()->user() 
+            : (($mapa02 && $mapa02->asesor) ? $mapa02->asesor : auth()->user());
+        $pengesahNama = $pengesahUser->nama_lengkap ?? 'Administrator LSP';
+        $asesorMet = $pengesahUser->nomor_registrasi ?? '-';
+        $profileTtd = $pengesahUser->tanda_tangan ?? null;
+    } else {
+        // Mode Asesor (tetap gunakan data Asesor, jangan diubah)
+        $pengesahUser = $pendaftaran->asesor ?? auth()->user();
+        $pengesahNama = $pengesahUser->nama_lengkap ?? auth()->user()->nama_lengkap;
+        $asesorMet = $pengesahUser->nomor_registrasi ?? auth()->user()->nomor_registrasi ?? 'MET.000.001234';
+        $profileTtd = auth()->user()->tanda_tangan ?: ($pendaftaran->tanda_tangan_asesor ?? null);
+    }
+
     $savedPeta = $mapa02->matriks_peta ?? [];
     $isConfirmed = ($mapa02->status_mapa ?? '') === 'selesai';
     $isConfigured = !empty($mapa02->exists) && $isConfirmed;
+    $displayTtd = ($isConfirmed && !empty($mapa02->tanda_tangan_asesor)) ? $mapa02->tanda_tangan_asesor : $profileTtd;
 @endphp
 
 <div class="max-w-6xl mx-auto px-2 sm:px-4 py-3 space-y-4 mapa02-container" x-data="mapa02App()" x-cloak>
@@ -207,11 +231,15 @@
             </div>
 
             <div class="bg-slate-50 border border-slate-100 rounded-xl p-2.5 space-y-0.5">
-                <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Asesor Penguji</span>
-                <div class="font-bold text-slate-800 truncate" title="{{ $asesorNama }}">
-                    {{ $asesorNama }}
+                <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    {{ ($isMasterMode && $isSignedByAdmin) ? 'Penyusun / Validator' : 'Asesor Penguji' }}
+                </span>
+                <div class="font-bold text-slate-800 truncate" title="{{ $pengesahNama }}">
+                    {{ $pengesahNama }}
                 </div>
-                <div class="text-[11px] text-slate-500">No. Reg: {{ $asesorMet }}</div>
+                <div class="text-[11px] {{ ($isMasterMode && $isSignedByAdmin) ? 'text-emerald-600 font-semibold' : 'text-slate-500' }}">
+                    {{ ($isMasterMode && $isSignedByAdmin) ? 'Administrator LSP' : ('No. Reg: ' . $asesorMet) }}
+                </div>
             </div>
 
             <div class="bg-slate-50 border border-slate-100 rounded-xl p-2.5 space-y-0.5">
@@ -465,11 +493,11 @@
                 </div>
             </div>
 
-            <!-- KOLOM 2: PENGESAHAN TANDA TANGAN ASESOR -->
+            <!-- KOLOM 2: PENGESAHAN TANDA TANGAN ASESOR / ADMIN -->
             <div class="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-4 sm:p-5 space-y-3">
                 <div class="flex items-center justify-between border-b border-slate-100 pb-2">
                     <h2 class="font-bold text-xs sm:text-sm text-slate-800">
-                        Pengesahan Asesor Penguji
+                        {{ ($isMasterMode && $isSignedByAdmin) ? 'Pengesahan Administrator LSP' : 'Pengesahan Asesor Penguji' }}
                     </h2>
                     @if($isConfirmed)
                         <span class="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 font-bold text-[10px]">
@@ -493,13 +521,13 @@
                 <!-- Mode Profile Signature -->
                 <div x-show="signatureMode === 'profile'" class="space-y-1.5">
                     <div class="h-28 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-center p-2">
-                        @if($profileTtd)
-                            <img src="{{ asset($profileTtd) }}" alt="TTD Profil Asesor" class="max-h-24 object-contain">
+                        @if($displayTtd)
+                            <img src="{{ Str::startsWith($displayTtd, 'data:') ? $displayTtd : asset($displayTtd) }}" alt="TTD {{ ($isMasterMode && $isSignedByAdmin) ? 'Admin' : 'Asesor' }}" class="max-h-24 object-contain">
                         @else
                             <span class="text-xs text-slate-400 italic">Tanda tangan profil belum diatur. Silakan pilih "Gambar TTD Digital".</span>
                         @endif
                     </div>
-                    <input type="hidden" name="tanda_tangan_asesor" :value="signatureMode === 'profile' ? '{{ $profileTtd }}' : canvasSignatureData" id="inputTtdAsesor">
+                    <input type="hidden" name="tanda_tangan_asesor" :value="signatureMode === 'profile' ? profileTtdData : canvasSignatureData" id="inputTtdAsesor">
                 </div>
 
                 <!-- Mode Canvas Signature -->
@@ -513,8 +541,14 @@
                             [ Bersihkan ]
                         </button>
                     </div>
-                </div>                <div class="text-[11px] text-slate-500 pt-1">
-                    Asesor: <strong>{{ $asesorNama }}</strong> (No. Reg: <strong>{{ $asesorMet }}</strong>)
+                </div>
+
+                <div class="text-[11px] text-slate-500 pt-1">
+                    @if($isMasterMode && $isSignedByAdmin)
+                        Administrator: <strong>{{ $pengesahNama }}</strong> (Administrator LSP)
+                    @else
+                        Asesor: <strong>{{ $pengesahNama }}</strong> (No. Reg: <strong>{{ $asesorMet }}</strong>)
+                    @endif
                 </div>
             </div>
         </div>
@@ -597,7 +631,8 @@
     function mapa02App() {
         return {
             isEditMode: {{ (!$isAsesi && $isConfigured) ? 'false' : 'true' }},
-            signatureMode: '{{ !empty($profileTtd) ? "profile" : "canvas" }}',
+            signatureMode: '{{ !empty($displayTtd) ? "profile" : "canvas" }}',
+            profileTtdData: @json($displayTtd ?? ''),
             canvasSignatureData: '',
             signaturePad: null,
             isSubmitting: false,
@@ -660,10 +695,10 @@
             prepareSignature() {
                 if (this.signatureMode === 'canvas' && this.signaturePad && !this.signaturePad.isEmpty()) {
                     this.canvasSignatureData = this.signaturePad.toDataURL('image/png');
-                    const hiddenInput = document.getElementById('inputTtdAsesor');
-                    if (hiddenInput) {
-                        hiddenInput.value = this.canvasSignatureData;
-                    }
+                }
+                const hiddenInput = document.getElementById('inputTtdAsesor');
+                if (hiddenInput) {
+                    hiddenInput.value = (this.signatureMode === 'profile') ? this.profileTtdData : this.canvasSignatureData;
                 }
             },
 

@@ -24,6 +24,7 @@ class AsesorMapaWorkflowTest extends TestCase
 
     private Pengguna $asesorA;
     private Pengguna $asesorB;
+    private Pengguna $admin;
     private Pengguna $asesi;
     private SkemaSertifikasi $skema;
     private UnitKompetensi $unit1;
@@ -56,6 +57,14 @@ class AsesorMapaWorkflowTest extends TestCase
             'kata_sandi' => bcrypt('secret'),
             'peran' => 'asesor',
             'nomor_registrasi' => 'MET.000.003344.2023',
+        ]);
+
+        $this->admin = Pengguna::create([
+            'nama_lengkap' => 'Admin LSP',
+            'email' => 'admin@example.test',
+            'kata_sandi' => bcrypt('secret'),
+            'peran' => 'admin',
+            'aktif' => true,
         ]);
 
         $this->asesi = Pengguna::create([
@@ -222,7 +231,36 @@ class AsesorMapaWorkflowTest extends TestCase
         $this->assertEquals('Masih dalam proses penyusunan rencana.', $mapa02->catatan_asesor);
     }
 
-    /** 7. Confirm berhasil & status menjadi selesai */
+    /** 7. Konfirmasi Mapa 1 memberi tahu admin dan tidak menggandakan notifikasi */
+    public function test_confirm_mapa01_notifies_admin_once_until_validated(): void
+    {
+        $payload = [
+            'aksi' => 'konfirmasi',
+            'tujuan_asesmen' => 'Sertifikasi',
+            'pendekatan_asesi' => ['Mandiri'],
+            'tanda_tangan_asesor' => $this->asesorA->tanda_tangan,
+        ];
+
+        $this->actingAs($this->asesorA)
+            ->post(route('asesor.mapa-01.simpan', $this->pendaftaran->id), $payload)
+            ->assertRedirect(route('asesor.mapa-02', $this->pendaftaran->id));
+
+        $this->assertEquals(1, $this->admin->notifications()->count());
+
+        $notification = $this->admin->notifications()->first();
+        $this->assertSame('FR.MAPA.01 Menunggu Validasi', $notification->data['title']);
+        $this->assertSame($this->pendaftaran->id, $notification->data['metadata']['mapa01_pendaftaran_id']);
+        $this->assertSame('menunggu_validasi', $notification->data['metadata']['status']);
+        $this->assertStringContainsString('/asesor/mapa-01/' . $this->pendaftaran->id, $notification->data['url']);
+
+        $this->actingAs($this->asesorA)
+            ->post(route('asesor.mapa-01.simpan', $this->pendaftaran->id), $payload)
+            ->assertRedirect(route('asesor.mapa-02', $this->pendaftaran->id));
+
+        $this->assertEquals(1, $this->admin->notifications()->count());
+    }
+
+    /** 8. Confirm berhasil & status menjadi selesai */
     public function test_confirm_persists_confirmed_status(): void
     {
         $matrix = [
@@ -248,7 +286,7 @@ class AsesorMapaWorkflowTest extends TestCase
         $this->assertNotNull($mapa02->tanggal_ttd_asesor);
     }
 
-    /** 8. Confirm tanpa instrumen valid ditolak dengan pesan error */
+    /** 9. Confirm tanpa instrumen valid ditolak dengan pesan error */
     public function test_confirm_without_active_instruments_fails_validation(): void
     {
         // Matrix kosong tanpa instrumen aktif
@@ -272,7 +310,7 @@ class AsesorMapaWorkflowTest extends TestCase
         );
     }
 
-    /** 9. Signature disimpan sebagai file pada storage */
+    /** 10. Signature disimpan sebagai file pada storage */
     public function test_signature_saved_as_file_on_storage(): void
     {
         $rawBase64 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
@@ -427,6 +465,7 @@ class AsesorMapaWorkflowTest extends TestCase
 
         $response = $this->actingAs($this->asesorA)->post(route('asesor.input-penilaian.simpan', $this->pendaftaran->id), [
             'nilai' => [$this->unit1->id => 'K'],
+            'verifikasi_kuk' => [$this->kuk1->id => 'K'],
             'rekomendasi_asesor_status' => 'dapat_dilanjutkan',
             'tanda_tangan_asesor' => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
         ]);
@@ -467,6 +506,7 @@ class AsesorMapaWorkflowTest extends TestCase
 
         $response = $this->actingAs($this->asesorA)->post(route('asesor.input-penilaian.simpan', $this->pendaftaran->id), [
             'nilai' => [$this->unit1->id => 'K'],
+            'verifikasi_kuk' => [$this->kuk1->id => 'K'],
             'rekomendasi_asesor_status' => 'dapat_dilanjutkan',
             'tanda_tangan_asesor' => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
         ]);

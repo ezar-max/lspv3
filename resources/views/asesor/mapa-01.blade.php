@@ -610,23 +610,32 @@
     <!-- NAVIGATION BAR ATAS -->
     <div class="tombol-aksi-container no-print" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem;">
         <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
-            @if($isAsesi)
-                <a href="{{ (url()->previous() && url()->previous() !== url()->current()) ? url()->previous() : route('asesi.tahapan', ['step' => 2, 'pendaftaran_id' => $pendaftaran->id]) }}" 
-                   onclick="if (document.referrer && document.referrer !== window.location.href) { window.location.href = document.referrer; return false; } else if (window.history.length > 1) { window.history.back(); return false; }"
-                   class="tombol tombol-sekunder tombol-sm cursor-pointer">
-                    &larr; Kembali
-                </a>
-            @else
-                @php
-                    $defaultKembali = !empty($isMasterMode) ? route('asesor.mapa', ['skema_id' => $pendaftaran->skema_id ?? 0]) : route('asesor.daftar-peserta');
-                @endphp
-                <a href="{{ (url()->previous() && url()->previous() !== url()->current()) ? url()->previous() : $defaultKembali }}" 
-                   onclick="if (document.referrer && document.referrer !== window.location.href) { window.location.href = document.referrer; return false; } else if (window.history.length > 1) { window.history.back(); return false; }"
-                   id="btn-kembali-mapa" 
-                   class="tombol tombol-sekunder tombol-sm cursor-pointer">
-                    &larr; Kembali
-                </a>
-            @endif
+            @php
+                $halamanFormulir = route('asesor.mapa', array_filter(['skema_id' => $pendaftaran->skema_id ?? request('skema_id')]));
+                $prevUrl = url()->previous();
+                
+                // Mencegah bug: jangan pernah kembali ke halaman MAPA 01 atau MAPA 02 itu sendiri
+                $isInvalidPrev = empty($prevUrl) 
+                    || $prevUrl === url()->current() 
+                    || str_contains($prevUrl, 'mapa-02') 
+                    || str_contains($prevUrl, 'mapa02') 
+                    || str_contains($prevUrl, 'mapa-01') 
+                    || str_contains($prevUrl, 'mapa01');
+
+                if ($isAsesi) {
+                    $targetKembali = route('asesi.tahapan', ['step' => 2, 'pendaftaran_id' => $pendaftaran->id]);
+                } elseif (!$isInvalidPrev && (str_contains($prevUrl, 'daftar-peserta') || str_contains($prevUrl, 'penilaian'))) {
+                    $targetKembali = $prevUrl;
+                } else {
+                    $targetKembali = $halamanFormulir;
+                }
+            @endphp
+            <a href="{{ $targetKembali }}" 
+               onclick="if (document.referrer && document.referrer !== window.location.href && !document.referrer.includes('mapa-02') && !document.referrer.includes('mapa02') && !document.referrer.includes('mapa-01') && !document.referrer.includes('mapa01')) { window.location.href = document.referrer; return false; } else { window.location.href = '{{ $targetKembali }}'; return false; }"
+               id="btn-kembali-mapa" 
+               class="tombol tombol-sekunder tombol-sm cursor-pointer">
+                &larr; Kembali
+            </a>
         </div>
         <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
             @if($isAdmin)
@@ -1813,14 +1822,30 @@
 
             <!-- TOMBOL AKSI & NAVIGASI DI BAWAH -->
             @php
-                $kembaliUrl = !empty($isMasterMode) ? route('asesor.mapa', ['skema_id' => $pendaftaran->skema_id]) : route('asesor.mapa');
-                $nextMapa02Url = !empty($isMasterMode) ? route('asesor.skema.mapa-02', $pendaftaran->skema_id) : route('asesor.mapa-02', $pendaftaran->id);
+                $halamanFormulirBawah = route('asesor.mapa', array_filter(['skema_id' => $pendaftaran->skema_id ?? request('skema_id')]));
+                $prevUrlBawah = url()->previous();
+                
+                // Mencegah bug: jangan pernah kembali ke MAPA 01 atau MAPA 02
+                $isInvalidPrevBawah = empty($prevUrlBawah) 
+                    || $prevUrlBawah === url()->current() 
+                    || str_contains($prevUrlBawah, 'mapa-02') 
+                    || str_contains($prevUrlBawah, 'mapa02') 
+                    || str_contains($prevUrlBawah, 'mapa-01') 
+                    || str_contains($prevUrlBawah, 'mapa01');
+
+                if ($isAsesi) {
+                    $kembaliUrlBawah = route('asesi.tahapan', ['step' => 2, 'pendaftaran_id' => $pendaftaran->id]);
+                } elseif (!$isInvalidPrevBawah && (str_contains($prevUrlBawah, 'daftar-peserta') || str_contains($prevUrlBawah, 'penilaian'))) {
+                    $kembaliUrlBawah = $prevUrlBawah;
+                } else {
+                    $kembaliUrlBawah = $halamanFormulirBawah;
+                }
             @endphp
 
             @if(!$isAsesi)
                 <div class="tombol-aksi-container no-print" style="margin-top: 2rem; display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
-                    <a href="{{ (url()->previous() && url()->previous() !== url()->current()) ? url()->previous() : $kembaliUrl }}" 
-                       onclick="if (document.referrer && document.referrer !== window.location.href) { window.location.href = document.referrer; return false; } else if (window.history.length > 1) { window.history.back(); return false; }"
+                    <a href="{{ $kembaliUrlBawah }}" 
+                       onclick="if (document.referrer && document.referrer !== window.location.href && !document.referrer.includes('mapa-02') && !document.referrer.includes('mapa02') && !document.referrer.includes('mapa-01') && !document.referrer.includes('mapa01')) { window.location.href = document.referrer; return false; } else { window.location.href = '{{ $kembaliUrlBawah }}'; return false; }"
                        class="tombol tombol-sekunder cursor-pointer">
                         &larr; Kembali
                     </a>
@@ -1848,8 +1873,8 @@
                 </div>
             @else
                 <div class="tombol-aksi-container no-print" style="margin-top: 2rem; display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
-                    <a href="{{ (url()->previous() && url()->previous() !== url()->current()) ? url()->previous() : $kembaliUrl }}" 
-                       onclick="if (document.referrer && document.referrer !== window.location.href) { window.location.href = document.referrer; return false; } else if (window.history.length > 1) { window.history.back(); return false; }"
+                    <a href="{{ $kembaliUrlBawah }}" 
+                       onclick="if (document.referrer && document.referrer !== window.location.href && !document.referrer.includes('mapa-02') && !document.referrer.includes('mapa02') && !document.referrer.includes('mapa-01') && !document.referrer.includes('mapa01')) { window.location.href = document.referrer; return false; } else { window.location.href = '{{ $kembaliUrlBawah }}'; return false; }"
                        class="tombol tombol-sekunder cursor-pointer">
                         &larr; Kembali
                     </a>

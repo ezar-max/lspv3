@@ -99,12 +99,6 @@
                 Pantau verifikasi berkas APL, skema sertifikasi, dan aktivitas asesmen terkini.
             </p>
         </div>
-        <div class="flex items-center gap-2.5">
-            <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200/90 bg-white text-slate-600 font-medium text-xs shadow-2xs">
-                <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-                <span>Periode {{ date('Y') }}</span>
-            </span>
-        </div>
     </div>
 
     <!-- =========================================================================
