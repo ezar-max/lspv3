@@ -251,6 +251,24 @@ class AssessmentScheduleTimeLockTest extends TestCase
             'matriks_peta' => [$unitRpl->id => [$elemenRpl->id => [$kukRpl->id => ['dpt' => 1]]]],
             'status_mapa' => 'selesai',
         ]);
+
+        \App\Models\AssessmentAk07Adjustment::create([
+            'assessment_registration_id' => $this->pendaftaranLas->id,
+            'potensi_asesi' => 1,
+            'fase_penggunaan' => 'saat_pra_asesmen',
+            'status' => 'confirmed',
+            'asesi_signature' => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+            'asesi_signed_at' => now(),
+        ]);
+
+        \App\Models\AssessmentAk07Adjustment::create([
+            'assessment_registration_id' => $this->pendaftaranRpl->id,
+            'potensi_asesi' => 1,
+            'fase_penggunaan' => 'saat_pra_asesmen',
+            'status' => 'confirmed',
+            'asesi_signature' => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+            'asesi_signed_at' => now(),
+        ]);
     }
 
     /** 1. Multi-Skema Isolation: Asesor Las only sees Welding candidates */
@@ -287,12 +305,12 @@ class AssessmentScheduleTimeLockTest extends TestCase
     /** 3. Question Bank Isolation: Asesi Las only sees Welding questions in Ruang Uji */
     public function test_question_bank_isolation_for_asesi(): void
     {
-        $respLas = $this->actingAs($this->asesiLas)->get(route('asesi.ujian', ['pendaftaran_id' => $this->pendaftaranLas->id]));
+        $respLas = $this->actingAs($this->asesiLas)->followingRedirects()->get(route('asesi.ujian', ['pendaftaran_id' => $this->pendaftaranLas->id]));
         $respLas->assertOk();
         $respLas->assertSee('Fungsi utama filter shade 10-12 pada helm las SMAW adalah?');
         $respLas->assertDontSee('Konsep OOP yang membungkus data dan fungsi adalah?');
 
-        $respRpl = $this->actingAs($this->asesiRpl)->get(route('asesi.ujian', ['pendaftaran_id' => $this->pendaftaranRpl->id]));
+        $respRpl = $this->actingAs($this->asesiRpl)->followingRedirects()->get(route('asesi.ujian', ['pendaftaran_id' => $this->pendaftaranRpl->id]));
         $respRpl->assertOk();
         $respRpl->assertSee('Konsep OOP yang membungkus data dan fungsi adalah?');
         $respRpl->assertDontSee('Fungsi utama filter shade 10-12 pada helm las SMAW adalah?');
@@ -439,7 +457,7 @@ class AssessmentScheduleTimeLockTest extends TestCase
         $asesiDashResp->assertSee('Sesi Asesmen Telah Dimulai!');
 
         // 2. Asesi Ruang Uji
-        $asesiUjianResp = $this->actingAs($this->asesiLas)->get(route('asesi.ujian', ['pendaftaran_id' => $this->pendaftaranLas->id]));
+        $asesiUjianResp = $this->actingAs($this->asesiLas)->followingRedirects()->get(route('asesi.ujian', ['pendaftaran_id' => $this->pendaftaranLas->id]));
         $asesiUjianResp->assertOk();
         $asesiUjianResp->assertSee('Sesi Ujian Aktif');
 
@@ -534,6 +552,77 @@ class AssessmentScheduleTimeLockTest extends TestCase
         // Harus menampilkan badge Terjadwal dan status di DB sudah menjadi 'terjadwal'
         $response->assertSee('Terjadwal');
         $this->assertEquals('terjadwal', $jadwalFuture->fresh()->status_jadwal);
+    }
+
+    /** 12. Asesmen hanya bisa diakses, diisi, dan dikerjakan saat jadwal telah dimulai */
+    public function test_asesmen_hanya_bisa_diisi_dan_dikerjakan_saat_jadwal_dimulai(): void
+    {
+        // 1. KONDISI: Jadwal Belum Dimulai (Besok)
+        $this->jadwalLas->update([
+            'tanggal_uji' => now()->addDays(1)->toDateString(),
+            'waktu_mulai' => '08:00',
+            'waktu_selesai' => '12:00',
+            'status_jadwal' => 'terjadwal',
+        ]);
+
+        $this->assertTrue($this->jadwalLas->isBelumMulai());
+
+        // Buka halaman tahapan formulir step 5
+        $respBelumMulai = $this->actingAs($this->asesiLas)
+            ->get(route('asesi.tahapan', ['step' => 5, 'pendaftaran_id' => $this->pendaftaranLas->id]));
+
+        $respBelumMulai->assertOk();
+        // Memastikan layar tunggu jadwal muncul dengan countdown dan rincian jadwal
+        $respBelumMulai->assertSee('Menunggu Waktu Pelaksanaan Asesmen');
+        $respBelumMulai->assertSee('Asesmen Dimulai Dalam:');
+        $respBelumMulai->assertSee('Menunggu Jadwal Mulai');
+        // Memastikan soal ujian TIDAK bocor dan TIDAK bisa diisi/dikerjakan
+        $respBelumMulai->assertDontSee('Fungsi utama filter shade 10-12 pada helm las SMAW adalah?');
+        $respBelumMulai->assertDontSee('FR.IA.05 (Ujian Teori CBT PG)');
+
+        // Percobaan pengiriman autosave diblokir dengan 403 Forbidden
+        $postBelumMulai = $this->actingAs($this->asesiLas)->postJson(route('asesi.ujian.autosave'), [
+            'pendaftaran_id' => $this->pendaftaranLas->id,
+            'tipe' => 'cbt',
+            'no' => 1,
+            'jawaban' => 'A'
+        ]);
+        $postBelumMulai->assertStatus(403);
+        $postBelumMulai->assertJsonFragment([
+            'status' => 'error'
+        ]);
+
+        // 2. KONDISI: Jadwal Telah Dimulai (Status 'berlangsung')
+        $this->jadwalLas->update([
+            'tanggal_uji' => now()->toDateString(),
+            'waktu_mulai' => '07:00',
+            'waktu_selesai' => '17:00',
+            'status_jadwal' => 'berlangsung',
+        ]);
+
+        $this->assertTrue($this->jadwalLas->isWaktuAktif());
+
+        // Buka kembali halaman tahapan formulir step 5
+        $respSudahMulai = $this->actingAs($this->asesiLas)
+            ->get(route('asesi.tahapan', ['step' => 5, 'pendaftaran_id' => $this->pendaftaranLas->id]));
+
+        $respSudahMulai->assertOk();
+        // Memastikan lencana aktif muncul dan layar tunggu menghilang
+        $respSudahMulai->assertSee('Sesi Ujian Aktif');
+        $respSudahMulai->assertDontSee('Menunggu Waktu Pelaksanaan Asesmen');
+        // Lembar soal terbuka dan siap diisi
+        $respSudahMulai->assertSee('FR.IA.05 (Ujian Teori CBT PG)');
+        $respSudahMulai->assertSee('Fungsi utama filter shade 10-12 pada helm las SMAW adalah?');
+
+        // Autosave berhasil disimpan
+        $postSudahMulai = $this->actingAs($this->asesiLas)->postJson(route('asesi.ujian.autosave'), [
+            'pendaftaran_id' => $this->pendaftaranLas->id,
+            'tipe' => 'cbt',
+            'no' => 1,
+            'jawaban' => 'A'
+        ]);
+        $postSudahMulai->assertOk();
+        $postSudahMulai->assertJsonFragment(['status' => 'success']);
     }
 }
 

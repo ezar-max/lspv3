@@ -96,6 +96,40 @@ class AssessmentAk07WorkflowTest extends TestCase
             'tanda_tangan_asesi_ak01' => 'sig_ak01.png',
             'tanda_tangan_asesor_ak01' => 'sig_asesor_ak01.png',
             'status_ak01' => 'selesai',
+            'status_mapa01' => 'selesai',
+            'status_mapa02' => 'selesai',
+        ]);
+
+        \App\Models\Mapa01::create([
+            'pendaftaran_id' => $this->pendaftaran->id,
+            'skema_id' => $this->skema->id,
+            'asesor_id' => $this->asesorA->id,
+            'status_mapa' => 'selesai',
+        ]);
+
+        \App\Models\Mapa02::create([
+            'pendaftaran_id' => $this->pendaftaran->id,
+            'skema_id' => $this->skema->id,
+            'asesor_id' => $this->asesorA->id,
+            'status_mapa' => 'selesai',
+            'matriks_peta' => [1 => [1 => [1 => ['dpe' => 1]]]],
+        ]);
+
+        $instCbt = \App\Models\SchemeMasterInstrument::create([
+            'skema_id' => $this->skema->id,
+            'instrument_code' => 'ia_05',
+            'title' => 'Pertanyaan Tertulis Pilihan Ganda',
+            'is_active' => true,
+        ]);
+
+        \App\Models\MasterQuestionBank::create([
+            'scheme_master_instrument_id' => $instCbt->id,
+            'skema_id' => $this->skema->id,
+            'question_type' => 'multiple_choice',
+            'question_text' => 'Pertanyaan uji coba AK07?',
+            'options' => ['A' => 'Opsi 1', 'B' => 'Opsi 2'],
+            'correct_answer' => 'A',
+            'order' => 1,
         ]);
     }
 

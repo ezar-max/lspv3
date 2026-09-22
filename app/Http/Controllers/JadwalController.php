@@ -99,8 +99,12 @@ class JadwalController extends Controller
             'tanggal_uji' => 'required|date',
             'waktu_mulai' => 'required',
             'waktu_selesai' => 'required',
-            'kuota' => 'required|integer|min:1',
+            'kuota' => 'required|integer|min:1|max:50',
             'status_jadwal' => 'required|in:terjadwal,berlangsung,selesai,dibatalkan',
+        ], [
+            'kuota.required' => 'Kapasitas kuota asesi wajib diisi (Standar: 10 asesi/asesor/hari).',
+            'kuota.max' => 'Kapasitas maksimal satu sesi per asesor disarankan tidak melebihi 50 asesi.',
+            'status_jadwal.required' => 'Status pelaksanaan jadwal wajib ditentukan.',
         ]);
 
         // Validasi kesesuaian role skema asesor dengan skema yang dipilih
@@ -112,6 +116,8 @@ class JadwalController extends Controller
         if (!$asesor) {
             return back()->withInput()->with('error', 'Gagal memperbarui jadwal: Asesor yang dipilih tidak memiliki kewenangan/role untuk skema sertifikasi yang dipilih.');
         }
+
+        $oldAsesorId = $jadwal->asesor_id;
 
         $jadwal->update([
             'kode_jadwal' => $request->kode_jadwal,
@@ -125,9 +131,29 @@ class JadwalController extends Controller
             'status_jadwal' => $request->status_jadwal,
         ]);
 
+        // Jika ada pergantian asesor, perbarui penugasan pada seluruh pendaftaran asesi di jadwal ini
+        if ($oldAsesorId != $request->asesor_id) {
+            $jadwal->pendaftaranAsesi()->update(['asesor_id' => $request->asesor_id]);
+
+            // Kirim notifikasi penugasan jadwal kepada asesor pengganti
+            $skema = SkemaSertifikasi::find($jadwal->skema_id);
+            $skemaNama = $skema ? $skema->nama_skema : 'Skema Sertifikasi';
+            $tglFormat = \Carbon\Carbon::parse($jadwal->tanggal_uji)->translatedFormat('d F Y');
+            $asesor->notify(new SystemAlert(
+                'Penugasan Jadwal Asesmen Diperbarui',
+                "Anda telah ditugaskan sebagai Asesor Penguji pada jadwal: {$jadwal->kode_jadwal} - {$skemaNama} di {$jadwal->nama_tuk} ({$tglFormat}).",
+                route('asesor.jadwal'),
+                'jadwal',
+                [
+                    'jadwal_id' => $jadwal->id,
+                    'kode_jadwal' => $jadwal->kode_jadwal,
+                ]
+            ));
+        }
+
         LogAktivitas::catat('Ubah Jadwal Asesmen', 'Memperbarui jadwal uji #' . $jadwal->kode_jadwal);
 
-        return back()->with('sukses', 'Jadwal uji kompetensi berhasil diperbarui.');
+        return back()->with('sukses', 'Jadwal uji kompetensi #' . $jadwal->kode_jadwal . ' berhasil diperbarui.');
     }
 
     public function hapusJadwal($id)

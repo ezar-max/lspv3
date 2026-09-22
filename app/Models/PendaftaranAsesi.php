@@ -90,12 +90,20 @@ class PendaftaranAsesi extends Model
 
     public function isApl02Revision(): bool
     {
+        if ($this->status_apl02 === 'approved' || $this->status_pendaftaran === 'selesai' || !empty($this->tanda_tangan_asesi_ak01)) {
+            return false;
+        }
+
         return in_array($this->status_apl02, ['revision', 'revision_requested', 'revisi'])
             || $this->rekomendasi_asesor_status === 'tidak_dapat_dilanjutkan';
     }
 
     public function isApl02Rejected(): bool
     {
+        if ($this->status_apl02 === 'approved' || $this->status_pendaftaran === 'selesai' || !empty($this->tanda_tangan_asesi_ak01)) {
+            return false;
+        }
+
         return in_array($this->status_apl02, ['rejected', 'ditolak'])
             || $this->rekomendasi_asesor_status === 'ditolak';
     }

@@ -303,4 +303,26 @@ class AsesorApl02VerifikasiTest extends TestCase
         $response->assertSee('Pendaftaran Ditolak');
         $response->assertSee('Pendaftaran Tidak Dapat Dilanjutkan (Ditolak)');
     }
+
+    public function test_asesi_dashboard_does_not_show_revisi_banner_when_apl02_approved_or_assessment_finished()
+    {
+        $pendaftaran = $this->createPendaftaranSubmitted();
+        $pendaftaran->update([
+            'status_apl02' => 'approved',
+            'status_pendaftaran' => 'selesai',
+            'tanda_tangan_asesi_ak01' => 'data:image/png;base64,samplettdak01',
+            'catatan_peninjauan_asesor' => 'Asesi telah menunjukkan kinerja dan pemahaman yang baik dalam seluruh tahapan uji kompetensi praktik maupun teori.',
+            'rekomendasi_asesor_status' => 'dapat_dilanjutkan',
+        ]);
+
+        $this->assertFalse($pendaftaran->isApl02Revision());
+        $this->assertFalse($pendaftaran->isApl02Rejected());
+
+        $response = $this->actingAs($this->asesi)->get(route('asesi.dashboard'));
+
+        $response->assertStatus(200);
+        $response->assertDontSee('Permintaan Revisi FR.APL.02');
+        $response->assertDontSee('Asesor meminta revisi pada butir asesmen mandiri');
+    }
 }
+

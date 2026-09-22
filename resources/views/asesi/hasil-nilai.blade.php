@@ -46,16 +46,11 @@
 
     @forelse($pendaftaranList as $p)
         @php
-            $namaAsesor = $p->rekomendasi->asesor->nama_lengkap 
-                ?? $p->asesor->nama_lengkap 
-                ?? $p->jadwal->asesor->nama_lengkap 
             $namaAsesor = $p->rekomendasi?->asesor?->nama_lengkap 
                 ?? $p->asesor?->nama_lengkap 
                 ?? $p->jadwal?->asesor?->nama_lengkap 
                 ?? 'Asesor LSP';
             
-            $ttdAsesor = $p->rekomendasi->tanda_tangan_asesor 
-                ?: ($p->tanda_tangan_asesor ?: ($p->asesor->tanda_tangan ?? null));
             $ttdAsesor = $p->rekomendasi?->tanda_tangan_asesor 
                 ?: ($p->tanda_tangan_asesor ?: ($p->asesor?->tanda_tangan ?? null));
 
@@ -67,8 +62,6 @@
             // Map rekomendasi unit dari FR.AK.02 jika ada
             $ak02Units = ($p->ak02 && is_array($p->ak02->rekomendasi_unit)) ? $p->ak02->rekomendasi_unit : [];
 
-            $isSelesai = ($p->status_pendaftaran === 'selesai') || !empty($p->rekomendasi);
-            $keputusanAkhir = $p->rekomendasi->keputusan ?? ($p->ak02->keputusan_final ?? null);
             // Validasi ketat: Asesmen HANYA dianggap selesai jika status pendaftaran adalah 'selesai' dan ada rekomendasi final
             $isSelesai = ($p->status_pendaftaran === 'selesai') && !empty($p->rekomendasi) && !empty($p->rekomendasi->keputusan);
             $keputusanAkhir = $isSelesai ? $p->rekomendasi->keputusan : null;
@@ -102,19 +95,16 @@
                     <div style="font-size: 0.78rem; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 0.35rem;">
                         Keputusan Akhir Asesmen:
                     </div>
-                    @if($keputusanAkhir === 'kompeten')
                     @if($isSelesai && $keputusanAkhir === 'kompeten')
                         <span class="lencana lencana-hijau" style="padding: 0.6rem 1.25rem; font-size: 1rem; font-weight: 800; display: inline-flex; align-items: center; gap: 0.4rem;">
                             <i class="fa-solid fa-circle-check"></i> KOMPETEN (K)
                         </span>
-                    @elseif($keputusanAkhir === 'belum_kompeten')
                     @elseif($isSelesai && $keputusanAkhir === 'belum_kompeten')
                         <span class="lencana lencana-merah" style="padding: 0.6rem 1.25rem; font-size: 1rem; font-weight: 800; display: inline-flex; align-items: center; gap: 0.4rem;">
                             <i class="fa-solid fa-circle-xmark"></i> BELUM KOMPETEN (BK)
                         </span>
                     @else
                         <span class="lencana lencana-amber" style="padding: 0.6rem 1.25rem; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 0.4rem;">
-                            <i class="fa-solid fa-hourglass-half"></i> Proses Penilaian Asesor
                             <i class="fa-solid fa-hourglass-half"></i> Asesmen Belum Selesai
                         </span>
                     @endif
@@ -149,18 +139,6 @@
                                 $nilaiStatus = null;
                                 $catatanUnit = null;
 
-                                if ($nilaiModel) {
-                                    $nilaiStatus = $nilaiModel->nilai_kompetensi;
-                                    $catatanUnit = $nilaiModel->catatan_asesor;
-                                } elseif ($ak02Item) {
-                                    $nilaiStatus = is_array($ak02Item) ? ($ak02Item['hasil'] ?? null) : $ak02Item;
-                                    $catatanUnit = is_array($ak02Item) ? ($ak02Item['catatan'] ?? null) : null;
-                                } elseif ($isSelesai && $keputusanAkhir === 'kompeten') {
-                                    $nilaiStatus = 'K';
-                                    $catatanUnit = 'Kompeten sesuai pemenuhan bukti observasi dan ujian.';
-                                } elseif ($isSelesai && $keputusanAkhir === 'belum_kompeten') {
-                                    $nilaiStatus = 'BK';
-                                    $catatanUnit = 'Belum memenuhi kriteria unjuk kerja pada unit ini.';
                                 if ($isSelesai) {
                                     if ($nilaiModel) {
                                         $nilaiStatus = $nilaiModel->nilai_kompetensi;
@@ -191,26 +169,22 @@
                                     @endif
                                 </td>
                                 <td style="text-align: center;">
-                                    @if($nilaiStatus === 'K' || strtoupper((string)$nilaiStatus) === 'KOMPETEN')
                                     @if($isSelesai && ($nilaiStatus === 'K' || strtoupper((string)$nilaiStatus) === 'KOMPETEN'))
                                         <span class="lencana lencana-hijau" style="font-weight: 700;">
                                             Kompeten (K)
                                         </span>
-                                    @elseif($nilaiStatus === 'BK' || strtoupper((string)$nilaiStatus) === 'BELUM_KOMPETEN')
                                     @elseif($isSelesai && ($nilaiStatus === 'BK' || strtoupper((string)$nilaiStatus) === 'BELUM_KOMPETEN'))
                                         <span class="lencana lencana-merah" style="font-weight: 700;">
                                             Belum Kompeten (BK)
                                         </span>
                                     @else
                                         <span class="lencana lencana-amber" style="font-size: 0.8rem;">
-                                            Sedang Dinilai
                                             Menunggu Ujian / Penilaian
                                         </span>
                                     @endif
                                 </td>
                                 <td>
                                     <span style="color: {{ !empty($catatanUnit) ? '#334155' : '#94a3b8' }}; font-size: 0.9rem;">
-                                        {{ $catatanUnit ?? ($isSelesai ? 'Memenuhi kriteria unjuk kerja.' : 'Belum ada catatan khusus.') }}
                                         {{ $catatanUnit ?? ($isSelesai ? 'Memenuhi kriteria unjuk kerja.' : 'Belum diuji oleh Asesor Penguji.') }}
                                     </span>
                                 </td>
@@ -226,8 +200,6 @@
                 </table>
             </div>
 
-            <!-- Kotak Umpan Balik & Rekomendasi Asesor -->
-            @if($p->rekomendasi)
             <!-- Kotak Umpan Balik & Rekomendasi Asesor (HANYA MUNCUL JIKA ASESMEN SUDAH SELESAI) -->
             @if($isSelesai && $p->rekomendasi)
                 <div style="background: var(--biru-bg); padding: 1.5rem; border-radius: var(--radius-md); border: 1px solid var(--biru-soft);">
@@ -301,7 +273,7 @@
                         <a href="{{ route('asesi.dasbor') }}" class="tombol tombol-sekunder" style="font-size: 0.88rem;">
                             <i class="fa-solid fa-arrow-left" style="margin-right: 0.35rem;"></i> Dasbor Utama
                         </a>
-                        <a href="{{ route('asesi.ujian', ['pendaftaran_id' => $p->id]) }}" class="tombol tombol-utama" style="font-size: 0.88rem;">
+                        <a href="{{ route('asesi.tahapan', ['step' => 5, 'pendaftaran_id' => $p->id]) }}" class="tombol tombol-utama" style="font-size: 0.88rem;">
                             Buka Ruang Ujian &rarr;
                         </a>
                     </div>

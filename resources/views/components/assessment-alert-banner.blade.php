@@ -11,7 +11,13 @@
             ->first();
 
         if ($pendaftaranAsesi) {
-            if ($pendaftaranAsesi->isApl02Revision() && !(request()->routeIs('asesi.tahapan*') && request('step') == 2)) {
+            $isApl02BeneranRevisi = $pendaftaranAsesi->isApl02Revision() 
+                && !$pendaftaranAsesi->isApl02Approved()
+                && $pendaftaranAsesi->status_pendaftaran !== 'selesai'
+                && empty($pendaftaranAsesi->tanda_tangan_asesi_ak01)
+                && empty($pendaftaranAsesi->rekomendasi);
+
+            if ($isApl02BeneranRevisi && !(request()->routeIs('asesi.tahapan*') && request('step') == 2)) {
                 $alert = [
                     'key' => 'asesi_revision_' . $pendaftaranAsesi->id . '_' . ($pendaftaranAsesi->updated_at?->timestamp ?? 0),
                     'icon' => 'fa-solid fa-triangle-exclamation',

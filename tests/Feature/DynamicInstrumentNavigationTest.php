@@ -117,6 +117,15 @@ class DynamicInstrumentNavigationTest extends TestCase
                 ]
             ],
         ]);
+
+        \App\Models\AssessmentAk07Adjustment::create([
+            'assessment_registration_id' => $this->pendaftaran->id,
+            'potensi_asesi' => 1,
+            'fase_penggunaan' => 'saat_pra_asesmen',
+            'status' => 'confirmed',
+            'asesi_signature' => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+            'asesi_signed_at' => now(),
+        ]);
     }
 
     public function test_skema_has_instrumen_and_aliases()
@@ -149,7 +158,7 @@ class DynamicInstrumentNavigationTest extends TestCase
     public function test_asesi_ruang_uji_displays_dynamic_tabs()
     {
         $response = $this->actingAs($this->asesi)
-            ->get(route('asesi.ruang-uji', ['pendaftaran_id' => $this->pendaftaran->id]));
+            ->get(route('asesi.tahapan', ['step' => 5, 'pendaftaran_id' => $this->pendaftaran->id]));
 
         $response->assertStatus(200);
         $response->assertSee('FR.IA.05 (Ujian Teori CBT PG)');
@@ -191,5 +200,13 @@ class DynamicInstrumentNavigationTest extends TestCase
         $this->pendaftaran->refresh();
         $this->assertEquals('selesai', $this->pendaftaran->status_pendaftaran);
         $this->assertEquals('dapat_dilanjutkan', $this->pendaftaran->rekomendasi_asesor_status);
+    }
+
+    public function test_asesi_ruang_uji_route_redirects_to_tahapan_step_5()
+    {
+        $response = $this->actingAs($this->asesi)
+            ->get(route('asesi.ruang-uji', ['pendaftaran_id' => $this->pendaftaran->id]));
+
+        $response->assertRedirect(route('asesi.tahapan', ['step' => 5, 'pendaftaran_id' => $this->pendaftaran->id]));
     }
 }

@@ -1,4 +1,4 @@
-@if(auth()->check() && auth()->user()->peran === 'asesi' && !request()->routeIs('asesi.ruang-uji') && !request()->routeIs('asesi.ujian'))
+@if(auth()->check() && auth()->user()->peran === 'asesi' && !request()->routeIs('asesi.ruang-uji') && !request()->routeIs('asesi.ujian') && !(request()->routeIs('asesi.tahapan*') && request('step') == 5))
 <!-- =========================================================================
      MODAL NOTIFIKASI REAL-TIME: SESI UJIAN TELAH DIMULAI ASESOR
      ========================================================================= -->
@@ -13,7 +13,7 @@
                 </span>
                 Sesi Ujian Sedang Berlangsung
             </span>
-            <button type="button" onclick="tutupNotifikasiUjian(60)" class="text-slate-400 hover:text-slate-600 text-xs font-semibold px-2 py-1 rounded hover:bg-slate-100 transition-colors">
+            <button type="button" onclick="tutupNotifikasiUjian()" class="text-slate-400 hover:text-slate-600 text-xs font-semibold px-2 py-1 rounded hover:bg-slate-100 transition-colors">
                 Tutup Sementara
             </button>
         </div>
@@ -47,7 +47,7 @@
         </div>
 
         <div class="flex flex-col sm:flex-row items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
-            <button type="button" onclick="tutupNotifikasiUjian(120)" class="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 text-xs font-semibold hover:bg-slate-50 transition-colors">
+            <button type="button" onclick="tutupNotifikasiUjian()" class="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 text-xs font-semibold hover:bg-slate-50 transition-colors">
                 Nanti Dulu
             </button>
             <a href="#" id="live-notif-btn-masuk" class="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold text-center shadow-xs transition-colors">
@@ -61,9 +61,27 @@
 <script>
 (function() {
     let checkInterval = null;
-    let dismissedUntil = 0;
     let isExamActive = false;
+    let currentExamPendaftaranId = null;
+    const currentUserId = {{ auth()->id() ?? 0 }};
     const checkEndpoint = '{{ route("asesi.ujian.status-live") }}';
+
+    function getStorageKey(pendaftaranId) {
+        return 'lsp_notif_ujian_shown_' + currentUserId + '_' + (pendaftaranId || 'active');
+    }
+
+    function isAlreadyShown(pendaftaranId) {
+        const key = getStorageKey(pendaftaranId);
+        return sessionStorage.getItem(key) === '1' || localStorage.getItem(key) === '1';
+    }
+
+    function markAsShown(pendaftaranId) {
+        const key = getStorageKey(pendaftaranId);
+        try {
+            sessionStorage.setItem(key, '1');
+            localStorage.setItem(key, '1');
+        } catch (e) {}
+    }
 
     function playNotificationChime() {
         try {
@@ -76,9 +94,7 @@
             const gain = ctx.createGain();
 
             osc.type = 'sine';
-            // Nada 1
             osc.frequency.setValueAtTime(587.33, now); // D5
-            // Nada 2
             osc.frequency.setValueAtTime(880.00, now + 0.15); // A5
 
             gain.gain.setValueAtTime(0, now);
@@ -101,13 +117,21 @@
         const box = document.getElementById('box-notifikasi-ujian');
         if (!modal || !box) return;
 
+        currentExamPendaftaranId = data.pendaftaran_id;
+
+        // Tandai langsung bahwa notifikasi sudah muncul 1x agar tidak berulang saat asesi navigasi halaman
+        markAsShown(data.pendaftaran_id);
+
         document.getElementById('live-notif-skema-nama').textContent = data.skema_nama || 'Skema Sertifikasi';
         document.getElementById('live-notif-asesor-nama').textContent = data.asesor_nama || 'Asesor Penguji';
         document.getElementById('live-notif-tuk-nama').textContent = data.nama_tuk || 'TUK LSP';
         
         const btnMasuk = document.getElementById('live-notif-btn-masuk');
         if (btnMasuk) {
-            btnMasuk.href = data.ruang_uji_url || '{{ route("asesi.ruang-uji") }}';
+            btnMasuk.href = data.ruang_uji_url || '{{ route("asesi.tahapan", ["step" => 5]) }}';
+            btnMasuk.onclick = function() {
+                markAsShown(data.pendaftaran_id);
+            };
         }
 
         if (modal.style.display === 'none' || modal.style.display === '') {
@@ -120,8 +144,10 @@
         }
     }
 
-    window.tutupNotifikasiUjian = function(seconds) {
-        dismissedUntil = Date.now() + (seconds * 1000);
+    window.tutupNotifikasiUjian = function() {
+        if (currentExamPendaftaranId) {
+            markAsShown(currentExamPendaftaranId);
+        }
         const modal = document.getElementById('modal-notifikasi-ujian-aktif');
         const box = document.getElementById('box-notifikasi-ujian');
         if (box) {
@@ -134,10 +160,6 @@
     };
 
     async function checkStatus() {
-        if (Date.now() < dismissedUntil) {
-            return;
-        }
-
         try {
             const res = await fetch(checkEndpoint, {
                 headers: {
@@ -150,6 +172,13 @@
 
             if (data.has_active_exam) {
                 isExamActive = true;
+                currentExamPendaftaranId = data.pendaftaran_id;
+
+                // Cegah popup muncul berulang-ulang saat asesi berpindah antar halaman
+                if (isAlreadyShown(data.pendaftaran_id)) {
+                    return;
+                }
+
                 showExamModal(data);
             }
         } catch (e) {
@@ -157,12 +186,21 @@
         }
     }
 
-    // Polling setiap 8 detik
+    // Inisialisasi pengecekan status
     document.addEventListener('DOMContentLoaded', function() {
-        setTimeout(checkStatus, 1500);
-        checkInterval = setInterval(checkStatus, 8000);
+        const modal = document.getElementById('modal-notifikasi-ujian-aktif');
+        if (modal) {
+            modal.addEventListener('click', function(e) {
+                if (e.target === modal) {
+                    window.tutupNotifikasiUjian();
+                }
+            });
+        }
 
-        // Langsung cek saat tab aktif kembali
+        setTimeout(checkStatus, 1500);
+        checkInterval = setInterval(checkStatus, 10000);
+
+        // Cek saat tab aktif kembali
         document.addEventListener('visibilitychange', function() {
             if (!document.hidden) {
                 checkStatus();

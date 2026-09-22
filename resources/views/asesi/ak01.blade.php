@@ -211,7 +211,7 @@
                     </p>
                 </div>
             </div>
-            <a href="{{ route('asesi.ujian', ['pendaftaran_id' => $pendaftaran->id]) }}" 
+            <a href="{{ route('asesi.tahapan', ['step' => 5, 'pendaftaran_id' => $pendaftaran->id]) }}" 
                class="px-4 py-2 rounded-xl bg-white text-emerald-800 hover:bg-emerald-50 font-bold text-xs shadow-xs transition-colors shrink-0 inline-flex items-center">
                 <span>Buka Ruang Ujian</span>
             </a>

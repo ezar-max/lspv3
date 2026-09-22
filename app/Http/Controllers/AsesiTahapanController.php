@@ -325,6 +325,18 @@ class AsesiTahapanController extends Controller
                 ];
                 $sisaDetik = $pendaftaran->jadwal->sisa_detik_ujian ?? 5400;
                 $detikMenujuMulai = $pendaftaran->jadwal->detik_menuju_mulai ?? 0;
+            } else {
+                $statusSesi = [
+                    'bisa_akses' => false,
+                    'is_readonly' => true,
+                    'status' => 'belum_ada_jadwal',
+                    'pesan' => 'Jadwal pelaksanaan asesmen belum ditentukan oleh pihak LSP.',
+                    'formatted_mulai' => '-',
+                    'formatted_selesai' => '-',
+                    'formatted_tanggal' => '-',
+                ];
+                $sisaDetik = 0;
+                $detikMenujuMulai = 0;
             }
 
             $instrumenAsesi = $pendaftaran->getInstrumenAsesi();
@@ -362,7 +374,15 @@ class AsesiTahapanController extends Controller
             }
 
             $isSubmitted = ($recordIa05 && $recordIa05->status === 'submitted') 
-                || ($pendaftaran->status_pendaftaran === 'selesai');
+                || ($recordIa06 && $recordIa06->status === 'submitted')
+                || ($recordIa02 && $recordIa02->status === 'submitted')
+                || ($pendaftaran->status_pendaftaran === 'selesai')
+                || !empty($pendaftaran->rekomendasi);
+
+            if ($isSubmitted) {
+                $statusSesi['is_readonly'] = true;
+                $statusSesi['can_access'] = true;
+            }
 
             $availableTabs = array_keys($instrumenAsesi);
             $requestedTab = $request->get('tab');

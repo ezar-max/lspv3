@@ -226,116 +226,18 @@ class AsesiUjianController extends Controller
 
     public function index(Request $request)
     {
-        $user = auth()->user();
-        if (!$user || $user->peran !== 'asesi') {
-            abort(403, 'Akses Ditolak: Halaman ini khusus untuk peserta uji (Asesi).');
+        $params = ['step' => 5];
+        if ($request->has('pendaftaran_id')) {
+            $params['pendaftaran_id'] = $request->get('pendaftaran_id');
+        }
+        if ($request->has('tab')) {
+            $params['tab'] = $request->get('tab');
+        }
+        if ($request->has('submitted')) {
+            $params['submitted'] = $request->get('submitted');
         }
 
-        $pendaftaranId = $request->get('pendaftaran_id');
-        $pendaftaran = PendaftaranAsesi::with([
-            'asesi.profilAsesi',
-            'skema.unitKompetensi.elemenKompetensi.kriteriaUnjukKerja',
-            'asesor',
-            'jadwal',
-            'dokumen',
-            'iaPenilaian'
-        ])
-        ->where('asesi_id', $user->id)
-        ->when($pendaftaranId, fn($q) => $q->where('id', $pendaftaranId))
-        ->latest()
-        ->first();
-
-        if (!$pendaftaran) {
-            if ($pendaftaranId) {
-                abort(PendaftaranAsesi::whereKey($pendaftaranId)->exists() ? 403 : 404,
-                    'Pendaftaran yang dipilih tidak dapat diakses.');
-            }
-            return redirect()->route('asesi.dashboard')
-                ->with('error', 'Anda belum memiliki pendaftaran skema sertifikasi yang aktif.');
-        }
-
-        $isAk01Selesai = ($pendaftaran->status_ak01 === 'selesai') || (!empty($pendaftaran->tanda_tangan_asesi_ak01) && !empty($pendaftaran->tanda_tangan_asesor_ak01));
-
-        if (!$isAk01Selesai && $pendaftaran->status_pendaftaran !== 'selesai') {
-            if ($pendaftaran->status_ak01 === 'disetujui_asesi' || !empty($pendaftaran->tanda_tangan_asesi_ak01)) {
-                return redirect()->route('asesi.ak01', ['id' => $pendaftaran->id])
-                    ->with('warning', 'Formulir FR.AK.01 telah Anda tandatangani dan sedang menunggu persetujuan/pengesahan dari Asesor Penguji sebelum memasuki Ruang Ujian.');
-            }
-            return redirect()->route('asesi.tahapan', ['step' => 3, 'pendaftaran_id' => $pendaftaran->id])
-                ->with('error', 'Harap tandatangani Persetujuan Asesmen (FR.AK.01) pada Tahapan Asesmen sebelum memasuki Ruang Ujian.');
-        }
-
-        if ($pendaftaran->jadwal) {
-            $pendaftaran->jadwal->syncRealtimeStatus();
-        }
-
-        $statusSesi = $this->cekAksesSesiUjian($pendaftaran);
-        $sisaDetik = $pendaftaran->jadwal ? $pendaftaran->jadwal->sisa_detik_ujian : 5400;
-        $detikMenujuMulai = $pendaftaran->jadwal ? $pendaftaran->jadwal->detik_menuju_mulai : 0;
-
-        $instrumenAsesi = $pendaftaran->getInstrumenAsesi();
-        $hasCbt = isset($instrumenAsesi['cbt']);
-        $hasEsai = isset($instrumenAsesi['esai']);
-        $hasPraktik = isset($instrumenAsesi['praktik']);
-
-        $soalCbt = [];
-        $recordIa05 = null;
-        $savedJawabanPg = [];
-        if ($hasCbt) {
-            $soalCbt = self::getDaftarSoalCbt($pendaftaran->skema);
-            $recordIa05 = IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.05')->first();
-            $savedJawabanPg = $recordIa05 ? ($recordIa05->data_jawaban['jawaban_pg'] ?? []) : [];
-        }
-
-        $soalEsai = [];
-        $recordIa06 = null;
-        $savedJawabanEsai = [];
-        if ($hasEsai) {
-            $soalEsai = self::getDaftarSoalEsai($pendaftaran->skema);
-            $recordIa06 = IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.06')->first();
-            $savedJawabanEsai = $recordIa06 ? ($recordIa06->data_jawaban['jawaban_esai'] ?? []) : [];
-        }
-
-        $panduanPraktik = [];
-        $recordIa02 = null;
-        $savedPraktik = [];
-        $dokumenPraktik = null;
-        if ($hasPraktik) {
-            $panduanPraktik = self::getPanduanPraktikIa02($pendaftaran->skema, $pendaftaran);
-            $recordIa02 = IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.02')->first();
-            $savedPraktik = $recordIa02 ? ($recordIa02->data_jawaban ?? []) : [];
-            $dokumenPraktik = $pendaftaran->dokumen ? $pendaftaran->dokumen->where('jenis_dokumen', 'Hasil Proyek / Laporan Praktik FR.IA.02')->first() : null;
-        }
-
-        $isSubmitted = ($recordIa05 && $recordIa05->status === 'submitted') 
-            || ($pendaftaran->status_pendaftaran === 'selesai');
-
-        $availableTabs = array_keys($instrumenAsesi);
-        $requestedTab = $request->get('tab');
-        if ($requestedTab && in_array($requestedTab, $availableTabs)) {
-            $defaultTab = $requestedTab;
-        } elseif (!empty($availableTabs)) {
-            $defaultTab = $availableTabs[0];
-        } else {
-            $defaultTab = 'praktik';
-        }
-
-        return view('asesi.ruang-uji', compact(
-            'pendaftaran',
-            'statusSesi',
-            'sisaDetik',
-            'detikMenujuMulai',
-            'instrumenAsesi',
-            'defaultTab',
-            'soalCbt',
-            'soalEsai',
-            'panduanPraktik',
-            'savedJawabanPg',
-            'savedJawabanEsai',
-            'savedPraktik',
-            'isSubmitted',
-            'dokumenPraktik'
-        ));
+        return redirect()->route('asesi.tahapan', $params);
     }
 
     /**
@@ -364,12 +266,37 @@ class AsesiUjianController extends Controller
             return response()->json(['status' => 'error', 'message' => 'Formulir FR.AK.01 belum disahkan oleh kedua belah pihak.'], 403);
         }
 
+        if ($pendaftaran->jadwal) {
+            $pendaftaran->jadwal->syncRealtimeStatus();
+            if ($pendaftaran->jadwal->status_jadwal === 'dibatalkan') {
+                return response()->json(['status' => 'error', 'message' => 'Jadwal asesmen telah dibatalkan.'], 403);
+            }
+            if ($pendaftaran->jadwal->isBelumMulai()) {
+                return response()->json(['status' => 'error', 'message' => 'Sesi asesmen belum dimulai sesuai jadwal. Jawaban belum dapat disimpan.'], 403);
+            }
+            if ($pendaftaran->jadwal->isSudahSelesai(true, 10)) {
+                return response()->json(['status' => 'error', 'message' => 'Waktu pengerjaan asesmen telah berakhir.'], 403);
+            }
+        }
+
+        // GUARD KETAT: Jika ujian telah dikumpulkan / disubmit, jawaban tidak dapat diubah lagi
+        $isSubmitted = ($pendaftaran->status_pendaftaran === 'selesai')
+            || !empty($pendaftaran->rekomendasi)
+            || IaPenilaian::where('pendaftaran_id', $pendaftaran->id)
+                ->whereIn('kode_formulir', ['FR.IA.05', 'FR.IA.06', 'FR.IA.02'])
+                ->where('status', 'submitted')
+                ->exists();
+
+        if ($isSubmitted) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Ujian telah dikumpulkan dan tidak dapat diisi atau diubah lagi.'
+            ], 403);
+        }
+
         $tipe = $request->input('tipe');
 
         if ($tipe === 'cbt') {
-            $no = $request->input('no');
-            $jawaban = $request->input('jawaban');
-
             $record = IaPenilaian::firstOrNew([
                 'pendaftaran_id' => $pendaftaran->id,
                 'kode_formulir' => 'FR.IA.05',
@@ -380,7 +307,20 @@ class AsesiUjianController extends Controller
                 'total_soal' => count(self::getDaftarSoalCbt($pendaftaran->skema)),
             ];
 
-            $payload['jawaban_pg'][$no] = $jawaban;
+            if ($request->has('jawaban_pg') && is_array($request->input('jawaban_pg'))) {
+                foreach ($request->input('jawaban_pg') as $k => $v) {
+                    if ($v !== null && $v !== '') {
+                        $payload['jawaban_pg'][$k] = $v;
+                    }
+                }
+            } else {
+                $no = $request->input('no');
+                $jawaban = $request->input('jawaban');
+                if ($no !== null) {
+                    $payload['jawaban_pg'][$no] = $jawaban;
+                }
+            }
+
             $payload['last_updated_at'] = now()->toDateTimeString();
 
             $record->user_id = $user->id;
@@ -392,17 +332,14 @@ class AsesiUjianController extends Controller
             return response()->json([
                 'status' => 'success',
                 'tipe' => 'cbt',
-                'no' => $no,
-                'jawaban' => $jawaban,
-                'total_terjawab' => count($payload['jawaban_pg']),
+                'no' => $request->input('no'),
+                'jawaban' => $request->input('jawaban'),
+                'total_terjawab' => count($payload['jawaban_pg'] ?? []),
                 'saved_at' => now()->format('H:i:s')
             ]);
         }
 
         if ($tipe === 'esai') {
-            $no = $request->input('no');
-            $jawaban = $request->input('jawaban');
-
             $record = IaPenilaian::firstOrNew([
                 'pendaftaran_id' => $pendaftaran->id,
                 'kode_formulir' => 'FR.IA.06',
@@ -412,7 +349,18 @@ class AsesiUjianController extends Controller
                 'jawaban_esai' => [],
             ];
 
-            $payload['jawaban_esai'][$no] = $jawaban;
+            if ($request->has('jawaban_esai') && is_array($request->input('jawaban_esai'))) {
+                foreach ($request->input('jawaban_esai') as $k => $v) {
+                    $payload['jawaban_esai'][$k] = $v;
+                }
+            } else {
+                $no = $request->input('no');
+                $jawaban = $request->input('jawaban');
+                if ($no !== null) {
+                    $payload['jawaban_esai'][$no] = $jawaban;
+                }
+            }
+
             $payload['last_updated_at'] = now()->toDateTimeString();
 
             $record->user_id = $user->id;
@@ -424,8 +372,8 @@ class AsesiUjianController extends Controller
             return response()->json([
                 'status' => 'success',
                 'tipe' => 'esai',
-                'no' => $no,
-                'total_terjawab' => count(array_filter($payload['jawaban_esai'], fn($v) => !empty(trim($v)))),
+                'no' => $request->input('no'),
+                'total_terjawab' => count(array_filter($payload['jawaban_esai'] ?? [], fn($v) => !empty(trim($v ?? '')))),
                 'saved_at' => now()->format('H:i:s')
             ]);
         }
@@ -487,6 +435,18 @@ class AsesiUjianController extends Controller
             if ($pendaftaran->jadwal->isSudahSelesai(true, 10)) {
                 return redirect()->back()->with('error', 'Waktu pelaksanaan asesmen telah berakhir.');
             }
+        }
+
+        // Guard: Jika ujian sudah dikumpulkan, berkas praktik tidak dapat diubah
+        $isSubmitted = ($pendaftaran->status_pendaftaran === 'selesai')
+            || !empty($pendaftaran->rekomendasi)
+            || IaPenilaian::where('pendaftaran_id', $pendaftaran->id)
+                ->whereIn('kode_formulir', ['FR.IA.05', 'FR.IA.06', 'FR.IA.02'])
+                ->where('status', 'submitted')
+                ->exists();
+
+        if ($isSubmitted) {
+            return redirect()->back()->with('error', 'Ujian telah dikumpulkan dan berkas praktik tidak dapat diubah lagi.');
         }
 
         $request->validate([
@@ -563,6 +523,19 @@ class AsesiUjianController extends Controller
             if ($pendaftaran->jadwal->isSudahSelesai(true, 10)) {
                 return redirect()->back()->with('error', 'Waktu pelaksanaan asesmen telah berakhir.');
             }
+        }
+
+        // Guard: Jika ujian telah dikumpulkan sebelumnya, tidak dapat dikumpulkan ulang
+        $isSubmitted = ($pendaftaran->status_pendaftaran === 'selesai')
+            || !empty($pendaftaran->rekomendasi)
+            || IaPenilaian::where('pendaftaran_id', $pendaftaran->id)
+                ->whereIn('kode_formulir', ['FR.IA.05', 'FR.IA.06', 'FR.IA.02'])
+                ->where('status', 'submitted')
+                ->exists();
+
+        if ($isSubmitted) {
+            return redirect()->route('asesi.tahapan', ['step' => 5, 'pendaftaran_id' => $pendaftaran->id])
+                ->with('info', 'Ujian Anda telah dikumpulkan sebelumnya dan lembar jawaban telah dikunci.');
         }
 
         // 1. Evaluasi & Submit CBT (FR.IA.05)
@@ -645,7 +618,7 @@ class AsesiUjianController extends Controller
 
         LogAktivitas::catat('Ujian Online Selesai', "Asesi {$user->nama_lengkap} telah mengumpulkan seluruh lembar ujian FR.IA pada pendaftaran #{$pendaftaran->nomor_pendaftaran}");
 
-        return redirect()->route('asesi.ujian', ['pendaftaran_id' => $pendaftaran->id, 'submitted' => 1])
+        return redirect()->route('asesi.tahapan', ['step' => 5, 'pendaftaran_id' => $pendaftaran->id, 'submitted' => 1])
             ->with('sukses', 'Ujian asesmen berhasil dikumpulkan! Seluruh jawaban Anda telah tersimpan dan siap dievaluasi oleh Asesor Penguji.');
     }
 
@@ -675,9 +648,9 @@ class AsesiUjianController extends Controller
             $jadwal = $p->jadwal;
             $statusJadwal = $jadwal ? $jadwal->syncRealtimeStatus() : 'terjadwal';
             $isSubmitted = IaPenilaian::where('pendaftaran_id', $p->id)
-                ->where('kode_formulir', 'FR.IA.05')
+                ->whereIn('kode_formulir', ['FR.IA.05', 'FR.IA.06', 'FR.IA.02'])
                 ->where('status', 'submitted')
-                ->exists();
+                ->exists() || ($p->status_pendaftaran === 'selesai') || !empty($p->rekomendasi);
 
             $isRuangUjiOpen = $p->isRuangUjiOpen();
             $sisaDetik = $jadwal ? $jadwal->sisa_detik_ujian : 0;
@@ -692,7 +665,7 @@ class AsesiUjianController extends Controller
                 'skema_nama' => $p->skema->nama_skema ?? 'Skema Sertifikasi',
                 'asesor_nama' => $p->asesor->nama_lengkap ?? ($jadwal->asesor->nama_lengkap ?? 'Asesor Penguji'),
                 'nama_tuk' => $jadwal->nama_tuk ?? 'TUK LSP',
-                'ruang_uji_url' => route('asesi.ruang-uji', ['pendaftaran_id' => $p->id]),
+                'ruang_uji_url' => route('asesi.tahapan', ['step' => 5, 'pendaftaran_id' => $p->id]),
             ]);
         }
 
@@ -706,9 +679,9 @@ class AsesiUjianController extends Controller
 
         foreach ($listPendaftaran as $p) {
             $isSubmitted = IaPenilaian::where('pendaftaran_id', $p->id)
-                ->where('kode_formulir', 'FR.IA.05')
+                ->whereIn('kode_formulir', ['FR.IA.05', 'FR.IA.06', 'FR.IA.02'])
                 ->where('status', 'submitted')
-                ->exists();
+                ->exists() || ($p->status_pendaftaran === 'selesai') || !empty($p->rekomendasi);
 
             if ($isSubmitted) {
                 continue;
@@ -731,7 +704,7 @@ class AsesiUjianController extends Controller
                     'skema_kode' => $p->skema->kode_skema ?? 'SKEMA',
                     'asesor_nama' => $p->asesor->nama_lengkap ?? ($jadwal->asesor->nama_lengkap ?? 'Asesor Penguji'),
                     'nama_tuk' => $jadwal->nama_tuk ?? 'TUK LSP',
-                    'ruang_uji_url' => route('asesi.ruang-uji', ['pendaftaran_id' => $p->id]),
+                    'ruang_uji_url' => route('asesi.tahapan', ['step' => 5, 'pendaftaran_id' => $p->id]),
                     'sisa_detik' => $jadwal->sisa_detik_ujian,
                 ]);
             }

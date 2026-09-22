@@ -437,7 +437,7 @@
                                 </div>
                             @elseif($timeInfo['status'] === 'selesai')
                                 <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
-                                    <a href="{{ route('asesi.ujian', ['pendaftaran_id' => $p->id]) }}" class="tombol tombol-sekunder" style="font-size: 0.88rem;">
+                                    <a href="{{ route('asesi.tahapan', ['step' => 5, 'pendaftaran_id' => $p->id]) }}" class="tombol tombol-sekunder" style="font-size: 0.88rem;">
                                         Pratinjau Ruang Uji
                                     </a>
                                     <a href="{{ route('asesi.tahapan', ['step' => 3, 'pendaftaran_id' => $p->id]) }}" class="tombol tombol-sekunder" style="font-size: 0.85rem;">
@@ -449,7 +449,7 @@
                                 </div>
                             @else
                                 <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
-                                    <a href="{{ route('asesi.ruang-uji', ['pendaftaran_id' => $p->id]) }}" class="tombol tombol-utama" style="background: #16a34a; border-color: #16a34a; font-size: 0.92rem; font-weight: 800; box-shadow: 0 4px 6px -1px rgba(22, 163, 74, 0.3);">
+                                    <a href="{{ route('asesi.tahapan', ['step' => 5, 'pendaftaran_id' => $p->id]) }}" class="tombol tombol-utama" style="background: #16a34a; border-color: #16a34a; font-size: 0.92rem; font-weight: 800; box-shadow: 0 4px 6px -1px rgba(22, 163, 74, 0.3);">
                                         Masuk Ruang Uji &rarr;
                                     </a>
                                     <a href="{{ route('asesi.tahapan', ['step' => 3, 'pendaftaran_id' => $p->id]) }}" class="tombol tombol-sekunder" style="font-size: 0.85rem;">
@@ -570,7 +570,7 @@
                             </p>
                         </div>
                         @if($isUjianBerlangsung)
-                            <a href="{{ route('asesi.ruang-uji', ['pendaftaran_id' => $p->id]) }}" class="tombol tombol-utama" style="background: #16a34a; border-color: #16a34a; font-size: 0.88rem; font-weight: 800; padding: 0.5rem 1.1rem;">
+                            <a href="{{ route('asesi.tahapan', ['step' => 5, 'pendaftaran_id' => $p->id]) }}" class="tombol tombol-utama" style="background: #16a34a; border-color: #16a34a; font-size: 0.88rem; font-weight: 800; padding: 0.5rem 1.1rem;">
                                 Masuk Ruang Uji &rarr;
                             </a>
                         @endif
@@ -628,7 +628,7 @@
                                     </div>
 
                                     @if($isUjianBerlangsung)
-                                        <a href="{{ route('asesi.ruang-uji', ['pendaftaran_id' => $p->id, 'tab' => $formItem['tab']]) }}" class="tombol tombol-utama tombol-sm" style="background: #2563eb; border-color: #2563eb; font-size: 0.8rem; text-align: center; width: 100%;">
+                                        <a href="{{ route('asesi.tahapan', ['step' => 5, 'pendaftaran_id' => $p->id, 'tab' => $formItem['tab']]) }}" class="tombol tombol-utama tombol-sm" style="background: #2563eb; border-color: #2563eb; font-size: 0.8rem; text-align: center; width: 100%;">
                                             Kerjakan {{ $formItem['kode'] }} &rarr;
                                         </a>
                                     @endif
