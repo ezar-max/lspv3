@@ -40,24 +40,111 @@
                 <li><a href="{{ route('beranda') }}#berita" class="nav-link">Berita &amp; Pengumuman</a></li>
             </ul>
 
-            @if(!request()->routeIs('masuk', 'daftar', 'registrasi'))
-                <div class="nav-aksi">
+            <div class="nav-aksi">
+                @auth
+                    <a href="{{ route(auth()->user()->peran . '.dasbor') }}" class="tombol-cta-header">
+                        Buka Dasbor
+                    </a>
+                @else
+                    <a href="{{ route('masuk') }}" class="tombol-masuk {{ request()->routeIs('masuk') ? 'aktif' : '' }}">
+                        Masuk
+                    </a>
+                    <a href="{{ route('daftar') }}" class="tombol-cta-header {{ (request()->routeIs('daftar') || request()->routeIs('registrasi')) ? 'aktif' : '' }}">
+                        Daftar Asesi
+                    </a>
+                @endauth
+                <button type="button" class="tombol-menu-hp" id="tombolMenuHp" aria-label="Buka Menu" aria-expanded="false" aria-controls="drawerMobileOverlay">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- MOBILE DRAWER NAVIGATION (Hanya aktif di mobile, 100% tersembunyi di desktop) -->
+    <div class="drawer-mobile-overlay" id="drawerMobileOverlay" aria-hidden="true">
+        <div class="drawer-mobile-panel" id="drawerMobilePanel" role="dialog" aria-modal="true" aria-label="Menu Navigasi Mobile">
+            <div class="drawer-mobile-header">
+                <div class="drawer-brand">
+                    <div class="drawer-logo-wrap">
+                        <img src="{{ asset('logo/logo-lsp.jpeg') }}" alt="Logo LSP SMKN 1 Gunungputri" class="drawer-logo-img">
+                    </div>
+                    <div class="drawer-brand-text">
+                        <span class="drawer-brand-nama">LSP SMKN 1 Gunungputri</span>
+                        <span class="drawer-brand-sub">Sertifikasi BNSP Resmi</span>
+                    </div>
+                </div>
+                <button type="button" class="drawer-tombol-tutup" id="drawerTombolTutup" aria-label="Tutup menu navigasi">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <div class="drawer-mobile-body">
+                <ul class="drawer-nav-list">
+                    <li>
+                        <a href="{{ route('beranda') }}#beranda" class="drawer-nav-link {{ request()->routeIs('beranda') ? 'aktif' : '' }}">
+                            <div class="drawer-nav-link-left">
+                                <div class="drawer-nav-icon">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                                </div>
+                                <span>Beranda</span>
+                            </div>
+                            <svg class="drawer-nav-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('beranda') }}#skema" class="drawer-nav-link">
+                            <div class="drawer-nav-link-left">
+                                <div class="drawer-nav-icon">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                                </div>
+                                <span>Skema Keahlian</span>
+                            </div>
+                            <svg class="drawer-nav-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('beranda') }}#berita" class="drawer-nav-link">
+                            <div class="drawer-nav-link-left">
+                                <div class="drawer-nav-icon">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 20H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v1m2 13a2 2 0 0 1-2-2V7m2 13a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"></path></svg>
+                                </div>
+                                <span>Berita &amp; Pengumuman</span>
+                            </div>
+                            <svg class="drawer-nav-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                        </a>
+                    </li>
+                </ul>
+
+                <div class="drawer-aksi-wadah">
                     @auth
-                        <a href="{{ route(auth()->user()->peran . '.dasbor') }}" class="tombol-cta-header">
-                            Buka Dasbor
+                        <a href="{{ route(auth()->user()->peran . '.dasbor') }}" class="drawer-btn-cta">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                            <span>Buka Dasbor Saya</span>
                         </a>
                     @else
-                        <a href="{{ route('masuk') }}" class="tombol-masuk">
-                            Masuk
+                        <a href="{{ route('masuk') }}" class="drawer-btn-masuk {{ request()->routeIs('masuk') ? 'aktif' : '' }}">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line></svg>
+                            <span>Masuk Portal</span>
                         </a>
-                        <a href="{{ route('daftar') }}" class="tombol-cta-header">
-                            Daftar Asesi
+                        <a href="{{ route('daftar') }}" class="drawer-btn-cta {{ (request()->routeIs('daftar') || request()->routeIs('registrasi')) ? 'aktif' : '' }}">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
+                            <span>Daftar Asesi Baru</span>
                         </a>
                     @endauth
                 </div>
-            @endif
+
+                <div class="drawer-footer-info">
+                    <div class="drawer-footer-badge">
+                        <span class="drawer-dot-verified"></span>
+                        <span>BNSP-LSP-2629-ID Terlisensi</span>
+                    </div>
+                    <p>&copy; {{ date('Y') }} SMKN 1 Gunungputri</p>
+                </div>
+            </div>
         </div>
-    </nav>
+    </div>
 
     <!-- KONTEN UTAMA -->
     <main>
@@ -114,6 +201,69 @@
     <!-- Auto Popup Notifikasi Session Flash (SweetAlert2 - Format Gambar 2) -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            // Mobile Drawer Toggle
+            const tombolMenuHp = document.getElementById('tombolMenuHp');
+            const drawerOverlay = document.getElementById('drawerMobileOverlay');
+            const drawerTutup = document.getElementById('drawerTombolTutup');
+            const drawerLinks = drawerOverlay ? drawerOverlay.querySelectorAll('.drawer-nav-link, .drawer-btn-masuk, .drawer-btn-cta') : [];
+
+            function bukaDrawer() {
+                if (drawerOverlay) {
+                    drawerOverlay.classList.add('aktif');
+                    drawerOverlay.setAttribute('aria-hidden', 'false');
+                    document.body.style.overflow = 'hidden';
+                    if (tombolMenuHp) tombolMenuHp.setAttribute('aria-expanded', 'true');
+                    if (drawerTutup) drawerTutup.focus();
+                }
+            }
+
+            function tutupDrawer() {
+                if (drawerOverlay) {
+                    drawerOverlay.classList.remove('aktif');
+                    drawerOverlay.setAttribute('aria-hidden', 'true');
+                    document.body.style.overflow = '';
+                    if (tombolMenuHp) {
+                        tombolMenuHp.setAttribute('aria-expanded', 'false');
+                        tombolMenuHp.focus();
+                    }
+                }
+            }
+
+            if (tombolMenuHp) {
+                tombolMenuHp.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    if (drawerOverlay && drawerOverlay.classList.contains('aktif')) {
+                        tutupDrawer();
+                    } else {
+                        bukaDrawer();
+                    }
+                });
+            }
+
+            if (drawerTutup) {
+                drawerTutup.addEventListener('click', tutupDrawer);
+            }
+
+            if (drawerOverlay) {
+                drawerOverlay.addEventListener('click', function(e) {
+                    if (e.target === drawerOverlay) {
+                        tutupDrawer();
+                    }
+                });
+
+                drawerLinks.forEach(function(link) {
+                    link.addEventListener('click', function() {
+                        tutupDrawer();
+                    });
+                });
+
+                document.addEventListener('keydown', function(e) {
+                    if (e.key === 'Escape' && drawerOverlay.classList.contains('aktif')) {
+                        tutupDrawer();
+                    }
+                });
+            }
+
             @if (session('sukses'))
                 Swal.fire({
                     icon: 'success',

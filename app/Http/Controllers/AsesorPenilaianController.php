@@ -8,6 +8,7 @@ use App\Models\IaPenilaian;
 use App\Models\RekomendasiAsesmen;
 use App\Models\PenilaianAsesmen;
 use App\Models\LogAktivitas;
+use App\Notifications\SystemAlert;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 
@@ -254,6 +255,9 @@ class AsesorPenilaianController extends Controller
         }
 
         if ($isFinal) {
+            $keputusan = $request->input('keputusan');
+            $catatanRekomendasi = $request->input('catatan_rekomendasi', 'Asesi telah menyelesaikan seluruh tahapan asesmen dan dinyatakan ' . strtoupper($keputusan) . '.');
+
             // Simpan Keputusan Rekomendasi Akhir & Umpan Balik (FR.AK.02 & FR.AK.03)
             RekomendasiAsesmen::updateOrCreate(
                 ['pendaftaran_id' => $pendaftaran->id],
@@ -261,6 +265,8 @@ class AsesorPenilaianController extends Controller
                     'asesor_id' => $user->id,
                     'keputusan' => $request->input('keputusan'),
                     'catatan_rekomendasi' => $request->input('catatan_rekomendasi', 'Asesi telah menyelesaikan seluruh tahapan asesmen dan dinyatakan ' . strtoupper($request->input('keputusan')) . '.'),
+                    'keputusan' => $keputusan,
+                    'catatan_rekomendasi' => $catatanRekomendasi,
                     'tanggal_rekomendasi' => now(),
                     'tanda_tangan_asesor' => $ttdAsesor,
                 ]
@@ -271,11 +277,47 @@ class AsesorPenilaianController extends Controller
                 'status_pendaftaran' => 'selesai',
                 'rekomendasi_asesor_status' => ($request->input('keputusan') === 'kompeten' ? 'dapat_dilanjutkan' : 'tidak_dapat_dilanjutkan'),
                 'catatan_peninjauan_asesor' => $request->input('catatan_rekomendasi'),
+                'rekomendasi_asesor_status' => ($keputusan === 'kompeten' ? 'dapat_dilanjutkan' : 'tidak_dapat_dilanjutkan'),
+                'catatan_peninjauan_asesor' => $catatanRekomendasi,
                 'tanda_tangan_asesor' => $ttdAsesor,
                 'tanggal_ttd_asesor' => now(),
+                'asesor_id' => $pendaftaran->asesor_id ?: $user->id,
             ]);
 
             LogAktivitas::catat('Penilaian Live Disahkan', "Asesor {$user->nama_lengkap} menetapkan keputusan " . strtoupper($request->input('keputusan')) . " pada asesi {$pendaftaran->asesi->nama_lengkap} (Reg #{$pendaftaran->nomor_pendaftaran})");
+            // Sinkronkan seluruh unit kompetensi dalam skema ke tabel penilaian_asesmen
+            if ($pendaftaran->skema && $pendaftaran->skema->unitKompetensi) {
+                foreach ($pendaftaran->skema->unitKompetensi as $unit) {
+                    PenilaianAsesmen::updateOrCreate(
+                        [
+                            'pendaftaran_id' => $pendaftaran->id,
+                            'unit_id' => $unit->id,
+                        ],
+                        [
+                            'asesor_id' => $user->id,
+                            'nilai_kompetensi' => ($keputusan === 'kompeten' ? 'K' : 'BK'),
+                            'catatan_asesor' => ($keputusan === 'kompeten' 
+                                ? 'Kompeten sesuai hasil observasi langsung, uji teori, dan praktik demonstrasi.' 
+                                : 'Belum memenuhi kriteria unjuk kerja yang dipersyaratkan.')
+                        ]
+                    );
+                }
+            }
+
+            // Kirim notifikasi lonceng ke akun Asesi
+            $asesi = $pendaftaran->asesi;
+            if ($asesi) {
+                $statusTeks = strtoupper($keputusan);
+                $asesi->notify(new SystemAlert(
+                    'Hasil Akhir Asesmen Tersedia',
+                    "Asesor {$user->nama_lengkap} telah menetapkan keputusan akhir asesmen: {$statusTeks}. Silakan buka menu Hasil & Nilai.",
+                    route('asesi.hasil-nilai'),
+                    'success',
+                    ['pendaftaran_id' => $pendaftaran->id, 'keputusan' => $keputusan]
+                ));
+            }
+
+            LogAktivitas::catat('Penilaian Live Disahkan', "Asesor {$user->nama_lengkap} menetapkan keputusan " . strtoupper($keputusan) . " pada asesi {$pendaftaran->asesi->nama_lengkap} (Reg #{$pendaftaran->nomor_pendaftaran})");
 
             return redirect()->route('asesor.penilaian-live', ['pendaftaranId' => $pendaftaran->id, 'tab' => 'rekap'])
                 ->with('sukses', 'Penilaian asesmen hari H dan Keputusan Rekomendasi Asesor berhasil disahkan dan ditutup!');

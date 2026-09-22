@@ -12,6 +12,7 @@ use App\Models\JadwalAsesmen;
 use App\Models\PendaftaranAsesi;
 use App\Models\Pengguna;
 use App\Models\RekomendasiAsesmen;
+use App\Models\PenilaianAsesmen;
 use App\Models\SkemaSertifikasi;
 use App\Notifications\SystemAlert;
 use Illuminate\Support\Facades\DB;
@@ -178,6 +179,44 @@ class AssessmentDocumentService
                 ]
             );
 
+            // Update status pendaftaran menjadi selesai
+            $ak02->pendaftaran->update([
+                'status_pendaftaran' => 'selesai',
+                'rekomendasi_asesor_status' => ($ak02->keputusan_final === 'kompeten' ? 'dapat_dilanjutkan' : 'tidak_dapat_dilanjutkan'),
+                'catatan_peninjauan_asesor' => $ak02->komentar_asesor,
+                'tanda_tangan_asesor' => $signature,
+                'tanggal_ttd_asesor' => now(),
+                'asesor_id' => $ak02->pendaftaran->asesor_id ?: $user->id,
+            ]);
+
+            // Sinkronkan rincian penilaian unit ke tabel penilaian_asesmen
+            $rekomendasiUnit = (array) ($ak02->rekomendasi_unit ?? []);
+            if (!empty($rekomendasiUnit)) {
+                foreach ($rekomendasiUnit as $uId => $uVal) {
+                    $hasil = is_array($uVal) ? ($uVal['hasil'] ?? 'K') : $uVal;
+                    $catatan = is_array($uVal) ? ($uVal['catatan'] ?? null) : null;
+                    PenilaianAsesmen::updateOrCreate(
+                        ['pendaftaran_id' => $ak02->pendaftaran_id, 'unit_id' => $uId],
+                        [
+                            'asesor_id' => $user->id,
+                            'nilai_kompetensi' => strtoupper((string) ($hasil ?: 'K')),
+                            'catatan_asesor' => $catatan ?: ($hasil === 'K' ? 'Kompeten pada unit ini.' : 'Belum kompeten.')
+                        ]
+                    );
+                }
+            } elseif ($ak02->pendaftaran->skema && $ak02->pendaftaran->skema->unitKompetensi) {
+                foreach ($ak02->pendaftaran->skema->unitKompetensi as $unit) {
+                    PenilaianAsesmen::updateOrCreate(
+                        ['pendaftaran_id' => $ak02->pendaftaran_id, 'unit_id' => $unit->id],
+                        [
+                            'asesor_id' => $user->id,
+                            'nilai_kompetensi' => ($ak02->keputusan_final === 'kompeten' ? 'K' : 'BK'),
+                            'catatan_asesor' => $ak02->komentar_asesor ?: ($ak02->keputusan_final === 'kompeten' ? 'Kompeten sesuai evaluasi FR.AK.02' : 'Belum kompeten.')
+                        ]
+                    );
+                }
+            }
+
             DocumentAuditLog::record(
                 'FR.AK.02',
                 $ak02->id,
@@ -189,17 +228,22 @@ class AssessmentDocumentService
             );
 
             // Kirim notifikasi ke Asesi bahwa keputusan telah keluar dan FR.AK.03 terbuka
+            // Kirim notifikasi ke Asesi bahwa keputusan telah keluar dan lembar hasil siap dilihat
             $asesi = $ak02->pendaftaran->asesi;
             if ($asesi) {
                 $targetUrl = \Illuminate\Support\Facades\Route::has('dokumen-asesmen.ak03.show')
                     ? route('dokumen-asesmen.ak03.show', $ak02->pendaftaran_id)
                     : '#';
+                $statusTeks = strtoupper($ak02->keputusan_final);
+                $targetUrl = route('asesi.hasil-nilai');
                 $asesi->notify(new SystemAlert(
                     'Keputusan Asesmen Tersedia',
                     "Asesor telah menetapkan keputusan asesmen pada formulir FR.AK.02. Silakan mengisi formulir umpan balik FR.AK.03.",
+                    "Asesor {$user->nama_lengkap} telah menetapkan keputusan asesmen: {$statusTeks} pada formulir FR.AK.02. Silakan melihat lembar hasil & nilai Anda.",
                     $targetUrl,
                     'success',
                     ['pendaftaran_id' => $ak02->pendaftaran_id]
+                    ['pendaftaran_id' => $ak02->pendaftaran_id, 'keputusan' => $ak02->keputusan_final]
                 ));
             }
 

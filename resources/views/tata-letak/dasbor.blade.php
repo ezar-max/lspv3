@@ -665,93 +665,72 @@
              x-transition:enter="transition-opacity ease-out duration-300"
              x-transition:enter-start="opacity-0"
              x-transition:enter-end="opacity-100"
-             x-transition:leave="transition-opacity ease-in duration-200"
+             x-transition:leave="transition-opacity ease-in duration-250"
              x-transition:leave-start="opacity-100"
              x-transition:leave-end="opacity-0"
              @click="mobileNavOpen = false"
              @keydown.escape.window="mobileNavOpen = false"
              x-effect="document.body.style.overflow = mobileNavOpen ? 'hidden' : ''"
-             class="fixed inset-0 w-screen h-screen bg-slate-950/85 backdrop-blur-xs z-[999] lg:hidden"
+             class="fixed inset-0 w-full h-full h-[100dvh] bg-slate-950/60 backdrop-blur-xs z-[999] lg:hidden"
              style="display: none;"
              aria-hidden="true"></div>
 
-        <!-- MOBILE NAVIGATION SLIDE-OVER DRAWER (FULL-HEIGHT NATIVE FEEL - ZERO TRANSPARENCY) -->
+        <!-- MOBILE NAVIGATION SLIDE-OVER DRAWER (RESPONSIVE VIEWPORT & NATIVE FEEL) -->
         <div x-show="mobileNavOpen" 
-             x-transition:enter="transition ease-out duration-300 transform"
+             x-transition:enter="transition ease-[cubic-bezier(0.16,1,0.3,1)] duration-300 transform-gpu"
              x-transition:enter-start="translate-x-full"
              x-transition:enter-end="translate-x-0"
-             x-transition:leave="transition ease-in duration-200 transform"
+             x-transition:leave="transition ease-[cubic-bezier(0.16,1,0.3,1)] duration-250 transform-gpu"
              x-transition:leave-start="translate-x-0"
              x-transition:leave-end="translate-x-full"
-             class="fixed inset-y-0 right-0 w-full max-w-[320px] sm:max-w-[340px] h-screen bg-white z-[1000] shadow-2xl flex flex-col border-l border-slate-200 lg:hidden"
+             class="fixed inset-y-0 right-0 w-[84vw] min-w-[270px] max-w-[325px] sm:max-w-[350px] h-[100dvh] max-h-[100dvh] bg-white z-[1000] shadow-[-10px_0_30px_rgba(0,0,0,0.12)] flex flex-col border-l border-slate-200/80 rounded-l-2xl sm:rounded-l-3xl overflow-hidden lg:hidden"
              style="display: none; background-color: #ffffff !important; opacity: 1 !important;">
             
             <!-- 1. Drawer Header -->
-            <div class="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
-                    <div class="flex items-center gap-2.5">
-                        <img src="{{ asset('images/logo-lsp.jpeg') }}" alt="Logo LSP" class="h-8 w-8 object-contain rounded-lg border border-slate-200/80 p-0.5 bg-white shadow-xs">
-                        <div class="leading-tight">
-                            <div class="font-bold text-slate-900 text-xs">LSP SMKN 1 Gunungputri</div>
-                            <div class="text-[9px] font-extrabold uppercase tracking-wider {{ $roleBadgeClass }}">
-                                Portal {{ ucfirst($peran ?? 'Pengguna') }}
-                            </div>
+            <div class="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/90 backdrop-blur-xs shrink-0 pt-[calc(1rem+env(safe-area-inset-top,0px))]">
+                <div class="flex items-center gap-2.5">
+                    <img src="{{ asset('images/logo-lsp.jpeg') }}" alt="Logo LSP" class="h-8 w-8 object-contain rounded-lg border border-slate-200/80 p-0.5 bg-white shadow-xs">
+                    <div class="leading-tight">
+                        <div class="font-bold text-slate-900 text-xs">LSP SMKN 1 Gunungputri</div>
+                        <div class="text-[9px] font-extrabold uppercase tracking-wider {{ $roleBadgeClass }}">
+                            Portal {{ ucfirst($peran ?? 'Pengguna') }}
                         </div>
                     </div>
-                    <button type="button" 
-                            @click="mobileNavOpen = false"
-                            class="w-8 h-8 rounded-lg bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-800 flex items-center justify-center transition-colors cursor-pointer"
-                            aria-label="Tutup Menu">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </button>
                 </div>
+                <button type="button" 
+                        @click="mobileNavOpen = false"
+                        class="w-8 h-8 rounded-lg bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-800 flex items-center justify-center transition-colors cursor-pointer"
+                        aria-label="Tutup Menu">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
 
-                <!-- 2. User Profile Card -->
-                <div class="p-3.5 bg-slate-50 border-b border-slate-100 flex items-center justify-between gap-3">
-                    <div class="flex items-center gap-2.5 min-w-0">
-                        <div class="w-9 h-9 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-bold flex items-center justify-center text-xs shrink-0 shadow-xs">
-                            {{ strtoupper(substr($user?->nama_lengkap ?? 'U', 0, 2)) }}
-                        </div>
-                        <div class="min-w-0 leading-tight">
-                            <div class="font-bold text-slate-800 text-xs truncate" title="{{ $user?->nama_lengkap }}">
-                                {{ $user?->nama_lengkap ?? 'Pengguna' }}
-                            </div>
-                            <div class="text-[11px] text-slate-500 truncate">{{ $user?->email ?? '-' }}</div>
-                        </div>
+            <!-- 2. User Profile Card -->
+            <div class="p-3.5 bg-slate-50/60 border-b border-slate-100 flex items-center justify-between gap-3 shrink-0">
+                <div class="flex items-center gap-2.5 min-w-0">
+                    <div class="w-9 h-9 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-bold flex items-center justify-center text-xs shrink-0 shadow-xs">
+                        {{ strtoupper(substr($user?->nama_lengkap ?? 'U', 0, 2)) }}
                     </div>
-                    @if($peran === 'asesi')
-                        <a href="{{ route('asesi.profil') }}" 
-                           @click="mobileNavOpen = false"
-                           class="px-2.5 py-1 text-[11px] font-bold text-blue-700 bg-blue-50 border border-blue-200/80 rounded-lg hover:bg-blue-100 transition-colors shrink-0">
-                            Profil
-                        </a>
-                    @endif
+                    <div class="min-w-0 leading-tight">
+                        <div class="font-bold text-slate-800 text-xs truncate" title="{{ $user?->nama_lengkap }}">
+                            {{ $user?->nama_lengkap ?? 'Pengguna' }}
+                        </div>
+                        <div class="text-[11px] text-slate-500 truncate">{{ $user?->email ?? '-' }}</div>
+                    </div>
                 </div>
-
-                <!-- 3. Scrollable Navigation Menu -->
-                <div class="flex-1 overflow-y-auto px-3 py-3.5 space-y-4 text-xs bg-white">
-                    <!-- Global Notifikasi Link -->
-                    <a href="{{ route('notifications.index') }}" 
+                @if($peran === 'asesi')
+                    <a href="{{ route('asesi.profil') }}" 
                        @click="mobileNavOpen = false"
-                       class="group flex items-center justify-between px-3 py-2.5 rounded-xl font-semibold transition-all {{ request()->routeIs('notifications.*') ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-700 bg-white border border-slate-200/80 hover:bg-slate-50' }}">
-                        <div class="flex items-center gap-2.5">
-                            <div class="w-7 h-7 rounded-lg flex items-center justify-center {{ request()->routeIs('notifications.*') ? 'bg-blue-700 text-white' : 'bg-slate-100 text-slate-600' }}">
-                                <i class="fa-solid fa-bell text-xs"></i>
-                            </div>
-                            <span>Notifikasi & Pemberitahuan</span>
-                        </div>
-                        @php
-                            $unreadNavbarCount = $user ? $user->unreadNotifications()->count() : 0;
-                        @endphp
-                        @if($unreadNavbarCount > 0)
-                            <span class="px-2 py-0.5 rounded-full {{ request()->routeIs('notifications.*') ? 'bg-white text-blue-700' : 'bg-rose-500 text-white' }} text-[10px] font-black">
-                                {{ $unreadNavbarCount > 99 ? '99+' : $unreadNavbarCount }}
-                            </span>
-                        @else
-                            <i class="fa-solid fa-chevron-right text-[10px] {{ request()->routeIs('notifications.*') ? 'text-blue-300' : 'text-slate-300 group-hover:text-slate-400 group-hover:translate-x-0.5' }} transition-all"></i>
-                        @endif
+                       class="px-2.5 py-1 text-[11px] font-bold text-blue-700 bg-blue-50 border border-blue-200/80 rounded-lg hover:bg-blue-100 transition-colors shrink-0">
+                        Profil
                     </a>
+                @endif
+            </div>
+
+            <!-- 3. Scrollable Navigation Menu -->
+            <div class="flex-1 overflow-y-auto px-3 py-3.5 space-y-4 text-xs bg-white overscroll-contain">
 
                     @if($peran === 'asesi')
                         <!-- Dashboard Asesi -->
@@ -1239,8 +1218,30 @@
                     @endif
                 </div>
 
-                <!-- 4. Drawer Footer -->
-                <div class="p-3.5 border-t border-slate-100 bg-slate-50 space-y-2">
+                <!-- 4. Drawer Footer (Sticky Bottom with Notification, Public Link, Logout) -->
+                <div class="p-3.5 border-t border-slate-100 bg-slate-50/95 backdrop-blur-xs space-y-2 shrink-0 pb-[calc(0.875rem+env(safe-area-inset-bottom,0px))]">
+                    <!-- Global Notifikasi Link (Diletakkan di Bagian Paling Bawah) -->
+                    @php
+                        $unreadNavbarCount = $user ? $user->unreadNotifications()->count() : 0;
+                    @endphp
+                    <a href="{{ route('notifications.index') }}" 
+                       @click="mobileNavOpen = false"
+                       class="group flex items-center justify-between px-3 py-2.5 rounded-xl font-semibold transition-all {{ request()->routeIs('notifications.*') ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-700 bg-white border border-slate-200/80 hover:bg-slate-100 shadow-2xs' }}">
+                        <div class="flex items-center gap-2.5">
+                            <div class="w-7 h-7 rounded-lg flex items-center justify-center {{ request()->routeIs('notifications.*') ? 'bg-blue-700 text-white' : 'bg-slate-100 text-slate-600 group-hover:bg-slate-200' }}">
+                                <i class="fa-solid fa-bell text-xs"></i>
+                            </div>
+                            <span class="text-xs">Notifikasi & Pemberitahuan</span>
+                        </div>
+                        @if($unreadNavbarCount > 0)
+                            <span class="px-2 py-0.5 rounded-full {{ request()->routeIs('notifications.*') ? 'bg-white text-blue-700' : 'bg-rose-500 text-white' }} text-[10px] font-black shadow-2xs">
+                                {{ $unreadNavbarCount > 99 ? '99+' : $unreadNavbarCount }}
+                            </span>
+                        @else
+                            <i class="fa-solid fa-chevron-right text-[10px] {{ request()->routeIs('notifications.*') ? 'text-blue-300' : 'text-slate-300 group-hover:text-slate-400 group-hover:translate-x-0.5' }} transition-all"></i>
+                        @endif
+                    </a>
+
                     <a href="{{ route('beranda') }}" 
                        @click="mobileNavOpen = false"
                        class="flex items-center justify-center gap-2 w-full px-3 py-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 text-xs font-semibold transition-colors">

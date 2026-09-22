@@ -1221,6 +1221,17 @@ class AsesiController extends Controller
         $pendaftaranList = PendaftaranAsesi::with(['skema', 'jadwal', 'penilaian.unit', 'rekomendasi.asesor'])
             ->where('asesi_id', auth()->id())
             ->get();
+        $pendaftaranList = PendaftaranAsesi::with([
+            'skema.unitKompetensi',
+            'jadwal.asesor',
+            'penilaian.unit',
+            'rekomendasi.asesor',
+            'ak02',
+            'asesor'
+        ])
+        ->where('asesi_id', auth()->id())
+        ->latest()
+        ->get();
 
         return view('asesi.hasil-nilai', compact('pendaftaranList'));
     }
