@@ -109,6 +109,9 @@
                 $hasRekomendasi = ($p->rekomendasi != null || $statusPendaftaran === 'selesai');
                 $isKompeten = ($p->rekomendasi && strtolower($p->rekomendasi->keputusan) === 'kompeten');
                 $isBelumKompeten = ($p->rekomendasi && strtolower($p->rekomendasi->keputusan) === 'belum_kompeten');
+                $hasRekomendasi = ($statusPendaftaran === 'selesai' && !empty($p->rekomendasi) && !empty($p->rekomendasi->keputusan));
+                $isKompeten = ($hasRekomendasi && strtolower($p->rekomendasi->keputusan) === 'kompeten');
+                $isBelumKompeten = ($hasRekomendasi && strtolower($p->rekomendasi->keputusan) === 'belum_kompeten');
 
                 $isDitolakAdmin = ($statusPendaftaran === 'ditolak' || $rekomAdmin === 'tidak_diterima');
                 $isDitolakAsesor = $p->isApl02Rejected();

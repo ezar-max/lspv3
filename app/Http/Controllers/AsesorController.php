@@ -566,6 +566,10 @@ class AsesorController extends Controller
             }
 
             // 3. Simpan Rekomendasi & Workflow Status
+            // 3. Simpan Rekomendasi & Workflow Status FR.APL.02
+            // CATATAN: FR.APL.02 adalah Asesmen Mandiri / Verifikasi Berkas (Tahap 2).
+            // Hasilnya adalah "Dapat Dilanjutkan" atau "Tidak Dapat Dilanjutkan" ke Uji Kompetensi.
+            // Keputusan Akhir Kelulusan (Kompeten/Belum Kompeten) HANYA ditetapkan setelah Uji Kompetensi Hari H!
             if ($isDitolak) {
                 // KONDISI: Asesor Menolak FR.APL.02
                 $pendaftaran->update([
