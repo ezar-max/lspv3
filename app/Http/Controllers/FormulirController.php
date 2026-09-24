@@ -1422,6 +1422,9 @@ class FormulirController extends Controller
                 ->with('warning', 'Formulir FR.AK.01 belum tersedia. Silakan menunggu Formulir FR.APL.02 disetujui oleh asesor.');
         }
 
+        $pendaftaran->syncFromMasterAk01IfAvailable();
+        $pendaftaran->refresh();
+
         return view('formulir.fr-ak-01', compact('pendaftaran'));
     }
 

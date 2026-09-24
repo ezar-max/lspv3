@@ -27,6 +27,9 @@
     $isSignedByAsesor = !empty($pendaftaran->tanda_tangan_asesor_ak01) || in_array($pendaftaran->status_ak01, ['disetujui_asesor', 'selesai']);
     $isLocked = true; // Formulir kesepakatan selalu read-only untuk Asesi
     $savedBukti = (array) ($pendaftaran->bukti_dikumpulkan ?? []);
+    if (empty($savedBukti)) {
+        $savedBukti = (array) ($pendaftaran->skema?->masterAk01?->bukti_dikumpulkan ?: $pendaftaran->getDefaultBuktiDikumpulkanFromSkema());
+    }
 
     // Ambil tanda tangan yang sudah ada secara hierarki:
     // 1. TTD AK.01 jika sudah ada
@@ -376,25 +379,25 @@
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-0.5">
                         <label class="flex items-center gap-2 p-2 rounded-xl border border-slate-200 text-slate-700 bg-slate-50/70 cursor-not-allowed select-none">
                             <input type="checkbox" disabled
-                                   {{ in_array('Observasi Praktik Demonstrasi', $savedBukti) || in_array('Uji Praktik / Observasi Demonstrasi', $savedBukti) ? 'checked' : '' }}
+                                   {{ in_array('Observasi Praktik Demonstrasi', $savedBukti) || in_array('Uji Praktik / Observasi Demonstrasi', $savedBukti) || in_array('Observasi Praktik Demonstrasi Kerja', $savedBukti) ? 'checked' : '' }}
                                    class="rounded text-blue-600 cursor-not-allowed">
                             <span class="text-[11px] font-medium">Observasi Praktik</span>
                         </label>
                         <label class="flex items-center gap-2 p-2 rounded-xl border border-slate-200 text-slate-700 bg-slate-50/70 cursor-not-allowed select-none">
                             <input type="checkbox" disabled
-                                   {{ in_array('Uji Tertulis (CBT)', $savedBukti) ? 'checked' : '' }}
+                                   {{ in_array('Uji Tertulis (CBT)', $savedBukti) || in_array('Uji Tertulis Online (CBT / FR.IA.05)', $savedBukti) || in_array('Uji Tertulis CBT', $savedBukti) ? 'checked' : '' }}
                                    class="rounded text-blue-600 cursor-not-allowed">
                             <span class="text-[11px] font-medium">Uji Tertulis CBT</span>
                         </label>
                         <label class="flex items-center gap-2 p-2 rounded-xl border border-slate-200 text-slate-700 bg-slate-50/70 cursor-not-allowed select-none">
                             <input type="checkbox" disabled
-                                   {{ in_array('Tanya Jawab Lisan', $savedBukti) ? 'checked' : '' }}
+                                   {{ in_array('Tanya Jawab Lisan', $savedBukti) || in_array('Tanya Jawab Lisan / Wawancara (FR.IA.07)', $savedBukti) ? 'checked' : '' }}
                                    class="rounded text-blue-600 cursor-not-allowed">
                             <span class="text-[11px] font-medium">Tanya Jawab Lisan</span>
                         </label>
                         <label class="flex items-center gap-2 p-2 rounded-xl border border-slate-200 text-slate-700 bg-slate-50/70 cursor-not-allowed select-none">
                             <input type="checkbox" disabled
-                                   {{ in_array('Verifikasi Portofolio', $savedBukti) || in_array('Hasil Verifikasi Portofolio', $savedBukti) ? 'checked' : '' }}
+                                   {{ in_array('Verifikasi Portofolio', $savedBukti) || in_array('Hasil Verifikasi Portofolio', $savedBukti) || in_array('Verifikasi Portofolio / Berkas Pendukung', $savedBukti) ? 'checked' : '' }}
                                    class="rounded text-blue-600 cursor-not-allowed">
                             <span class="text-[11px] font-medium">Verifikasi Portofolio</span>
                         </label>

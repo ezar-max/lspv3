@@ -2441,6 +2441,24 @@
             skema.focus();
             return false;
         }
+
+        // Validasi Wajib Tanda Tangan Digital Asesi pada FR.APL.01
+        const ttdInput = document.getElementById('input-ttd-apl01');
+        const ttdVal = ttdInput ? ttdInput.value.trim() : '';
+        const hasValidTtd = ttdVal && (ttdVal.startsWith('data:image') || ttdVal.length > 50);
+
+        if (!hasValidTtd) {
+            alert('Tanda tangan digital Asesi wajib dibuat dan dibubuhkan pada formulir permohonan FR.APL.01 sebelum diajukan.');
+            const canvas = document.getElementById('canvas-ttd-apl01');
+            if (canvas) {
+                canvas.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                canvas.style.outline = '3px solid #ef4444';
+                canvas.style.borderRadius = '8px';
+                setTimeout(() => { canvas.style.outline = ''; }, 3500);
+            }
+            return false;
+        }
+
         return confirm('Apakah Anda yakin ingin mengajukan Formulir FR.APL.01 ke Admin LSP untuk diverifikasi?');
     }
 
@@ -2472,6 +2490,32 @@
         initSignatureCanvas('canvas-ttd-apl01', 'input-ttd-apl01');
         initSignatureCanvas('canvas-ttd-apl02', 'input-ttd-apl02');
         initSignatureCanvas('canvas-ttd-ak01', 'input-ttd-ak01');
+
+        // Form submit safety lock for FR.APL.01
+        const formApl01 = document.getElementById('form-apl01-terpadu');
+        if (formApl01) {
+            formApl01.addEventListener('submit', function(e) {
+                const submitter = e.submitter;
+                const aksi = submitter ? submitter.value : '';
+                if (aksi === 'ajukan') {
+                    const ttdInput = document.getElementById('input-ttd-apl01');
+                    const ttdVal = ttdInput ? ttdInput.value.trim() : '';
+                    const hasValidTtd = ttdVal && (ttdVal.startsWith('data:image') || ttdVal.length > 50);
+                    if (!hasValidTtd) {
+                        e.preventDefault();
+                        alert('Tanda tangan digital Asesi wajib dibuat dan dibubuhkan pada formulir permohonan FR.APL.01 sebelum diajukan.');
+                        const canvas = document.getElementById('canvas-ttd-apl01');
+                        if (canvas) {
+                            canvas.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            canvas.style.outline = '3px solid #ef4444';
+                            canvas.style.borderRadius = '8px';
+                            setTimeout(() => { canvas.style.outline = ''; }, 3500);
+                        }
+                        return false;
+                    }
+                }
+            });
+        }
 
         // Otomatis hilangkan banner notifikasi penolakan setelah 5 detik
         setTimeout(() => {

@@ -800,60 +800,111 @@ class PendaftaranAsesi extends Model
     }
 
     /**
-     * Pastikan data formulir FR.AK.01 tersinkronisasi dari Master FR.AK.01 Skema jika ada
+     * Ambil default metode bukti asesmen berdasarkan skema dari database
+     */
+    public function getDefaultBuktiDikumpulkanFromSkema(): array
+    {
+        $skema = $this->relationLoaded('skema') ? $this->skema : $this->skema()->with(['masterAk01', 'mapa02', 'masterInstruments'])->first();
+        if (!$skema) {
+            return ['Observasi Praktik Demonstrasi', 'Uji Tertulis (CBT)', 'Tanya Jawab Lisan'];
+        }
+
+        // 1. Cek Master FR.AK.01 terlebih dahulu jika sudah dikonfigurasi
+        if ($skema->masterAk01 && !empty($skema->masterAk01->bukti_dikumpulkan)) {
+            return (array) $skema->masterAk01->bukti_dikumpulkan;
+        }
+
+        // 2. Ambil dari instrumen aktif skema atau MAPA.02 di database
+        $methods = [];
+        if ($skema->hasInstrumen('FR.IA.01') || $skema->hasInstrumen('FR.IA.02')) {
+            $methods[] = 'Observasi Praktik Demonstrasi';
+        }
+        if ($skema->hasInstrumen('FR.IA.05') || $skema->hasInstrumen('FR.IA.06')) {
+            $methods[] = 'Uji Tertulis (CBT)';
+        }
+        if ($skema->hasInstrumen('FR.IA.03') || $skema->hasInstrumen('FR.IA.07')) {
+            $methods[] = 'Tanya Jawab Lisan';
+        }
+        if ($skema->hasInstrumen('FR.IA.08')) {
+            $methods[] = 'Verifikasi Portofolio';
+        }
+
+        if (empty($methods)) {
+            $methods = ['Observasi Praktik Demonstrasi', 'Uji Tertulis (CBT)', 'Tanya Jawab Lisan'];
+        }
+
+        return array_values(array_unique($methods));
+    }
+
+    /**
+     * Pastikan data formulir FR.AK.01 tersinkronisasi dari Master FR.AK.01 Skema atau data skema di database
      */
     public function syncFromMasterAk01IfAvailable(): bool
     {
-        $skema = $this->relationLoaded('skema') ? $this->skema : $this->skema()->with('masterAk01')->first();
+        $skema = $this->relationLoaded('skema') ? $this->skema : $this->skema()->with(['masterAk01', 'mapa02', 'masterInstruments'])->first();
         $masterAk01 = $skema?->masterAk01;
-
-        if (!$masterAk01) {
-            return false;
-        }
 
         $needsUpdate = false;
         $dataToUpdate = [];
 
-        // Default TUK jika asesi belum memilih atau status masih 'belum'
-        if (!empty($masterAk01->tuk_type) && (empty($this->tuk_type) || $this->status_ak01 === 'belum')) {
-            if ($this->tuk_type !== $masterAk01->tuk_type) {
-                $this->tuk_type = $masterAk01->tuk_type;
-                $dataToUpdate['tuk_type'] = $masterAk01->tuk_type;
-                $needsUpdate = true;
-            }
-        }
-
-        // Default metode bukti jika asesi belum memilih atau status masih 'belum'
-        if (!empty($masterAk01->bukti_dikumpulkan) && (empty($this->bukti_dikumpulkan) || $this->status_ak01 === 'belum')) {
-            if ($this->bukti_dikumpulkan != $masterAk01->bukti_dikumpulkan) {
-                $this->bukti_dikumpulkan = $masterAk01->bukti_dikumpulkan;
-                $dataToUpdate['bukti_dikumpulkan'] = $masterAk01->bukti_dikumpulkan;
-                $needsUpdate = true;
-            }
-        }
-
-        if (!empty($masterAk01->bukti_dikumpulkan_lainnya) && (empty($this->bukti_dikumpulkan_lainnya) || $this->status_ak01 === 'belum')) {
-            if ($this->bukti_dikumpulkan_lainnya !== $masterAk01->bukti_dikumpulkan_lainnya) {
-                $this->bukti_dikumpulkan_lainnya = $masterAk01->bukti_dikumpulkan_lainnya;
-                $dataToUpdate['bukti_dikumpulkan_lainnya'] = $masterAk01->bukti_dikumpulkan_lainnya;
-                $needsUpdate = true;
-            }
-        }
-
-        if (!empty($masterAk01->tanda_tangan_asesor)) {
-            if (empty($this->tanda_tangan_asesor_ak01) || $this->tanda_tangan_asesor_ak01 !== $masterAk01->tanda_tangan_asesor) {
-                $this->tanda_tangan_asesor_ak01 = $masterAk01->tanda_tangan_asesor;
-                $this->tanggal_ttd_asesor_ak01 = $masterAk01->tanggal_ttd_asesor ?? now();
-                $dataToUpdate['tanda_tangan_asesor_ak01'] = $masterAk01->tanda_tangan_asesor;
-                $dataToUpdate['tanggal_ttd_asesor_ak01'] = $this->tanggal_ttd_asesor_ak01;
-
-                if ($this->status_ak01 === 'belum') {
-                    $this->status_ak01 = 'disetujui_asesor';
-                    $dataToUpdate['status_ak01'] = 'disetujui_asesor';
-                } elseif (!empty($this->tanda_tangan_asesi_ak01)) {
-                    $this->status_ak01 = 'selesai';
-                    $dataToUpdate['status_ak01'] = 'selesai';
+        if ($masterAk01) {
+            // Default TUK jika asesi belum memilih atau status masih 'belum'
+            if (!empty($masterAk01->tuk_type) && (empty($this->tuk_type) || $this->status_ak01 === 'belum')) {
+                if ($this->tuk_type !== $masterAk01->tuk_type) {
+                    $this->tuk_type = $masterAk01->tuk_type;
+                    $dataToUpdate['tuk_type'] = $masterAk01->tuk_type;
+                    $needsUpdate = true;
                 }
+            }
+
+            // Default metode bukti jika belum ada, asesi belum memilih, atau status masih 'belum'
+            if (!empty($masterAk01->bukti_dikumpulkan) && (empty($this->bukti_dikumpulkan) || $this->status_ak01 === 'belum')) {
+                if ($this->bukti_dikumpulkan != $masterAk01->bukti_dikumpulkan) {
+                    $this->bukti_dikumpulkan = $masterAk01->bukti_dikumpulkan;
+                    $dataToUpdate['bukti_dikumpulkan'] = $masterAk01->bukti_dikumpulkan;
+                    $needsUpdate = true;
+                }
+            }
+
+            if (!empty($masterAk01->bukti_dikumpulkan_lainnya) && (empty($this->bukti_dikumpulkan_lainnya) || $this->status_ak01 === 'belum')) {
+                if ($this->bukti_dikumpulkan_lainnya !== $masterAk01->bukti_dikumpulkan_lainnya) {
+                    $this->bukti_dikumpulkan_lainnya = $masterAk01->bukti_dikumpulkan_lainnya;
+                    $dataToUpdate['bukti_dikumpulkan_lainnya'] = $masterAk01->bukti_dikumpulkan_lainnya;
+                    $needsUpdate = true;
+                }
+            }
+
+            if (!empty($masterAk01->tanda_tangan_asesor)) {
+                if (empty($this->tanda_tangan_asesor_ak01) || $this->tanda_tangan_asesor_ak01 !== $masterAk01->tanda_tangan_asesor) {
+                    $this->tanda_tangan_asesor_ak01 = $masterAk01->tanda_tangan_asesor;
+                    $this->tanggal_ttd_asesor_ak01 = $masterAk01->tanggal_ttd_asesor ?? now();
+                    $dataToUpdate['tanda_tangan_asesor_ak01'] = $masterAk01->tanda_tangan_asesor;
+                    $dataToUpdate['tanggal_ttd_asesor_ak01'] = $this->tanggal_ttd_asesor_ak01;
+
+                    if ($this->status_ak01 === 'belum') {
+                        $this->status_ak01 = 'disetujui_asesor';
+                        $dataToUpdate['status_ak01'] = 'disetujui_asesor';
+                    } elseif (!empty($this->tanda_tangan_asesi_ak01)) {
+                        $this->status_ak01 = 'selesai';
+                        $dataToUpdate['status_ak01'] = 'selesai';
+                    }
+                    $needsUpdate = true;
+                }
+            }
+        } else {
+            // Fallback jika Master FR.AK.01 belum dikonfigurasi: ambil data form sesuai skemanya dari database
+            if (empty($this->bukti_dikumpulkan)) {
+                $defaultBukti = $this->getDefaultBuktiDikumpulkanFromSkema();
+                if (!empty($defaultBukti)) {
+                    $this->bukti_dikumpulkan = $defaultBukti;
+                    $dataToUpdate['bukti_dikumpulkan'] = $defaultBukti;
+                    $needsUpdate = true;
+                }
+            }
+            if (empty($this->tuk_type)) {
+                $defaultTuk = $this->jadwal?->nama_tuk ? 'Sewaktu' : 'Sewaktu';
+                $this->tuk_type = $defaultTuk;
+                $dataToUpdate['tuk_type'] = $defaultTuk;
                 $needsUpdate = true;
             }
         }

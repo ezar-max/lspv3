@@ -1187,8 +1187,8 @@
                         Batal / Kembali
                     </a>
 
-                    <button type="submit" name="status_pendaftaran" value="ditolak" 
-                            onclick="return confirm('Peringatan: Menolak pendaftaran akan membatalkan permohonan asesi pada skema ini. Lanjutkan?')"
+                    <button type="submit" name="status_pendaftaran" value="ditolak" formnovalidate
+                            onclick="const sel = document.getElementById('select-jadwal-asesmen'); if (sel) { sel.required = false; sel.value = ''; } return confirm('Peringatan: Menolak pendaftaran akan membatalkan permohonan asesi pada skema ini. Lanjutkan?')"
                             class="w-full sm:w-auto px-4 py-2.5 text-xs font-semibold text-rose-700 bg-white hover:bg-rose-50 border border-rose-200 rounded-xl transition-colors text-center">
                         Tolak Permohonan
                     </button>
@@ -1198,8 +1198,8 @@
                 <div class="w-full sm:w-auto">
                     <!-- If any document is 'tidak_valid': Return for revision -->
                     <template x-if="hasInvalidDoc">
-                        <button type="submit" name="status_pendaftaran" value="revisi" 
-                                onclick="return confirm('Kirim Catatan Revisi: Pendaftaran ini akan dikembalikan ke Asesi untuk memperbaiki dokumen yang berstatus Tidak Valid. Lanjutkan?')"
+                        <button type="submit" name="status_pendaftaran" value="revisi" formnovalidate
+                                onclick="const sel = document.getElementById('select-jadwal-asesmen'); if (sel) { sel.required = false; sel.value = ''; } return confirm('Kirim Catatan Revisi: Pendaftaran ini akan dikembalikan ke Asesi untuk memperbaiki dokumen yang berstatus Tidak Valid. Lanjutkan?')"
                                 class="w-full sm:w-auto px-7 py-3 bg-rose-600 hover:bg-rose-700 text-white text-xs sm:text-sm font-bold rounded-xl shadow-xs transition-colors flex items-center justify-center gap-2">
                             <span>Kirim Catatan Revisi ke Asesi</span>
                             <span>&rarr;</span>

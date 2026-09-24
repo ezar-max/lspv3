@@ -107,6 +107,10 @@ class AsesiTahapanController extends Controller
         $isAk07Selesai = false;
 
         if ($pendaftaran) {
+            // Sinkronkan data persetujuan FR.AK.01 dari Master Skema / Database Skema
+            $pendaftaran->syncFromMasterAk01IfAvailable();
+            $pendaftaran->refresh();
+
             $isDraft = in_array($pendaftaran->status_pendaftaran, ['draft', 'revisi']);
             $isDiajukan = ($pendaftaran->status_pendaftaran === 'diajukan');
             $isDitolakAdmin = ($pendaftaran->status_pendaftaran === 'ditolak' || $pendaftaran->rekomendasi_admin_status === 'tidak_diterima');
@@ -309,6 +313,9 @@ class AsesiTahapanController extends Controller
         $dokumenPraktik = null;
         $instrumenAsesi = [];
         $defaultTab = 'cbt';
+        $adaFormOnlineDikerjakan = false;
+        $isHasilAkhirTersedia = false;
+        $rekomendasi = null;
 
         if ($pendaftaran) {
             if ($pendaftaran->jadwal) {
@@ -373,13 +380,31 @@ class AsesiTahapanController extends Controller
                 $dokumenPraktik = $pendaftaran->dokumen ? $pendaftaran->dokumen->where('jenis_dokumen', 'Hasil Proyek / Laporan Praktik FR.IA.02')->first() : null;
             }
 
-            $isSubmitted = ($recordIa05 && $recordIa05->status === 'submitted') 
-                || ($recordIa06 && $recordIa06->status === 'submitted')
-                || ($recordIa02 && $recordIa02->status === 'submitted')
-                || ($pendaftaran->status_pendaftaran === 'selesai')
-                || !empty($pendaftaran->rekomendasi);
+            // Filter instrumen yang benar-benar memiliki formulir online untuk dikerjakan asesi
+            $hasCbtForm = $hasCbt && count($soalCbt) > 0;
+            $hasEsaiForm = $hasEsai && count($soalEsai) > 0;
+            $hasPraktikForm = $hasPraktik && (!empty($panduanPraktik['skenario']) || !empty($panduanPraktik['instruksi_kerja']) || !empty($panduanPraktik['judul_tugas']));
 
-            if ($isSubmitted) {
+            $adaFormOnlineDikerjakan = $hasCbtForm || $hasEsaiForm || $hasPraktikForm;
+
+            // Perbarui $instrumenAsesi hanya untuk yang benar-benar memiliki formulir online
+            $filteredInstrumen = [];
+            if ($hasCbtForm && isset($instrumenAsesi['cbt'])) $filteredInstrumen['cbt'] = $instrumenAsesi['cbt'];
+            if ($hasEsaiForm && isset($instrumenAsesi['esai'])) $filteredInstrumen['esai'] = $instrumenAsesi['esai'];
+            if ($hasPraktikForm && isset($instrumenAsesi['praktik'])) $filteredInstrumen['praktik'] = $instrumenAsesi['praktik'];
+            $instrumenAsesi = $filteredInstrumen;
+
+            // Status pengumpulan formulir online: hanya jika ada formulir online dan telah disubmit
+            $isSubmitted = $adaFormOnlineDikerjakan && (
+                ($hasCbtForm && $recordIa05 && $recordIa05->status === 'submitted') ||
+                ($hasEsaiForm && $recordIa06 && $recordIa06->status === 'submitted') ||
+                ($hasPraktikForm && $recordIa02 && $recordIa02->status === 'submitted')
+            );
+
+            $rekomendasi = $pendaftaran->rekomendasi;
+            $isHasilAkhirTersedia = ($pendaftaran->status_pendaftaran === 'selesai' || !empty($rekomendasi?->keputusan)) && !empty($rekomendasi?->keputusan);
+
+            if ($isSubmitted || ($adaFormOnlineDikerjakan && $isHasilAkhirTersedia)) {
                 $statusSesi['is_readonly'] = true;
                 $statusSesi['can_access'] = true;
             }
@@ -391,7 +416,7 @@ class AsesiTahapanController extends Controller
             } elseif (!empty($availableTabs)) {
                 $defaultTab = $availableTabs[0];
             } else {
-                $defaultTab = 'praktik';
+                $defaultTab = 'info';
             }
         }
 
@@ -446,7 +471,10 @@ class AsesiTahapanController extends Controller
             'isSubmitted',
             'dokumenPraktik',
             'instrumenAsesi',
-            'defaultTab'
+            'defaultTab',
+            'adaFormOnlineDikerjakan',
+            'isHasilAkhirTersedia',
+            'rekomendasi'
         ));
     }
 
@@ -554,14 +582,25 @@ class AsesiTahapanController extends Controller
             if (!$request->hasFile('file_foto') && !$dokumenFotoAda) {
                 return back()->with('error', 'Silakan unggah Pasfoto 3x4 (Background Merah) terlebih dahulu.');
             }
-            if (!$request->filled('tanda_tangan_asesi') && empty($pendaftaran?->tanda_tangan_asesi) && empty($pengguna->tanda_tangan)) {
-                return back()->with('error', 'Silakan buat Tanda Tangan Digital pada formulir permohonan.');
+            $ttdInput = trim($request->input('tanda_tangan_asesi') ?? '');
+            $hasTtdPendaftaran = !empty($pendaftaran?->tanda_tangan_asesi);
+            $hasTtdBaru = !empty($ttdInput) && (str_starts_with($ttdInput, 'data:image') || strlen($ttdInput) > 50);
+
+            if (!$hasTtdBaru && !$hasTtdPendaftaran) {
+                return back()->withInput()->with('error', 'Tanda tangan digital Asesi wajib dibuat dan dibubuhkan pada formulir permohonan FR.APL.01 sebelum diajukan.');
             }
         }
 
         $nomorPendaftaran = $pendaftaran ? $pendaftaran->nomor_pendaftaran : ('APL01-' . date('Ymd') . '-' . rand(1000, 9999));
         $statusPendaftaran = $isAjukan ? 'diajukan' : ($pendaftaran ? $pendaftaran->status_pendaftaran : 'draft');
-        $ttd = $request->tanda_tangan_asesi ?: ($pendaftaran?->tanda_tangan_asesi ?: $pengguna->tanda_tangan);
+        
+        $ttdInput = trim($request->input('tanda_tangan_asesi') ?? '');
+        $hasTtdBaru = !empty($ttdInput) && (str_starts_with($ttdInput, 'data:image') || strlen($ttdInput) > 50);
+        $ttd = $hasTtdBaru ? $ttdInput : ($pendaftaran?->tanda_tangan_asesi);
+
+        if ($hasTtdBaru) {
+            $pengguna->update(['tanda_tangan' => $ttdInput]);
+        }
 
         $dataPendaftaran = [
             'nomor_pendaftaran' => $nomorPendaftaran,
@@ -1065,10 +1104,19 @@ class AsesiTahapanController extends Controller
             $asesor = $pendaftaran->asesor ?: $pendaftaran->jadwal?->asesor;
             $asesorTtd = $pendaftaran->tanda_tangan_asesor_ak01 ?: ($asesor?->tanda_tangan ?: 'signatures/verified_asesor_auto.png');
 
+            $tukType = $request->input('tuk_type') ?: ($pendaftaran->tuk_type ?: ($pendaftaran->skema?->masterAk01?->tuk_type ?: 'Sewaktu'));
+            $buktiDikumpulkan = $request->input('bukti_dikumpulkan');
+            if (empty($buktiDikumpulkan)) {
+                $buktiDikumpulkan = $pendaftaran->bukti_dikumpulkan ?: ($pendaftaran->skema?->masterAk01?->bukti_dikumpulkan ?: $pendaftaran->getDefaultBuktiDikumpulkanFromSkema());
+            }
+            $buktiLainnya = $request->has('bukti_dikumpulkan_lainnya') 
+                ? $request->bukti_dikumpulkan_lainnya 
+                : ($pendaftaran->bukti_dikumpulkan_lainnya ?: ($pendaftaran->skema?->masterAk01?->bukti_dikumpulkan_lainnya ?? null));
+
             $pendaftaran->update([
-                'tuk_type' => $request->has('tuk_type') ? $request->tuk_type : $pendaftaran->tuk_type,
-                'bukti_dikumpulkan' => $request->has('bukti_dikumpulkan') ? $request->bukti_dikumpulkan : $pendaftaran->bukti_dikumpulkan,
-                'bukti_dikumpulkan_lainnya' => $request->has('bukti_dikumpulkan_lainnya') ? $request->bukti_dikumpulkan_lainnya : $pendaftaran->bukti_dikumpulkan_lainnya,
+                'tuk_type' => $tukType,
+                'bukti_dikumpulkan' => $buktiDikumpulkan,
+                'bukti_dikumpulkan_lainnya' => $buktiLainnya,
                 'tanda_tangan_asesi_ak01' => $ttdPath,
                 'tanggal_ttd_asesi_ak01' => now(),
                 'status_ak01' => 'selesai',

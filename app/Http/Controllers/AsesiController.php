@@ -1199,6 +1199,10 @@ class AsesiController extends Controller
             return back()->with('error', 'Permohonan tidak dapat diajukan! Anda belum mengunggah dokumen persyaratan apapun. Silakan lengkapi unggah berkas Anda terlebih dahulu.');
         }
 
+        if (empty($pendaftaran->tanda_tangan_asesi)) {
+            return back()->with('error', 'Permohonan tidak dapat diajukan! Tanda tangan digital Asesi wajib dibuat dan dibubuhkan pada formulir FR.APL.01 terlebih dahulu.');
+        }
+
         $pendaftaran->update(['status_pendaftaran' => 'diajukan']);
 
         LogAktivitas::catat('Pengajuan Berkas Pendaftaran', 'Mengajukan berkas pendaftaran #' . $pendaftaran->nomor_pendaftaran . ' untuk diverifikasi Admin');

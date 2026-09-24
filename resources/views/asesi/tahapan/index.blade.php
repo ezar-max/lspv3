@@ -1671,12 +1671,15 @@
                                     <span>Jenis Tempat Uji Kompetensi (TUK)</span>
                                     <span class="text-slate-500 font-semibold text-[11px] normal-case bg-slate-100 px-2 py-0.5 rounded">Ditetapkan Asesor / LSP</span>
                                 </label>
-                                <input type="hidden" name="tuk_type" value="{{ old('tuk_type', $pendaftaran->tuk_type ?? '') }}">
+                                @php
+                                    $selectedTuk = old('tuk_type', $pendaftaran->tuk_type ?: ($pendaftaran->skema?->masterAk01?->tuk_type ?: 'Sewaktu'));
+                                @endphp
+                                <input type="hidden" name="tuk_type" value="{{ $selectedTuk }}">
                                 <select disabled class="w-full bg-slate-100 border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-800 outline-hidden font-medium opacity-90 cursor-not-allowed">
-                                    <option value="" {{ old('tuk_type', $pendaftaran->tuk_type) === null || old('tuk_type', $pendaftaran->tuk_type) === '' ? 'selected' : '' }}></option>
-                                    <option value="Sewaktu" {{ old('tuk_type', $pendaftaran->tuk_type) === 'Sewaktu' ? 'selected' : '' }}>TUK Sewaktu (Sekolah/Mitra)</option>
-                                    <option value="Tempat Kerja" {{ old('tuk_type', $pendaftaran->tuk_type) === 'Tempat Kerja' ? 'selected' : '' }}>TUK Tempat Kerja / Industri (DUDI)</option>
-                                    <option value="Mandiri" {{ old('tuk_type', $pendaftaran->tuk_type) === 'Mandiri' ? 'selected' : '' }}>TUK Mandiri</option>
+                                    <option value="" {{ empty($selectedTuk) ? 'selected' : '' }}></option>
+                                    <option value="Sewaktu" {{ $selectedTuk === 'Sewaktu' ? 'selected' : '' }}>TUK Sewaktu (Sekolah/Mitra)</option>
+                                    <option value="Tempat Kerja" {{ $selectedTuk === 'Tempat Kerja' ? 'selected' : '' }}>TUK Tempat Kerja / Industri (DUDI)</option>
+                                    <option value="Mandiri" {{ $selectedTuk === 'Mandiri' ? 'selected' : '' }}>TUK Mandiri</option>
                                 </select>
                                 <p class="text-[11px] text-slate-500">Tempat pelaksanaan asesmen telah ditetapkan sesuai perencanaan asesmen.</p>
                             </div>
@@ -1689,6 +1692,9 @@
                                 </label>
                                 @php
                                     $savedBukti = (array) ($pendaftaran->bukti_dikumpulkan ?? []);
+                                    if (empty($savedBukti)) {
+                                        $savedBukti = (array) ($pendaftaran->skema?->masterAk01?->bukti_dikumpulkan ?: $pendaftaran->getDefaultBuktiDikumpulkanFromSkema());
+                                    }
                                 @endphp
                                 @foreach($savedBukti as $b)
                                     <input type="hidden" name="bukti_dikumpulkan[]" value="{{ $b }}">
@@ -1696,25 +1702,25 @@
                                 <div class="grid grid-cols-1 gap-2 pt-1">
                                     <label class="flex items-center gap-2.5 text-xs text-slate-700 cursor-not-allowed opacity-85 select-none">
                                         <input type="checkbox" disabled value="Observasi Praktik Demonstrasi"
-                                               {{ in_array('Uji Praktik / Observasi Demonstrasi', $savedBukti) || in_array('Observasi Praktik Demonstrasi', $savedBukti) ? 'checked' : '' }}
+                                               {{ in_array('Uji Praktik / Observasi Demonstrasi', $savedBukti) || in_array('Observasi Praktik Demonstrasi', $savedBukti) || in_array('Observasi Praktik Demonstrasi Kerja', $savedBukti) ? 'checked' : '' }}
                                                class="rounded-sm text-blue-600 cursor-not-allowed border-slate-300">
                                         <span>Observasi Praktik Demonstrasi Kerja</span>
                                     </label>
                                     <label class="flex items-center gap-2.5 text-xs text-slate-700 cursor-not-allowed opacity-85 select-none">
                                         <input type="checkbox" disabled value="Uji Tertulis (CBT)"
-                                               {{ in_array('Uji Tertulis (CBT)', $savedBukti) ? 'checked' : '' }}
+                                               {{ in_array('Uji Tertulis (CBT)', $savedBukti) || in_array('Uji Tertulis Online (CBT / FR.IA.05)', $savedBukti) || in_array('Uji Tertulis CBT', $savedBukti) ? 'checked' : '' }}
                                                class="rounded-sm text-blue-600 cursor-not-allowed border-slate-300">
                                         <span>Uji Tertulis Online (CBT / FR.IA.05)</span>
                                     </label>
                                     <label class="flex items-center gap-2.5 text-xs text-slate-700 cursor-not-allowed opacity-85 select-none">
                                         <input type="checkbox" disabled value="Tanya Jawab Lisan"
-                                               {{ in_array('Tanya Jawab Lisan', $savedBukti) ? 'checked' : '' }}
+                                               {{ in_array('Tanya Jawab Lisan', $savedBukti) || in_array('Tanya Jawab Lisan / Wawancara (FR.IA.07)', $savedBukti) ? 'checked' : '' }}
                                                class="rounded-sm text-blue-600 cursor-not-allowed border-slate-300">
                                         <span>Tanya Jawab Lisan / Wawancara (FR.IA.07)</span>
                                     </label>
                                     <label class="flex items-center gap-2.5 text-xs text-slate-700 cursor-not-allowed opacity-85 select-none">
                                         <input type="checkbox" disabled value="Verifikasi Portofolio"
-                                               {{ in_array('Verifikasi Portofolio', $savedBukti) || in_array('Hasil Verifikasi Portofolio', $savedBukti) ? 'checked' : '' }}
+                                               {{ in_array('Verifikasi Portofolio', $savedBukti) || in_array('Hasil Verifikasi Portofolio', $savedBukti) || in_array('Verifikasi Portofolio / Berkas Pendukung', $savedBukti) ? 'checked' : '' }}
                                                class="rounded-sm text-blue-600 cursor-not-allowed border-slate-300">
                                         <span>Verifikasi Portofolio / Berkas Pendukung</span>
                                     </label>
@@ -1724,9 +1730,12 @@
                                     <label class="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">
                                         Bukti / Metode Lainnya:
                                     </label>
-                                    <input type="hidden" name="bukti_dikumpulkan_lainnya" value="{{ old('bukti_dikumpulkan_lainnya', $pendaftaran->bukti_dikumpulkan_lainnya) }}">
+                                    @php
+                                        $savedBuktiLainnya = old('bukti_dikumpulkan_lainnya', $pendaftaran->bukti_dikumpulkan_lainnya ?: ($pendaftaran->skema?->masterAk01?->bukti_dikumpulkan_lainnya ?? null));
+                                    @endphp
+                                    <input type="hidden" name="bukti_dikumpulkan_lainnya" value="{{ $savedBuktiLainnya }}">
                                     <div class="text-xs text-slate-700 bg-slate-100/80 rounded-lg px-3 py-2 border border-slate-200">
-                                        {{ $pendaftaran->bukti_dikumpulkan_lainnya ?: 'Tidak ada catatan bukti lainnya.' }}
+                                        {{ $savedBuktiLainnya ?: 'Tidak ada catatan bukti lainnya.' }}
                                     </div>
                                 </div>
                             </div>
@@ -1747,7 +1756,11 @@
                         </div>
 
                         <!-- Tanda Tangan Asesor Preview jika sudah ada -->
-                        @if(!empty($pendaftaran->tanda_tangan_asesor_ak01))
+                        @php
+                            $ttdAsesorSah = $pendaftaran->tanda_tangan_asesor_ak01 ?: ($pendaftaran->skema?->masterAk01?->tanda_tangan_asesor ?? null);
+                            $tglTtdAsesorSah = $pendaftaran->tanggal_ttd_asesor_ak01 ?: ($pendaftaran->skema?->masterAk01?->tanggal_ttd_asesor ?? null);
+                        @endphp
+                        @if(!empty($ttdAsesorSah))
                             <div class="p-3.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between">
                                 <div class="flex items-center gap-3">
                                     <div class="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center justify-center font-bold text-xs">
@@ -1756,11 +1769,11 @@
                                     <div>
                                         <span class="text-[11px] font-bold text-slate-700 uppercase block">Telah Disahkan oleh Asesor Penguji</span>
                                         <span class="text-xs font-semibold text-slate-900">{{ $pendaftaran->asesor->nama_lengkap ?? $pendaftaran->jadwal?->asesor?->nama_lengkap ?? 'Asesor Penguji' }}</span>
-                                        <span class="text-[10px] text-slate-400 block">{{ $pendaftaran->tanggal_ttd_asesor_ak01 ? date('d M Y H:i', strtotime($pendaftaran->tanggal_ttd_asesor_ak01)) : '' }}</span>
+                                        <span class="text-[10px] text-slate-400 block">{{ $tglTtdAsesorSah ? date('d M Y H:i', strtotime($tglTtdAsesorSah)) : '' }}</span>
                                     </div>
                                 </div>
                                 <div class="h-12 w-28 bg-white rounded border border-slate-200 p-1 flex items-center justify-center">
-                                    <img src="{{ asset($pendaftaran->tanda_tangan_asesor_ak01) }}" alt="TTD Asesor" class="max-h-10 object-contain">
+                                    <img src="{{ asset($ttdAsesorSah) }}" alt="TTD Asesor" class="max-h-10 object-contain">
                                 </div>
                             </div>
                         @endif

@@ -145,4 +145,24 @@ document.addEventListener('DOMContentLoaded', () => {
       tutupModal('modalCanvasTtd');
     });
   }
+
+  // Validasi form submission agar wajib mengisi TTD sebelum mengirimkan permohonan
+  const formBagian32 = document.querySelector('form[action*="bagian-32"]') || document.querySelector('form[action*="pendaftaran"]');
+  if (formBagian32) {
+    formBagian32.addEventListener('submit', (e) => {
+      const inputHidden = document.getElementById('input-ttd-asesi-base64');
+      const val = inputHidden ? inputHidden.value.trim() : '';
+      const hasValidTtd = val && (val.startsWith('data:image') || val.length > 50);
+
+      if (!hasValidTtd) {
+        e.preventDefault();
+        alert('Tanda tangan digital Asesi wajib dibuat dan dibubuhkan terlebih dahulu sebelum mengirimkan formulir FR.APL.01.');
+        if (typeof bukaModal === 'function') {
+          bukaModal('modalCanvasTtd');
+        }
+        return false;
+      }
+    });
+  }
 });
+
