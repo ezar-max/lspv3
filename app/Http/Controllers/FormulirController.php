@@ -1342,10 +1342,6 @@ class FormulirController extends Controller
 
         $tandaTangan = $request->tanda_tangan ?? ($user->tanda_tangan ?? ($pendaftaran->tanda_tangan_asesi ?? null));
 
-        if (!$tandaTangan) {
-            $tandaTangan = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="220" height="60"><text x="10" y="38" font-family="Brush Script MT, cursive, sans-serif" font-size="28" fill="%231e3a8a">' . urlencode($user->nama_lengkap) . '</text></svg>';
-        }
-
         $iaRecord = IaPenilaian::firstOrNew([
             'pendaftaran_id' => $pendaftaran->id,
             'kode_formulir' => $kodeForm,
@@ -1469,9 +1465,6 @@ class FormulirController extends Controller
             $pendaftaran->status_ak01 = !empty($pendaftaran->tanda_tangan_asesi_ak01) ? 'selesai' : 'disetujui_asesor';
         } elseif ($user && $user->peran === 'asesi') {
             $rawTtd = $request->tanda_tangan_asesi_ak01 ?: ($pendaftaran->tanda_tangan_asesi_ak01 ?: ($user->tanda_tangan ?? $pendaftaran->tanda_tangan_asesi));
-            if (empty($rawTtd)) {
-                $rawTtd = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="220" height="60"><text x="10" y="38" font-family="Brush Script MT, cursive, sans-serif" font-size="28" fill="%231e3a8a">' . urlencode($user->nama_lengkap) . '</text></svg>';
-            }
             if (!empty($rawTtd) && \Illuminate\Support\Str::startsWith($rawTtd, 'data:image') && !\Illuminate\Support\Str::startsWith($rawTtd, 'data:image/svg+xml')) {
                 try {
                     $imageParts = explode(';base64,', $rawTtd);

@@ -129,7 +129,11 @@
                     
                     <!-- Icon Type -->
                     <div class="mt-0.5 shrink-0">
-                        @if($type === 'revision')
+                        @if($type === 'mapa_validation')
+                            <div class="w-8 h-8 rounded-xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center text-xs shadow-2xs">
+                                <i class="fa-solid fa-file-shield"></i>
+                            </div>
+                        @elseif($type === 'revision')
                             <div class="w-8 h-8 rounded-xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center text-xs shadow-2xs">
                                 <i class="fa-solid fa-triangle-exclamation"></i>
                             </div>

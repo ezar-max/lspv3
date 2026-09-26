@@ -530,6 +530,12 @@ class AsesiTahapanController extends Controller
                 ->first();
         }
 
+        // GUARD: Jika pendaftaran telah ditolak oleh Admin LSP, tidak dapat diubah lagi
+        if ($pendaftaran && ($pendaftaran->status_pendaftaran === 'ditolak' || $pendaftaran->rekomendasi_admin_status === 'tidak_diterima')) {
+            return redirect()->route('asesi.tahapan', ['step' => 1])
+                ->with('error', 'Pendaftaran untuk skema ini telah Ditolak dan tidak dapat diubah lagi. Silakan pilih skema sertifikasi lainnya.');
+        }
+
         // GUARD: Jika formulir FR.APL.01 telah disetujui (ACC) oleh Admin LSP, formulir bersifat Read-Only
         if ($pendaftaran && $pendaftaran->isApprovedByAdmin()) {
             return redirect()->route('asesi.tahapan', ['pendaftaran_id' => $pendaftaran->id, 'step' => 2])

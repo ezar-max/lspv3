@@ -41,7 +41,6 @@
             $defaultAsesorTab = 'rekap';
         }
     }
-    $userProfileSignature = auth()->user()->tanda_tangan;
 @endphp
 
 <div class="min-h-screen bg-slate-50/60 pb-20"
@@ -49,7 +48,7 @@
         activeTab: '{{ request('tab', $defaultAsesorTab) }}',
         isFinalized: {{ $isFinalized ? 'true' : 'false' }},
         keputusan: '{{ old('keputusan', $pendaftaran->rekomendasi->keputusan ?? 'kompeten') }}',
-        signatureMode: '{{ !empty($userProfileSignature) ? 'profile' : 'canvas' }}',
+        signatureMode: 'canvas',
         
         setAllK(unitId) {
             document.querySelectorAll('input[data-unit=\'' + unitId + '\'][value=\'K\']').forEach(el => {
@@ -681,37 +680,8 @@
                             </div>
                         </div>
 
-                        <!-- Switcher Opsi TTD -->
-                        <div class="flex items-center gap-2 p-1 bg-slate-100 rounded-xl max-w-sm">
-                            @if(!empty($userProfileSignature))
-                                <button type="button" 
-                                        @click="signatureMode = 'profile'"
-                                        :class="signatureMode === 'profile' ? 'bg-white text-slate-900 shadow-xs font-bold' : 'text-slate-600 font-medium'"
-                                        class="flex-1 py-1.5 px-3 rounded-lg text-xs transition-all flex items-center justify-center gap-1.5">
-                                    <span>Gunakan TTD Profil</span>
-                                </button>
-                            @endif
-                            <button type="button" 
-                                    @click="signatureMode = 'canvas'"
-                                    :class="signatureMode === 'canvas' ? 'bg-white text-slate-900 shadow-xs font-bold' : 'text-slate-600 font-medium'"
-                                    class="flex-1 py-1.5 px-3 rounded-lg text-xs transition-all flex items-center justify-center gap-1.5">
-                                    <span>Gambar TTD Baru</span>
-                            </button>
-                        </div>
-
-                        <!-- Mode Profil -->
-                        <template x-if="signatureMode === 'profile'">
-                            <div class="p-4 bg-emerald-50/60 border border-emerald-200 rounded-xl space-y-2">
-                                <div class="text-xs font-bold text-emerald-900">Spesimen Tanda Tangan Profil Terverifikasi:</div>
-                                <div class="bg-white p-2 rounded-lg border border-emerald-200/80 inline-block">
-                                    <img src="{{ $userProfileSignature }}" alt="TTD Profil Asesor" class="max-h-20 max-w-xs object-contain">
-                                </div>
-                                <input type="hidden" name="mode_ttd" value="profil">
-                            </div>
-                        </template>
-
                         <!-- Mode Canvas -->
-                        <div x-show="signatureMode === 'canvas'" class="space-y-2">
+                        <div class="space-y-2">
                             <div class="flex items-center justify-between">
                                 <span class="text-xs text-slate-500 font-medium">Torehkan tanda tangan Anda di canvas bawah:</span>
                                 <button type="button" @click="clearSignature()" class="text-xs text-red-600 hover:text-red-700 font-semibold px-2.5 py-1 bg-red-50 hover:bg-red-100 rounded-lg transition-colors">
@@ -720,7 +690,7 @@
                             </div>
                             <div class="border border-slate-300 rounded-xl bg-white p-2 relative overflow-hidden">
                                 <canvas id="canvasSignatureAsesor" class="w-full h-36 bg-slate-50/50 rounded-lg cursor-crosshair"></canvas>
-                                <input type="hidden" name="tanda_tangan_asesor" id="inputSignatureAsesor" value="{{ $pendaftaran->rekomendasi->tanda_tangan_asesor ?? ($pendaftaran->tanda_tangan_asesor ?? auth()->user()->tanda_tangan) }}">
+                                <input type="hidden" name="tanda_tangan_asesor" id="inputSignatureAsesor" value="{{ $pendaftaran->rekomendasi->tanda_tangan_asesor ?? ($pendaftaran->tanda_tangan_asesor ?? '') }}">
                             </div>
                         </div>
                     </div>

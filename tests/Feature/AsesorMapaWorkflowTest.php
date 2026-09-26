@@ -243,7 +243,7 @@ class AsesorMapaWorkflowTest extends TestCase
 
         $this->actingAs($this->asesorA)
             ->post(route('asesor.mapa-01.simpan', $this->pendaftaran->id), $payload)
-            ->assertRedirect(route('asesor.mapa-02', $this->pendaftaran->id));
+            ->assertRedirect(route('asesor.mapa', ['skema_id' => $this->pendaftaran->skema_id]));
 
         $this->assertEquals(1, $this->admin->notifications()->count());
 
@@ -255,7 +255,7 @@ class AsesorMapaWorkflowTest extends TestCase
 
         $this->actingAs($this->asesorA)
             ->post(route('asesor.mapa-01.simpan', $this->pendaftaran->id), $payload)
-            ->assertRedirect(route('asesor.mapa-02', $this->pendaftaran->id));
+            ->assertRedirect(route('asesor.mapa', ['skema_id' => $this->pendaftaran->skema_id]));
 
         $this->assertEquals(1, $this->admin->notifications()->count());
     }

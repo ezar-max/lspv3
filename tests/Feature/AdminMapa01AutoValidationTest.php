@@ -55,27 +55,31 @@ class AdminMapa01AutoValidationTest extends TestCase
     }
 
     /**
-     * 1. Admin yang membuka formulir MAPA-01 tidak perlu menggambar TTD asesor
-     * (tombol kanvas modal TTD asesor tidak muncul, digantikan status otomatis terverifikasi).
+     * 1. Halaman MAPA-01 tidak boleh menampilkan tanda tangan SVG otomatis teks font palsu.
      */
     public function test_admin_sees_auto_verified_asesor_and_no_canvas_button_in_mapa01(): void
     {
         $response = $this->actingAs($this->admin)->get(route('asesor.skema.mapa-01', $this->skema->id));
         $response->assertStatus(200);
 
-        // Tidak boleh ada tombol buka modal canvas untuk tanda tangan asesor bagi admin
-        $response->assertDontSee("bukaModal('modalCanvasTtd')", false);
-        $response->assertDontSee('Bubuhkan Tanda Tangan');
+        // Tidak boleh menampilkan badge "Terverifikasi Otomatis" atau SVG cursive palsu
+        $response->assertDontSee('Terverifikasi Otomatis');
+        $response->assertDontSee('Brush Script MT');
+        $response->assertDontSee('>Otomatis<', false);
 
-        // Harus menampilkan badge bahwa TTD asesor terverifikasi otomatis
-        $response->assertSee('Terverifikasi Otomatis');
+        // Admin TIDAK boleh melihat tombol untuk membubuhkan tanda tangan asesor
+        $response->assertDontSee('Bubuhkan Tanda Tangan');
+        $response->assertSee('Menunggu TTD Asesor');
+
+        // Tombol validator admin tidak memerlukan TTD, hanya Validasi
+        $response->assertDontSee('Validasi &amp; TTD', false);
 
         // Harus menampilkan tombol Sahkan & Validasi FR.MAPA.01
         $response->assertSee('Sahkan &amp; Validasi FR.MAPA.01', false);
     }
 
     /**
-     * 2. Admin menyimpan Master MAPA-01 langsung terisi TTD asesor dan langsung tervalidasi.
+     * 2. Admin menyimpan Master MAPA-01 memvalidasi dokumen tanpa membuat TTD SVG palsu.
      */
     public function test_admin_saving_master_mapa01_auto_populates_asesor_signature_and_validates_directly(): void
     {
@@ -85,25 +89,23 @@ class AdminMapa01AutoValidationTest extends TestCase
             'konteks_lingkungan' => 'Tempat kerja simulasi',
         ]);
 
-        $response->assertRedirect(route('asesor.skema.mapa-02', $this->skema->id));
+        $response->assertRedirect(route('asesor.mapa', ['skema_id' => $this->skema->id]));
 
         $master = Mapa01::where('skema_id', $this->skema->id)->whereNull('pendaftaran_id')->first();
         $this->assertNotNull($master);
 
-        // TTD Asesor terisi otomatis
-        $this->assertNotEmpty($master->tanda_tangan_asesor);
-        $this->assertNotNull($master->tanggal_ttd_asesor);
+        // TTD Asesor tidak boleh berupa SVG teks palsu
+        $this->assertFalse(str_contains((string)$master->tanda_tangan_asesor, 'svg'));
 
         // Baris Validator Admin langsung terisi dan statusnya tervalidasi
         $tabel = $master->penyusun_validator_tabel;
         $this->assertIsArray($tabel);
         $this->assertEquals('tervalidasi', $tabel['validator_1']['status_validasi'] ?? null);
         $this->assertEquals($this->admin->nama_lengkap, $tabel['validator_1']['nama'] ?? null);
-        $this->assertNotEmpty($tabel['validator_1']['ttd'] ?? null);
     }
 
     /**
-     * 3. Admin menyimpan MAPA-01 peserta langsung tervalidasi dan memperbarui pendaftaran asesi.
+     * 3. Admin menyimpan MAPA-01 peserta langsung tervalidasi tanpa membuat SVG palsu.
      */
     public function test_admin_saving_candidate_mapa01_auto_validates_and_updates_pendaftaran(): void
     {
@@ -129,23 +131,18 @@ class AdminMapa01AutoValidationTest extends TestCase
             'tujuan_asesmen' => 'Sertifikasi',
         ]);
 
-        $response->assertRedirect(route('asesor.mapa-02', $pendaftaran->id));
+        $response->assertRedirect(route('asesor.mapa', ['skema_id' => $this->skema->id]));
 
         $mapa01 = Mapa01::where('pendaftaran_id', $pendaftaran->id)->first();
         $this->assertNotNull($mapa01);
 
-        // TTD Asesor otomatis terisi
-        $this->assertNotEmpty($mapa01->tanda_tangan_asesor);
+        // TTD Asesor tidak boleh berupa SVG teks palsu
+        $this->assertFalse(str_contains((string)$mapa01->tanda_tangan_asesor, 'svg'));
 
         // Validator langsung tervalidasi
         $tabel = $mapa01->penyusun_validator_tabel;
         $this->assertEquals('tervalidasi', $tabel['validator_1']['status_validasi'] ?? null);
         $this->assertEquals($this->admin->nama_lengkap, $tabel['validator_1']['nama'] ?? null);
-
-        // PendaftaranAsesi juga langsung terupdate tanda tangan admin
-        $pendaftaranFresh = $pendaftaran->fresh();
-        $this->assertNotEmpty($pendaftaranFresh->tanda_tangan_admin);
-        $this->assertNotNull($pendaftaranFresh->tanggal_ttd_admin);
     }
 
     /**

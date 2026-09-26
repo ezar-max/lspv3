@@ -490,14 +490,9 @@ class AsesorController extends Controller
         }
 
         // VALIDASI TANDA TANGAN ASESOR (WAJIB)
-        $ttdAsesor = $request->tanda_tangan_asesor ?: (auth()->user()->tanda_tangan ?: $pendaftaran->tanda_tangan_asesor);
+        $ttdAsesor = $request->tanda_tangan_asesor ?: $pendaftaran->tanda_tangan_asesor;
         if (empty($ttdAsesor)) {
             return back()->withInput()->with('error', 'Gagal memverifikasi: Tanda Tangan Asesor Penguji wajib dibubuhkan sebelum menyimpan keputusan FR.APL.02.');
-        }
-
-        // Simpan tanda tangan ke profil user asesor jika baru digambar (base64)
-        if ($request->filled('tanda_tangan_asesor') && \Illuminate\Support\Str::startsWith($request->tanda_tangan_asesor, 'data:image')) {
-            auth()->user()->update(['tanda_tangan' => $request->tanda_tangan_asesor]);
         }
 
         $oldStatus = $pendaftaran->status_apl02;
@@ -751,13 +746,10 @@ class AsesorController extends Controller
             } catch (\Exception $e) {
                 // Fallback
             }
-        } elseif (!empty($rawSignature) && !empty(auth()->user()->tanda_tangan) && $rawSignature === auth()->user()->tanda_tangan) {
-            // Asesor memilih tanda tangan dari profil
-            $signaturePath = auth()->user()->tanda_tangan;
         }
 
         if (empty($signaturePath)) {
-            $signaturePath = auth()->user()->tanda_tangan ?: $pendaftaran->tanda_tangan_asesor_ak01;
+            $signaturePath = $pendaftaran->tanda_tangan_asesor_ak01;
         }
 
         if (empty($signaturePath)) {
@@ -888,11 +880,49 @@ class AsesorController extends Controller
 
         LogAktivitas::catat('Master MAPA.01', 'Menyimpan Master FR.MAPA.01 (' . ($isConfirm ? 'Disahkan' : 'Draft') . ') untuk Skema ' . $skema->kode_skema);
 
+        // Notifikasi ke Admin & Superadmin jika formulir Master MAPA.01 Skema memerlukan validasi
+        if ($user->peran === 'asesor') {
+            $master01 = Mapa01::where('skema_id', $skema->id)->whereNull('pendaftaran_id')->first();
+            $validatorData = $master01?->penyusun_validator_tabel['validator_1'] ?? [];
+            $isAlreadyValidated = !empty($validatorData['ttd']) || ($validatorData['status_validasi'] ?? null) === 'tervalidasi';
+
+            if (!$isAlreadyValidated) {
+                $admins = Pengguna::whereIn('peran', ['admin', 'superadmin'])
+                    ->where('aktif', true)
+                    ->get();
+
+                foreach ($admins as $admin) {
+                    $hasPendingNotification = $admin->notifications()
+                        ->where('type', SystemAlert::class)
+                        ->get()
+                        ->contains(function ($notification) use ($skema) {
+                            return ($notification->data['metadata']['mapa01_master_skema_id'] ?? null) == $skema->id
+                                && ($notification->data['metadata']['status'] ?? null) === 'menunggu_validasi'
+                                && is_null($notification->read_at);
+                        });
+
+                    if (!$hasPendingNotification) {
+                        $admin->notify(new SystemAlert(
+                            'FR.MAPA.01 Sesuai Skema Menunggu Validasi',
+                            'Asesor ' . ($user->nama_lengkap ?: 'Asesor') . ' telah menyusun dokumen Master FR.MAPA.01 untuk Skema ' . ($skema->nama_skema ?: 'Sertifikasi') . ' (' . $skema->kode_skema . '). Dokumen menunggu pengesahan & validasi Administrator LSP.',
+                            route('asesor.skema.mapa-01', $skema->id),
+                            'mapa_validation',
+                            [
+                                'mapa01_master_skema_id' => $skema->id,
+                                'skema_id' => $skema->id,
+                                'status' => 'menunggu_validasi',
+                            ]
+                        ));
+                    }
+                }
+            }
+        }
+
         if ($isConfirm) {
             $suksesMsg = in_array($user->peran, ['admin', 'superadmin'])
-                ? 'Dokumen Master FR.MAPA.01 berhasil disahkan dan langsung tervalidasi oleh Administrator! Silakan lanjutkan untuk meninjau Master Peta Instrumen (FR.MAPA.02).'
-                : 'Master Dokumen FR.MAPA.01 berhasil disahkan! Silakan lanjutkan untuk meninjau dan mengesahkan Master Peta Instrumen (FR.MAPA.02).';
-            return redirect()->route('asesor.skema.mapa-02', $skema->id)
+                ? 'Dokumen Master FR.MAPA.01 berhasil disahkan dan langsung tervalidasi oleh Administrator.'
+                : 'Master Dokumen FR.MAPA.01 berhasil disahkan.';
+            return redirect()->route('asesor.mapa', ['skema_id' => $skema->id])
                 ->with('sukses', $suksesMsg);
         }
 
@@ -1055,13 +1085,13 @@ class AsesorController extends Controller
             } catch (\Exception $e) {
                 // Fallback
             }
-        } elseif (!empty($rawSignature) && ($rawSignature === $user->tanda_tangan || \Illuminate\Support\Str::startsWith($rawSignature, 'storage/') || \Illuminate\Support\Str::startsWith($rawSignature, 'images/'))) {
+        } elseif (!empty($rawSignature) && (\Illuminate\Support\Str::startsWith($rawSignature, 'storage/') || \Illuminate\Support\Str::startsWith($rawSignature, 'images/'))) {
             $signaturePath = $rawSignature;
         }
 
         $existingMasterAk01 = MasterAk01::where('skema_id', $skema->id)->first();
         if (empty($signaturePath)) {
-            $signaturePath = $existingMasterAk01->tanda_tangan_asesor ?? $user->tanda_tangan;
+            $signaturePath = $existingMasterAk01?->tanda_tangan_asesor;
         }
 
         $masterAk01 = MasterAk01::updateOrCreate(
@@ -1072,7 +1102,7 @@ class AsesorController extends Controller
                 'bukti_dikumpulkan' => $request->input('bukti_dikumpulkan', ['Observasi Praktik Demonstrasi', 'Uji Tertulis (CBT)', 'Tanya Jawab Lisan']),
                 'bukti_dikumpulkan_lainnya' => $request->input('bukti_dikumpulkan_lainnya'),
                 'catatan_asesor' => $request->input('catatan_asesor'),
-                'tanda_tangan_asesor' => $signaturePath ?: $user->tanda_tangan,
+                'tanda_tangan_asesor' => $signaturePath,
                 'tanggal_ttd_asesor' => now(),
                 'status' => 'selesai',
             ]
@@ -1175,12 +1205,12 @@ class AsesorController extends Controller
             } catch (\Exception $e) {
                 // Fallback
             }
-        } elseif (!empty($rawSignature) && ($rawSignature === $user->tanda_tangan || \Illuminate\Support\Str::startsWith($rawSignature, 'storage/') || \Illuminate\Support\Str::startsWith($rawSignature, 'images/'))) {
+        } elseif (!empty($rawSignature) && (\Illuminate\Support\Str::startsWith($rawSignature, 'storage/') || \Illuminate\Support\Str::startsWith($rawSignature, 'images/'))) {
             $signaturePath = $rawSignature;
         }
 
         if (empty($signaturePath)) {
-            $signaturePath = $existingMaster->tanda_tangan_asesor ?? $user->tanda_tangan;
+            $signaturePath = $existingMaster?->tanda_tangan_asesor;
         }
 
         $masterAk07 = MasterAk07::updateOrCreate(
@@ -1194,7 +1224,7 @@ class AsesorController extends Controller
                 'metode_disepakati' => $request->input('metode_disepakati'),
                 'instrumen_disepakati' => $request->input('instrumen_disepakati'),
                 'catatan_asesor' => $request->input('catatan_asesor'),
-                'tanda_tangan_asesor' => $signaturePath ?: $user->tanda_tangan,
+                'tanda_tangan_asesor' => $signaturePath,
                 'tanggal_ttd_asesor' => now(),
                 'status' => 'selesai',
             ]
@@ -1337,9 +1367,9 @@ class AsesorController extends Controller
 
         if ($isConfirm) {
             $suksesMsg = in_array($user->peran, ['admin', 'superadmin'])
-                ? 'Dokumen FR.MAPA.01 berhasil disahkan dan langsung tervalidasi oleh Administrator! Silakan lanjutkan untuk meninjau dan mengesahkan Peta Instrumen Asesmen (FR.MAPA 02).'
-                : 'Dokumen FR.MAPA.01 berhasil disahkan! Silakan lanjutkan untuk meninjau dan mengesahkan Peta Instrumen Asesmen (FR.MAPA 02).';
-            return redirect()->route('asesor.mapa-02', $pendaftaran->id)
+                ? 'Dokumen FR.MAPA.01 berhasil disahkan dan langsung tervalidasi oleh Administrator.'
+                : 'Dokumen FR.MAPA.01 berhasil disahkan.';
+            return redirect()->route('asesor.mapa', ['skema_id' => $pendaftaran->skema_id])
                 ->with('sukses', $suksesMsg);
         }
 
@@ -1476,7 +1506,7 @@ class AsesorController extends Controller
                 'jumlah_kompeten' => $totalKompeten,
                 'jumlah_belum_kompeten' => $totalBelumKompeten,
                 'catatan_pelaksanaan' => $request->catatan_pelaksanaan,
-                'tanda_tangan_asesor' => auth()->user()->tanda_tangan,
+                'tanda_tangan_asesor' => $request->tanda_tangan_asesor ?? null,
             ]
         );
 

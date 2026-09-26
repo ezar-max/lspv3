@@ -22,8 +22,8 @@
 
 @section('konten')
 @php
-    $userSignature = auth()->user()?->tanda_tangan;
-    $currentSignature = $masterAk07->tanda_tangan_asesor ?? $userSignature;
+    $userSignature = null;
+    $currentSignature = $masterAk07->tanda_tangan_asesor ?? null;
     $isSigned = !empty($currentSignature);
     $isConfigured = $masterAk07->exists && ($masterAk07->status === 'selesai' || !empty($masterAk07->updated_at));
     $savedChecklist = (array) ($masterAk07->items_checklist ?? []);
@@ -463,12 +463,6 @@
                                     <span>Gunakan TTD Tersimpan Saat Ini</span>
                                 </label>
                             @endif
-                            @if(!empty($userSignature))
-                                <label class="inline-flex items-center gap-1.5 cursor-pointer text-xs font-medium text-slate-700">
-                                    <input type="radio" name="sign_mode" value="profile" x-model="signatureMode" class="accent-indigo-600">
-                                    <span>Gunakan TTD Akun Profil</span>
-                                </label>
-                            @endif
                             <label class="inline-flex items-center gap-1.5 cursor-pointer text-xs font-medium text-slate-700">
                                 <input type="radio" name="sign_mode" value="canvas" x-model="signatureMode" class="accent-indigo-600">
                                 <span>Gores TTD Baru</span>
@@ -480,14 +474,6 @@
                             <div x-show="signatureMode === 'existing'" class="p-3 border border-slate-200 rounded-xl bg-white flex flex-col items-center justify-center h-28">
                                 <img src="{{ asset($currentSignature) }}" alt="TTD Tersimpan" class="max-h-20 object-contain">
                                 <span class="text-[10px] text-slate-400 mt-1">Tanda tangan yang tersimpan sebelumnya akan dipertahankan.</span>
-                            </div>
-                        @endif
-
-                        <!-- Preview Profil Box -->
-                        @if(!empty($userSignature))
-                            <div x-show="signatureMode === 'profile'" class="p-3 border border-slate-200 rounded-xl bg-white flex flex-col items-center justify-center h-28">
-                                <img src="{{ asset($userSignature) }}" alt="TTD Profil" class="max-h-20 object-contain">
-                                <span class="text-[10px] text-slate-400 mt-1">Tanda tangan dari profil akun Anda.</span>
                             </div>
                         @endif
 
@@ -588,7 +574,7 @@ function ak07SkemaApp() {
     return {
         isEditMode: {{ $isConfigured ? 'false' : 'true' }},
         isSubmitting: false,
-        signatureMode: '{{ !empty($currentSignature) ? "existing" : (!empty($userSignature) ? "profile" : "canvas") }}',
+        signatureMode: '{{ !empty($currentSignature) ? "existing" : "canvas" }}',
         sigPad: null,
         selectedPotensi: {!! json_encode($selectedPotensi) !!},
         selectedFase: {!! json_encode($selectedFase) !!},
@@ -692,12 +678,10 @@ function ak07SkemaApp() {
                         }
                         return;
                     }
-                    inputTtd.value = '{{ $currentSignature ?: $userSignature }}';
+                    inputTtd.value = '{{ $currentSignature }}';
                 } else {
                     inputTtd.value = this.sigPad.toDataURL('image/png');
                 }
-            } else if (this.signatureMode === 'profile') {
-                inputTtd.value = '{{ $userSignature }}';
             } else if (this.signatureMode === 'existing') {
                 inputTtd.value = '{{ $currentSignature }}';
             }

@@ -439,40 +439,9 @@
                             Waktu Pengesahan: <strong>{{ $pendaftaran->tanggal_ttd_asesor_ak01 ? date('d/m/Y H:i', strtotime($pendaftaran->tanggal_ttd_asesor_ak01)) : 'Tercatat' }}</strong>
                         </div>
                     @else
-                        <!-- OPSI TANDA TANGAN ASESOR (PROFIL vs CANVAS) -->
+                        <!-- TANDA TANGAN ASESOR (CANVAS) -->
                         <div class="space-y-2.5">
-                            @if(!empty(auth()->user()->tanda_tangan))
-                                <div class="flex items-center gap-2 p-1 bg-slate-200/70 rounded-xl text-xs font-semibold">
-                                    <button type="button" 
-                                            @click="modeTtd = 'profil'"
-                                            :class="modeTtd === 'profil' ? 'bg-white text-indigo-700 shadow-2xs' : 'text-slate-600 hover:text-slate-900'"
-                                            class="flex-1 py-1.5 px-2.5 rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer">
-                                        <span>Gunakan TTD Profil</span>
-                                    </button>
-                                    <button type="button" 
-                                            @click="modeTtd = 'canvas'; $nextTick(() => initSignatureEngine())"
-                                            :class="modeTtd === 'canvas' ? 'bg-white text-indigo-700 shadow-2xs' : 'text-slate-600 hover:text-slate-900'"
-                                            class="flex-1 py-1.5 px-2.5 rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer">
-                                        <span>Gambar TTD Baru</span>
-                                    </button>
-                                </div>
-                            @endif
-
-                            <!-- Mode 1: Tanda Tangan Profil -->
-                            <div x-show="modeTtd === 'profil'" class="space-y-2">
-                                <div class="h-32 bg-white rounded-xl border border-indigo-200 p-2 flex flex-col items-center justify-center relative overflow-hidden bg-indigo-50/20">
-                                    <div class="absolute top-2 right-2 px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-[10px] font-bold flex items-center gap-1">
-                                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1"></span> Siap Digunakan
-                                    </div>
-                                    <img src="{{ asset(auth()->user()->tanda_tangan) }}" alt="Spesimen Tanda Tangan" class="max-h-24 object-contain">
-                                </div>
-                                <p class="text-[11px] text-slate-500">
-                                    Menggunakan spesimen tanda tangan digital yang tersimpan pada profil Asesor Anda.
-                                </p>
-                            </div>
-
-                            <!-- Mode 2: Interactive Signature Canvas -->
-                            <div x-show="modeTtd === 'canvas'" class="space-y-1.5">
+                            <div class="space-y-1.5">
                                 <div class="border border-slate-300 rounded-xl bg-white relative overflow-hidden">
                                     <canvas id="canvasAk01Asesor" width="800" height="240" class="w-full h-32 bg-white cursor-crosshair block touch-none" style="touch-action: none; -ms-touch-action: none;"></canvas>
                                 </div>
@@ -545,23 +514,13 @@
         return {
             agreedToClause: {{ $isSignedByAsesor ? 'true' : 'false' }},
             isSubmitting: false,
-            modeTtd: '{{ !empty(auth()->user()->tanda_tangan) ? 'profil' : 'canvas' }}',
+            modeTtd: 'canvas',
             engine: null,
 
             init() {
                 @if(!$isSignedByAsesor)
                     this.$nextTick(() => {
-                        if (this.modeTtd === 'canvas') {
-                            this.initSignatureEngine();
-                        }
-                    });
-
-                    this.$watch('modeTtd', (val) => {
-                        if (val === 'canvas') {
-                            this.$nextTick(() => {
-                                this.initSignatureEngine();
-                            });
-                        }
+                        this.initSignatureEngine();
                     });
                 @endif
             },
@@ -600,25 +559,19 @@
                     return;
                 }
 
-                if (this.modeTtd === 'profil') {
-                    if (this.$refs.signatureInput) {
-                        this.$refs.signatureInput.value = '{{ auth()->user()->tanda_tangan }}';
+                if (this.engine) {
+                    if (this.engine.isEmpty()) {
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Tanda Tangan Belum Dibubuhkan',
+                            text: 'Silakan bubuhkan tanda tangan digital Anda pada canvas.',
+                            confirmButtonColor: '#4f46e5'
+                        });
+                        return;
                     }
-                } else if (this.modeTtd === 'canvas') {
-                    if (this.engine) {
-                        if (this.engine.isEmpty()) {
-                            Swal.fire({
-                                icon: 'warning',
-                                title: 'Tanda Tangan Belum Dibubuhkan',
-                                text: 'Silakan bubuhkan tanda tangan digital Anda pada canvas atau pilih opsi gunakan tanda tangan profil.',
-                                confirmButtonColor: '#4f46e5'
-                            });
-                            return;
-                        }
-                        const dataUrl = this.engine.toDataURL();
-                        if (this.$refs.signatureInput) {
-                            this.$refs.signatureInput.value = dataUrl;
-                        }
+                    const dataUrl = this.engine.toDataURL();
+                    if (this.$refs.signatureInput) {
+                        this.$refs.signatureInput.value = dataUrl;
                     }
                 }
 

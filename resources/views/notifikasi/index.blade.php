@@ -52,6 +52,47 @@
         </div>
     </div>
 
+    @if(auth()->check() && in_array(auth()->user()->peran, ['admin', 'superadmin']) && isset($pendingMapa01Skema) && $pendingMapa01Skema->isNotEmpty())
+        <!-- BANNER PERINGATAN VALIDASI FR.MAPA.01 SESUAI SKEMA -->
+        <div class="bg-gradient-to-r from-amber-500/10 via-amber-50 to-orange-50/60 border border-amber-200/90 rounded-3xl p-5 sm:p-6 shadow-xs relative overflow-hidden">
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div class="flex items-start gap-3.5">
+                    <div class="w-11 h-11 rounded-2xl bg-amber-500 text-white flex items-center justify-center text-lg shadow-sm shrink-0">
+                        <i class="fa-solid fa-file-shield"></i>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h3 class="font-black text-sm sm:text-base text-amber-950">
+                                {{ $pendingMapa01Skema->count() }} Dokumen FR.MAPA.01 Sesuai Skema Perlu Divalidasi
+                            </h3>
+                            <span class="px-2 py-0.5 rounded-full bg-amber-200/80 text-amber-800 text-[10px] font-black uppercase tracking-wider">
+                                Tindakan Diperlukan
+                            </span>
+                        </div>
+                        <p class="text-xs text-amber-800/90 mt-1 max-w-2xl leading-relaxed">
+                            Terdapat formulir Master Perencanaan Asesmen (FR.MAPA.01) sesuai skema yang telah disusun oleh Asesor dan menunggu pengesahan & validasi resmi oleh Administrator LSP.
+                        </p>
+                    </div>
+                </div>
+                <div class="flex flex-wrap items-center gap-2 self-end sm:self-center shrink-0">
+                    @if($pendingMapa01Skema->count() === 1)
+                        <a href="{{ route('asesor.skema.mapa-01', $pendingMapa01Skema->first()->skema_id) }}" 
+                           class="px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition shadow-xs flex items-center gap-2 cursor-pointer">
+                            <span>Validasi Sekarang</span>
+                            <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                        </a>
+                    @else
+                        <a href="{{ route('admin.master-muk.index') }}" 
+                           class="px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition shadow-xs flex items-center gap-2 cursor-pointer">
+                            <span>Lihat Formulir Skema</span>
+                            <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                        </a>
+                    @endif
+                </div>
+            </div>
+        </div>
+    @endif
+
     <!-- FILTER TABS & SEARCH -->
     <div class="flex items-center justify-between gap-3 border-b border-slate-200/80 pb-2">
         <div class="flex items-center gap-1 sm:gap-2">
@@ -99,7 +140,9 @@
                             bg-emerald-50 text-emerald-600 border border-emerald-100
                         @elseif($type === 'apl01_submission')
                             bg-blue-50 text-blue-600 border border-blue-100
-                        @elseif($type === 'revision')
+                        @elseif($type === 'mapa_validation')
+                            bg-amber-50 text-amber-600 border border-amber-200
+                        @elseif($type === 'revision' || $type === 'warning')
                             bg-amber-50 text-amber-600 border border-amber-100
                         @elseif($type === 'danger' || $type === 'ditolak')
                             bg-rose-50 text-rose-600 border border-rose-100
@@ -112,7 +155,9 @@
                             <i class="fa-solid fa-circle-check"></i>
                         @elseif($type === 'apl01_submission')
                             <i class="fa-solid fa-file-signature"></i>
-                        @elseif($type === 'revision')
+                        @elseif($type === 'mapa_validation')
+                            <i class="fa-solid fa-file-shield"></i>
+                        @elseif($type === 'revision' || $type === 'warning')
                             <i class="fa-solid fa-triangle-exclamation"></i>
                         @elseif($type === 'danger' || $type === 'ditolak')
                             <i class="fa-solid fa-circle-xmark"></i>
@@ -154,8 +199,8 @@
                 <div class="flex items-center gap-2 self-end sm:self-center shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 w-full sm:w-auto justify-end">
                     @if($targetUrl && $targetUrl !== '#')
                         <a href="{{ route('notifications.read', $item->id) }}" 
-                           class="px-3.5 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-600 text-blue-700 hover:text-white border border-blue-200/80 font-bold text-xs transition-colors flex items-center gap-1.5 shadow-2xs">
-                            <span>Buka Halaman</span>
+                           class="px-3.5 py-1.5 rounded-xl {{ $type === 'mapa_validation' ? 'bg-amber-50 hover:bg-amber-600 text-amber-700 hover:text-white border border-amber-200/80' : 'bg-blue-50 hover:bg-blue-600 text-blue-700 hover:text-white border border-blue-200/80' }} font-bold text-xs transition-colors flex items-center gap-1.5 shadow-2xs">
+                            <span>{{ $type === 'mapa_validation' ? 'Validasi Dokumen' : 'Buka Halaman' }}</span>
                             <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
                         </a>
                     @endif

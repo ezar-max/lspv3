@@ -18,8 +18,60 @@
         }
 
         /* ============================================================
+           COMPACT & BALANCED TABLE STYLING (DESKTOP & GENERAL)
+           ============================================================ */
+        .mapa02-table {
+            font-size: 11px;
+            border-collapse: collapse;
+            width: 100%;
+        }
+
+        /* Kolom Pertama (Elemen): Jarak tepi kiri lega (20px) */
+        .mapa02-th-elemen,
+        .mapa02-td-elemen {
+            padding-left: 1.25rem !important;
+            padding-right: 0.75rem !important;
+            padding-top: 0.45rem !important;
+            padding-bottom: 0.45rem !important;
+            font-size: 11px !important;
+        }
+
+        /* Kolom KUK */
+        .mapa02-th-kuk,
+        .mapa02-td-kuk {
+            padding-left: 0.75rem !important;
+            padding-right: 0.85rem !important;
+            padding-top: 0.45rem !important;
+            padding-bottom: 0.45rem !important;
+            font-size: 11px !important;
+        }
+
+        /* 8 Kolom Instrumen Asesmen (IA) */
+        .mapa02-th-ia,
+        .mapa02-td-ia {
+            width: 44px !important;
+            min-width: 42px !important;
+            padding: 0.45rem 0.25rem !important;
+            text-align: center !important;
+        }
+
+        /* Kolom Terakhir (CRP): Jarak tepi kanan lega (20px) */
+        .mapa02-th-ia:last-child,
+        .mapa02-td-ia:last-child {
+            padding-right: 1.25rem !important;
+            min-width: 54px !important;
+        }
+
+        .mapa02-cb {
+            width: 1rem !important;
+            height: 1rem !important;
+            margin: 0 auto;
+            display: block;
+            cursor: pointer;
+        }
+
+        /* ============================================================
            MOBILE ONLY (<= 768px)
-           Desktop (>= 769px) is 100% UNTOUCHED and identical to original.
            ============================================================ */
         @media (max-width: 768px) {
             .mapa02-table-wrapper {
@@ -127,22 +179,22 @@
             : (($mapa02 && $mapa02->asesor) ? $mapa02->asesor : auth()->user());
         $pengesahNama = $pengesahUser->nama_lengkap ?? 'Administrator LSP';
         $asesorMet = $pengesahUser->nomor_registrasi ?? '-';
-        $profileTtd = $pengesahUser->tanda_tangan ?? null;
+        $profileTtd = null;
     } else {
         // Mode Asesor (tetap gunakan data Asesor, jangan diubah)
         $pengesahUser = $pendaftaran->asesor ?? auth()->user();
         $pengesahNama = $pengesahUser->nama_lengkap ?? auth()->user()->nama_lengkap;
         $asesorMet = $pengesahUser->nomor_registrasi ?? auth()->user()->nomor_registrasi ?? 'MET.000.001234';
-        $profileTtd = auth()->user()->tanda_tangan ?: ($pendaftaran->tanda_tangan_asesor ?? null);
+        $profileTtd = $pendaftaran->tanda_tangan_asesor ?? null;
     }
 
     $savedPeta = $mapa02->matriks_peta ?? [];
     $isConfirmed = ($mapa02->status_mapa ?? '') === 'selesai';
     $isConfigured = !empty($mapa02->exists) && $isConfirmed;
-    $displayTtd = ($isConfirmed && !empty($mapa02->tanda_tangan_asesor)) ? $mapa02->tanda_tangan_asesor : $profileTtd;
+    $displayTtd = ($isConfirmed && !empty($mapa02->tanda_tangan_asesor)) ? $mapa02->tanda_tangan_asesor : null;
 @endphp
 
-<div class="max-w-6xl mx-auto px-2 sm:px-4 py-3 space-y-4 mapa02-container" x-data="mapa02App()" x-cloak>
+<div class="max-w-6xl mx-auto px-3 sm:px-6 lg:px-8 py-3.5 space-y-4 mapa02-container" x-data="mapa02App()" x-cloak>
 
     <!-- =========================================================================
          TOP BREADCRUMB & ACTION BAR
@@ -257,33 +309,33 @@
     <!-- =========================================================================
          LEGEND INSTRUMEN (COMPACT INLINE)
          ========================================================================= -->
-    <div class="mapa02-legend bg-slate-50 rounded-xl border border-slate-200/80 p-3 text-[11px] text-slate-600 flex flex-wrap items-center gap-x-4 gap-y-1.5">
-        <span class="font-bold text-slate-700 uppercase tracking-wider text-[10px] flex items-center gap-1.5">
-            <span class="w-1.5 h-1.5 rounded-full bg-blue-600"></span> Legenda Instrumen:
+    <div class="mapa02-legend bg-slate-50 rounded-lg border border-slate-200/80 p-2 sm:p-2.5 text-[10.5px] text-slate-600 flex flex-wrap items-center gap-x-3.5 gap-y-1">
+        <span class="font-bold text-slate-700 uppercase tracking-wider text-[9.5px] flex items-center gap-1.5">
+            <span class="w-1.5 h-1.5 rounded-full bg-blue-600"></span> Legenda:
         </span>
-        <span class="inline-flex items-center gap-1"><strong>CLO</strong>: IA.01 Ceklis Observasi</span>
-        <span class="inline-flex items-center gap-1"><strong>DPT</strong>: IA.02 Tugas Praktik</span>
-        <span class="inline-flex items-center gap-1"><strong>PMO</strong>: IA.03 Pertanyaan Observasi</span>
-        <span class="inline-flex items-center gap-1"><strong>DPE</strong>: IA.05/06 Uji Tulis PG & Esai</span>
-        <span class="inline-flex items-center gap-1"><strong>DPL</strong>: IA.07 Pertanyaan Lisan</span>
-        <span class="inline-flex items-center gap-1"><strong>VP</strong>: IA.08 Verifikasi Portofolio</span>
-        <span class="inline-flex items-center gap-1"><strong>PW</strong>: IA.09 Pertanyaan Wawancara</span>
-        <span class="inline-flex items-center gap-1"><strong>CRP</strong>: IA.11 Reviu Produk</span>
+        <span class="inline-flex items-center gap-1"><strong>CLO</strong>: Observasi</span>
+        <span class="inline-flex items-center gap-1"><strong>DPT</strong>: Praktik</span>
+        <span class="inline-flex items-center gap-1"><strong>PMO</strong>: Pertanyaan Obs.</span>
+        <span class="inline-flex items-center gap-1"><strong>DPE</strong>: Tulis PG & Esai</span>
+        <span class="inline-flex items-center gap-1"><strong>DPL</strong>: Lisan</span>
+        <span class="inline-flex items-center gap-1"><strong>VP</strong>: Portofolio</span>
+        <span class="inline-flex items-center gap-1"><strong>PW</strong>: Wawancara</span>
+        <span class="inline-flex items-center gap-1"><strong>CRP</strong>: Reviu Produk</span>
     </div>
 
     <!-- BANNER MODE TAMPILAN / EDIT -->
     @if(!$isAsesi)
-    <div x-show="!isEditMode" class="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex items-center justify-between gap-3 text-xs text-slate-600 shadow-2xs no-print">
+    <div x-show="!isEditMode" class="bg-slate-50 border border-slate-200 rounded-xl p-3 flex items-center justify-between gap-3 text-xs text-slate-600 shadow-2xs no-print">
         <div>
-            <strong class="text-slate-800 font-bold block text-sm">Mode Tampilan (Terkunci)</strong>
-            <span>Peta instrumen telah dikonfigurasi dan ditampilkan dalam mode hanya lihat. Klik tombol <strong>Edit Formulir</strong> di atas jika ingin mengubah matriks instrumen.</span>
+            <strong class="text-slate-800 font-bold block text-xs">Mode Tampilan (Terkunci)</strong>
+            <span class="text-[11px]">Peta instrumen telah dikonfigurasi dan ditampilkan dalam mode hanya lihat. Klik tombol <strong>Edit Formulir</strong> di atas jika ingin mengubah matriks instrumen.</span>
         </div>
     </div>
 
-    <div x-show="isEditMode && {{ $isConfigured ? 'true' : 'false' }}" class="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center gap-3 text-xs text-amber-800 shadow-2xs no-print">
+    <div x-show="isEditMode && {{ $isConfigured ? 'true' : 'false' }}" class="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-center gap-3 text-xs text-amber-800 shadow-2xs no-print">
         <div>
-            <strong class="text-amber-900 font-bold block text-sm">Mode Edit Aktif</strong>
-            <span>Anda sekarang dapat mencentang atau menghapus instrumen asesmen pada matriks di bawah, lalu klik Simpan Draft atau Konfirmasi di bawah.</span>
+            <strong class="text-amber-900 font-bold block text-xs">Mode Edit Aktif</strong>
+            <span class="text-[11px]">Anda sekarang dapat mencentang atau menghapus instrumen asesmen pada matriks di bawah, lalu klik Simpan Draft atau Konfirmasi di bawah.</span>
         </div>
     </div>
     @endif
@@ -299,16 +351,16 @@
 
         <!-- LOOP UNIT KOMPETENSI -->
         @forelse($pendaftaran->skema->unitKompetensi as $indexUnit => $unit)
-            <div class="bg-white rounded-2xl border border-slate-200/90 shadow-2xs overflow-hidden page-break" x-data="{ expanded: true }">
+            <div class="bg-white rounded-xl border border-slate-200/90 shadow-2xs overflow-hidden page-break" x-data="{ expanded: true }">
                 
                 <!-- Unit Header Bar -->
-                <div class="px-4 py-3 bg-slate-50/90 border-b border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                    <div class="flex items-center gap-2.5 min-w-0">
-                        <button type="button" @click="expanded = !expanded" class="text-xs font-semibold text-slate-500 hover:text-slate-800 px-2 py-0.5 rounded bg-slate-100 hover:bg-slate-200 transition-colors no-print">
+                <div class="px-4 sm:px-5 py-2.5 bg-slate-50/90 border-b border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+                    <div class="flex items-center gap-2 min-w-0">
+                        <button type="button" @click="expanded = !expanded" class="text-[11px] font-semibold text-slate-500 hover:text-slate-800 px-1.5 py-0.5 rounded bg-slate-100 hover:bg-slate-200 transition-colors no-print">
                             <span x-text="expanded ? 'Tutup' : 'Buka'"></span>
                         </button>
                         <div class="min-w-0">
-                            <span class="text-[10px] font-bold text-blue-700 uppercase tracking-wider block">
+                            <span class="text-[9.5px] font-bold text-blue-700 uppercase tracking-wider block">
                                 Unit {{ $indexUnit + 1 }} &bull; {{ $unit->kode_unit }}
                             </span>
                             <h2 class="font-bold text-xs sm:text-sm text-slate-900 truncate" title="{{ $unit->judul_unit }}">
@@ -319,13 +371,13 @@
 
                     <!-- Quick Action Buttons Per Unit -->
                     <div class="mapa02-quick-actions flex items-center gap-1.5 no-print shrink-0 self-end sm:self-center" x-show="isEditMode">
-                        <button type="button" @click="toggleInstrumentForUnit({{ $unit->id }}, 'clo')" class="px-2 py-1 bg-white hover:bg-slate-100 border border-slate-200 rounded-md text-[10px] font-semibold text-slate-700 transition">
+                        <button type="button" @click="toggleInstrumentForUnit({{ $unit->id }}, 'clo')" class="px-2 py-0.5 bg-white hover:bg-slate-100 border border-slate-200 rounded text-[9.5px] font-semibold text-slate-700 transition">
                             + Observasi (CLO)
                         </button>
-                        <button type="button" @click="toggleInstrumentForUnit({{ $unit->id }}, 'dpt')" class="px-2 py-1 bg-white hover:bg-slate-100 border border-slate-200 rounded-md text-[10px] font-semibold text-slate-700 transition">
+                        <button type="button" @click="toggleInstrumentForUnit({{ $unit->id }}, 'dpt')" class="px-2 py-0.5 bg-white hover:bg-slate-100 border border-slate-200 rounded text-[9.5px] font-semibold text-slate-700 transition">
                             + Praktik (DPT)
                         </button>
-                        <button type="button" @click="toggleInstrumentForUnit({{ $unit->id }}, 'dpe')" class="px-2 py-1 bg-white hover:bg-slate-100 border border-slate-200 rounded-md text-[10px] font-semibold text-slate-700 transition">
+                        <button type="button" @click="toggleInstrumentForUnit({{ $unit->id }}, 'dpe')" class="px-2 py-0.5 bg-white hover:bg-slate-100 border border-slate-200 rounded text-[9.5px] font-semibold text-slate-700 transition">
                             + Tulis (DPE)
                         </button>
                     </div>
@@ -346,17 +398,17 @@
 
                     <table class="w-full text-left border-collapse text-xs mapa02-table">
                         <thead>
-                            <tr class="bg-slate-50/50 border-b border-slate-200 text-[11px] font-bold text-slate-600 uppercase tracking-wider">
-                                <th class="py-2.5 px-3 w-1/4 min-w-[180px] mapa02-th-elemen">Elemen Kompetensi</th>
-                                <th class="py-2.5 px-3 w-1/3 min-w-[220px] mapa02-th-kuk">Kriteria Unjuk Kerja (KUK)</th>
-                                <th class="py-2.5 px-2 text-center w-12 mapa02-th-ia" title="IA.01: Ceklis Observasi">CLO</th>
-                                <th class="py-2.5 px-2 text-center w-12 mapa02-th-ia" title="IA.02: Tugas Praktik">DPT</th>
-                                <th class="py-2.5 px-2 text-center w-12 mapa02-th-ia" title="IA.03: Pertanyaan Pendukung Observasi">PMO</th>
-                                <th class="py-2.5 px-2 text-center w-12 mapa02-th-ia" title="IA.05/06: Uji Tertulis CBT & Esai">DPE</th>
-                                <th class="py-2.5 px-2 text-center w-12 mapa02-th-ia" title="IA.07: Pertanyaan Lisan">DPL</th>
-                                <th class="py-2.5 px-2 text-center w-12 mapa02-th-ia" title="IA.08: Verifikasi Portofolio">VP</th>
-                                <th class="py-2.5 px-2 text-center w-12 mapa02-th-ia" title="IA.09: Pertanyaan Wawancara">PW</th>
-                                <th class="py-2.5 px-2 text-center w-12 mapa02-th-ia" title="IA.11: Ceklis Reviu Produk">CRP</th>
+                            <tr class="bg-slate-50/75 border-b border-slate-200 text-[10.5px] font-bold text-slate-600 uppercase tracking-wider">
+                                <th class="py-1.5 px-2.5 w-[26%] min-w-[170px] mapa02-th-elemen">Elemen Kompetensi</th>
+                                <th class="py-1.5 px-2.5 min-w-[220px] mapa02-th-kuk">Kriteria Unjuk Kerja (KUK)</th>
+                                <th class="py-1.5 px-1 text-center w-9 min-w-[36px] max-w-[42px] mapa02-th-ia" title="IA.01: Ceklis Observasi">CLO</th>
+                                <th class="py-1.5 px-1 text-center w-9 min-w-[36px] max-w-[42px] mapa02-th-ia" title="IA.02: Tugas Praktik">DPT</th>
+                                <th class="py-1.5 px-1 text-center w-9 min-w-[36px] max-w-[42px] mapa02-th-ia" title="IA.03: Pertanyaan Pendukung Observasi">PMO</th>
+                                <th class="py-1.5 px-1 text-center w-9 min-w-[36px] max-w-[42px] mapa02-th-ia" title="IA.05/06: Uji Tertulis CBT & Esai">DPE</th>
+                                <th class="py-1.5 px-1 text-center w-9 min-w-[36px] max-w-[42px] mapa02-th-ia" title="IA.07: Pertanyaan Lisan">DPL</th>
+                                <th class="py-1.5 px-1 text-center w-9 min-w-[36px] max-w-[42px] mapa02-th-ia" title="IA.08: Verifikasi Portofolio">VP</th>
+                                <th class="py-1.5 px-1 text-center w-9 min-w-[36px] max-w-[42px] mapa02-th-ia" title="IA.09: Pertanyaan Wawancara">PW</th>
+                                <th class="py-1.5 px-1 text-center w-9 min-w-[36px] max-w-[42px] mapa02-th-ia" title="IA.11: Ceklis Reviu Produk">CRP</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-100 text-slate-800">
@@ -380,46 +432,46 @@
                                             $pw  = !empty($savedItem['pw']);
                                             $crp = !empty($savedItem['crp']);
                                         @endphp
-                                        <tr class="hover:bg-slate-50/50 transition-colors">
+                                        <tr class="hover:bg-slate-50/60 transition-colors">
                                             @if($kIndex === 0)
-                                                <td class="py-2.5 px-3 align-top bg-slate-50/30 border-r border-slate-100 font-medium mapa02-td-elemen" rowspan="{{ $totalKuk }}">
+                                                <td class="py-1.5 px-2.5 align-top bg-slate-50/40 border-r border-slate-100 font-medium mapa02-td-elemen text-[11px]" rowspan="{{ $totalKuk }}">
                                                     <span class="font-bold text-slate-900 block leading-tight">
                                                         {{ $elem->nomor_elemen }}. {{ $elem->nama_elemen }}
                                                     </span>
                                                     @if(!empty($elem->pertanyaan_elemen))
-                                                        <span class="text-[10px] text-slate-500 italic block mt-1 mapa02-elem-desc">"{{ $elem->pertanyaan_elemen }}"</span>
+                                                        <span class="text-[9.5px] text-slate-500 italic block mt-0.5 leading-snug mapa02-elem-desc">"{{ $elem->pertanyaan_elemen }}"</span>
                                                     @endif
                                                 </td>
                                             @endif
-                                            <td class="py-2 px-3 align-top border-r border-slate-100 mapa02-td-kuk">
-                                                <div class="flex items-start gap-1.5">
+                                            <td class="py-1.5 px-2.5 align-top border-r border-slate-100 mapa02-td-kuk text-[11px]">
+                                                <div class="flex items-start gap-1.5 leading-snug">
                                                     <span class="font-bold text-blue-700 shrink-0">{{ $kuk->nomor_kuk }}</span>
-                                                    <span class="text-slate-700 leading-snug">{{ $kuk->pernyataan_kuk }}</span>
+                                                    <span class="text-slate-700">{{ $kuk->pernyataan_kuk }}</span>
                                                 </div>
                                             </td>
-                                            <td class="py-2 px-1 text-center align-middle mapa02-td-ia">
-                                                <input type="checkbox" name="matriks_peta[{{ $unit->id }}][{{ $elem->id }}][{{ $kKey }}][clo]" value="1" {{ $clo ? 'checked' : '' }} class="mapa02-cb unit-{{ $unit->id }}-clo rounded-sm text-blue-600 focus:ring-0 cursor-pointer">
+                                            <td class="py-1 px-0.5 text-center align-middle mapa02-td-ia">
+                                                <input type="checkbox" name="matriks_peta[{{ $unit->id }}][{{ $elem->id }}][{{ $kKey }}][clo]" value="1" {{ $clo ? 'checked' : '' }} class="mapa02-cb unit-{{ $unit->id }}-clo rounded-xs text-blue-600 focus:ring-0 cursor-pointer">
                                             </td>
-                                            <td class="py-2 px-1 text-center align-middle mapa02-td-ia">
-                                                <input type="checkbox" name="matriks_peta[{{ $unit->id }}][{{ $elem->id }}][{{ $kKey }}][dpt]" value="1" {{ $dpt ? 'checked' : '' }} class="mapa02-cb unit-{{ $unit->id }}-dpt rounded-sm text-blue-600 focus:ring-0 cursor-pointer">
+                                            <td class="py-1 px-0.5 text-center align-middle mapa02-td-ia">
+                                                <input type="checkbox" name="matriks_peta[{{ $unit->id }}][{{ $elem->id }}][{{ $kKey }}][dpt]" value="1" {{ $dpt ? 'checked' : '' }} class="mapa02-cb unit-{{ $unit->id }}-dpt rounded-xs text-blue-600 focus:ring-0 cursor-pointer">
                                             </td>
-                                            <td class="py-2 px-1 text-center align-middle mapa02-td-ia">
-                                                <input type="checkbox" name="matriks_peta[{{ $unit->id }}][{{ $elem->id }}][{{ $kKey }}][pmo]" value="1" {{ $pmo ? 'checked' : '' }} class="mapa02-cb unit-{{ $unit->id }}-pmo rounded-sm text-blue-600 focus:ring-0 cursor-pointer">
+                                            <td class="py-1 px-0.5 text-center align-middle mapa02-td-ia">
+                                                <input type="checkbox" name="matriks_peta[{{ $unit->id }}][{{ $elem->id }}][{{ $kKey }}][pmo]" value="1" {{ $pmo ? 'checked' : '' }} class="mapa02-cb unit-{{ $unit->id }}-pmo rounded-xs text-blue-600 focus:ring-0 cursor-pointer">
                                             </td>
-                                            <td class="py-2 px-1 text-center align-middle mapa02-td-ia">
-                                                <input type="checkbox" name="matriks_peta[{{ $unit->id }}][{{ $elem->id }}][{{ $kKey }}][dpe]" value="1" {{ $dpe ? 'checked' : '' }} class="mapa02-cb unit-{{ $unit->id }}-dpe rounded-sm text-blue-600 focus:ring-0 cursor-pointer">
+                                            <td class="py-1 px-0.5 text-center align-middle mapa02-td-ia">
+                                                <input type="checkbox" name="matriks_peta[{{ $unit->id }}][{{ $elem->id }}][{{ $kKey }}][dpe]" value="1" {{ $dpe ? 'checked' : '' }} class="mapa02-cb unit-{{ $unit->id }}-dpe rounded-xs text-blue-600 focus:ring-0 cursor-pointer">
                                             </td>
-                                            <td class="py-2 px-1 text-center align-middle mapa02-td-ia">
-                                                <input type="checkbox" name="matriks_peta[{{ $unit->id }}][{{ $elem->id }}][{{ $kKey }}][dpl]" value="1" {{ $dpl ? 'checked' : '' }} class="mapa02-cb unit-{{ $unit->id }}-dpl rounded-sm text-blue-600 focus:ring-0 cursor-pointer">
+                                            <td class="py-1 px-0.5 text-center align-middle mapa02-td-ia">
+                                                <input type="checkbox" name="matriks_peta[{{ $unit->id }}][{{ $elem->id }}][{{ $kKey }}][dpl]" value="1" {{ $dpl ? 'checked' : '' }} class="mapa02-cb unit-{{ $unit->id }}-dpl rounded-xs text-blue-600 focus:ring-0 cursor-pointer">
                                             </td>
-                                            <td class="py-2 px-1 text-center align-middle mapa02-td-ia">
-                                                <input type="checkbox" name="matriks_peta[{{ $unit->id }}][{{ $elem->id }}][{{ $kKey }}][vp]" value="1" {{ $vp ? 'checked' : '' }} class="mapa02-cb unit-{{ $unit->id }}-vp rounded-sm text-blue-600 focus:ring-0 cursor-pointer">
+                                            <td class="py-1 px-0.5 text-center align-middle mapa02-td-ia">
+                                                <input type="checkbox" name="matriks_peta[{{ $unit->id }}][{{ $elem->id }}][{{ $kKey }}][vp]" value="1" {{ $vp ? 'checked' : '' }} class="mapa02-cb unit-{{ $unit->id }}-vp rounded-xs text-blue-600 focus:ring-0 cursor-pointer">
                                             </td>
-                                            <td class="py-2 px-1 text-center align-middle mapa02-td-ia">
-                                                <input type="checkbox" name="matriks_peta[{{ $unit->id }}][{{ $elem->id }}][{{ $kKey }}][pw]" value="1" {{ $pw ? 'checked' : '' }} class="mapa02-cb unit-{{ $unit->id }}-pw rounded-sm text-blue-600 focus:ring-0 cursor-pointer">
+                                            <td class="py-1 px-0.5 text-center align-middle mapa02-td-ia">
+                                                <input type="checkbox" name="matriks_peta[{{ $unit->id }}][{{ $elem->id }}][{{ $kKey }}][pw]" value="1" {{ $pw ? 'checked' : '' }} class="mapa02-cb unit-{{ $unit->id }}-pw rounded-xs text-blue-600 focus:ring-0 cursor-pointer">
                                             </td>
-                                            <td class="py-2 px-1 text-center align-middle mapa02-td-ia">
-                                                <input type="checkbox" name="matriks_peta[{{ $unit->id }}][{{ $elem->id }}][{{ $kKey }}][crp]" value="1" {{ $crp ? 'checked' : '' }} class="mapa02-cb unit-{{ $unit->id }}-crp rounded-sm text-blue-600 focus:ring-0 cursor-pointer">
+                                            <td class="py-1 px-0.5 text-center align-middle mapa02-td-ia">
+                                                <input type="checkbox" name="matriks_peta[{{ $unit->id }}][{{ $elem->id }}][{{ $kKey }}][crp]" value="1" {{ $crp ? 'checked' : '' }} class="mapa02-cb unit-{{ $unit->id }}-crp rounded-xs text-blue-600 focus:ring-0 cursor-pointer">
                                             </td>
                                         </tr>
                                     @endforeach
@@ -427,38 +479,38 @@
                                     @php
                                         $savedItem = $savedPeta[$unit->id][$elem->id]['elem_only'] ?? [];
                                     @endphp
-                                    <tr class="hover:bg-slate-50/50 transition-colors">
-                                        <td class="py-2.5 px-3 align-top bg-slate-50/30 border-r border-slate-100 font-medium mapa02-td-elemen">
+                                    <tr class="hover:bg-slate-50/60 transition-colors">
+                                        <td class="py-1.5 px-2.5 align-top bg-slate-50/40 border-r border-slate-100 font-medium mapa02-td-elemen text-[11px]">
                                             <span class="font-bold text-slate-900 block leading-tight">
                                                 {{ $elem->nomor_elemen }}. {{ $elem->nama_elemen }}
                                             </span>
                                         </td>
-                                        <td class="py-2 px-3 align-top border-r border-slate-100 italic text-slate-400 mapa02-td-kuk">
+                                        <td class="py-1.5 px-2.5 align-top border-r border-slate-100 italic text-slate-400 mapa02-td-kuk text-[11px]">
                                             KUK belum diinput untuk elemen ini.
                                         </td>
-                                        <td class="py-2 px-1 text-center align-middle mapa02-td-ia">
-                                            <input type="checkbox" name="matriks_peta[{{ $unit->id }}][{{ $elem->id }}][elem_only][clo]" value="1" {{ !empty($savedItem['clo']) ? 'checked' : '' }} class="mapa02-cb unit-{{ $unit->id }}-clo rounded-sm text-blue-600 focus:ring-0 cursor-pointer">
+                                        <td class="py-1 px-0.5 text-center align-middle mapa02-td-ia">
+                                            <input type="checkbox" name="matriks_peta[{{ $unit->id }}][{{ $elem->id }}][elem_only][clo]" value="1" {{ !empty($savedItem['clo']) ? 'checked' : '' }} class="mapa02-cb unit-{{ $unit->id }}-clo rounded-xs text-blue-600 focus:ring-0 cursor-pointer">
                                         </td>
-                                        <td class="py-2 px-1 text-center align-middle mapa02-td-ia">
-                                            <input type="checkbox" name="matriks_peta[{{ $unit->id }}][{{ $elem->id }}][elem_only][dpt]" value="1" {{ !empty($savedItem['dpt']) ? 'checked' : '' }} class="mapa02-cb unit-{{ $unit->id }}-dpt rounded-sm text-blue-600 focus:ring-0 cursor-pointer">
+                                        <td class="py-1 px-0.5 text-center align-middle mapa02-td-ia">
+                                            <input type="checkbox" name="matriks_peta[{{ $unit->id }}][{{ $elem->id }}][elem_only][dpt]" value="1" {{ !empty($savedItem['dpt']) ? 'checked' : '' }} class="mapa02-cb unit-{{ $unit->id }}-dpt rounded-xs text-blue-600 focus:ring-0 cursor-pointer">
                                         </td>
-                                        <td class="py-2 px-1 text-center align-middle mapa02-td-ia">
-                                            <input type="checkbox" name="matriks_peta[{{ $unit->id }}][{{ $elem->id }}][elem_only][pmo]" value="1" {{ !empty($savedItem['pmo']) ? 'checked' : '' }} class="mapa02-cb unit-{{ $unit->id }}-pmo rounded-sm text-blue-600 focus:ring-0 cursor-pointer">
+                                        <td class="py-1 px-0.5 text-center align-middle mapa02-td-ia">
+                                            <input type="checkbox" name="matriks_peta[{{ $unit->id }}][{{ $elem->id }}][elem_only][pmo]" value="1" {{ !empty($savedItem['pmo']) ? 'checked' : '' }} class="mapa02-cb unit-{{ $unit->id }}-pmo rounded-xs text-blue-600 focus:ring-0 cursor-pointer">
                                         </td>
-                                        <td class="py-2 px-1 text-center align-middle mapa02-td-ia">
-                                            <input type="checkbox" name="matriks_peta[{{ $unit->id }}][{{ $elem->id }}][elem_only][dpe]" value="1" {{ !empty($savedItem['dpe']) ? 'checked' : '' }} class="mapa02-cb unit-{{ $unit->id }}-dpe rounded-sm text-blue-600 focus:ring-0 cursor-pointer">
+                                        <td class="py-1 px-0.5 text-center align-middle mapa02-td-ia">
+                                            <input type="checkbox" name="matriks_peta[{{ $unit->id }}][{{ $elem->id }}][elem_only][dpe]" value="1" {{ !empty($savedItem['dpe']) ? 'checked' : '' }} class="mapa02-cb unit-{{ $unit->id }}-dpe rounded-xs text-blue-600 focus:ring-0 cursor-pointer">
                                         </td>
-                                        <td class="py-2 px-1 text-center align-middle mapa02-td-ia">
-                                            <input type="checkbox" name="matriks_peta[{{ $unit->id }}][{{ $elem->id }}][elem_only][dpl]" value="1" {{ !empty($savedItem['dpl']) ? 'checked' : '' }} class="mapa02-cb unit-{{ $unit->id }}-dpl rounded-sm text-blue-600 focus:ring-0 cursor-pointer">
+                                        <td class="py-1 px-0.5 text-center align-middle mapa02-td-ia">
+                                            <input type="checkbox" name="matriks_peta[{{ $unit->id }}][{{ $elem->id }}][elem_only][dpl]" value="1" {{ !empty($savedItem['dpl']) ? 'checked' : '' }} class="mapa02-cb unit-{{ $unit->id }}-dpl rounded-xs text-blue-600 focus:ring-0 cursor-pointer">
                                         </td>
-                                        <td class="py-2 px-1 text-center align-middle mapa02-td-ia">
-                                            <input type="checkbox" name="matriks_peta[{{ $unit->id }}][{{ $elem->id }}][elem_only][vp]" value="1" {{ !empty($savedItem['vp']) ? 'checked' : '' }} class="mapa02-cb unit-{{ $unit->id }}-vp rounded-sm text-blue-600 focus:ring-0 cursor-pointer">
+                                        <td class="py-1 px-0.5 text-center align-middle mapa02-td-ia">
+                                            <input type="checkbox" name="matriks_peta[{{ $unit->id }}][{{ $elem->id }}][elem_only][vp]" value="1" {{ !empty($savedItem['vp']) ? 'checked' : '' }} class="mapa02-cb unit-{{ $unit->id }}-vp rounded-xs text-blue-600 focus:ring-0 cursor-pointer">
                                         </td>
-                                        <td class="py-2 px-1 text-center align-middle mapa02-td-ia">
-                                            <input type="checkbox" name="matriks_peta[{{ $unit->id }}][{{ $elem->id }}][elem_only][pw]" value="1" {{ !empty($savedItem['pw']) ? 'checked' : '' }} class="mapa02-cb unit-{{ $unit->id }}-pw rounded-sm text-blue-600 focus:ring-0 cursor-pointer">
+                                        <td class="py-1 px-0.5 text-center align-middle mapa02-td-ia">
+                                            <input type="checkbox" name="matriks_peta[{{ $unit->id }}][{{ $elem->id }}][elem_only][pw]" value="1" {{ !empty($savedItem['pw']) ? 'checked' : '' }} class="mapa02-cb unit-{{ $unit->id }}-pw rounded-xs text-blue-600 focus:ring-0 cursor-pointer">
                                         </td>
-                                        <td class="py-2 px-1 text-center align-middle mapa02-td-ia">
-                                            <input type="checkbox" name="matriks_peta[{{ $unit->id }}][{{ $elem->id }}][elem_only][crp]" value="1" {{ !empty($savedItem['crp']) ? 'checked' : '' }} class="mapa02-cb unit-{{ $unit->id }}-crp rounded-sm text-blue-600 focus:ring-0 cursor-pointer">
+                                        <td class="py-1 px-0.5 text-center align-middle mapa02-td-ia">
+                                            <input type="checkbox" name="matriks_peta[{{ $unit->id }}][{{ $elem->id }}][elem_only][crp]" value="1" {{ !empty($savedItem['crp']) ? 'checked' : '' }} class="mapa02-cb unit-{{ $unit->id }}-crp rounded-xs text-blue-600 focus:ring-0 cursor-pointer">
                                         </td>
                                     </tr>
                                 @endif
@@ -480,22 +532,28 @@
         <!-- =========================================================================
              CATATAN ASESOR & PENGESAHAN TANDA TANGAN
              ========================================================================= -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
             
             <!-- KOLOM 1: CATATAN ASESOR -->
-            <div class="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-4 sm:p-5 space-y-2.5">
-                <h2 class="font-bold text-xs sm:text-sm text-slate-800 border-b border-slate-100 pb-2">
-                    Catatan Perencanaan Asesor
-                </h2>
-                <div class="space-y-1.5">
-                    <label class="text-[11px] font-medium text-slate-600 block">Catatan metodologi / modifikasi rencana instrumen asesmen:</label>
-                    <textarea name="catatan_asesor" rows="4" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-800 focus:bg-white focus:ring-1 focus:ring-blue-500 transition-colors" placeholder="Tuliskan catatan khusus terkait pemilihan metode dan instrumen asesmen...">{{ old('catatan_asesor', $mapa02->catatan_asesor ?? '') }}</textarea>
+            <div class="bg-white rounded-xl border border-slate-200/90 shadow-2xs p-3.5 sm:p-4 space-y-2 flex flex-col justify-between">
+                <div>
+                    <h2 class="font-bold text-xs sm:text-sm text-slate-800 border-b border-slate-100 pb-1.5 flex items-center justify-between">
+                        <span>Catatan Perencanaan Asesor</span>
+                        <span class="text-[10px] text-slate-400 font-normal">Opsional</span>
+                    </h2>
+                    <div class="space-y-1 mt-2">
+                        <label class="text-[11px] font-medium text-slate-600 block">Catatan metodologi / modifikasi rencana instrumen asesmen:</label>
+                        <textarea name="catatan_asesor" rows="2" class="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs text-slate-800 focus:bg-white focus:ring-1 focus:ring-blue-500 transition-colors" placeholder="Tuliskan catatan khusus terkait pemilihan metode dan instrumen asesmen...">{{ old('catatan_asesor', $mapa02->catatan_asesor ?? '') }}</textarea>
+                    </div>
+                </div>
+                <div class="text-[10px] text-slate-400 italic pt-1">
+                    * Catatan khusus rencana pelaksanaan pemetaan instrumen.
                 </div>
             </div>
 
             <!-- KOLOM 2: PENGESAHAN TANDA TANGAN ASESOR / ADMIN -->
-            <div class="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-4 sm:p-5 space-y-3">
-                <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+            <div class="bg-white rounded-xl border border-slate-200/90 shadow-2xs p-3.5 sm:p-4 space-y-2.5">
+                <div class="flex items-center justify-between border-b border-slate-100 pb-1.5">
                     <h2 class="font-bold text-xs sm:text-sm text-slate-800">
                         {{ ($isMasterMode && $isSignedByAdmin) ? 'Pengesahan Administrator LSP' : 'Pengesahan Asesor Penguji' }}
                     </h2>
@@ -506,44 +564,29 @@
                     @endif
                 </div>
 
-                <!-- Pilihan Metode TTD -->
-                <div class="flex items-center gap-3 text-xs no-print">
-                    <label class="flex items-center gap-1.5 cursor-pointer font-medium text-slate-700">
-                        <input type="radio" name="ttd_mode" value="profile" x-model="signatureMode" class="text-blue-600 focus:ring-0">
-                        <span>Gunakan TTD Profil</span>
-                    </label>
-                    <label class="flex items-center gap-1.5 cursor-pointer font-medium text-slate-700">
-                        <input type="radio" name="ttd_mode" value="canvas" x-model="signatureMode" class="text-blue-600 focus:ring-0">
-                        <span>Gambar TTD Digital</span>
-                    </label>
-                </div>
+                <!-- Mode Canvas Signature (Compact Box) -->
+                <div class="space-y-1.5">
+                    @if($displayTtd)
+                        <div x-show="!isEditMode" class="h-24 max-w-[280px] bg-slate-50 rounded-lg border border-slate-200 flex items-center justify-center p-1.5">
+                            <img src="{{ Str::startsWith($displayTtd, 'data:') ? $displayTtd : asset($displayTtd) }}" alt="TTD {{ ($isMasterMode && $isSignedByAdmin) ? 'Admin' : 'Asesor' }}" class="max-h-20 object-contain">
+                        </div>
+                    @endif
 
-                <!-- Mode Profile Signature -->
-                <div x-show="signatureMode === 'profile'" class="space-y-1.5">
-                    <div class="h-28 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-center p-2">
-                        @if($displayTtd)
-                            <img src="{{ Str::startsWith($displayTtd, 'data:') ? $displayTtd : asset($displayTtd) }}" alt="TTD {{ ($isMasterMode && $isSignedByAdmin) ? 'Admin' : 'Asesor' }}" class="max-h-24 object-contain">
-                        @else
-                            <span class="text-xs text-slate-400 italic">Tanda tangan profil belum diatur. Silakan pilih "Gambar TTD Digital".</span>
-                        @endif
-                    </div>
-                    <input type="hidden" name="tanda_tangan_asesor" :value="signatureMode === 'profile' ? profileTtdData : canvasSignatureData" id="inputTtdAsesor">
-                </div>
-
-                <!-- Mode Canvas Signature -->
-                <div x-show="signatureMode === 'canvas'" class="space-y-1.5" style="display: none;">
-                    <div class="border border-slate-300 rounded-xl bg-white relative overflow-hidden">
-                        <canvas id="canvasMapa02Asesor" class="w-full h-28 bg-white cursor-crosshair block touch-none"></canvas>
-                    </div>
-                    <div class="flex items-center justify-between text-[11px]">
-                        <span class="text-slate-400">Gunakan mouse atau layar sentuh.</span>
-                        <button type="button" @click="clearCanvas()" class="text-rose-600 hover:text-rose-800 font-semibold cursor-pointer">
-                            [ Bersihkan ]
-                        </button>
+                    <div x-show="isEditMode" class="space-y-1">
+                        <div class="w-full max-w-[280px] border border-slate-300 rounded-lg bg-white relative overflow-hidden shadow-2xs">
+                            <canvas id="canvasMapa02Asesor" class="w-full bg-white cursor-crosshair block" style="touch-action: none; height: 90px; width: 100%; display: block;"></canvas>
+                        </div>
+                        <input type="hidden" name="tanda_tangan_asesor" id="inputTtdAsesor" value="{{ $displayTtd ?? '' }}">
+                        <div class="w-full max-w-[280px] flex items-center justify-between text-[10px] text-slate-400">
+                            <span>Gunakan mouse / sentuh</span>
+                            <button type="button" @click="clearCanvas()" class="text-rose-600 hover:text-rose-800 font-semibold cursor-pointer">
+                                [ Bersihkan ]
+                            </button>
+                        </div>
                     </div>
                 </div>
 
-                <div class="text-[11px] text-slate-500 pt-1">
+                <div class="text-[11px] text-slate-500 pt-0.5">
                     @if($isMasterMode && $isSignedByAdmin)
                         Administrator: <strong>{{ $pengesahNama }}</strong> (Administrator LSP)
                     @else
@@ -631,10 +674,11 @@
     function mapa02App() {
         return {
             isEditMode: {{ (!$isAsesi && $isConfigured) ? 'false' : 'true' }},
-            signatureMode: '{{ !empty($displayTtd) ? "profile" : "canvas" }}',
-            profileTtdData: @json($displayTtd ?? ''),
+            signatureMode: 'canvas',
+            profileTtdData: '',
             canvasSignatureData: '',
             signaturePad: null,
+            hasDrawn: false,
             isSubmitting: false,
             showConfirmModal: false,
 
@@ -642,43 +686,130 @@
                 this.$nextTick(() => {
                     this.initSignaturePad();
                 });
+                setTimeout(() => {
+                    this.initSignaturePad();
+                }, 300);
             },
 
             toggleEditMode() {
                 this.isEditMode = !this.isEditMode;
-                if (this.isEditMode && this.signatureMode === 'canvas') {
-                    this.$nextTick(() => {
-                        this.initSignaturePad();
-                    });
-                }
+                this.$nextTick(() => {
+                    this.initSignaturePad();
+                });
+                setTimeout(() => {
+                    this.initSignaturePad();
+                }, 200);
             },
 
             initSignaturePad() {
                 const canvas = document.getElementById('canvasMapa02Asesor');
                 if (!canvas) return;
 
-                function resizeCanvas() {
-                    const ratio = Math.max(window.devicePixelRatio || 1, 1);
-                    canvas.width = canvas.offsetWidth * ratio;
-                    canvas.height = canvas.offsetHeight * ratio;
-                    canvas.getContext('2d').scale(ratio, ratio);
+                const parent = canvas.parentElement;
+                const width = (parent && parent.clientWidth > 50) ? parent.clientWidth : 280;
+                const height = 90;
+
+                canvas.width = width;
+                canvas.height = height;
+
+                const ctx = canvas.getContext('2d');
+                ctx.lineWidth = 1.8;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                ctx.strokeStyle = '#0f172a';
+
+                let isDrawing = false;
+
+                const getPos = (e) => {
+                    const rect = canvas.getBoundingClientRect();
+                    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                    return {
+                        x: (clientX - rect.left) * (canvas.width / rect.width),
+                        y: (clientY - rect.top) * (canvas.height / rect.height)
+                    };
+                };
+
+                const start = (e) => {
+                    isDrawing = true;
+                    this.hasDrawn = true;
+                    const pos = getPos(e);
+                    ctx.beginPath();
+                    ctx.moveTo(pos.x, pos.y);
+                    if (e.cancelable) e.preventDefault();
+                };
+
+                const draw = (e) => {
+                    if (!isDrawing) return;
+                    const pos = getPos(e);
+                    ctx.lineTo(pos.x, pos.y);
+                    ctx.stroke();
+                    if (e.cancelable) e.preventDefault();
+                };
+
+                const stop = () => {
+                    if (!isDrawing) return;
+                    isDrawing = false;
+                    ctx.closePath();
+                    const dataUrl = canvas.toDataURL('image/png');
+                    this.canvasSignatureData = dataUrl;
+                    const hiddenInput = document.getElementById('inputTtdAsesor');
+                    if (hiddenInput) {
+                        hiddenInput.value = dataUrl;
+                    }
+                };
+
+                // Remove existing listeners if any
+                if (canvas._sigStart) {
+                    canvas.removeEventListener('mousedown', canvas._sigStart);
+                    canvas.removeEventListener('mousemove', canvas._sigDraw);
+                    window.removeEventListener('mouseup', canvas._sigStop);
+                    canvas.removeEventListener('touchstart', canvas._sigStart);
+                    canvas.removeEventListener('touchmove', canvas._sigDraw);
+                    window.removeEventListener('touchend', canvas._sigStop);
                 }
 
-                window.addEventListener('resize', resizeCanvas);
-                resizeCanvas();
+                canvas._sigStart = start;
+                canvas._sigDraw = draw;
+                canvas._sigStop = stop;
 
-                this.signaturePad = new SignaturePad(canvas, {
-                    backgroundColor: 'rgb(255, 255, 255)',
-                    penColor: 'rgb(15, 23, 42)',
-                    minWidth: 1.2,
-                    maxWidth: 2.5
-                });
+                canvas.addEventListener('mousedown', start);
+                canvas.addEventListener('mousemove', draw);
+                window.addEventListener('mouseup', stop);
+
+                canvas.addEventListener('touchstart', start, { passive: false });
+                canvas.addEventListener('touchmove', draw, { passive: false });
+                window.addEventListener('touchend', stop);
+
+                // Optional SignaturePad CDN wrapper if loaded
+                if (typeof SignaturePad !== 'undefined') {
+                    try {
+                        this.signaturePad = new SignaturePad(canvas, {
+                            backgroundColor: 'rgba(255, 255, 255, 0)',
+                            penColor: 'rgb(15, 23, 42)',
+                            minWidth: 1.0,
+                            maxWidth: 2.0
+                        });
+                    } catch (err) {
+                        // Native canvas will handle it seamlessly
+                    }
+                }
             },
 
             clearCanvas() {
                 if (this.signaturePad) {
-                    this.signaturePad.clear();
-                    this.canvasSignatureData = '';
+                    try { this.signaturePad.clear(); } catch(e){}
+                }
+                const canvas = document.getElementById('canvasMapa02Asesor');
+                if (canvas) {
+                    const ctx = canvas.getContext('2d');
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                }
+                this.canvasSignatureData = '';
+                this.hasDrawn = false;
+                const hiddenInput = document.getElementById('inputTtdAsesor');
+                if (hiddenInput) {
+                    hiddenInput.value = '';
                 }
             },
 
@@ -693,12 +824,15 @@
             },
 
             prepareSignature() {
-                if (this.signatureMode === 'canvas' && this.signaturePad && !this.signaturePad.isEmpty()) {
+                const canvas = document.getElementById('canvasMapa02Asesor');
+                if (this.signaturePad && !this.signaturePad.isEmpty()) {
                     this.canvasSignatureData = this.signaturePad.toDataURL('image/png');
+                } else if (canvas && this.hasDrawn) {
+                    this.canvasSignatureData = canvas.toDataURL('image/png');
                 }
                 const hiddenInput = document.getElementById('inputTtdAsesor');
-                if (hiddenInput) {
-                    hiddenInput.value = (this.signatureMode === 'profile') ? this.profileTtdData : this.canvasSignatureData;
+                if (hiddenInput && this.canvasSignatureData) {
+                    hiddenInput.value = this.canvasSignatureData;
                 }
             },
 

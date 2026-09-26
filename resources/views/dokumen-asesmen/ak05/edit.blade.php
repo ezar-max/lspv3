@@ -333,11 +333,6 @@
                     <button type="button" @click="clearCanvas()" class="text-rose-600 hover:underline">
                         Bersihkan Kanvas
                     </button>
-                    @if(auth()->user()->tanda_tangan)
-                        <button type="button" @click="useStoredProfileSign()" class="text-purple-600 hover:underline">
-                            Gunakan Tanda Tangan Profil
-                        </button>
-                    @endif
                 </div>
             </div>
 
@@ -397,15 +392,10 @@
                 if (this.signaturePad) this.signaturePad.clear();
             },
 
-            useStoredProfileSign() {
-                document.getElementById('signatureInput').value = "{{ auth()->user()->tanda_tangan }}";
-                this.submitSave(true);
-            },
-
             confirmFinalize() {
                 if (this.signaturePad && !this.signaturePad.isEmpty()) {
                     document.getElementById('signatureInput').value = this.signaturePad.toDataURL();
-                } else if (!"{{ auth()->user()->tanda_tangan }}") {
+                } else {
                     alert('Silakan bubuhkan tanda tangan asesor pada kanvas.');
                     return;
                 }

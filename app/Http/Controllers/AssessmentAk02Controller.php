@@ -157,9 +157,9 @@ class AssessmentAk02Controller extends Controller
         $ak02 = $this->documentService->getOrCreateAk02($pendaftaran);
         $user = auth()->user();
 
-        $signature = $request->input('signature') ?: $user->tanda_tangan;
+        $signature = $request->input('signature');
         if (empty($signature)) {
-            return back()->with('error', 'Silakan bubuhkan tanda tangan atau gunakan tanda tangan tersimpan pada profil Anda.');
+            return back()->with('error', 'Silakan bubuhkan tanda tangan digital Anda pada kanvas.');
         }
 
         $this->documentService->signAsesorAk02($ak02, $signature, $user);

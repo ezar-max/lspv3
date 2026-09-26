@@ -25,6 +25,7 @@ class DatabaseSeeder extends Seeder
                 'kata_sandi' => Hash::make('admin123'),
                 'peran' => 'superadmin',
                 'nomor_telepon' => '081283854572',
+                'nomor_registrasi' => 'REG.SPRADM.LSP.001',
                 'aktif' => true,
             ]
         );
@@ -37,6 +38,7 @@ class DatabaseSeeder extends Seeder
                 'kata_sandi' => Hash::make('admin123'),
                 'peran' => 'admin',
                 'nomor_telepon' => '081283854572',
+                'nomor_registrasi' => 'REG.ADM.LSP.001',
                 'aktif' => true,
             ]
         );

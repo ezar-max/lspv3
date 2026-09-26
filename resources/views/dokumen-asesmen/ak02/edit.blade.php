@@ -482,7 +482,7 @@
                     <button type="button" @click="clearSignaturePad()" class="text-rose-600 hover:underline">
                         Bersihkan Kanvas
                     </button>
-                    @if(auth()->user()->tanda_tangan)
+                    @if(auth()->user()->peran === 'asesi' && auth()->user()->tanda_tangan)
                         <button type="button" @click="useProfileSignature()" class="text-blue-600 hover:underline">
                             Gunakan Tanda Tangan Profil
                         </button>

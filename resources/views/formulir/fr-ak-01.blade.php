@@ -33,7 +33,7 @@
         $asesorMet = $pendaftaran->asesor->nomor_registrasi ?? 'MET.000.004455.2023';
         $asesiNama = $pendaftaran->asesi->nama_lengkap ?? 'Nama Asesi';
         
-        $asesorTtd = $pendaftaran->tanda_tangan_asesor_ak01 ?? ($pendaftaran->tanda_tangan_asesor ?? ($pendaftaran->asesor->tanda_tangan ?? (auth()->user()->peran === 'asesor' ? auth()->user()->tanda_tangan : null)));
+        $asesorTtd = $pendaftaran->tanda_tangan_asesor_ak01 ?? ($pendaftaran->tanda_tangan_asesor ?? null);
         $asesiTtd = $pendaftaran->tanda_tangan_asesi_ak01 ?? ($pendaftaran->tanda_tangan_asesi ?? ($pendaftaran->asesi->tanda_tangan ?? (auth()->user()->peran === 'asesi' ? auth()->user()->tanda_tangan : null)));
         
         $tglTtdAsesor = $pendaftaran->tanggal_ttd_asesor_ak01 ? \Carbon\Carbon::parse($pendaftaran->tanggal_ttd_asesor_ak01)->isoFormat('D MMMM YYYY') : ($pendaftaran->tanggal_ttd_asesor ? \Carbon\Carbon::parse($pendaftaran->tanggal_ttd_asesor)->isoFormat('D MMMM YYYY') : null);

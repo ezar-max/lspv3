@@ -257,6 +257,10 @@ class AsesiUjianController extends Controller
             return response()->json(['status' => 'error', 'message' => 'Pendaftaran tidak valid'], 404);
         }
 
+        if ($pendaftaran->status_pendaftaran === 'ditolak' || $pendaftaran->rekomendasi_admin_status === 'tidak_diterima') {
+            return response()->json(['status' => 'error', 'message' => 'Pendaftaran sertifikasi ini telah Ditolak. Sesi ujian tidak dapat diikuti.'], 403);
+        }
+
         if (!$pendaftaran->isMapaConfirmed()) {
             return response()->json(['status' => 'error', 'message' => 'Rencana asesmen (FR.MAPA.01 & FR.MAPA.02) belum disahkan asesor.'], 403);
         }
@@ -415,6 +419,10 @@ class AsesiUjianController extends Controller
         $pendaftaranId = $request->input('pendaftaran_id');
         $pendaftaran = PendaftaranAsesi::where('id', $pendaftaranId)->where('asesi_id', $user->id)->firstOrFail();
 
+        if ($pendaftaran->status_pendaftaran === 'ditolak' || $pendaftaran->rekomendasi_admin_status === 'tidak_diterima') {
+            return redirect()->back()->with('error', 'Pendaftaran sertifikasi ini telah Ditolak. Berkas ujian tidak dapat diunggah.');
+        }
+
         if (!$pendaftaran->isMapaConfirmed()) {
             return redirect()->back()->with('error', 'Rencana asesmen (FR.MAPA.01 & FR.MAPA.02) belum disahkan asesor. Ruang ujian belum tersedia.');
         }
@@ -502,6 +510,10 @@ class AsesiUjianController extends Controller
         $user = auth()->user();
         $pendaftaranId = $request->input('pendaftaran_id');
         $pendaftaran = PendaftaranAsesi::with('skema')->where('id', $pendaftaranId)->where('asesi_id', $user->id)->firstOrFail();
+
+        if ($pendaftaran->status_pendaftaran === 'ditolak' || $pendaftaran->rekomendasi_admin_status === 'tidak_diterima') {
+            return redirect()->back()->with('error', 'Pendaftaran sertifikasi ini telah Ditolak.');
+        }
 
         if (!$pendaftaran->isMapaConfirmed()) {
             return redirect()->back()->with('error', 'Rencana asesmen (FR.MAPA.01 & FR.MAPA.02) belum disahkan asesor. Ruang ujian belum tersedia.');

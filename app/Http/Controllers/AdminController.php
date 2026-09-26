@@ -115,10 +115,10 @@ class AdminController extends Controller
             'catatan_verifikasi' => 'nullable|string',
         ]);
 
-        $ttdAdmin = $request->tanda_tangan_admin_base64 ?: auth()->user()->tanda_tangan;
-
-        if ($request->tanda_tangan_admin_base64) {
-            auth()->user()->update(['tanda_tangan' => $request->tanda_tangan_admin_base64]);
+        $ttdAdmin = $request->tanda_tangan_admin_base64 ?: ($pendaftaran->tanda_tangan_admin ?? null);
+        if (empty($ttdAdmin) && in_array($request->status_pendaftaran, ['diverifikasi', 'ditolak'])) {
+            $adminUser = auth()->user();
+            $ttdAdmin = $adminUser?->tanda_tangan ?: null;
         }
 
         $isRevisi = in_array($request->status_pendaftaran, ['draft', 'revisi']);
@@ -181,11 +181,35 @@ class AdminController extends Controller
         }
 
         if ($isDitolak) {
+            // Hapus/bersihkan seluruh downstream records terkait pendaftaran yang ditolak
+            $pendaftaran->jawabanApl02()->delete();
+            $pendaftaran->verifikasiKukApl02()->delete();
+            $pendaftaran->buktiApl02()->delete();
+            $pendaftaran->iaPenilaian()->delete();
+            $pendaftaran->penilaian()->delete();
+            $pendaftaran->rekomendasi()->delete();
+            $pendaftaran->ak07Adjustment()?->delete();
+            $pendaftaran->ak02()?->delete();
+            $pendaftaran->ak03()?->delete();
+            $pendaftaran->mapa01()?->delete();
+            $pendaftaran->mapa02()?->delete();
+            \App\Models\AssessmentAk06::where('pendaftaran_id', $pendaftaran->id)->delete();
+
             $pendaftaran->update([
                 'status_pendaftaran' => 'ditolak',
                 'rekomendasi_admin_status' => 'tidak_diterima',
+                'status_apl02' => 'ditolak',
+                'status_ak01' => null,
                 'jadwal_id' => null,
                 'asesor_id' => null,
+                'tanda_tangan_asesor' => null,
+                'tanggal_ttd_asesor' => null,
+                'tanda_tangan_asesi_ak01' => null,
+                'tanggal_ttd_asesi_ak01' => null,
+                'tanda_tangan_asesor_ak01' => null,
+                'tanggal_ttd_asesor_ak01' => null,
+                'rekomendasi_asesor_status' => null,
+                'catatan_peninjauan_asesor' => null,
                 'catatan_verifikasi' => $request->catatan_verifikasi,
                 'tanda_tangan_admin' => $ttdAdmin,
                 'tanggal_ttd_admin' => now(),
@@ -322,8 +346,8 @@ class AdminController extends Controller
         if ($mapa01) {
             $existingTable = $mapa01->penyusun_validator_tabel ?: [];
             $existingTable['validator_1'] = [
-                'nama' => auth()->user()->nama_lengkap ?? 'Administrator LSP SMKN 1 Gunungputri',
-                'nomor_met' => auth()->user()->nomor_registrasi ?? 'REG.LSP.001.2026',
+                'nama' => auth()->user()->nama_lengkap ?: 'Administrator LSP',
+                'nomor_met' => auth()->user()->nomor_registrasi ?: 'REG.ADM.LSP.001',
                 'ttd' => $ttdAdmin,
                 'ttd_tanggal' => now()->format('d/m/Y'),
                 'status_validasi' => 'tervalidasi',
@@ -425,23 +449,6 @@ class AdminController extends Controller
         return view('admin.detail-asesi', compact('asesi'));
     }
 
-    public function simpanTtdAdmin(Request $request, $id)
-    {
-        $admin = auth()->user();
-
-        $request->validate([
-            'tanda_tangan' => 'required|image|mimes:jpeg,png,jpg|max:2048',
-        ]);
-
-        if ($request->hasFile('tanda_tangan')) {
-            $file = $request->file('tanda_tangan');
-            $namaFile = 'ttd_admin_' . $admin->id . '_' . time() . '.' . $file->getClientOriginalExtension();
-            $path = $file->storeAs('tanda_tangan', $namaFile, 'public');
-            $admin->update(['tanda_tangan' => 'storage/' . $path]);
-        }
-
-        return back()->with('sukses', 'Tanda Tangan Digital Admin berhasil diunggah & disimpan.');
-    }
 
     public function laporanKelulusan(Request $request)
     {
@@ -762,7 +769,7 @@ class AdminController extends Controller
                 'tanggal_ttd_admin' => now(),
             ]);
 
-            return back()->with('info', 'Dokumen FR.MAPA.01 untuk skema sertifikasi ini sudah berstatus tervalidasi melalui Master Skema.');
+            return redirect()->route('asesor.mapa', ['skema_id' => $mapa01->skema_id])->with('info', 'Dokumen FR.MAPA.01 untuk skema sertifikasi ini sudah berstatus tervalidasi melalui Master Skema.');
         }
 
         $request->validate([
@@ -775,47 +782,39 @@ class AdminController extends Controller
             'validator_nomor_met.required' => 'Nomor Registrasi / NIP Validator wajib diisi.',
         ]);
 
-        $ttdAdmin = $request->tanda_tangan_admin_base64 ?: $user->tanda_tangan;
-        if ($request->tanda_tangan_admin_base64) {
-            $user->update(['tanda_tangan' => $request->tanda_tangan_admin_base64]);
-        }
-
-        if (empty($ttdAdmin)) {
-            $adminName = $user->nama_lengkap ?: 'Administrator LSP';
-            $adminSvg = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="220" height="60"><text x="10" y="38" font-family="Brush Script MT, cursive, sans-serif" font-size="24" fill="%23065f46">' . urlencode($adminName) . '</text></svg>';
+        $ttdAdmin = $request->tanda_tangan_admin_base64;
+        if (!empty($ttdAdmin) && !str_contains($ttdAdmin, 'svg')) {
             $targetId = $mapa01->pendaftaran_id;
             $prefix = $targetId ? 'mapa01_val' : ('mapa01_master_val_' . $mapa01->skema_id);
-            $ttdAdmin = app(\App\Services\MapaWorkflowService::class)->saveSignatureFile($adminSvg, $targetId, $prefix) ?: $adminSvg;
+            $savedAdmin = app(\App\Services\MapaWorkflowService::class)->saveSignatureFile($ttdAdmin, $targetId, $prefix);
+            if ($savedAdmin) {
+                $ttdAdmin = $savedAdmin;
+            }
+        } else {
+            $ttdAdmin = null;
         }
 
         $existingTable = $mapa01->penyusun_validator_tabel ?: [];
         $existingTable['validator_1'] = [
-            'nama' => $request->validator_nama ?: ($user->nama_lengkap ?: 'Administrator LSP SMKN 1 Gunungputri'),
-            'nomor_met' => $request->validator_nomor_met ?: ($user->nomor_registrasi ?: 'NIP/REG.ADM.LSP.001'),
+            'nama' => $request->validator_nama ?: ($user->nama_lengkap ?: 'Administrator LSP'),
+            'nomor_met' => $request->validator_nomor_met ?: ($user->nomor_registrasi ?: 'REG.ADM.LSP.001'),
             'ttd' => $ttdAdmin,
             'ttd_tanggal' => now()->format('d/m/Y'),
             'status_validasi' => 'tervalidasi',
             'catatan' => $request->catatan_validasi ?: null,
         ];
 
-        // Pastikan juga jika asesor belum bertanda tangan, diisi secara otomatis
-        if (empty($mapa01->tanda_tangan_asesor) || empty($existingTable['penyusun_1']['ttd'])) {
-            $asesorModel = $mapa01->asesor ?: Pengguna::where('peran', 'asesor')->where('skema_id', $mapa01->skema_id)->first();
-            $asesorTtd = $asesorModel?->tanda_tangan;
-            if (empty($asesorTtd)) {
-                $namaAsesor = $asesorModel?->nama_lengkap ?: ($existingTable['penyusun_1']['nama'] ?? 'Asesor Penguji');
-                $svgSig = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="220" height="60"><text x="10" y="38" font-family="Brush Script MT, cursive, sans-serif" font-size="26" fill="%231e3a8a">' . urlencode($namaAsesor) . '</text></svg>';
-                $targetId = $mapa01->pendaftaran_id;
-                $prefix = $targetId ? 'mapa01' : ('mapa01_master_' . $mapa01->skema_id);
-                $asesorTtd = app(\App\Services\MapaWorkflowService::class)->saveSignatureFile($svgSig, $targetId, $prefix) ?: $svgSig;
-            }
-            $mapa01->tanda_tangan_asesor = $asesorTtd;
-            $mapa01->tanggal_ttd_asesor = $mapa01->tanggal_ttd_asesor ?: now();
-            $existingTable['penyusun_1']['nama'] = $existingTable['penyusun_1']['nama'] ?? ($asesorModel?->nama_lengkap ?? 'Asesor Penguji');
-            $existingTable['penyusun_1']['nomor_met'] = $existingTable['penyusun_1']['nomor_met'] ?? ($asesorModel?->nomor_registrasi ?? 'MET.000.001222 2026');
-            $existingTable['penyusun_1']['ttd'] = $asesorTtd;
-            $existingTable['penyusun_1']['ttd_tanggal'] = $existingTable['penyusun_1']['ttd_tanggal'] ?? now()->format('d/m/Y');
+        // Pastikan nama dan MET penyusun terisi, jangan pernah membuat TTD SVG palsu
+        $asesorModel = $mapa01->asesor ?: Pengguna::where('peran', 'asesor')->where('skema_id', $mapa01->skema_id)->first();
+        if ($mapa01->tanda_tangan_asesor && str_contains($mapa01->tanda_tangan_asesor, 'svg')) {
+            $mapa01->tanda_tangan_asesor = null;
         }
+        if (isset($existingTable['penyusun_1']['ttd']) && str_contains($existingTable['penyusun_1']['ttd'], 'svg')) {
+            $existingTable['penyusun_1']['ttd'] = null;
+        }
+
+        $existingTable['penyusun_1']['nama'] = $existingTable['penyusun_1']['nama'] ?? ($asesorModel?->nama_lengkap ?? 'Asesor Penguji');
+        $existingTable['penyusun_1']['nomor_met'] = $existingTable['penyusun_1']['nomor_met'] ?? ($asesorModel?->nomor_registrasi ?? 'MET.000.001222 2026');
 
         $mapa01->penyusun_validator_tabel = $existingTable;
         $mapa01->status_mapa = 'selesai';
@@ -847,17 +846,33 @@ class AdminController extends Controller
         $targetInfo = $mapa01->pendaftaran_id ? "Pendaftaran #{$mapa01->pendaftaran?->nomor_pendaftaran}" : "Master Skema {$skemaNama}";
         LogAktivitas::catat('Validasi FR.MAPA.01', "Admin {$user->nama_lengkap} memvalidasi dokumen FR.MAPA.01 untuk {$targetInfo}");
 
+        // Tandai notifikasi validasi FR.MAPA.01 terkait sebagai telah dibaca
+        $pendingNotifs = \Illuminate\Notifications\DatabaseNotification::whereNull('read_at')
+            ->where('type', SystemAlert::class)
+            ->get();
+
+        foreach ($pendingNotifs as $notif) {
+            $meta = $notif->data['metadata'] ?? [];
+            if (!$mapa01->pendaftaran_id && ($meta['mapa01_master_skema_id'] ?? null) == $mapa01->skema_id) {
+                $notif->markAsRead();
+            } elseif ($mapa01->pendaftaran_id && ($meta['mapa01_pendaftaran_id'] ?? null) == $mapa01->pendaftaran_id) {
+                $notif->markAsRead();
+            }
+        }
+
         $matriksUnits = (array) ($mapa01->rencana_unit_matriks ?? []);
         $totalUnits = $mapa01->skema?->unitKompetensi?->count() ?? 0;
         $isMatrixIncomplete = ($totalUnits > 0 && count($matriksUnits) < $totalUnits);
         $isPendekatanEmpty = empty($mapa01->pendekatan_asesi);
 
+        $targetRedirect = route('asesor.mapa', ['skema_id' => $mapa01->skema_id]);
         if ($isMatrixIncomplete || $isPendekatanEmpty) {
-            return back()->with('sukses', 'Dokumen FR.MAPA.01 berhasil divalidasi dan disahkan oleh Administrator LSP!')
-                         ->with('warning', 'Pemberitahuan Validasi: Terdapat komponen formulir (pendekatan kandidat atau unit kompetensi) yang belum terisi maksimal oleh Asesor.');
+            return redirect($targetRedirect)
+                ->with('sukses', 'Dokumen FR.MAPA.01 berhasil divalidasi dan disahkan oleh Administrator LSP!')
+                ->with('warning', 'Pemberitahuan Validasi: Terdapat komponen formulir (pendekatan kandidat atau unit kompetensi) yang belum terisi maksimal oleh Asesor.');
         }
 
-        return back()->with('sukses', 'Dokumen FR.MAPA.01 berhasil divalidasi dan disahkan oleh Administrator LSP!');
+        return redirect($targetRedirect)->with('sukses', 'Dokumen FR.MAPA.01 berhasil divalidasi dan disahkan oleh Administrator LSP!');
     }
 }
 

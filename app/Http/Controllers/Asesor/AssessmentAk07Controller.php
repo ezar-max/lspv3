@@ -176,13 +176,6 @@ class AssessmentAk07Controller extends Controller
             $ak07->asesi_signature = null;
             $ak07->asesi_signed_at = null;
         } elseif ($isConfirmAction) {
-            if (empty($ak07->asesor_signature)) {
-                $profileTtd = auth()->user()->tanda_tangan;
-                if (!empty($profileTtd)) {
-                    $ak07->asesor_signature = $profileTtd;
-                    $ak07->asesor_signed_at = now();
-                }
-            }
             $ak07->status = 'confirmed';
         }
 
@@ -239,10 +232,6 @@ class AssessmentAk07Controller extends Controller
 
         $rawSignature = $request->input('tanda_tangan_asesor');
         $signaturePath = $this->processSignatureImage($rawSignature, 'asesor', $pendaftaran->id);
-
-        if (!$signaturePath && !empty(auth()->user()->tanda_tangan)) {
-            $signaturePath = auth()->user()->tanda_tangan;
-        }
 
         if (!$signaturePath) {
             return back()->with('error', 'Tanda tangan asesor tidak valid atau belum tersedia.');

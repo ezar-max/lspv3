@@ -191,7 +191,6 @@ Route::middleware(['auth', 'peran:admin'])->prefix('admin')->as('admin.')->group
     
     Route::get('/asesi', [AdminController::class, 'manajemenAsesi'])->name('manajemen-asesi');
     Route::get('/asesi/{id}', [AdminController::class, 'detailAsesi'])->name('detail-asesi');
-    Route::post('/ttd-admin/{id}', [AdminController::class, 'simpanTtdAdmin'])->name('simpan-ttd');
     Route::post('/mapa-01/{id}/validasi', [AdminController::class, 'validasiMapa01'])->name('mapa-01.validasi');
     
     Route::get('/skema', [SkemaController::class, 'index'])->name('manajemen-skema');

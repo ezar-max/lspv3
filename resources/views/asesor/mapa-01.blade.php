@@ -512,8 +512,15 @@
         $adminValidatorData = !empty($adminValidatorData['ttd']) ? $adminValidatorData : $masterValidatorData;
     }
 
-    $adminValidatorNama = $adminValidatorData['nama'] ?? '';
-    $adminValidatorMet = $adminValidatorData['nomor_met'] ?? '';
+    // Ambil default identitas Validator dari akun Admin di database
+    $adminUserDb = (auth()->check() && in_array(auth()->user()->peran, ['admin', 'superadmin']))
+        ? auth()->user()
+        : (\App\Models\Pengguna::where('peran', 'admin')->first() ?: \App\Models\Pengguna::where('peran', 'superadmin')->first());
+    $dbAdminNama = $adminUserDb?->nama_lengkap ?: 'Administrator LSP';
+    $dbAdminMet = $adminUserDb?->nomor_registrasi ?: 'REG.ADM.LSP.001';
+
+    $adminValidatorNama = !empty($adminValidatorData['nama']) ? $adminValidatorData['nama'] : $dbAdminNama;
+    $adminValidatorMet = !empty($adminValidatorData['nomor_met']) ? $adminValidatorData['nomor_met'] : $dbAdminMet;
     $adminTtd = $adminValidatorData['ttd'] ?? ($pendaftaran->tanda_tangan_admin ?? null);
     $adminTtdTgl = $adminValidatorData['ttd_tanggal'] ?? ($pendaftaran->tanggal_ttd_admin ? \Carbon\Carbon::parse($pendaftaran->tanggal_ttd_admin)->format('d/m/Y') : '');
     $adminStatusValidasi = $adminValidatorData['status_validasi'] ?? null;
@@ -883,20 +890,14 @@
                 ? $savedPenyusunMet
                 : ($resolvedAsesor?->nomor_registrasi ?? 'MET.000.001222 2026');
 
-            // Resolusi TTD Asesor: Jangan mengambil TTD lain jika dokumen MAPA.01 ini belum ditandatangani
+            // Resolusi TTD Asesor: Hanya gunakan gambar tanda tangan nyata dari Asesor (abaikan SVG teks otomatis)
             $candidateTtd = $mapa01?->tanda_tangan_asesor ?? ($penyusunTabelSaved['penyusun_1']['ttd'] ?? null);
-            if (!empty($candidateTtd) && in_array($candidateTtd, $adminTtdList, true)) {
+            if (!empty($candidateTtd) && (in_array($candidateTtd, $adminTtdList, true) || Str::contains($candidateTtd, 'svg'))) {
                 $candidateTtd = null;
             }
 
             $asesorTtd = $candidateTtd;
-            if ($isAdmin && empty($asesorTtd)) {
-                $asesorTtd = $resolvedAsesor?->tanda_tangan 
-                    ?: ('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="220" height="60"><text x="10" y="38" font-family="Brush Script MT, cursive, sans-serif" font-size="24" fill="%231e3a8a">' . urlencode($asesorNama) . '</text></svg>');
-                $isAsesorAutoSigned = true;
-            } else {
-                $isAsesorAutoSigned = !empty($asesorTtd) && !empty($candidateTtd);
-            }
+            $isAsesorAutoSigned = false;
         @endphp
 
         <!-- ========================================================================= -->
@@ -1653,14 +1654,20 @@
             </div>
 
             @php
-                $adminValidatorNama = $penyusunTabelSaved['validator_1']['nama'] 
-                    ?? '';
-                $adminValidatorMet = $penyusunTabelSaved['validator_1']['nomor_met'] 
-                    ?? '';
-                $adminTtd = $penyusunTabelSaved['validator_1']['ttd'] 
-                    ?? ($pendaftaran->tanda_tangan_admin ?? null);
-                $adminTtdTgl = $penyusunTabelSaved['validator_1']['ttd_tanggal'] 
-                    ?? ($pendaftaran->tanggal_ttd_admin ? \Carbon\Carbon::parse($pendaftaran->tanggal_ttd_admin)->format('d/m/Y') : '');
+                if (empty($adminValidatorNama)) {
+                    $adminValidatorNama = $penyusunTabelSaved['validator_1']['nama'] ?? $dbAdminNama;
+                }
+                if (empty($adminValidatorMet)) {
+                    $adminValidatorMet = $penyusunTabelSaved['validator_1']['nomor_met'] ?? $dbAdminMet;
+                }
+                if (empty($adminTtd)) {
+                    $adminTtd = $penyusunTabelSaved['validator_1']['ttd'] 
+                        ?? ($pendaftaran->tanda_tangan_admin ?? null);
+                }
+                if (empty($adminTtdTgl)) {
+                    $adminTtdTgl = $penyusunTabelSaved['validator_1']['ttd_tanggal'] 
+                        ?? ($pendaftaran->tanggal_ttd_admin ? \Carbon\Carbon::parse($pendaftaran->tanggal_ttd_admin)->format('d/m/Y') : '');
+                }
             @endphp
 
             <div style="overflow-x: auto; margin-bottom: 1.5rem; border: 1px solid #cbd5e1; border-radius: 6px;">
@@ -1684,7 +1691,7 @@
                                     @if($asesorTtd)
                                         <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
                                             <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                                            {{ ($isAdmin && !empty($isAsesorAutoSigned)) ? 'Otomatis' : 'Telah Ditandatangani' }}
+                                            Telah Ditandatangani
                                         </span>
                                     @else
                                         <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
@@ -1718,21 +1725,25 @@
                                             <img src="{{ Str::startsWith($asesorTtd, 'data:') ? $asesorTtd : asset($asesorTtd) }}" alt="TTD Asesor" class="max-h-9 max-w-full object-contain">
                                         </div>
                                         <span class="text-[11px] font-semibold text-slate-500">{{ $penyusunTabelSaved['penyusun_1']['ttd_tanggal'] ?? date('d/m/Y') }}</span>
-                                        @if($isAdmin)
-                                            <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                                ✓ Terverifikasi Otomatis
-                                            </span>
+                                        @if(!$isAdmin)
+                                            <button type="button" onclick="bukaModal('modalCanvasTtd')" class="text-[10px] text-indigo-600 hover:underline mt-0.5">Ubah</button>
                                         @endif
                                     </div>
                                 @else
-                                    <button type="button" 
-                                            onclick="bukaModal('modalCanvasTtd')" 
-                                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-2xs transition-colors cursor-pointer">
-                                        <span>Bubuhkan Tanda Tangan</span>
-                                    </button>
+                                    @if(!$isAdmin)
+                                        <button type="button" 
+                                                onclick="bukaModal('modalCanvasTtd')" 
+                                                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-2xs transition-colors cursor-pointer">
+                                            <span>Bubuhkan Tanda Tangan</span>
+                                        </button>
+                                    @else
+                                        <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-slate-100 text-slate-500 border border-slate-200 text-[11px] font-medium">
+                                            Menunggu TTD Asesor
+                                        </span>
+                                    @endif
                                 @endif
                                 <input type="hidden" name="tanda_tangan_asesor" id="input-ttd-asesor-base64" value="{{ $asesorTtd }}">
-                                <input type="hidden" name="penyusun_validator_tabel[penyusun_1][ttd]" value="{{ $asesorTtd }}">
+                                <input type="hidden" name="penyusun_validator_tabel[penyusun_1][ttd]" id="input-penyusun-ttd" value="{{ $asesorTtd }}">
                                 <input type="hidden" name="penyusun_validator_tabel[penyusun_1][ttd_tanggal]" value="{{ $penyusunTabelSaved['penyusun_1']['ttd_tanggal'] ?? date('d/m/Y') }}">
                             </td>
                         </tr>
@@ -1762,14 +1773,14 @@
                             <td style="padding: 0.6rem 0.75rem;">
                                 <input type="text" 
                                        name="penyusun_validator_tabel[validator_1][nama]" 
-                                       value="{{ $adminValidatorNama ?: ($isAdmin ? auth()->user()->nama_lengkap : '') }}" 
+                                       value="{{ $adminValidatorNama }}" 
                                        class="w-full px-3 py-1.5 text-sm font-semibold rounded border border-slate-300 focus:border-slate-700 focus:ring-1 focus:ring-slate-700 bg-white text-slate-800 transition-colors" 
                                        placeholder="Nama admin validator...">
                             </td>
                             <td style="padding: 0.6rem 0.75rem;">
                                 <input type="text" 
                                        name="penyusun_validator_tabel[validator_1][nomor_met]" 
-                                       value="{{ $adminValidatorMet ?: ($isAdmin ? (auth()->user()->nomor_registrasi ?: 'NIP/REG.ADM.LSP.001') : '') }}" 
+                                       value="{{ $adminValidatorMet }}" 
                                        class="w-full px-3 py-1.5 text-sm font-medium rounded border border-slate-300 focus:border-slate-700 focus:ring-1 focus:ring-slate-700 bg-white text-slate-800 transition-colors" 
                                        placeholder="Nomor registrasi admin...">
                             </td>
@@ -1800,7 +1811,7 @@
                                             <button type="button" 
                                                     onclick="bukaModal('modalValidasiAdminMapa01')" 
                                                     class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-2xs transition-colors cursor-pointer">
-                                                <span>Validasi & TTD</span>
+                                                <span>Validasi</span>
                                             </button>
                                         @else
                                             <span class="inline-flex items-center px-2.5 py-1 rounded bg-amber-50 text-amber-700 border border-amber-200 text-xs font-semibold">
@@ -1962,7 +1973,7 @@
                 <label style="display: block; font-size: 0.78rem; font-weight: 700; color: #334155; margin-bottom: 0.35rem;">
                     Nama Validator (Admin LSP) <span style="color: #dc2626;">*</span>
                 </label>
-                <input type="text" name="validator_nama" value="{{ $adminValidatorNama ?: (auth()->check() && $isAdmin ? auth()->user()->nama_lengkap : '') }}" required
+                <input type="text" name="validator_nama" value="{{ $adminValidatorNama }}" required
                        style="width: 100%; padding: 0.55rem 0.75rem; font-size: 0.85rem; border: 1.2px solid #cbd5e1; border-radius: 8px; outline: none; box-sizing: border-box; font-weight: 600;"
                        placeholder="Nama lengkap validator...">
             </div>
@@ -1971,7 +1982,7 @@
                 <label style="display: block; font-size: 0.78rem; font-weight: 700; color: #334155; margin-bottom: 0.35rem;">
                     Nomor Registrasi / NIP Validator <span style="color: #dc2626;">*</span>
                 </label>
-                <input type="text" name="validator_nomor_met" value="{{ $adminValidatorMet ?: (auth()->check() && $isAdmin ? (auth()->user()->nomor_registrasi ?: 'NIP/REG.ADM.LSP.001') : '') }}" required
+                <input type="text" name="validator_nomor_met" value="{{ $adminValidatorMet }}" required
                        style="width: 100%; padding: 0.55rem 0.75rem; font-size: 0.85rem; border: 1.2px solid #cbd5e1; border-radius: 8px; outline: none; box-sizing: border-box; font-weight: 600;"
                        placeholder="NIP atau Nomor Registrasi...">
             </div>
@@ -1985,34 +1996,6 @@
                           placeholder="Catatan hasil verifikasi kelayakan rencana asesmen...">{{ $catatanValidasi }}</textarea>
             </div>
 
-            <div style="margin-bottom: 1.25rem;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
-                    <label style="font-size: 0.78rem; font-weight: 700; color: #334155;">
-                        Tanda Tangan Digital Validator <span style="color: #dc2626;">*</span>
-                    </label>
-                    @if(auth()->check() && !empty(auth()->user()->tanda_tangan))
-                        <button type="button" onclick="gunakanTtdAkunAdmin('{{ auth()->user()->tanda_tangan }}')"
-                                style="background: none; border: none; font-size: 0.75rem; color: #0284c7; font-weight: 700; cursor: pointer; text-decoration: underline;">
-                            Gunakan TTD Profil Saya
-                        </button>
-                    @endif
-                </div>
-
-                <div style="background: #f8fafc; border: 1.5px dashed #94a3b8; border-radius: 10px; padding: 0.5rem; text-align: center;">
-                    <canvas id="canvas-ttd-validator" width="460" height="150"
-                            style="background: #ffffff; border-radius: 6px; cursor: crosshair; touch-action: none; display: block; margin: 0 auto; max-width: 100%;"></canvas>
-                </div>
-
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem;">
-                    <span style="font-size: 0.72rem; color: #64748b;">
-                        Goreskan tanda tangan dengan mouse atau layar sentuh.
-                    </span>
-                    <button type="button" id="btn-clear-canvas-validator"
-                            style="background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 6px; padding: 0.25rem 0.65rem; font-size: 0.72rem; font-weight: 600; color: #475569; cursor: pointer;">
-                        Bersihkan Goresan
-                    </button>
-                </div>
-            </div>
 
             <div style="display: flex; gap: 0.75rem; justify-content: flex-end; border-top: 1px solid #f1f5f9; padding-top: 1rem;">
                 <button type="button" onclick="tutupModal('modalValidasiAdminMapa01')" class="tombol tombol-sekunder tombol-sm">
@@ -2254,81 +2237,6 @@
             form.submit();
         }
 
-        let validatorCanvasInited = false;
-        let validatorHasDrawn = false;
-
-        function initValidatorCanvas() {
-            const canvas = document.getElementById('canvas-ttd-validator');
-            if (!canvas || validatorCanvasInited) return;
-            validatorCanvasInited = true;
-
-            const ctx = canvas.getContext('2d');
-            let isDrawing = false;
-
-            ctx.strokeStyle = '#0f172a';
-            ctx.lineWidth = 2.4;
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
-
-            function getPos(e) {
-                const rect = canvas.getBoundingClientRect();
-                let clientX = e.clientX, clientY = e.clientY;
-                if (e.touches && e.touches.length > 0) {
-                    clientX = e.touches[0].clientX;
-                    clientY = e.touches[0].clientY;
-                }
-                return {
-                    x: (clientX - rect.left) * (canvas.width / rect.width),
-                    y: (clientY - rect.top) * (canvas.height / rect.height)
-                };
-            }
-
-            function start(e) {
-                isDrawing = true;
-                validatorHasDrawn = true;
-                const pos = getPos(e);
-                ctx.beginPath();
-                ctx.moveTo(pos.x, pos.y);
-                if (e.type.startsWith('touch')) e.preventDefault();
-            }
-
-            function draw(e) {
-                if (!isDrawing) return;
-                const pos = getPos(e);
-                ctx.lineTo(pos.x, pos.y);
-                ctx.stroke();
-                if (e.type.startsWith('touch')) e.preventDefault();
-            }
-
-            function stop() {
-                if (!isDrawing) return;
-                isDrawing = false;
-                ctx.closePath();
-                const input = document.getElementById('input-ttd-validator-modal-base64');
-                if (input) {
-                    input.value = canvas.toDataURL('image/png');
-                }
-            }
-
-            canvas.addEventListener('mousedown', start);
-            canvas.addEventListener('mousemove', draw);
-            window.addEventListener('mouseup', stop);
-
-            canvas.addEventListener('touchstart', start, { passive: false });
-            canvas.addEventListener('touchmove', draw, { passive: false });
-            window.addEventListener('touchend', stop);
-
-            const btnClear = document.getElementById('btn-clear-canvas-validator');
-            if (btnClear) {
-                btnClear.addEventListener('click', function() {
-                    ctx.clearRect(0, 0, canvas.width, canvas.height);
-                    validatorHasDrawn = false;
-                    const input = document.getElementById('input-ttd-validator-modal-base64');
-                    if (input) input.value = '';
-                });
-            }
-        }
-
         function toggleRincianValidasiAdmin() {
             const wadah = document.getElementById('wadah-rincian-validasi-admin');
             const text = document.getElementById('text-toggle-rincian-validasi');
@@ -2352,7 +2260,6 @@
                 formVal.addEventListener('submit', function(e) {
                     const inputNama = formVal.querySelector('input[name="validator_nama"]');
                     const inputMet = formVal.querySelector('input[name="validator_nomor_met"]');
-                    const inputTtd = document.getElementById('input-ttd-validator-modal-base64');
 
                     if (!inputNama || !inputNama.value.trim()) {
                         e.preventDefault();
@@ -2385,44 +2292,73 @@
                         inputMet.focus();
                         return;
                     }
-
-                    if (!inputTtd || !inputTtd.value.trim()) {
-                        const adminName = "{{ auth()->check() ? (auth()->user()->nama_lengkap ?: 'Administrator LSP') : 'Administrator LSP' }}";
-                        const autoSvg = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='60'><text x='10' y='38' font-family='Brush Script MT, cursive, sans-serif' font-size='24' fill='%23065f46'>" + encodeURIComponent(adminName) + "</text></svg>";
-                        if (inputTtd) inputTtd.value = autoSvg;
-                    }
                 });
             }
         });
 
-        function loadInitialValidatorSig(dataUrl) {
-            if (!dataUrl) return;
-            const canvas = document.getElementById('canvas-ttd-validator');
+        function initAsesorCanvas() {
+            const canvas = document.getElementById('canvas-ttd-asesi');
             if (!canvas) return;
             const ctx = canvas.getContext('2d');
-            const img = new Image();
-            img.onload = function() {
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                const hRatio = (canvas.width * 0.85) / img.width;
-                const vRatio = (canvas.height * 0.85) / img.height;
-                const ratio = Math.min(hRatio, vRatio, 1);
-                const shiftX = (canvas.width - img.width * ratio) / 2;
-                const shiftY = (canvas.height - img.height * ratio) / 2;
-                ctx.drawImage(img, 0, 0, img.width, img.height, shiftX, shiftY, img.width * ratio, img.height * ratio);
-                validatorHasDrawn = true;
-            };
-            img.src = dataUrl;
-        }
+            let isDrawing = false;
+            ctx.lineWidth = 2.5;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.strokeStyle = '#1e3a8a';
 
-        function gunakanTtdAkunAdmin(dataUrl) {
-            const input = document.getElementById('input-ttd-validator-modal-base64');
-            if (input) input.value = dataUrl;
-            loadInitialValidatorSig(dataUrl);
+            function getPos(e) {
+                const rect = canvas.getBoundingClientRect();
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                const scaleX = canvas.width / rect.width;
+                const scaleY = canvas.height / rect.height;
+                return {
+                    x: (clientX - rect.left) * scaleX,
+                    y: (clientY - rect.top) * scaleY
+                };
+            }
+
+            function start(e) {
+                isDrawing = true;
+                const pos = getPos(e);
+                ctx.beginPath();
+                ctx.moveTo(pos.x, pos.y);
+                if (e.cancelable) e.preventDefault();
+            }
+
+            function draw(e) {
+                if (!isDrawing) return;
+                const pos = getPos(e);
+                ctx.lineTo(pos.x, pos.y);
+                ctx.stroke();
+                if (e.cancelable) e.preventDefault();
+            }
+
+            function stop() {
+                if (!isDrawing) return;
+                isDrawing = false;
+                ctx.closePath();
+            }
+
+            canvas.addEventListener('mousedown', start);
+            canvas.addEventListener('mousemove', draw);
+            window.addEventListener('mouseup', stop);
+
+            canvas.addEventListener('touchstart', start, { passive: false });
+            canvas.addEventListener('touchmove', draw, { passive: false });
+            window.addEventListener('touchend', stop);
+
+            const btnClear = document.getElementById('btn-clear-canvas');
+            if (btnClear) {
+                btnClear.addEventListener('click', function() {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                });
+            }
         }
 
         document.addEventListener('DOMContentLoaded', function() {
             applyMapa01Mode();
-            initValidatorCanvas();
+            initAsesorCanvas();
 
             const formM = document.getElementById('form-mapa01');
             if (formM) {
@@ -2432,12 +2368,6 @@
                     });
                 });
             }
-
-            @if(!empty($adminTtd))
-                setTimeout(function() {
-                    loadInitialValidatorSig("{{ Str::startsWith($adminTtd, 'data:') ? $adminTtd : asset($adminTtd) }}");
-                }, 300);
-            @endif
 
             // Callback saat simpan tanda tangan canvas asesor
             const btnSimpan = document.getElementById('btn-simpan-canvas');
@@ -2450,6 +2380,10 @@
                         if (hiddenInput) {
                             hiddenInput.value = dataUrl;
                         }
+                        const hiddenPenyusun = document.getElementById('input-penyusun-ttd');
+                        if (hiddenPenyusun) {
+                            hiddenPenyusun.value = dataUrl;
+                        }
                         const container = document.getElementById('container-ttd-asesor-preview');
                         if (container) {
                             container.innerHTML = `
@@ -2460,6 +2394,7 @@
                                     <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
                                         <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1"></span> Siap Disimpan
                                     </span>
+                                    <button type="button" onclick="bukaModal('modalCanvasTtd')" class="text-[10px] text-indigo-600 hover:underline mt-0.5">Ubah</button>
                                 </div>
                             `;
                         }

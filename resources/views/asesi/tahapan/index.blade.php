@@ -83,8 +83,11 @@
                             <select onchange="window.location.href='?pendaftaran_id=' + this.value" 
                                     class="text-xs font-semibold bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 focus:ring-2 focus:ring-blue-500 outline-hidden">
                                 @foreach($semuaPendaftaran as $itemP)
+                                    @php
+                                        $isItemDitolak = ($itemP->status_pendaftaran === 'ditolak' || $itemP->rekomendasi_admin_status === 'tidak_diterima');
+                                    @endphp
                                     <option value="{{ $itemP->id }}" {{ (isset($pendaftaran) && $pendaftaran->id == $itemP->id) ? 'selected' : '' }}>
-                                        {{ Str::limit($itemP->skema->nama_skema ?? 'Skema', 18) }}
+                                        {{ Str::limit($itemP->skema->nama_skema ?? 'Skema', 18) }} {{ $isItemDitolak ? '[Ditolak]' : '' }}
                                     </option>
                                 @endforeach
                             </select>
@@ -143,6 +146,38 @@
              STEP 1: FORMULIR FR.APL.01 (PERMOHONAN SERTIFIKASI)
              ========================================================================= -->
         <div x-show="currentStep === 1" x-transition.opacity.duration.300ms class="mt-6 space-y-6">
+            @if($isDitolakAdmin && $pendaftaranTerakhirDitolak)
+                <div class="bg-rose-50/90 border border-rose-200/90 rounded-2xl p-5 sm:p-6 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div class="flex items-start gap-3.5">
+                        <div class="w-10 h-10 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center shrink-0 mt-0.5">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </div>
+                        <div class="space-y-1">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-800 uppercase tracking-wider">
+                                    Pendaftaran Ditolak &bull; Tidak Diterima
+                                </span>
+                                @if($pendaftaranTerakhirDitolak->nomor_pendaftaran)
+                                    <span class="text-xs text-slate-500 font-mono font-semibold">No. Reg: {{ $pendaftaranTerakhirDitolak->nomor_pendaftaran }}</span>
+                                @endif
+                            </div>
+                            <h3 class="text-base font-bold text-rose-950">Permohonan Pendaftaran Skema {{ $pendaftaranTerakhirDitolak->skema->nama_skema ?? '' }} Ditolak</h3>
+                            <p class="text-xs text-rose-800 leading-relaxed max-w-2xl">
+                                Permohonan sertifikasi Anda dinyatakan tidak memenuhi persyaratan oleh Admin LSP pada verifikasi berkas FR.APL.01.
+                                @if($pendaftaranTerakhirDitolak->catatan_verifikasi)
+                                    <span class="block mt-1 font-semibold text-rose-900 bg-white/70 p-2 rounded-lg border border-rose-200">
+                                        Catatan Verifikator Admin: "{{ $pendaftaranTerakhirDitolak->catatan_verifikasi }}"
+                                    </span>
+                                @endif
+                                <span class="block mt-1">Silakan pilih skema sertifikasi lainnya yang tersedia pada formulir di bawah ini untuk mendaftar.</span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            @endif
+
             @if($isAccAdmin)
                 <div class="bg-emerald-50/90 border border-emerald-200/90 rounded-2xl p-5 sm:p-6 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                     <div class="flex items-start gap-3.5">

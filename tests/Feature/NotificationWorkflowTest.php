@@ -318,4 +318,91 @@ class NotificationWorkflowTest extends TestCase
                 && str_contains($n->data['message'], 'JDW-NOTIF-BARU-99');
         }));
     }
+
+    /** 9. ROLE ADMIN: Asesor menyusun Master FR.MAPA.01 memicu notifikasi validasi ke Admin & Superadmin */
+    public function test_asesor_saving_master_mapa01_notifies_admins_for_validation(): void
+    {
+        $response = $this->actingAs($this->asesor)->post(route('asesor.skema.mapa-01.simpan', $this->skema->id), [
+            'aksi' => 'konfirmasi',
+            'tujuan_asesmen' => 'Sertifikasi Kejuruan',
+            'konteks_lingkungan' => 'Tempat kerja simulasi',
+            'konteks_peluang_bukti' => 'Tersedia',
+        ]);
+
+        $response->assertSessionHas('sukses');
+
+        // Admin menerima notifikasi bahwa FR.MAPA.01 sesuai skema perlu divalidasi
+        $adminNotifs = $this->admin->notifications;
+        $this->assertTrue($adminNotifs->contains(function ($n) {
+            return str_contains($n->data['title'], 'FR.MAPA.01 Sesuai Skema Menunggu Validasi')
+                && str_contains($n->data['message'], $this->skema->nama_skema);
+        }));
+
+        // Superadmin juga menerima notifikasi
+        $superadminNotifs = $this->superadmin->notifications;
+        $this->assertTrue($superadminNotifs->contains(function ($n) {
+            return str_contains($n->data['title'], 'FR.MAPA.01 Sesuai Skema Menunggu Validasi')
+                && str_contains($n->data['message'], $this->skema->kode_skema);
+        }));
+    }
+
+    /** 10. ROLE ADMIN: Halaman notifikasi menampilkan pemberitahuan form MAPA 01 sesuai skema yang perlu divalidasi */
+    public function test_admin_notification_page_displays_mapa01_scheme_pending_validation(): void
+    {
+        // Buat Master MAPA.01 sesuai skema dalam keadaan belum divalidasi
+        \App\Models\Mapa01::create([
+            'skema_id' => $this->skema->id,
+            'pendaftaran_id' => null,
+            'asesor_id' => $this->asesor->id,
+            'tujuan_asesmen' => 'Sertifikasi',
+            'penyusun_validator_tabel' => [
+                'penyusun_1' => [
+                    'nama' => $this->asesor->nama_lengkap,
+                    'nomor_met' => 'MET.999.001',
+                    'ttd' => 'signatures/asesor_test.png',
+                    'ttd_tanggal' => now()->format('d/m/Y'),
+                ],
+                'validator_1' => [
+                    'nama' => '',
+                    'nomor_met' => '',
+                    'ttd' => null,
+                    'status_validasi' => null,
+                ]
+            ],
+            'status_mapa' => 'draft',
+        ]);
+
+        $response = $this->actingAs($this->admin)->get(route('notifications.index'));
+        $response->assertOk();
+        $response->assertSee('FR.MAPA.01 Sesuai Skema Menunggu Validasi');
+        $response->assertSee($this->skema->nama_skema);
+        $response->assertSee('Dokumen FR.MAPA.01 Sesuai Skema Perlu Divalidasi');
+        $response->assertSee(route('asesor.skema.mapa-01', $this->skema->id));
+    }
+
+    /** 11. ROLE ADMIN: Admin memvalidasi Master FR.MAPA.01 menandai notifikasi sebagai dibaca */
+    public function test_admin_validating_master_mapa01_marks_notification_as_read(): void
+    {
+        // 1. Asesor simpan master MAPA 01
+        $this->actingAs($this->asesor)->post(route('asesor.skema.mapa-01.simpan', $this->skema->id), [
+            'aksi' => 'konfirmasi',
+            'tujuan_asesmen' => 'Sertifikasi',
+        ]);
+
+        $notif = $this->admin->unreadNotifications()->first();
+        $this->assertNotNull($notif);
+        $this->assertNull($notif->read_at);
+
+        // 2. Admin memvalidasi Master MAPA 01
+        $response = $this->actingAs($this->admin)->post(route('admin.mapa-01.validasi', $this->skema->id), [
+            'skema_id' => $this->skema->id,
+            'validator_nama' => $this->admin->nama_lengkap,
+            'validator_nomor_met' => 'ADM.001.2026',
+        ]);
+
+        $response->assertSessionHas('sukses');
+
+        $notif->refresh();
+        $this->assertNotNull($notif->read_at);
+    }
 }

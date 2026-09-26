@@ -787,10 +787,22 @@ class AsesiController extends Controller
 
         $pengguna = auth()->user();
 
+        // PEMBATASAN: Skema yang pernah ditolak tidak dapat didaftarkan kembali
+        $isDitolakSkema = PendaftaranAsesi::where('asesi_id', $pengguna->id)
+            ->where('skema_id', $request->skema_id)
+            ->where(function ($q) {
+                $q->where('status_pendaftaran', 'ditolak')
+                    ->orWhere('rekomendasi_admin_status', 'tidak_diterima');
+            })->exists();
+
+        if ($isDitolakSkema) {
+            return back()->with('error', 'Skema sertifikasi ini telah Ditolak untuk akun Anda dan tidak dapat dipilih kembali. Silakan pilih skema sertifikasi lainnya.');
+        }
+
         // PEMBATASAN: SETIAP ASESI HANYA BISA DAFTAR 1 KALI PER SKEMA
         $pendaftaranSubmitted = PendaftaranAsesi::where('asesi_id', $pengguna->id)
             ->where('skema_id', $request->skema_id)
-            ->whereNotIn('status_pendaftaran', ['draft', 'revisi'])
+            ->whereNotIn('status_pendaftaran', ['draft', 'revisi', 'ditolak'])
             ->exists();
 
         if ($pendaftaranSubmitted) {
@@ -1163,6 +1175,10 @@ class AsesiController extends Controller
     {
         $pendaftaran = PendaftaranAsesi::where('asesi_id', auth()->id())->findOrFail($id);
 
+        if ($pendaftaran->status_pendaftaran === 'ditolak' || $pendaftaran->rekomendasi_admin_status === 'tidak_diterima') {
+            return back()->with('error', 'Pendaftaran untuk skema ini telah Ditolak. Anda tidak dapat mengunggah dokumen baru.');
+        }
+
         $request->validate([
             'jenis_dokumen' => 'required|string',
             'file_dokumen' => 'required|file|mimes:pdf,jpg,jpeg,png|max:5048',
@@ -1194,6 +1210,10 @@ class AsesiController extends Controller
     public function ajukanPendaftaran($id)
     {
         $pendaftaran = PendaftaranAsesi::with('dokumen')->where('asesi_id', auth()->id())->findOrFail($id);
+
+        if ($pendaftaran->status_pendaftaran === 'ditolak' || $pendaftaran->rekomendasi_admin_status === 'tidak_diterima') {
+            return back()->with('error', 'Pendaftaran untuk skema ini telah Ditolak dan tidak dapat diajukan kembali.');
+        }
 
         if ($pendaftaran->dokumen->count() === 0) {
             return back()->with('error', 'Permohonan tidak dapat diajukan! Anda belum mengunggah dokumen persyaratan apapun. Silakan lengkapi unggah berkas Anda terlebih dahulu.');

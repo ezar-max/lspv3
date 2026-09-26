@@ -23,8 +23,7 @@
 @section('konten')
 @php
     $savedBukti = (array) ($masterAk01->bukti_dikumpulkan ?? []);
-    $userSignature = auth()->user()->tanda_tangan;
-    $currentSignature = $masterAk01->tanda_tangan_asesor ?? $userSignature;
+    $currentSignature = $masterAk01->tanda_tangan_asesor ?? null;
     $isSigned = !empty($currentSignature);
     $isConfigured = $masterAk01->exists && $masterAk01->status === 'selesai';
 @endphp
@@ -279,54 +278,26 @@
                 4. Pengesahan & Tanda Tangan Asesor Penguji
             </h2>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-5 text-xs">
-                <!-- Pilihan Metode Tanda Tangan -->
-                <div class="space-y-3">
-                    <span class="font-bold text-slate-700 block">Pilih Metode Tanda Tangan:</span>
-
-                    @if(!empty($userSignature))
-                        <label class="flex items-start gap-3 p-3 rounded-xl border border-slate-200 bg-slate-50 cursor-pointer hover:bg-slate-100/70 transition-colors">
-                            <input type="radio" name="sign_mode" value="profile" x-model="signMode" class="mt-0.5 text-indigo-600 focus:ring-0">
-                            <div class="space-y-1">
-                                <span class="font-bold text-slate-900 block">Gunakan Tanda Tangan Profil Akun</span>
-                                <span class="text-[11px] text-slate-500 block">Tanda tangan digital resmi yang tersimpan pada akun Anda.</span>
-                                <div class="h-16 w-32 bg-white rounded border border-slate-200 p-1 flex items-center justify-center mt-1">
-                                    <img src="{{ asset($userSignature) }}" alt="Tanda Tangan Profil" class="max-h-14 object-contain">
-                                </div>
-                            </div>
-                        </label>
-                    @endif
-
-                    <label class="flex items-start gap-3 p-3 rounded-xl border border-slate-200 bg-slate-50 cursor-pointer hover:bg-slate-100/70 transition-colors">
-                        <input type="radio" name="sign_mode" value="canvas" x-model="signMode" class="mt-0.5 text-indigo-600 focus:ring-0">
-                        <div class="space-y-0.5">
-                            <span class="font-bold text-slate-900 block">Gambar Tanda Tangan Baru (Canvas)</span>
-                            <span class="text-[11px] text-slate-500 block">Gunakan mouse atau layar sentuh untuk tanda tangan langsung.</span>
-                        </div>
-                    </label>
-                </div>
+            <div class="space-y-3 text-xs">
+                @if($currentSignature)
+                    <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl mb-3 flex items-center gap-3">
+                        <span class="font-bold text-slate-700">Tanda Tangan Asesor Aktif:</span>
+                        <img src="{{ Str::startsWith($currentSignature, 'data:') ? $currentSignature : asset($currentSignature) }}" alt="TTD Master" class="max-h-12 object-contain bg-white p-1 border rounded">
+                    </div>
+                @endif
 
                 <!-- Canvas Tanda Tangan -->
-                <div class="space-y-2" x-show="signMode === 'canvas'">
-                    <span class="font-bold text-slate-700 block">Canvas Tanda Tangan Digital:</span>
+                <div class="space-y-2">
+                    <span class="font-bold text-slate-700 block">Bubuhkan Tanda Tangan Digital Baru (Canvas):</span>
                     <div class="border border-slate-300 rounded-xl bg-white relative overflow-hidden">
                         <canvas id="canvasMasterAk01" width="800" height="240" class="w-full h-36 bg-white cursor-crosshair block touch-none" style="touch-action: none;"></canvas>
-                        <input type="hidden" name="tanda_tangan_asesor" id="inputSignatureMasterAk01" x-ref="signatureInput">
+                        <input type="hidden" name="tanda_tangan_asesor" id="inputSignatureMasterAk01" x-ref="signatureInput" value="{{ $currentSignature ?? '' }}">
                     </div>
                     <div class="flex items-center justify-between text-[11px]">
                         <span class="text-slate-400">Tanda tangan di area putih di atas.</span>
                         <button type="button" @click="clearSignature()" class="text-rose-600 hover:text-rose-800 font-semibold cursor-pointer">
                             [ Hapus / Ulangi ]
                         </button>
-                    </div>
-                </div>
-
-                <!-- Pratinjau TTD Tersimpan jika mode profil -->
-                <div class="space-y-2" x-show="signMode === 'profile'">
-                    <span class="font-bold text-slate-700 block">Status Tanda Tangan:</span>
-                    <div class="h-36 bg-slate-50 rounded-xl border border-slate-200 flex flex-col items-center justify-center p-3 text-center">
-                        <span class="font-bold text-slate-800">Tanda Tangan Siap Diterapkan</span>
-                        <span class="text-[11px] text-slate-500 mt-1">Tanda tangan dari profil Anda akan dicantumkan pada dokumen FR.AK.01 seluruh asesi.</span>
                     </div>
                 </div>
             </div>
@@ -370,7 +341,7 @@
         return {
             isEditMode: {{ $isConfigured ? 'false' : 'true' }},
             agreedToClause: {{ $masterAk01->exists ? 'true' : 'false' }},
-            signMode: '{{ !empty($userSignature) ? 'profile' : 'canvas' }}',
+            signMode: 'canvas',
             isSubmitting: false,
             pad: null,
 
@@ -428,24 +399,19 @@
                     return;
                 }
 
-                if (this.signMode === 'canvas') {
-                    if (!this.pad || this.pad.isEmpty()) {
-                        Swal.fire({
-                            icon: 'warning',
-                            title: 'Tanda Tangan Kosong',
-                            text: 'Silakan bubuhkan tanda tangan digital pada canvas terlebih dahulu.',
-                            confirmButtonColor: '#4f46e5'
-                        });
-                        return;
-                    }
+                if (this.pad && !this.pad.isEmpty()) {
                     const dataUrl = this.pad.toDataURL('image/png');
                     if (this.$refs.signatureInput) {
                         this.$refs.signatureInput.value = dataUrl;
                     }
-                } else if (this.signMode === 'profile') {
-                    if (this.$refs.signatureInput) {
-                        this.$refs.signatureInput.value = '{{ $userSignature }}';
-                    }
+                } else if (!this.$refs.signatureInput || !this.$refs.signatureInput.value) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Tanda Tangan Kosong',
+                        text: 'Silakan bubuhkan tanda tangan digital pada canvas terlebih dahulu.',
+                        confirmButtonColor: '#4f46e5'
+                    });
+                    return;
                 }
 
                 this.isSubmitting = true;

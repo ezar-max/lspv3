@@ -156,16 +156,7 @@ class AsesorPenilaianController extends Controller
             'penilaian_esai' => 'nullable|array',
         ]);
 
-        $ttdAsesor = $request->tanda_tangan_asesor 
-            ?: ($user->tanda_tangan ?: $pendaftaran->tanda_tangan_asesor);
-
-        if (empty($ttdAsesor)) {
-            $ttdAsesor = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="220" height="60"><text x="10" y="38" font-family="Brush Script MT, cursive, sans-serif" font-size="26" fill="%231e3a8a">' . urlencode($user->nama_lengkap) . '</text></svg>';
-        }
-
-        if ($request->filled('tanda_tangan_asesor') && \Illuminate\Support\Str::startsWith($request->tanda_tangan_asesor, 'data:image')) {
-            auth()->user()->update(['tanda_tangan' => $request->tanda_tangan_asesor]);
-        }
+        $ttdAsesor = $request->tanda_tangan_asesor ?: ($user->tanda_tangan ?? $pendaftaran->tanda_tangan_asesor);
 
         // 1. Simpan Ceklis Observasi Praktik (FR.IA.01) jika instrumen aktif di MAPA.02
         $penilaianKuk = $request->input('penilaian_kuk', []);
@@ -594,8 +585,7 @@ class AsesorPenilaianController extends Controller
         }
 
         $countUpdated = 0;
-        $ttdAsesor = $user->tanda_tangan 
-            ?: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="220" height="60"><text x="10" y="38" font-family="Brush Script MT, cursive, sans-serif" font-size="26" fill="%231e3a8a">' . urlencode($user->nama_lengkap) . '</text></svg>';
+        $ttdAsesor = $user->tanda_tangan ?: null;
 
         foreach ($penilaianMassal as $pendaftaranId => $penilaianPerSoal) {
             $pendaftaran = PendaftaranAsesi::find($pendaftaranId);

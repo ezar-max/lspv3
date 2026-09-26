@@ -63,7 +63,8 @@
             $ak02Units = ($p->ak02 && is_array($p->ak02->rekomendasi_unit)) ? $p->ak02->rekomendasi_unit : [];
 
             // Validasi ketat: Asesmen HANYA dianggap selesai jika status pendaftaran adalah 'selesai' dan ada rekomendasi final
-            $isSelesai = ($p->status_pendaftaran === 'selesai') && !empty($p->rekomendasi) && !empty($p->rekomendasi->keputusan);
+            $isDitolak = ($p->status_pendaftaran === 'ditolak' || $p->rekomendasi_admin_status === 'tidak_diterima');
+            $isSelesai = !$isDitolak && ($p->status_pendaftaran === 'selesai') && !empty($p->rekomendasi) && !empty($p->rekomendasi->keputusan);
             $keputusanAkhir = $isSelesai ? $p->rekomendasi->keputusan : null;
         @endphp
 
@@ -73,7 +74,7 @@
                 <div>
                     <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.35rem;">
                         <span class="lencana lencana-biru">{{ $p->skema->kode_skema ?? 'SKEMA' }}</span>
-                        @if($p->jadwal)
+                        @if($p->jadwal && !$isDitolak)
                             <span class="lencana" style="background: #f1f5f9; color: #475569; font-weight: 600;">
                                 {{ $p->jadwal->kode_jadwal ?? 'Jadwal Asesmen' }}
                             </span>
@@ -84,8 +85,8 @@
                     </h2>
                     <div style="font-size: 0.88rem; color: var(--abu-teks); display: flex; gap: 1.25rem; flex-wrap: wrap;">
                         <span>No. Registrasi: <strong style="color: #1e293b;">{{ $p->nomor_pendaftaran }}</strong></span>
-                        <span>Asesor Penguji: <strong style="color: #1e293b;">{{ $namaAsesor }}</strong></span>
-                        @if($p->jadwal && $p->jadwal->tanggal_uji)
+                        <span>Asesor Penguji: <strong style="color: #1e293b;">{{ $isDitolak ? '-' : $namaAsesor }}</strong></span>
+                        @if(!$isDitolak && $p->jadwal && $p->jadwal->tanggal_uji)
                             <span>Tanggal Asesmen: <strong style="color: #1e293b;">{{ date('d F Y', strtotime($p->jadwal->tanggal_uji)) }}</strong></span>
                         @endif
                     </div>
@@ -95,7 +96,11 @@
                     <div style="font-size: 0.78rem; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 0.35rem;">
                         Keputusan Akhir Asesmen:
                     </div>
-                    @if($isSelesai && $keputusanAkhir === 'kompeten')
+                    @if($isDitolak)
+                        <span class="lencana lencana-merah" style="padding: 0.6rem 1.25rem; font-size: 0.95rem; font-weight: 800; display: inline-flex; align-items: center; gap: 0.4rem;">
+                            <i class="fa-solid fa-circle-xmark"></i> Permohonan Ditolak (Tidak Diterima)
+                        </span>
+                    @elseif($isSelesai && $keputusanAkhir === 'kompeten')
                         <span class="lencana lencana-hijau" style="padding: 0.6rem 1.25rem; font-size: 1rem; font-weight: 800; display: inline-flex; align-items: center; gap: 0.4rem;">
                             <i class="fa-solid fa-circle-check"></i> KOMPETEN (K)
                         </span>
@@ -110,6 +115,26 @@
                     @endif
                 </div>
             </div>
+
+            <!-- Banner Penolakan Jika Pendaftaran Ditolak -->
+            @if($isDitolak)
+                <div style="background-color: #fef2f2; border: 1.5px solid #fecaca; border-radius: 12px; padding: 1.25rem 1.5rem; margin-bottom: 1.5rem;">
+                    <div style="display: flex; align-items: flex-start; gap: 0.85rem;">
+                        <i class="fa-solid fa-triangle-exclamation" style="font-size: 1.4rem; color: #dc2626; margin-top: 0.15rem;"></i>
+                        <div>
+                            <h4 style="margin: 0 0 0.35rem 0; color: #991b1b; font-weight: 800; font-size: 1.05rem;">Permohonan Skema Ditolak</h4>
+                            <p style="margin: 0 0 0.5rem 0; font-size: 0.9rem; color: #7f1d1d; line-height: 1.5;">
+                                Pendaftaran skema sertifikasi ini dinyatakan <strong>Tidak Diterima / Ditolak</strong> pada verifikasi berkas FR.APL.01 oleh Admin LSP, sehingga proses uji kompetensi tidak dapat dilaksanakan.
+                            </p>
+                            @if($p->catatan_verifikasi)
+                                <div style="background: #ffffff; border: 1px solid #fca5a5; border-radius: 8px; padding: 0.75rem 1rem; font-size: 0.88rem; color: #991b1b; margin-top: 0.5rem;">
+                                    <strong>Catatan Verifikator Admin:</strong> "{{ $p->catatan_verifikasi }}"
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+                </div>
+            @endif
 
             <!-- Tabel Rincian Unit Kompetensi -->
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
@@ -169,7 +194,11 @@
                                     @endif
                                 </td>
                                 <td style="text-align: center;">
-                                    @if($isSelesai && ($nilaiStatus === 'K' || strtoupper((string)$nilaiStatus) === 'KOMPETEN'))
+                                    @if($isDitolak)
+                                        <span class="lencana lencana-merah" style="font-size: 0.8rem; font-weight: 700;">
+                                            Dibatalkan (Ditolak)
+                                        </span>
+                                    @elseif($isSelesai && ($nilaiStatus === 'K' || strtoupper((string)$nilaiStatus) === 'KOMPETEN'))
                                         <span class="lencana lencana-hijau" style="font-weight: 700;">
                                             Kompeten (K)
                                         </span>
@@ -185,7 +214,7 @@
                                 </td>
                                 <td>
                                     <span style="color: {{ !empty($catatanUnit) ? '#334155' : '#94a3b8' }}; font-size: 0.9rem;">
-                                        {{ $catatanUnit ?? ($isSelesai ? 'Memenuhi kriteria unjuk kerja.' : 'Belum diuji oleh Asesor Penguji.') }}
+                                        {{ $isDitolak ? 'Tidak dapat diuji karena permohonan pendaftaran APL.01 ditolak.' : ($catatanUnit ?? ($isSelesai ? 'Memenuhi kriteria unjuk kerja.' : 'Belum diuji oleh Asesor Penguji.')) }}
                                     </span>
                                 </td>
                             </tr>

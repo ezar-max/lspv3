@@ -43,16 +43,9 @@
 <div style="max-width: 1100px;" class="animasi-slide">
     
     <!-- HEADER -->
-    <div style="margin-bottom: 1.75rem; display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
-        <div>
-            <h1 style="font-size: 1.75rem; color: var(--biru-malam); margin-bottom: 0.35rem;">Asesi &bull; Data & Verifikasi</h1>
-            <p style="color: var(--abu-teks); font-size: 0.92rem; margin: 0;">Pusat pengelolaan master biodata asesi, riwayat pendaftaran, dan verifikasi berkas APL-01</p>
-        </div>
-        <div>
-            <button class="tombol tombol-sekunder tombol-sm" onclick="bukaModal('modalTtdAdmin')">
-                Kelola TTD Digital Admin
-            </button>
-        </div>
+    <div style="margin-bottom: 1.75rem;">
+        <h1 style="font-size: 1.75rem; color: var(--biru-malam); margin-bottom: 0.35rem;">Asesi &bull; Data & Verifikasi</h1>
+        <p style="color: var(--abu-teks); font-size: 0.92rem; margin: 0;">Pusat pengelolaan master biodata asesi, riwayat pendaftaran, dan verifikasi berkas APL-01</p>
     </div>
 
     <!-- STATS COUNTER -->
@@ -231,35 +224,5 @@
         </div>
     @endif
 
-</div>
-
-<!-- MODAL TTD DIGITAL ADMIN -->
-<div class="modal-overlay" id="modalTtdAdmin">
-    <div class="modal-konten">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-            <h3 style="color: var(--biru-malam); margin: 0;">Upload TTD Digital Admin</h3>
-            <button onclick="tutupModal('modalTtdAdmin')" style="background: none; border: none; font-size: 1.4rem; cursor: pointer; color: var(--abu-teks);">&times;</button>
-        </div>
-
-        <form action="{{ route('admin.simpan-ttd', auth()->id()) }}" method="POST" enctype="multipart/form-data">
-            @csrf
-            @if(auth()->user()->tanda_tangan)
-                <div style="text-align: center; margin-bottom: 1.25rem; background: var(--biru-bg); padding: 1rem; border-radius: var(--radius-md); border: 1px solid var(--biru-soft);">
-                    <img src="{{ asset(auth()->user()->tanda_tangan) }}" alt="TTD Admin" style="max-height: 80px; object-fit: contain;">
-                    <div style="font-size: 0.8rem; color: var(--hijau-sukses); font-weight: 700; margin-top: 0.25rem;">TTD Admin Aktif Saat Ini</div>
-                </div>
-            @endif
-
-            <div class="grup-form">
-                <label class="label-form">Pilih File Gambar TTD (Format PNG Transparan)</label>
-                <input type="file" name="tanda_tangan" class="input-control" required accept="image/*">
-            </div>
-
-            <div style="margin-top: 1.5rem; text-align: right; display: flex; gap: 0.5rem; justify-content: flex-end;">
-                <button type="button" class="tombol tombol-sekunder" onclick="tutupModal('modalTtdAdmin')">Batal</button>
-                <button type="submit" class="tombol tombol-utama">Simpan TTD</button>
-            </div>
-        </form>
-    </div>
 </div>
 @endsection

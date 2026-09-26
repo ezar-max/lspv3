@@ -285,6 +285,19 @@ class PendaftaranAsesi extends Model
      */
     public function getAssessmentTimeStatusAttribute(): array
     {
+        // 0. Jika pendaftaran ditolak oleh Admin LSP
+        if ($this->status_pendaftaran === 'ditolak' || $this->rekomendasi_admin_status === 'tidak_diterima') {
+            return [
+                'status' => 'ditolak',
+                'can_access' => false,
+                'is_readonly' => true,
+                'pesan' => 'Pendaftaran sertifikasi ini telah Ditolak oleh Admin LSP. Ruang uji kompetensi tidak dapat diakses.',
+                'formatted_mulai' => '-',
+                'formatted_selesai' => '-',
+                'formatted_tanggal' => '-',
+            ];
+        }
+
         // 1. Jika asesmen sudah selesai dinilai asesor
         if ($this->status_pendaftaran === 'selesai' || !empty($this->rekomendasi)) {
             $keputusan = strtoupper($this->rekomendasi->keputusan ?? 'SELESAI');

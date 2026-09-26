@@ -20,7 +20,7 @@
 @php
     $asesorNama = $pendaftaran->asesor->nama_lengkap ?? auth()->user()->nama_lengkap;
     $asesorMet = $pendaftaran->asesor->nomor_registrasi ?? auth()->user()->nomor_registrasi ?? 'MET.000.004455';
-    $profileTtd = auth()->user()->tanda_tangan ?: $pendaftaran->tanda_tangan_asesor;
+    $profileTtd = $pendaftaran->tanda_tangan_asesor;
     $isConfirmed = $ak07->isConfirmed();
     $savedChecklist = (array) ($ak07->items_checklist ?? []);
     $selectedPotensi = $ak07->potensi_asesi !== null ? (int) $ak07->potensi_asesi : null;
@@ -362,40 +362,15 @@
                         <strong>{{ $asesorNama }}</strong> (No. MET: {{ $asesorMet }})
                     </div>
 
-                    <!-- Tanda Tangan Selector Asesor -->
-                    <div class="space-y-2">
-                        <div class="flex items-center gap-2">
-                            @if(!empty($profileTtd))
-                                <label class="inline-flex items-center gap-1.5 cursor-pointer text-[11px] font-medium text-slate-700">
-                                    <input type="radio" name="sigMode" value="profile" x-model="signatureMode" class="accent-blue-600">
-                                    <span>Gunakan TTD Akun Profil</span>
-                                </label>
-                            @endif
-                            <label class="inline-flex items-center gap-1.5 cursor-pointer text-[11px] font-medium text-slate-700">
-                                <input type="radio" name="sigMode" value="canvas" x-model="signatureMode" class="accent-blue-600">
-                                <span>Gores TTD Baru di Layar</span>
-                            </label>
+                    <!-- Tanda Tangan Canvas Asesor -->
+                    <div class="space-y-1.5">
+                        <div class="border-2 border-dashed border-slate-300 rounded-xl bg-white relative p-1">
+                            <canvas id="canvasAk07Asesor" class="w-full h-28 rounded-lg cursor-crosshair touch-none"></canvas>
+                            <button type="button" @click="clearCanvas()" class="absolute top-2 right-2 px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded text-[10px] font-bold transition">
+                                Bersihkan
+                            </button>
                         </div>
-
-                        <!-- Canvas Box -->
-                        <div x-show="signatureMode === 'canvas'" class="space-y-1.5">
-                            <div class="border-2 border-dashed border-slate-300 rounded-xl bg-white relative p-1">
-                                <canvas id="canvasAk07Asesor" class="w-full h-28 rounded-lg cursor-crosshair touch-none"></canvas>
-                                <button type="button" @click="clearCanvas()" class="absolute top-2 right-2 px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded text-[10px] font-bold transition">
-                                    Bersihkan
-                                </button>
-                            </div>
-                            <span class="text-[10px] text-slate-400 italic">Tandatangani di atas kotak putih menggunakan sentuhan layar atau mouse.</span>
-                        </div>
-
-                        <!-- Preview Profil Box -->
-                        <div x-show="signatureMode === 'profile'" class="p-2 border border-slate-200 rounded-xl bg-white flex items-center justify-center h-28">
-                            @if(!empty($profileTtd))
-                                <img src="{{ asset($profileTtd) }}" alt="TTD Profil" class="max-h-24 object-contain">
-                            @else
-                                <span class="text-slate-400 italic">Belum ada tanda tangan di profil.</span>
-                            @endif
-                        </div>
+                        <span class="text-[10px] text-slate-400 italic">Tandatangani di atas kotak putih menggunakan sentuhan layar atau mouse.</span>
                     </div>
                 </div>
 
@@ -488,7 +463,7 @@
 <script>
     function ak07App() {
         return {
-            signatureMode: '{{ !empty($profileTtd) ? "profile" : "canvas" }}',
+            signatureMode: 'canvas',
             canvasSignatureData: '',
             signaturePad: null,
             isSubmitting: false,
@@ -556,16 +531,11 @@
             },
 
             prepareSignature() {
-                if (this.signatureMode === 'canvas' && this.signaturePad && !this.signaturePad.isEmpty()) {
+                if (this.signaturePad && !this.signaturePad.isEmpty()) {
                     this.canvasSignatureData = this.signaturePad.toDataURL('image/png');
                     const hiddenInput = document.getElementById('inputTtdAsesor');
                     if (hiddenInput) {
                         hiddenInput.value = this.canvasSignatureData;
-                    }
-                } else if (this.signatureMode === 'profile') {
-                    const hiddenInput = document.getElementById('inputTtdAsesor');
-                    if (hiddenInput) {
-                        hiddenInput.value = '{{ $profileTtd }}';
                     }
                 }
             },

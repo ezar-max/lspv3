@@ -15,7 +15,14 @@
             <p style="color: var(--abu-teks);">Skema: <strong>{{ $pendaftaran->skema->nama_skema }}</strong></p>
         </div>
         <div>
-            @if($pendaftaran->status_pendaftaran === 'draft')
+            @php
+                $isDitolak = ($pendaftaran->status_pendaftaran === 'ditolak' || $pendaftaran->rekomendasi_admin_status === 'tidak_diterima');
+            @endphp
+            @if($isDitolak)
+                <span class="lencana lencana-merah" style="padding: 0.6rem 1rem; font-size: 0.9rem; font-weight: 700;">
+                    Status: DITOLAK (TIDAK DITERIMA)
+                </span>
+            @elseif($pendaftaran->status_pendaftaran === 'draft')
                 <form action="{{ route('asesi.ajukan', $pendaftaran->id) }}" method="POST">
                     @csrf
                     <button type="submit" class="tombol tombol-sukses" onclick="if({{ $pendaftaran->dokumen->count() }} === 0) { alert('Dokumen persyaratan belum diunggah! Silakan unggah minimal 1 file berkas (KTP / Ijazah / Portofolio APL-02) di form bawah terlebih dahulu.'); return false; } return confirm('Apakah Anda yakin seluruh dokumen telah lengkap dan siap diajukan ke Admin?')">
@@ -42,32 +49,49 @@
     @endif
 
     <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 1.5rem;">
-        <!-- FORM UNGGAH FILE -->
-        <div class="kartu">
-            <h3 style="color: var(--biru-malam); margin-bottom: 1rem;">Form Unggah Berkas</h3>
-            <form action="{{ route('asesi.upload-dokumen.simpan', $pendaftaran->id) }}" method="POST" enctype="multipart/form-data">
-                @csrf
-                <div class="grup-form">
-                    <label class="label-form">Jenis Dokumen Persyaratan</label>
-                    <select name="jenis_dokumen" class="input-control" required>
-                        <option value="KTP / Kartu Pelajar">KTP / Kartu Pelajar</option>
-                        <option value="Ijazah / Rapor Terakhir">Ijazah / Rapor Terakhir</option>
-                        <option value="Pasfoto 3x4 Background Merah">Pasfoto 3x4 Background Merah</option>
-                        <option value="Formulir Mandiri APL-02">Formulir Mandiri APL-02</option>
-                        <option value="Portofolio Sertifikat/Karya">Portofolio Sertifikat / Karya</option>
-                    </select>
-                </div>
+        <!-- FORM UNGGAH FILE / STATUS DITOLAK -->
+        @if($isDitolak)
+            <div class="kartu" style="border: 1.5px solid #fca5a5; background: #fef2f2;">
+                <h3 style="color: #991b1b; margin-bottom: 0.75rem; font-weight: 700;">Pendaftaran Ditolak</h3>
+                <p style="color: #7f1d1d; font-size: 0.88rem; line-height: 1.5; margin-bottom: 1rem;">
+                    Permohonan sertifikasi skema ini telah <strong>Ditolak</strong> oleh Admin LSP. Anda tidak dapat mengunggah dokumen baru untuk skema ini.
+                </p>
+                @if($pendaftaran->catatan_verifikasi)
+                    <div style="background: #ffffff; border: 1px solid #fecaca; border-radius: 6px; padding: 0.6rem 0.85rem; font-size: 0.82rem; color: #991b1b; margin-bottom: 1rem;">
+                        <strong>Catatan Admin:</strong> "{{ $pendaftaran->catatan_verifikasi }}"
+                    </div>
+                @endif
+                <a href="{{ route('asesi.pendaftaran') }}" class="tombol tombol-utama tombol-sm" style="background: #dc2626; border-color: #dc2626; display: inline-block;">
+                    Daftar Skema Lainnya &rarr;
+                </a>
+            </div>
+        @else
+            <div class="kartu">
+                <h3 style="color: var(--biru-malam); margin-bottom: 1rem;">Form Unggah Berkas</h3>
+                <form action="{{ route('asesi.upload-dokumen.simpan', $pendaftaran->id) }}" method="POST" enctype="multipart/form-data">
+                    @csrf
+                    <div class="grup-form">
+                        <label class="label-form">Jenis Dokumen Persyaratan</label>
+                        <select name="jenis_dokumen" class="input-control" required>
+                            <option value="KTP / Kartu Pelajar">KTP / Kartu Pelajar</option>
+                            <option value="Ijazah / Rapor Terakhir">Ijazah / Rapor Terakhir</option>
+                            <option value="Pasfoto 3x4 Background Merah">Pasfoto 3x4 Background Merah</option>
+                            <option value="Formulir Mandiri APL-02">Formulir Mandiri APL-02</option>
+                            <option value="Portofolio Sertifikat/Karya">Portofolio Sertifikat / Karya</option>
+                        </select>
+                    </div>
 
-                <div class="grup-form">
-                    <label class="label-form">Pilih File (PDF, JPG, PNG - Maks 5MB)</label>
-                    <input type="file" name="file_dokumen" class="input-control" required accept=".pdf,.jpg,.jpeg,.png">
-                </div>
+                    <div class="grup-form">
+                        <label class="label-form">Pilih File (PDF, JPG, PNG - Maks 5MB)</label>
+                        <input type="file" name="file_dokumen" class="input-control" required accept=".pdf,.jpg,.jpeg,.png">
+                    </div>
 
-                <button type="submit" class="tombol tombol-utama" style="width: 100%; margin-top: 1rem;">
-                    Unggah File
-                </button>
-            </form>
-        </div>
+                    <button type="submit" class="tombol tombol-utama" style="width: 100%; margin-top: 1rem;">
+                        Unggah File
+                    </button>
+                </form>
+            </div>
+        @endif
 
         <!-- DAFTAR DOKUMEN TERUNGGAH -->
         <div class="kartu">

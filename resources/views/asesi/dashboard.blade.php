@@ -74,8 +74,11 @@
                 <label class="font-bold text-slate-500 text-[11px]">Skema:</label>
                 <select onchange="window.location.href='?pendaftaran_id=' + this.value" class="bg-transparent border-0 text-slate-800 font-bold text-xs focus:ring-0 cursor-pointer outline-hidden pr-2">
                     @foreach($semuaPendaftaran as $itemP)
+                        @php
+                            $isItemDitolak = ($itemP->status_pendaftaran === 'ditolak' || $itemP->rekomendasi_admin_status === 'tidak_diterima');
+                        @endphp
                         <option value="{{ $itemP->id }}" {{ (isset($pendaftaranTerakhir) && $pendaftaranTerakhir->id == $itemP->id) ? 'selected' : '' }}>
-                            {{ $itemP->skema->kode_skema ?? 'SKEMA' }} - {{ Str::limit($itemP->skema->nama_skema ?? 'Skema', 24) }}
+                            {{ $itemP->skema->kode_skema ?? 'SKEMA' }} - {{ Str::limit($itemP->skema->nama_skema ?? 'Skema', 24) }} {{ $isItemDitolak ? '[Ditolak]' : '' }}
                         </option>
                     @endforeach
                 </select>
@@ -126,7 +129,9 @@
                 // ==========================================
                 // 1. TAHAP 1: FR.APL.01 (Permohonan Sertifikasi)
                 // ==========================================
-                if ($statusPendaftaran === 'draft') {
+                if ($isDitolakAdmin) {
+                    $tahap1 = ['state' => 'ditolak', 'label' => 'APL-01 Ditolak', 'sub' => 'Tidak Diterima'];
+                } elseif ($statusPendaftaran === 'draft') {
                     $tahap1 = ['state' => 'aktif', 'label' => 'Draft APL-01', 'sub' => 'Lengkapi & Kirim'];
                 } elseif ($statusPendaftaran === 'revisi') {
                     $tahap1 = ['state' => 'revisi', 'label' => 'Perlu Revisi', 'sub' => 'Perbaiki Berkas'];
@@ -273,7 +278,9 @@
             <div class="card-context-detail">
                 <div>
                     <div style="font-size: 0.75rem; font-weight: 700; color: #64748b; text-transform: uppercase;">Asesor Penguji:</div>
-                    @if($p->asesor)
+                    @if($isDitolak)
+                        <span style="font-size: 0.88rem; color: #dc2626; font-weight: 600;">Tidak Ditugaskan (Ditolak)</span>
+                    @elseif($p->asesor)
                         <strong style="font-size: 0.95rem; color: var(--biru-malam); display: block;">{{ $p->asesor->nama_lengkap }}</strong>
                         <span style="font-size: 0.78rem; color: var(--biru-utama);">No. Reg: {{ $p->asesor->nomor_registrasi ?? ('MET.000.00' . $p->asesor->id . ' 2026') }}</span>
                     @else
@@ -283,10 +290,15 @@
 
                 <div>
                     <div style="font-size: 0.75rem; font-weight: 700; color: #64748b; text-transform: uppercase;">Tempat Uji (TUK) & Jadwal:</div>
-                    <strong style="font-size: 0.95rem; color: var(--biru-malam); display: block;">{{ $p->jadwal->nama_tuk ?? ($p->tuk_type ? 'TUK ' . $p->tuk_type : 'TUK Sewaktu') }}</strong>
-                    <span style="font-size: 0.78rem; color: #64748b;">
-                        {{ $p->jadwal ? \Carbon\Carbon::parse($p->jadwal->tanggal_uji)->format('d F Y') : 'Jadwal Ditentukan Kemudian' }}
-                    </span>
+                    @if($isDitolak)
+                        <strong style="font-size: 0.95rem; color: #dc2626; display: block;">Dibatalkan</strong>
+                        <span style="font-size: 0.78rem; color: #64748b;">Pendaftaran Ditolak</span>
+                    @else
+                        <strong style="font-size: 0.95rem; color: var(--biru-malam); display: block;">{{ $p->jadwal->nama_tuk ?? ($p->tuk_type ? 'TUK ' . $p->tuk_type : 'TUK Sewaktu') }}</strong>
+                        <span style="font-size: 0.78rem; color: #64748b;">
+                            {{ $p->jadwal ? \Carbon\Carbon::parse($p->jadwal->tanggal_uji)->format('d F Y') : 'Jadwal Ditentukan Kemudian' }}
+                        </span>
+                    @endif
                 </div>
 
                 <div>

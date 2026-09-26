@@ -539,7 +539,7 @@
         $initialNotes[$d->id] = $d->catatan ?? '';
     }
 
-    $ttdAdminRaw = auth()->user()->tanda_tangan ?: $pendaftaran->tanda_tangan_admin;
+    $ttdAdminRaw = $pendaftaran->tanda_tangan_admin;
     $srcAdmin = $ttdAdminRaw ? (Str::startsWith($ttdAdminRaw, ['data:image', 'http://', 'https://']) ? $ttdAdminRaw : asset($ttdAdminRaw)) : '';
 
     $noHp = $pendaftaran->asesi->no_telepon ?: ($pendaftaran->no_hp ?: '-');
@@ -687,7 +687,7 @@
     <!-- MAIN FORM VERIFIKASI -->
     <form id="form-verifikasi-admin" action="{{ route('admin.verifikasi.simpan', $pendaftaran->id) }}" method="POST" class="space-y-6">
         @csrf
-        <input type="hidden" name="tanda_tangan_admin_base64" id="input-ttd-admin-base64" value="{{ auth()->user()->tanda_tangan ?: $pendaftaran->tanda_tangan_admin }}">
+        <input type="hidden" name="tanda_tangan_admin_base64" id="input-ttd-admin-base64" value="{{ $pendaftaran->tanda_tangan_admin }}">
 
         <!-- Dynamic Hidden Inputs for Document Status & Notes -->
         <template x-for="doc in documents" :key="doc.id">

@@ -532,7 +532,7 @@
                             </div>
 
                             @php
-                                $ttdAsesorApl02 = $pendaftaran->tanda_tangan_asesor ?? auth()->user()->tanda_tangan;
+                                $ttdAsesorApl02 = $pendaftaran->tanda_tangan_asesor;
                                 $srcAsesorApl02 = $ttdAsesorApl02 ? (\Illuminate\Support\Str::startsWith($ttdAsesorApl02, ['data:image', 'http://', 'https://']) ? $ttdAsesorApl02 : asset($ttdAsesorApl02)) : '';
                             @endphp
 
@@ -555,7 +555,7 @@
                                                 id="btn-modal-ttd-asesor" 
                                                 @click="bukaModalTtdAsesor()"
                                                 class="px-2.5 py-1.5 rounded-lg {{ $srcAsesorApl02 ? 'bg-white border-slate-300 text-slate-700 hover:bg-slate-50' : 'bg-blue-600 text-white hover:bg-blue-700 shadow-2xs' }} border font-semibold text-xs transition-colors inline-flex items-center gap-1 cursor-pointer">
-                                            <span>{{ ($pendaftaran->tanda_tangan_asesor || auth()->user()->tanda_tangan) ? 'Ubah Tanda Tangan Canvas' : 'Gambar TTD Digital (Wajib)' }}</span>
+                                            <span>{{ $pendaftaran->tanda_tangan_asesor ? 'Ubah Tanda Tangan Canvas' : 'Gambar TTD Digital (Wajib)' }}</span>
                                         </button>
                                     @endif
                                 </div>
