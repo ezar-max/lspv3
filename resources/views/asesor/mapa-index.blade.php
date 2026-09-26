@@ -127,6 +127,25 @@
                     </div>
                 </div>
 
+                @if($skemaList->count() > 1)
+                    <!-- Dropdown Pemilihan Skema untuk Asesor jika mengampu lebih dari 1 skema penugasan -->
+                    @php
+                        $asesorFormAction = request()->routeIs('admin.master-muk*') ? route('admin.master-muk.index') : route('asesor.mapa');
+                    @endphp
+                    <form action="{{ $asesorFormAction }}" method="GET" class="shrink-0 w-full sm:w-auto min-w-[280px]">
+                        <div class="relative">
+                            <select name="skema_id" id="asesor_skema_id" onchange="this.form.submit()" 
+                                    class="w-full text-xs sm:text-sm font-semibold py-2.5 pl-3.5 pr-10 rounded-xl bg-slate-50 text-slate-900 border border-slate-200 shadow-2xs hover:bg-white focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 cursor-pointer transition">
+                                @foreach($skemaList as $s)
+                                    <option value="{{ $s->id }}" {{ ($selectedSkemaId ?? 0) == $s->id ? 'selected' : '' }}>
+                                        {{ $s->kode_skema }} &mdash; {{ $s->nama_skema }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </form>
+                @endif
+
             </div>
         </div>
     @else

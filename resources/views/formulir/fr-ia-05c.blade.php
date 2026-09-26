@@ -492,6 +492,21 @@
                 @endif
             </div>
 
+            <!-- PANEL UNIT KOMPETENSI SKEMA -->
+            <div class="panel-nav-soal" style="margin-top: 1rem;">
+                <strong style="font-size: 0.88rem; color: #0f172a; display: block; margin-bottom: 0.5rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.4rem;">
+                    Daftar Unit Kompetensi ({{ $pendaftaran->skema->unitKompetensi->count() }})
+                </strong>
+                <div style="font-size: 0.78rem; color: #334155; display: flex; flex-direction: column; gap: 0.4rem;">
+                    @foreach($pendaftaran->skema->unitKompetensi as $uIdx => $u)
+                        <div style="padding: 0.45rem 0.6rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px;">
+                            <div style="font-weight: 700; color: #1e3a8a; font-family: monospace;">{{ $u->kode_unit }}</div>
+                            <div style="color: #334155; line-height: 1.3; margin-top: 0.15rem;">{{ $u->nama_unit ?? $u->judul_unit }}</div>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+
         </div>
 
     </div>

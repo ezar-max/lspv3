@@ -142,6 +142,27 @@ class QuestionBankController extends Controller
     }
 
     /**
+     * Update Spesifikasi Mutu Produk (FR.IA.11)
+     */
+    public function updateSpec(Request $request, $id)
+    {
+        $request->validate([
+            'spec_name' => 'required|string|max:255',
+            'standard_tolerance' => 'required|string',
+            'order' => 'nullable|integer',
+        ]);
+
+        $spec = MasterProductSpecification::findOrFail($id);
+        $spec->update([
+            'spec_name' => $request->input('spec_name'),
+            'standard_tolerance' => $request->input('standard_tolerance'),
+            'order' => $request->input('order', $spec->order),
+        ]);
+
+        return redirect()->back()->with('sukses', 'Parameter spesifikasi produk berhasil diperbarui!');
+    }
+
+    /**
      * Hapus Spesifikasi Mutu Produk (FR.IA.11)
      */
     public function destroySpec($id)

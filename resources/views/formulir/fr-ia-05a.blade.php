@@ -89,6 +89,34 @@
         </table>
         <div style="font-size: 0.75rem; font-style: italic; color: #64748b; margin-top: -1rem; margin-bottom: 1.25rem;">*Coret yang tidak perlu</div>
 
+        <!-- DAFTAR UNIT KOMPETENSI SKEMA -->
+        <table class="tabel-bnsp" style="margin-bottom: 1.25rem;">
+            <thead>
+                <tr style="background-color: #f1f5f9;">
+                    <th style="width: 5%; text-align: center;">No.</th>
+                    <th style="width: 25%; text-align: center;">Kode Unit</th>
+                    <th style="width: 50%; text-align: center;">Judul Unit Kompetensi</th>
+                    <th style="width: 20%; text-align: center;">Standar Kompetensi</th>
+                </tr>
+            </thead>
+            <tbody>
+                @forelse($pendaftaran->skema->unitKompetensi as $idxU => $u)
+                    <tr>
+                        <td style="text-align: center;">{{ $idxU + 1 }}</td>
+                        <td style="font-weight: 700; font-family: monospace;">{{ $u->kode_unit }}</td>
+                        <td>{{ $u->nama_unit ?? $u->judul_unit }}</td>
+                        <td style="font-size: 0.85rem; color: #475569;">{{ $u->standar_kompetensi ?? 'SKKNI' }}</td>
+                    </tr>
+                @empty
+                    <tr>
+                        <td colspan="4" style="text-align: center; color: #94a3b8; font-style: italic;">
+                            Tidak ada unit kompetensi terdaftar pada skema sertifikasi ini.
+                        </td>
+                    </tr>
+                @endforelse
+            </tbody>
+        </table>
+
         <!-- DAFTAR PERTANYAAN PILIHAN GANDA -->
         <div style="margin-bottom: 1.5rem;">
             <div style="font-weight: 800; font-size: 0.95rem; color: #0f172a; margin-bottom: 0.75rem;">

@@ -277,7 +277,9 @@ Route::middleware(['auth', 'peran:admin,asesor,superadmin'])->prefix('admin/mast
     Route::delete('/soal/{id}', [\App\Http\Controllers\QuestionBankController::class, 'destroy'])->whereNumber('id')->name('soal.destroy');
     Route::post('/{id}/generate-auto', [\App\Http\Controllers\QuestionBankController::class, 'generateAuto'])->whereNumber('id')->name('generate-auto');
     Route::post('/spec/simpan', [\App\Http\Controllers\QuestionBankController::class, 'storeSpec'])->name('spec.store');
-    Route::delete('/spec/{id}', [\App\Http\Controllers\QuestionBankController::class, 'destroySpec'])->name('spec.destroy');
+    Route::post('/spec/{id}/ubah', [\App\Http\Controllers\QuestionBankController::class, 'updateSpec'])->whereNumber('id')->name('spec.update');
+    Route::put('/spec/{id}', [\App\Http\Controllers\QuestionBankController::class, 'updateSpec'])->whereNumber('id')->name('spec.update-put');
+    Route::delete('/spec/{id}', [\App\Http\Controllers\QuestionBankController::class, 'destroySpec'])->whereNumber('id')->name('spec.destroy');
     Route::get('/{instrumentId}/export', [\App\Http\Controllers\QuestionBankController::class, 'export'])->name('export');
 });
 

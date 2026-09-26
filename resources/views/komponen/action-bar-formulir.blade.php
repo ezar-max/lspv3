@@ -13,13 +13,21 @@
     $signedLabel = $signedLabel ?? 'Telah Ditandatangani';
     $signRoute = $signRoute ?? null;
     $signLabel = $signLabel ?? 'Tanda Tangani Hasil Asesmen';
+    $role = auth()->check() ? auth()->user()->peran : null;
+    $defaultBack = match($role) {
+        'asesi' => route('asesi.tahapan'),
+        'asesor' => (!empty($pendaftaran->skema_id) ? route('asesor.mapa', ['skema_id' => $pendaftaran->skema_id]) : route('asesor.daftar-peserta')),
+        default => (!empty($pendaftaran->skema_id) ? route('admin.master-muk.index', ['skema_id' => $pendaftaran->skema_id]) : route('admin.dokumen.index')),
+    };
+    $targetKembali = $kembaliRoute ?? $galeriUrl ?? $defaultBack;
+    if ($targetKembali === '#' || empty($targetKembali)) {
+        $targetKembali = $defaultBack;
+    }
 @endphp
 
 <div class="action-bar-formulir no-print">
     <div class="action-bar-kiri">
-        <a href="{{ (url()->previous() && url()->previous() !== url()->current()) ? url()->previous() : $galeriUrl }}" 
-           onclick="if (document.referrer && document.referrer !== window.location.href) { window.location.href = document.referrer; return false; } else if (window.history.length > 1) { window.history.back(); return false; }"
-           class="tombol tombol-sekunder tombol-sm cursor-pointer">
+        <a href="{{ $targetKembali }}" class="tombol tombol-sekunder tombol-sm cursor-pointer">
             &larr; Kembali
         </a>
         <span class="lencana lencana-biru">{{ $kodeForm ?? 'FORMULIR' }}</span>

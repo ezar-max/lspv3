@@ -90,15 +90,17 @@
         </table>
         <div style="font-size: 0.75rem; font-style: italic; color: #64748b; margin-top: -1rem; margin-bottom: 1.25rem;">*Coret yang tidak perlu</div>
 
-        <!-- PANDUAN BAGI ASESOR -->
-        <div style="border: 1px solid #334155; padding: 1rem 1.25rem; background: #f8fafc; border-radius: 4px; margin-bottom: 1.5rem;">
-            <strong style="display: block; font-size: 0.95rem; color: #0f172a; margin-bottom: 0.5rem; text-transform: uppercase;">PANDUAN BAGI ASESOR</strong>
-            <ul style="margin: 0; padding-left: 1.2rem; font-size: 0.85rem; color: #334155; line-height: 1.6;">
+        <!-- PANDUAN BAGI ASESOR (SESUAI GAMBAR) -->
+        <div style="border: 1px solid #0f172a; padding: 0.85rem 1.25rem; background: #ffffff; margin-bottom: 1.5rem;">
+            <div style="font-weight: 800; font-size: 0.92rem; color: #0f172a; margin-bottom: 0.45rem; text-transform: uppercase;">
+                PANDUAN BAGI ASESOR
+            </div>
+            <ul style="margin: 0; padding-left: 1.2rem; font-size: 0.84rem; color: #0f172a; line-height: 1.65; list-style-type: disc;">
                 <li>Lengkapi nama unit kompetensi, elemen, dan kriteria unjuk kerja sesuai kolom dalam tabel.</li>
-                <li>Isilah standar industri atau tempat kerja.</li>
+                <li>Isilah standar industri atau tempat kerja</li>
                 <li>Beri tanda centang (&radic;) pada kolom "YA" jika Anda yakin asesi dapat melakukan/mendemonstrasikan tugas sesuai KUK, atau centang (&radic;) pada kolom "Tidak" bila sebaliknya.</li>
                 <li>Penilaian Lanjut diisi bila hasil belum dapat disimpulkan, untuk itu gunakan metode lain sehingga keputusan dapat dibuat.</li>
-                <li>Isilah kolom KUK sesuai dengan Unit Kompetensi / SKKNI.</li>
+                <li>Isilah kolom KUK sesuai dengan Unit Kompetensi/ SKKNI</li>
             </ul>
         </div>
 
@@ -109,135 +111,160 @@
                 $pencapaianMap = $savedData['pencapaian'] ?? [];
                 $lanjutMap = $savedData['penilaian_lanjut'] ?? [];
                 $catatanKukMap = $savedData['catatan_kuk'] ?? [];
+
+                $allUnits = $pendaftaran->skema->unitKompetensi ?? collect();
+                $meta = $masterInst->additional_metadata ?? [];
+                if (!is_array($meta)) $meta = json_decode($meta, true) ?: [];
+                $kelompokSplit = (int)($meta['kelompok_split'] ?? 0);
+                $defaultStandarMaster = $meta['default_standard'] ?? null;
+                $standarElemenMaster = $meta['standar_elemen'] ?? [];
+
+                if ($kelompokSplit > 0 && $allUnits->count() > $kelompokSplit) {
+                    $group1Units = $allUnits->slice(0, $kelompokSplit);
+                    $group2Units = $allUnits->slice($kelompokSplit);
+                } else {
+                    $group1Units = $allUnits;
+                    $group2Units = collect();
+                }
             @endphp
 
-        <!-- KELOMPOK PEKERJAAN -->
-        <table class="tabel-bnsp" style="margin-bottom: 1.5rem;">
+        <!-- KELOMPOK PEKERJAAN 1 -->
+        <table class="tabel-bnsp" style="width: 100%; border-collapse: collapse; margin-bottom: 1.5rem; font-size: 0.86rem;">
             <thead>
                 <tr>
-                    <th style="width: 22%; text-align: center;">Kelompok Pekerjaan</th>
-                    <th style="width: 8%; text-align: center;">No.</th>
-                    <th style="width: 25%;">Kode Unit</th>
-                    <th>Judul Unit</th>
+                    <th rowspan="{{ $group1Units->count() + 1 }}" style="width: 25%; text-align: center; vertical-align: middle; font-weight: 800; background-color: #ffffff; border: 1px solid #0f172a; padding: 8px 10px;">
+                        Kelompok Pekerjaan 1
+                    </th>
+                    <th style="width: 8%; text-align: center; font-weight: 700; border: 1px solid #0f172a; padding: 6px;">No.</th>
+                    <th style="width: 27%; text-align: center; font-weight: 700; border: 1px solid #0f172a; padding: 6px;">Kode Unit</th>
+                    <th style="text-align: center; font-weight: 700; border: 1px solid #0f172a; padding: 6px;">Judul Unit</th>
                 </tr>
             </thead>
             <tbody>
-                @forelse($pendaftaran->skema->unitKompetensi as $indexUnit => $unit)
+                @forelse($group1Units as $indexUnit => $unit)
                     <tr>
-                        @if($indexUnit === 0)
-                            <td rowspan="{{ count($pendaftaran->skema->unitKompetensi) }}" style="vertical-align: middle; text-align: center; font-weight: 700; background-color: #f8fafc;">
-                                Kelompok Pekerjaan 1
-                            </td>
-                        @endif
-                        <td style="text-align: center; font-weight: 700;">{{ $indexUnit + 1 }}.</td>
-                        <td style="font-weight: 600; color: #0284c7;">{{ $unit->kode_unit }}</td>
-                        <td style="font-weight: 600; color: #0f172a;">{{ $unit->judul_unit }}</td>
+                        <td style="text-align: center; font-weight: 700; border: 1px solid #0f172a; padding: 6px;">{{ $indexUnit + 1 }}.</td>
+                        <td style="font-weight: 600; color: #0f172a; border: 1px solid #0f172a; padding: 6px 10px;">{{ $unit->kode_unit }}</td>
+                        <td style="font-weight: 600; color: #0f172a; border: 1px solid #0f172a; padding: 6px 10px;">{{ $unit->judul_unit }}</td>
                     </tr>
                 @empty
-                    <tr><td colspan="4" style="text-align: center; color: #64748b;">Belum ada data unit kompetensi.</td></tr>
+                    <tr><td colspan="3" style="text-align: center; color: #64748b; font-style: italic; border: 1px solid #0f172a; padding: 10px;">Belum ada data unit kompetensi.</td></tr>
                 @endforelse
             </tbody>
         </table>
 
-        <!-- LOOP CEKLIS OBSERVASI PER UNIT KOMPETENSI -->
-        @foreach($pendaftaran->skema->unitKompetensi as $indexUnit => $unit)
-            <div style="margin-top: 1.75rem;" class="{{ $indexUnit > 0 ? 'page-break' : '' }}">
+        <!-- LOOP CEKLIS OBSERVASI PER UNIT KOMPETENSI (KELOMPOK 1) -->
+        @foreach($group1Units as $indexUnit => $unit)
+            <div style="margin-top: 1.75rem; margin-bottom: 2rem;" class="{{ $indexUnit > 0 ? 'page-break' : '' }}">
                 
-                <table class="tabel-bnsp" style="margin-bottom: 0; border-bottom: none;">
+                <table class="tabel-bnsp" style="width: 100%; border-collapse: collapse; margin-bottom: 0; font-size: 0.88rem;">
                     <tr>
-                        <td rowspan="2" style="width: 22%; font-weight: 700; vertical-align: middle; background-color: #f1f5f9;">
+                        <td rowspan="2" style="width: 25%; font-weight: 800; vertical-align: middle; background-color: #ffffff; border: 1px solid #0f172a; padding: 8px 10px;">
                             Unit Kompetensi {{ $indexUnit + 1 }}
                         </td>
-                        <td style="width: 15%; font-weight: 600;">Kode Unit</td>
-                        <td style="width: 2%;">:</td>
-                        <td style="font-weight: 700; color: #0284c7;">{{ $unit->kode_unit }}</td>
+                        <td style="width: 14%; font-weight: 600; border: 1px solid #0f172a; padding: 6px 10px;">Kode Unit</td>
+                        <td style="width: 2%; text-align: center; border: 1px solid #0f172a; padding: 6px 4px;">:</td>
+                        <td style="font-weight: 700; color: #0f172a; border: 1px solid #0f172a; padding: 6px 10px;">{{ $unit->kode_unit }}</td>
                     </tr>
                     <tr>
-                        <td style="font-weight: 600;">Judul Unit</td>
-                        <td>:</td>
-                        <td style="font-weight: 700; color: #0f172a;">{{ $unit->judul_unit }}</td>
+                        <td style="font-weight: 600; border: 1px solid #0f172a; padding: 6px 10px;">Judul Unit</td>
+                        <td style="text-align: center; border: 1px solid #0f172a; padding: 6px 4px;">:</td>
+                        <td style="font-weight: 700; color: #0f172a; border: 1px solid #0f172a; padding: 6px 10px;">{{ $unit->judul_unit }}</td>
                     </tr>
                 </table>
 
-                <table class="tabel-bnsp" style="font-size: 0.85rem;">
+                <table class="tabel-bnsp" style="width: 100%; border-collapse: collapse; font-size: 0.82rem; margin-top: -1px;">
                     <thead>
                         <tr>
-                            <th rowspan="2" style="width: 5%; text-align: center;">No.</th>
-                            <th rowspan="2" style="width: 22%;">Elemen</th>
-                            <th rowspan="2" style="width: 33%;">Kriteria Unjuk Kerja</th>
-                            <th rowspan="2" style="width: 18%;">Standar Industri atau Tempat Kerja</th>
-                            <th colspan="2" style="width: 12%; text-align: center;">Pencapaian</th>
-                            <th rowspan="2" style="width: 10%; text-align: center;">Penilaian Lanjut</th>
+                            <th rowspan="2" style="width: 5%; text-align: center; border: 1px solid #0f172a; padding: 6px;">No.</th>
+                            <th rowspan="2" style="width: 22%; text-align: center; border: 1px solid #0f172a; padding: 6px;">Elemen</th>
+                            <th rowspan="2" style="width: 33%; text-align: center; border: 1px solid #0f172a; padding: 6px;">Kriteria Unjuk Kerja</th>
+                            <th rowspan="2" style="width: 20%; text-align: center; border: 1px solid #0f172a; padding: 6px;">Standar Industri atau Tempat Kerja</th>
+                            <th colspan="2" style="width: 12%; text-align: center; border: 1px solid #0f172a; padding: 6px;">Pencapaian</th>
+                            <th rowspan="2" style="width: 8%; text-align: center; border: 1px solid #0f172a; padding: 6px;">Penilaian Lanjut</th>
                         </tr>
                         <tr>
-                            <th style="width: 6%; text-align: center;">Ya</th>
-                            <th style="width: 6%; text-align: center;">Tidak</th>
+                            <th style="width: 6%; text-align: center; border: 1px solid #0f172a; padding: 4px;">Ya</th>
+                            <th style="width: 6%; text-align: center; border: 1px solid #0f172a; padding: 4px;">Tidak</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse($unit->elemenKompetensi as $idxElem => $elem)
                             @php
                                 $totalKuk = count($elem->kriteriaUnjukKerja);
+                                $elemStandar = $standarMap[$elem->id] 
+                                    ?? ($standarElemenMaster[$elem->id] 
+                                    ?? ($defaultStandarMaster 
+                                    ?? ('SKKNI ' . $unit->kode_unit)));
                             @endphp
                             @if($totalKuk > 0)
                                 @foreach($elem->kriteriaUnjukKerja as $kIdx => $kuk)
+                                    @php
+                                        $curPencapaian = $pencapaianMap[$kuk->id] ?? null;
+                                        $curLanjut = $lanjutMap[$kuk->id] ?? '';
+                                    @endphp
                                     <tr>
                                         @if($kIdx === 0)
-                                            <td rowspan="{{ $totalKuk }}" style="text-align: center; font-weight: 700; vertical-align: middle;">
+                                            <td rowspan="{{ $totalKuk }}" style="text-align: center; font-weight: 700; vertical-align: top; border: 1px solid #0f172a; padding: 6px;">
                                                 {{ $idxElem + 1 }}
                                             </td>
-                                            <td rowspan="{{ $totalKuk }}" style="font-weight: 600; color: #0f172a; vertical-align: top;">
+                                            <td rowspan="{{ $totalKuk }}" style="font-weight: 600; color: #0f172a; vertical-align: top; border: 1px solid #0f172a; padding: 6px 8px;">
                                                 {{ $elem->nomor_elemen }}. {{ $elem->nama_elemen }}
                                                 @if(!empty($elem->pertanyaan_elemen))
-                                                    <div style="font-size: 0.78rem; color: #0284c7; font-style: italic; margin-top: 0.25rem;">"{{ $elem->pertanyaan_elemen }}"</div>
+                                                    <div style="font-size: 0.76rem; color: #0284c7; font-style: italic; margin-top: 0.25rem;">"{{ $elem->pertanyaan_elemen }}"</div>
                                                 @endif
                                             </td>
                                         @endif
-                                        @php
-                                            $curStandar = $standarMap[$kuk->id] ?? ('SKKNI ' . $unit->kode_unit);
-                                            $curPencapaian = $pencapaianMap[$kuk->id] ?? null;
-                                            $curLanjut = $lanjutMap[$kuk->id] ?? '';
-                                        @endphp
-                                        <td>
-                                            <strong style="color: #0284c7;">{{ $kuk->nomor_kuk }}</strong> {{ $kuk->pernyataan_kuk }}
+
+                                        <td style="border: 1px solid #0f172a; padding: 6px 8px; vertical-align: top;">
+                                            <strong style="color: #0f172a;">{{ $elem->nomor_elemen }}.{{ $kuk->nomor_kuk }}</strong> {{ $kuk->pernyataan_kuk }}
                                         </td>
-                                        <td>
-                                            <input type="text" name="standar_industri[{{ $kuk->id }}]" class="input-inline-bnsp" value="{{ $curStandar }}" style="font-size: 0.78rem;" {{ $isAsesi ? 'readonly' : '' }}>
+
+                                        @if($kIdx === 0)
+                                            <!-- Standar Industri per Elemen Spanning Row (Sesuai Gambar) -->
+                                            <td rowspan="{{ $totalKuk }}" style="border: 1px solid #0f172a; padding: 6px; vertical-align: middle; text-align: center; background: #fafafa;">
+                                                <textarea name="standar_industri[{{ $elem->id }}]" rows="{{ max(2, $totalKuk) }}" class="input-inline-bnsp" style="width: 100%; border: 1px dashed #94a3b8; padding: 4px; font-size: 0.78rem; text-align: center; resize: vertical;" placeholder="Standar Industri..." {{ $isAsesi ? 'readonly' : '' }}>{{ $elemStandar }}</textarea>
+                                            </td>
+                                        @endif
+
+                                        <td style="text-align: center; vertical-align: middle; border: 1px solid #0f172a; padding: 4px;">
+                                            <input type="radio" name="pencapaian[{{ $kuk->id }}]" value="K" {{ $curPencapaian === 'K' || ($curPencapaian === null && $isAsesi) ? 'checked' : '' }} style="width: 16px; height: 16px; accent-color: #059669; cursor: pointer;" {{ $isAsesi ? 'disabled' : '' }}>
                                         </td>
-                                        <td style="text-align: center; vertical-align: middle;">
-                                            <input type="radio" name="pencapaian[{{ $kuk->id }}]" value="K" {{ $curPencapaian === 'K' || ($curPencapaian === null && $isAsesi) ? 'checked' : '' }} style="width: 16px; height: 16px; accent-color: #059669;" {{ $isAsesi ? 'disabled' : '' }}>
+                                        <td style="text-align: center; vertical-align: middle; border: 1px solid #0f172a; padding: 4px;">
+                                            <input type="radio" name="pencapaian[{{ $kuk->id }}]" value="BK" {{ $curPencapaian === 'BK' ? 'checked' : '' }} style="width: 16px; height: 16px; accent-color: #dc2626; cursor: pointer;" {{ $isAsesi ? 'disabled' : '' }}>
                                         </td>
-                                        <td style="text-align: center; vertical-align: middle;">
-                                            <input type="radio" name="pencapaian[{{ $kuk->id }}]" value="BK" {{ $curPencapaian === 'BK' ? 'checked' : '' }} style="width: 16px; height: 16px; accent-color: #dc2626;" {{ $isAsesi ? 'disabled' : '' }}>
-                                        </td>
-                                        <td>
-                                            <input type="text" name="penilaian_lanjut[{{ $kuk->id }}]" class="input-inline-bnsp" value="{{ $curLanjut }}" placeholder="Catatan..." style="font-size: 0.78rem;" {{ $isAsesi ? 'readonly' : '' }}>
+                                        <td style="border: 1px solid #0f172a; padding: 4px; vertical-align: middle;">
+                                            <input type="text" name="penilaian_lanjut[{{ $kuk->id }}]" class="input-inline-bnsp" value="{{ $curLanjut }}" placeholder="..." style="font-size: 0.78rem; width: 100%;" {{ $isAsesi ? 'readonly' : '' }}>
                                         </td>
                                     </tr>
                                 @endforeach
                             @else
                                 <tr>
-                                    <td style="text-align: center; font-weight: 700;">{{ $idxElem + 1 }}</td>
-                                    <td style="font-weight: 600;">{{ $elem->nomor_elemen }}. {{ $elem->nama_elemen }}</td>
-                                    <td style="font-style: italic; color: #64748b;">KUK belum diinput.</td>
-                                    <td><input type="text" class="input-inline-bnsp" value="SKKNI" style="font-size: 0.78rem;"></td>
-                                    <td style="text-align: center;"><input type="checkbox" checked style="width: 16px; height: 16px;"></td>
-                                    <td style="text-align: center;"><input type="checkbox" style="width: 16px; height: 16px;"></td>
-                                    <td><input type="text" class="input-inline-bnsp" style="font-size: 0.78rem;"></td>
+                                    <td style="text-align: center; font-weight: 700; border: 1px solid #0f172a; padding: 6px;">{{ $idxElem + 1 }}</td>
+                                    <td style="font-weight: 600; border: 1px solid #0f172a; padding: 6px 8px;">{{ $elem->nomor_elemen }}. {{ $elem->nama_elemen }}</td>
+                                    <td style="font-style: italic; color: #64748b; border: 1px solid #0f172a; padding: 6px 8px;">KUK belum diinput.</td>
+                                    <td style="border: 1px solid #0f172a; padding: 6px;"><input type="text" class="input-inline-bnsp" value="SKKNI" style="font-size: 0.78rem;"></td>
+                                    <td style="text-align: center; border: 1px solid #0f172a; padding: 4px;"><input type="checkbox" checked style="width: 16px; height: 16px;"></td>
+                                    <td style="text-align: center; border: 1px solid #0f172a; padding: 4px;"><input type="checkbox" style="width: 16px; height: 16px;"></td>
+                                    <td style="border: 1px solid #0f172a; padding: 4px;"><input type="text" class="input-inline-bnsp" style="font-size: 0.78rem;"></td>
                                 </tr>
                             @endif
                         @empty
-                            <tr><td colspan="7" style="text-align: center; color: #64748b;">Belum ada data elemen.</td></tr>
+                            <tr><td colspan="7" style="text-align: center; color: #64748b; font-style: italic; border: 1px solid #0f172a; padding: 10px;">Belum ada data elemen.</td></tr>
                         @endforelse
                     </tbody>
                 </table>
             </div>
         @endforeach
 
-        <!-- UMPAN BALIK DAN PENGESAHAN -->
-        <div style="margin-top: 1.5rem; margin-bottom: 1.5rem;">
-            <div style="font-weight: 700; font-size: 0.95rem; margin-bottom: 0.4rem; color: #0f172a;">Umpan Balik / Catatan Asesor:</div>
-            <textarea name="umpan_balik" class="input-inline-bnsp" rows="3" placeholder="Tuliskan umpan balik untuk asesi..." {{ $isAsesi ? 'readonly' : '' }}>{{ $iaRecord->catatan_asesor ?? ($savedData['umpan_balik'] ?? 'Seluruh instruksi kerja dan demonstrasi praktik telah diobservasi dengan baik sesuai standar kompetensi SKKNI.') }}</textarea>
+        <!-- ========================================================================= -->
+        <!-- UMPAN BALIK UNTUK ASESI (SESUAI GAMBAR) -->
+        <!-- ========================================================================= -->
+        <div style="border: 1px solid #0f172a; padding: 0.85rem 1rem; margin-top: 1.5rem; margin-bottom: 1.5rem;">
+            <div style="font-weight: 700; font-size: 0.92rem; margin-bottom: 0.45rem; color: #0f172a;">
+                Umpan Balik untuk asesi:
+            </div>
+            <textarea name="umpan_balik" class="input-inline-bnsp" rows="3" style="width: 100%; border: 1px dashed #cbd5e1; padding: 0.5rem; font-size: 0.85rem; border-radius: 4px; box-sizing: border-box;" placeholder="Tuliskan umpan balik untuk asesi..." {{ $isAsesi ? 'readonly' : '' }}>{{ $iaRecord->catatan_asesor ?? ($savedData['umpan_balik'] ?? ($meta['umpan_balik'] ?? 'Seluruh instruksi kerja dan demonstrasi praktik telah diobservasi dengan baik sesuai standar kompetensi SKKNI.')) }}</textarea>
             
             <div style="margin-top: 0.85rem; padding: 0.75rem 1rem; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 4px;">
                 <div style="font-weight: 700; font-size: 0.88rem; color: #0f172a; margin-bottom: 0.35rem;">Rekomendasi Keputusan Asesor:</div>
@@ -253,6 +280,119 @@
                 </div>
             </div>
         </div>
+
+        <!-- KELOMPOK PEKERJAAN 2 (JIKA ADA) -->
+        @if($group2Units->count() > 0)
+            <table class="tabel-bnsp" style="width: 100%; border-collapse: collapse; margin-top: 2rem; margin-bottom: 1.5rem; font-size: 0.86rem;">
+                <thead>
+                    <tr>
+                        <th rowspan="{{ $group2Units->count() + 1 }}" style="width: 25%; text-align: center; vertical-align: middle; font-weight: 800; background-color: #ffffff; border: 1px solid #0f172a; padding: 8px 10px;">
+                            Kelompok Pekerjaan 2
+                        </th>
+                        <th style="width: 8%; text-align: center; font-weight: 700; border: 1px solid #0f172a; padding: 6px;">No.</th>
+                        <th style="width: 27%; text-align: center; font-weight: 700; border: 1px solid #0f172a; padding: 6px;">Kode Unit</th>
+                        <th style="text-align: center; font-weight: 700; border: 1px solid #0f172a; padding: 6px;">Judul Unit</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($group2Units as $indexUnit => $unit)
+                        <tr>
+                            <td style="text-align: center; font-weight: 700; border: 1px solid #0f172a; padding: 6px;">{{ $indexUnit + 1 }}.</td>
+                            <td style="font-weight: 600; color: #0f172a; border: 1px solid #0f172a; padding: 6px 10px;">{{ $unit->kode_unit }}</td>
+                            <td style="font-weight: 600; color: #0f172a; border: 1px solid #0f172a; padding: 6px 10px;">{{ $unit->judul_unit }}</td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+
+            @foreach($group2Units as $indexUnit => $unit)
+                <div style="margin-top: 1.75rem; margin-bottom: 2rem;" class="page-break">
+                    <table class="tabel-bnsp" style="width: 100%; border-collapse: collapse; margin-bottom: 0; font-size: 0.88rem;">
+                        <tr>
+                            <td rowspan="2" style="width: 25%; font-weight: 800; vertical-align: middle; background-color: #ffffff; border: 1px solid #0f172a; padding: 8px 10px;">
+                                Unit Kompetensi {{ $group1Units->count() + $indexUnit + 1 }}
+                            </td>
+                            <td style="width: 14%; font-weight: 600; border: 1px solid #0f172a; padding: 6px 10px;">Kode Unit</td>
+                            <td style="width: 2%; text-align: center; border: 1px solid #0f172a; padding: 6px 4px;">:</td>
+                            <td style="font-weight: 700; color: #0f172a; border: 1px solid #0f172a; padding: 6px 10px;">{{ $unit->kode_unit }}</td>
+                        </tr>
+                        <tr>
+                            <td style="font-weight: 600; border: 1px solid #0f172a; padding: 6px 10px;">Judul Unit</td>
+                            <td style="text-align: center; border: 1px solid #0f172a; padding: 6px 4px;">:</td>
+                            <td style="font-weight: 700; color: #0f172a; border: 1px solid #0f172a; padding: 6px 10px;">{{ $unit->judul_unit }}</td>
+                        </tr>
+                    </table>
+
+                    <table class="tabel-bnsp" style="width: 100%; border-collapse: collapse; font-size: 0.82rem; margin-top: -1px;">
+                        <thead>
+                            <tr>
+                                <th rowspan="2" style="width: 5%; text-align: center; border: 1px solid #0f172a; padding: 6px;">No.</th>
+                                <th rowspan="2" style="width: 22%; text-align: center; border: 1px solid #0f172a; padding: 6px;">Elemen</th>
+                                <th rowspan="2" style="width: 33%; text-align: center; border: 1px solid #0f172a; padding: 6px;">Kriteria Unjuk Kerja</th>
+                                <th rowspan="2" style="width: 20%; text-align: center; border: 1px solid #0f172a; padding: 6px;">Standar Industri atau Tempat Kerja</th>
+                                <th colspan="2" style="width: 12%; text-align: center; border: 1px solid #0f172a; padding: 6px;">Pencapaian</th>
+                                <th rowspan="2" style="width: 8%; text-align: center; border: 1px solid #0f172a; padding: 6px;">Penilaian Lanjut</th>
+                            </tr>
+                            <tr>
+                                <th style="width: 6%; text-align: center; border: 1px solid #0f172a; padding: 4px;">Ya</th>
+                                <th style="width: 6%; text-align: center; border: 1px solid #0f172a; padding: 4px;">Tidak</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($unit->elemenKompetensi as $idxElem => $elem)
+                                @php
+                                    $totalKuk = count($elem->kriteriaUnjukKerja);
+                                    $elemStandar = $standarMap[$elem->id] 
+                                        ?? ($standarElemenMaster[$elem->id] 
+                                        ?? ($defaultStandarMaster 
+                                        ?? ('SKKNI ' . $unit->kode_unit)));
+                                @endphp
+                                @if($totalKuk > 0)
+                                    @foreach($elem->kriteriaUnjukKerja as $kIdx => $kuk)
+                                        @php
+                                            $curPencapaian = $pencapaianMap[$kuk->id] ?? null;
+                                            $curLanjut = $lanjutMap[$kuk->id] ?? '';
+                                        @endphp
+                                        <tr>
+                                            @if($kIdx === 0)
+                                                <td rowspan="{{ $totalKuk }}" style="text-align: center; font-weight: 700; vertical-align: top; border: 1px solid #0f172a; padding: 6px;">
+                                                    {{ $idxElem + 1 }}
+                                                </td>
+                                                <td rowspan="{{ $totalKuk }}" style="font-weight: 600; color: #0f172a; vertical-align: top; border: 1px solid #0f172a; padding: 6px 8px;">
+                                                    {{ $elem->nomor_elemen }}. {{ $elem->nama_elemen }}
+                                                </td>
+                                            @endif
+
+                                            <td style="border: 1px solid #0f172a; padding: 6px 8px; vertical-align: top;">
+                                                <strong style="color: #0f172a;">{{ $elem->nomor_elemen }}.{{ $kuk->nomor_kuk }}</strong> {{ $kuk->pernyataan_kuk }}
+                                            </td>
+
+                                            @if($kIdx === 0)
+                                                <td rowspan="{{ $totalKuk }}" style="border: 1px solid #0f172a; padding: 6px; vertical-align: middle; text-align: center; background: #fafafa;">
+                                                    <textarea name="standar_industri[{{ $elem->id }}]" rows="{{ max(2, $totalKuk) }}" class="input-inline-bnsp" style="width: 100%; border: 1px dashed #94a3b8; padding: 4px; font-size: 0.78rem; text-align: center; resize: vertical;" placeholder="Standar Industri..." {{ $isAsesi ? 'readonly' : '' }}>{{ $elemStandar }}</textarea>
+                                                </td>
+                                            @endif
+
+                                            <td style="text-align: center; vertical-align: middle; border: 1px solid #0f172a; padding: 4px;">
+                                                <input type="radio" name="pencapaian[{{ $kuk->id }}]" value="K" {{ $curPencapaian === 'K' || ($curPencapaian === null && $isAsesi) ? 'checked' : '' }} style="width: 16px; height: 16px; accent-color: #059669; cursor: pointer;" {{ $isAsesi ? 'disabled' : '' }}>
+                                            </td>
+                                            <td style="text-align: center; vertical-align: middle; border: 1px solid #0f172a; padding: 4px;">
+                                                <input type="radio" name="pencapaian[{{ $kuk->id }}]" value="BK" {{ $curPencapaian === 'BK' ? 'checked' : '' }} style="width: 16px; height: 16px; accent-color: #dc2626; cursor: pointer;" {{ $isAsesi ? 'disabled' : '' }}>
+                                            </td>
+                                            <td style="border: 1px solid #0f172a; padding: 4px; vertical-align: middle;">
+                                                <input type="text" name="penilaian_lanjut[{{ $kuk->id }}]" class="input-inline-bnsp" value="{{ $curLanjut }}" placeholder="..." style="font-size: 0.78rem; width: 100%;" {{ $isAsesi ? 'readonly' : '' }}>
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                @endif
+                            @empty
+                                <tr><td colspan="7" style="text-align: center; color: #64748b; font-style: italic; border: 1px solid #0f172a; padding: 10px;">Belum ada data elemen.</td></tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            @endforeach
+        @endif
         </form>
 
         <!-- PENGESAHAN ASESI & ASESOR -->

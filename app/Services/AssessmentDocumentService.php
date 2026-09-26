@@ -242,7 +242,6 @@ class AssessmentDocumentService
                     "Asesor {$user->nama_lengkap} telah menetapkan keputusan asesmen: {$statusTeks} pada formulir FR.AK.02. Silakan melihat lembar hasil & nilai Anda.",
                     $targetUrl,
                     'success',
-                    ['pendaftaran_id' => $ak02->pendaftaran_id]
                     ['pendaftaran_id' => $ak02->pendaftaran_id, 'keputusan' => $ak02->keputusan_final]
                 ));
             }

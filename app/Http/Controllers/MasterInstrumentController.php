@@ -15,6 +15,7 @@ use App\Models\Mapa02;
 use App\Models\PendaftaranAsesi;
 use App\Models\MasterAk01;
 use App\Models\MasterAk07;
+use App\Models\JadwalAsesmen;
 use App\Http\Requests\StoreMasterInstrumentRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -22,28 +23,89 @@ use Illuminate\Support\Facades\DB;
 class MasterInstrumentController extends Controller
 {
     /**
-     * Pusat Pembuatan Formulir (FR.MAPA & FR.IA) Berbasis Skema untuk Admin
+     * Pusat Pembuatan Formulir (FR.MAPA & FR.IA) Berbasis Skema untuk Admin & Asesor
      */
     public function index(Request $request)
     {
-        // Ambil semua skema aktif dengan unit, elemen, KUK, dan master instrument
-        $skemaList = SkemaSertifikasi::where('status_aktif', true)
-            ->with([
-                'unitKompetensi.elemenKompetensi.kriteriaUnjukKerja',
-                'masterInstruments.questionBanks',
-                'masterInstruments.productSpecifications'
-            ])
-            ->orderBy('nama_skema', 'asc')
-            ->get();
+        $user = auth()->user();
+        $isAsesor = $user && $user->peran === 'asesor';
 
-        if ($skemaList->isEmpty()) {
-            // Tidak ada skema aktif — tampilkan state kosong tanpa auto-create
-            $selectedSkema = null;
-            $selectedSkemaId = 0;
+        if ($isAsesor) {
+            $asesorId = $user->id;
+            $primarySkemaId = $user->skema_id;
+            $jadwalSkemaIds = JadwalAsesmen::where('asesor_id', $asesorId)
+                ->pluck('skema_id')
+                ->unique()
+                ->toArray();
+
+            $accessibleSkemaIds = array_unique(array_filter(array_merge([$primarySkemaId], $jadwalSkemaIds)));
+
+            if (!empty($accessibleSkemaIds)) {
+                $skemaList = SkemaSertifikasi::whereIn('id', $accessibleSkemaIds)
+                    ->where('status_aktif', true)
+                    ->with([
+                        'unitKompetensi.elemenKompetensi.kriteriaUnjukKerja',
+                        'masterInstruments.questionBanks',
+                        'masterInstruments.productSpecifications'
+                    ])
+                    ->orderBy('nama_skema', 'asc')
+                    ->get();
+
+                if ($skemaList->isEmpty()) {
+                    $skemaList = SkemaSertifikasi::where('status_aktif', true)
+                        ->with([
+                            'unitKompetensi.elemenKompetensi.kriteriaUnjukKerja',
+                            'masterInstruments.questionBanks',
+                            'masterInstruments.productSpecifications'
+                        ])
+                        ->orderBy('nama_skema', 'asc')
+                        ->get();
+                }
+            } else {
+                $skemaList = SkemaSertifikasi::where('status_aktif', true)
+                    ->with([
+                        'unitKompetensi.elemenKompetensi.kriteriaUnjukKerja',
+                        'masterInstruments.questionBanks',
+                        'masterInstruments.productSpecifications'
+                    ])
+                    ->orderBy('nama_skema', 'asc')
+                    ->get();
+            }
+
+            if ($skemaList->isEmpty()) {
+                $selectedSkema = null;
+                $selectedSkemaId = 0;
+            } else {
+                $requestedSkemaId = (int) $request->get('skema_id');
+                if ($requestedSkemaId && $skemaList->contains('id', $requestedSkemaId)) {
+                    $selectedSkemaId = $requestedSkemaId;
+                } elseif ($primarySkemaId && $skemaList->contains('id', (int) $primarySkemaId)) {
+                    $selectedSkemaId = (int) $primarySkemaId;
+                } else {
+                    $selectedSkemaId = (int) ($skemaList->first()?->id ?? 0);
+                }
+                $selectedSkema = $skemaList->firstWhere('id', $selectedSkemaId) ?: $skemaList->first();
+                $selectedSkemaId = $selectedSkema?->id ?? 0;
+            }
         } else {
-            // Tentukan skema yang dipilih oleh admin (bebas memilih skema apa saja)
-            $selectedSkemaId = (int) ($request->get('skema_id') ?: ($skemaList->first()?->id ?? 0));
-            $selectedSkema = $skemaList->firstWhere('id', $selectedSkemaId) ?: $skemaList->first();
+            // Ambil semua skema aktif dengan unit, elemen, KUK, dan master instrument (Admin / Superadmin)
+            $skemaList = SkemaSertifikasi::where('status_aktif', true)
+                ->with([
+                    'unitKompetensi.elemenKompetensi.kriteriaUnjukKerja',
+                    'masterInstruments.questionBanks',
+                    'masterInstruments.productSpecifications'
+                ])
+                ->orderBy('nama_skema', 'asc')
+                ->get();
+
+            if ($skemaList->isEmpty()) {
+                $selectedSkema = null;
+                $selectedSkemaId = 0;
+            } else {
+                $selectedSkemaId = (int) ($request->get('skema_id') ?: ($skemaList->first()?->id ?? 0));
+                $selectedSkema = $skemaList->firstWhere('id', $selectedSkemaId) ?: $skemaList->first();
+                $selectedSkemaId = $selectedSkema?->id ?? 0;
+            }
         }
 
         // Rekan asesor pada skema yang dipilih
@@ -102,6 +164,19 @@ class MasterInstrumentController extends Controller
                 ->with('error', 'Skema sertifikasi tidak ditemukan. Pastikan skema sudah dibuat dan aktif.');
         }
 
+        $user = auth()->user();
+        if ($user && $user->peran === 'asesor') {
+            $accessibleSkemaIds = array_unique(array_filter(array_merge(
+                [$user->skema_id],
+                JadwalAsesmen::where('asesor_id', $user->id)->pluck('skema_id')->unique()->toArray()
+            )));
+            $accessibleInts = array_map('intval', $accessibleSkemaIds);
+            if (!empty($accessibleInts) && !in_array((int) $skemaId, $accessibleInts, true)) {
+                return redirect()->route('admin.master-muk.index')
+                    ->with('error', 'Akses Ditolak: Anda tidak memiliki penugasan untuk skema ini.');
+            }
+        }
+
         $normalized = SchemeMasterInstrument::normalizeCode($code);
         $bnspInfo = SchemeMasterInstrument::BNSP_INSTRUMENT_MAP[$normalized] ?? null;
         $defaultTitle = $bnspInfo['full_name'] ?? ('Master Instrumen ' . strtoupper($code));
@@ -113,8 +188,7 @@ class MasterInstrumentController extends Controller
             ->first();
 
         if ($existing) {
-            return redirect()->route('admin.master-muk.manage', $existing->id)
-                ->with('sukses', "Formulir {$existing->title} sudah ada. Silakan kelola di sini.");
+            return redirect()->route('admin.master-muk.manage', $existing->id);
         }
 
         // Buat instrumen baru hanya saat user secara eksplisit klik "Tambah Form +"
@@ -133,8 +207,7 @@ class MasterInstrumentController extends Controller
             'user_agent' => $request->userAgent(),
         ]);
 
-        return redirect()->route('admin.master-muk.manage', $instrument->id)
-            ->with('sukses', "Formulir {$instrument->title} berhasil dibuat dan siap dikelola.");
+        return redirect()->route('admin.master-muk.manage', $instrument->id);
     }
 
     /**
@@ -211,28 +284,34 @@ class MasterInstrumentController extends Controller
             'productSpecifications'
         ])->findOrFail($id);
 
+        $user = auth()->user();
+        if ($user && $user->peran === 'asesor') {
+            $accessibleSkemaIds = array_unique(array_filter(array_merge(
+                [$user->skema_id],
+                JadwalAsesmen::where('asesor_id', $user->id)->pluck('skema_id')->unique()->toArray()
+            )));
+            $accessibleInts = array_map('intval', $accessibleSkemaIds);
+            if (!empty($accessibleInts) && !in_array((int) $instrument->skema_id, $accessibleInts, true)) {
+                return redirect()->route('admin.master-muk.index')
+                    ->with('error', 'Akses Ditolak: Anda tidak memiliki penugasan untuk skema formulir ini.');
+            }
+        }
+
         $skemaList = SkemaSertifikasi::orderBy('nama_skema', 'asc')->get();
 
-        // Kumpulkan daftar KUK untuk dropdown pilihan relasi KUK
+        // Kumpulkan daftar KUK untuk seluruh unit kompetensi pada skema
         $kukList = [];
-        if ($instrument->unitKompetensi) {
-            foreach ($instrument->unitKompetensi->elemenKompetensi as $elemen) {
+        $unitsToUse = ($instrument->skema && $instrument->skema->unitKompetensi->isNotEmpty())
+            ? $instrument->skema->unitKompetensi
+            : ($instrument->unitKompetensi ? collect([$instrument->unitKompetensi]) : collect());
+
+        foreach ($unitsToUse as $unit) {
+            foreach ($unit->elemenKompetensi as $elemen) {
                 foreach ($elemen->kriteriaUnjukKerja as $kuk) {
                     $kukList[] = [
                         'id' => $kuk->id,
-                        'label' => "{$elemen->nomor_elemen}.{$kuk->nomor_kuk} - {$kuk->pernyataan_kuk} (Unit: {$instrument->unitKompetensi->kode_unit})"
+                        'label' => "[{$unit->kode_unit}] {$elemen->nomor_elemen}.{$kuk->nomor_kuk} - " . \Illuminate\Support\Str::limit($kuk->pernyataan_kuk, 80)
                     ];
-                }
-            }
-        } elseif ($instrument->skema) {
-            foreach ($instrument->skema->unitKompetensi as $unit) {
-                foreach ($unit->elemenKompetensi as $elemen) {
-                    foreach ($elemen->kriteriaUnjukKerja as $kuk) {
-                        $kukList[] = [
-                            'id' => $kuk->id,
-                            'label' => "[{$unit->kode_unit}] {$elemen->nomor_elemen}.{$kuk->nomor_kuk} - " . \Illuminate\Support\Str::limit($kuk->pernyataan_kuk, 80)
-                        ];
-                    }
                 }
             }
         }
@@ -266,10 +345,40 @@ class MasterInstrumentController extends Controller
         if ($request->has('metadata_deliverables')) {
             $meta['deliverables'] = $request->input('metadata_deliverables');
         }
+        if ($request->has('metadata_instructions')) {
+            $meta['instructions'] = $request->input('metadata_instructions');
+        }
+        if ($request->has('metadata_default_standard')) {
+            $meta['default_standard'] = $request->input('metadata_default_standard');
+        }
+        if ($request->has('metadata_benchmark')) {
+            $meta['benchmark'] = $request->input('metadata_benchmark');
+        }
+        if ($request->has('metadata_kuk_standards')) {
+            $meta['kuk_standards'] = $request->input('metadata_kuk_standards');
+        }
+        if ($request->has('metadata_standar_elemen')) {
+            $meta['standar_elemen'] = $request->input('metadata_standar_elemen');
+        }
+        if ($request->has('metadata_kelompok_split')) {
+            $meta['kelompok_split'] = (int) $request->input('metadata_kelompok_split');
+        }
+        if ($request->has('metadata_umpan_balik')) {
+            $meta['umpan_balik'] = $request->input('metadata_umpan_balik');
+        }
+        if ($request->has('metadata_penyusun_validator')) {
+            $meta['penyusun_validator'] = $request->input('metadata_penyusun_validator');
+        }
+        if ($request->has('metadata_kelompok_skenario')) {
+            $meta['kelompok_skenario'] = $request->input('metadata_kelompok_skenario');
+        }
+        if ($request->has('metadata_kelompok_soal')) {
+            $meta['kelompok_soal'] = $request->input('metadata_kelompok_soal');
+        }
         $instrument->additional_metadata = $meta;
         $instrument->save();
 
-        return redirect()->back()->with('sukses', 'Template instruksi & skenario berhasil disimpan.');
+        return redirect()->back()->with('sukses', 'Formulir ' . strtoupper($instrument->instrument_code) . ' berhasil disimpan.');
     }
 
     /**

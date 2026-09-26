@@ -807,9 +807,10 @@ class AsesorController extends Controller
                 [$user->skema_id],
                 JadwalAsesmen::where('asesor_id', $user->id)->pluck('skema_id')->unique()->toArray()
             )));
+            $accessibleInts = array_map('intval', $accessibleSkemaIds);
 
             // Jika daftar skema asesor belum spesifik, izinkan akses ke seluruh skema aktif
-            if (!empty($accessibleSkemaIds) && !in_array($skemaId, $accessibleSkemaIds, true)) {
+            if (!empty($accessibleInts) && !in_array((int) $skemaId, $accessibleInts, true)) {
                 abort(403, 'Akses Ditolak: Anda tidak memiliki penugasan untuk skema ini.');
             }
         }
@@ -1565,9 +1566,17 @@ class AsesorController extends Controller
             $selectedSkema = null;
             $selectedSkemaId = 0;
         } else {
-            // Tentukan skema penugasan asesor (asesor terikat ke skemanya)
-            $selectedSkemaId = (int) ($primarySkemaId ?: ($request->get('skema_id') ?: ($skemaList->first()?->id ?? 0)));
+            // Tentukan skema penugasan asesor (prioritas request jika valid, lalu primary skema, lalu skema pertama)
+            $requestedSkemaId = (int) $request->get('skema_id');
+            if ($requestedSkemaId && $skemaList->contains('id', $requestedSkemaId)) {
+                $selectedSkemaId = $requestedSkemaId;
+            } elseif ($primarySkemaId && $skemaList->contains('id', (int) $primarySkemaId)) {
+                $selectedSkemaId = (int) $primarySkemaId;
+            } else {
+                $selectedSkemaId = (int) ($skemaList->first()?->id ?? 0);
+            }
             $selectedSkema = $skemaList->firstWhere('id', $selectedSkemaId) ?: $skemaList->first();
+            $selectedSkemaId = $selectedSkema?->id ?? 0;
         }
 
         // Rekan asesor pada skema yang sama

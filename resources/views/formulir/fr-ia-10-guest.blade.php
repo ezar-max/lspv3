@@ -112,6 +112,30 @@
             </tr>
         </table>
 
+        <!-- TABEL UNIT KOMPETENSI SKEMA YANG DIVERIFIKASI -->
+        <table class="tabel-bnsp" style="margin-bottom: 1.5rem; font-size: 0.88rem;">
+            <thead>
+                <tr>
+                    <th style="width: 8%; text-align: center;">No.</th>
+                    <th style="width: 28%; text-align: center;">Kode Unit</th>
+                    <th>Judul Unit Kompetensi</th>
+                </tr>
+            </thead>
+            <tbody>
+                @forelse($pendaftaran->skema->unitKompetensi as $idx => $u)
+                    <tr>
+                        <td style="text-align: center; font-weight: 700;">{{ $idx + 1 }}.</td>
+                        <td style="font-weight: 600; color: #0369a1;">{{ $u->kode_unit }}</td>
+                        <td style="font-weight: 600;">{{ $u->judul_unit }}</td>
+                    </tr>
+                @empty
+                    <tr>
+                        <td colspan="3" style="text-align: center; color: #64748b; font-style: italic;">Belum ada unit kompetensi pada skema ini.</td>
+                    </tr>
+                @endforelse
+            </tbody>
+        </table>
+
         <!-- PANDUAN -->
         <div class="kotak-panduan-asesor">
             <strong>PANDUAN PENGISIAN UNTUK ATASAN / SUPERVISOR INDUSTRI:</strong>

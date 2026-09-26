@@ -21,148 +21,23 @@ class FormulirController extends Controller
     private function dapatkanPendaftaran($pendaftaranId = null)
     {
         $user = auth()->user();
-        $requestedSkemaId = request()->get('skema_id');
+        $requestedSkemaId = request()->filled('skema_id') 
+            ? (int) request()->get('skema_id') 
+            : (session()->has('active_selected_skema_id') ? (int) session('active_selected_skema_id') : null);
 
-        // 0. JIKA SKEMA_ID DIMINTA EKSPLISIT (PRATINJAU MASTER BLANKO) TANPA PENDAFTARAN_ID SPESIFIK
-        if ($requestedSkemaId && !$pendaftaranId && !request()->has('pendaftaran_id')) {
-            $dummy = $this->resolveBlankoSkema($requestedSkemaId, $user);
-            if ($dummy) {
-                return $dummy;
-            }
-        }
+        $explicitPendaftaranId = ($pendaftaranId !== null && $pendaftaranId !== '') 
+            ? (int) $pendaftaranId 
+            : (request()->filled('pendaftaran_id') ? (int) request()->get('pendaftaran_id') : null);
 
-        // 1. JIKA USER ADALAH ASESI: HANYA BOLEH AKSES PENDAFTARAN MILIK AKUNNYA SENDIRI
-        if ($user && $user->peran === 'asesi') {
-            $userId = $user->id;
-            if ($pendaftaranId) {
-                $pendaftaran = PendaftaranAsesi::with([
-                    'asesi.profilAsesi',
-                    'skema.unitKompetensi.elemenKompetensi.kriteriaUnjukKerja',
-                    'asesor',
-                    'jadwal',
-                    'rekomendasi',
-                    'mapa01',
-                    'mapa02',
-                    'jawabanApl02',
-                    'iaPenilaian'
-                ])->where('id', $pendaftaranId)->where('asesi_id', $userId)->first();
+        // Jika pendaftaranId = 0 secara eksplisit, ini adalah mode Blanko / Pratinjau Master Skema
+        $isExplicitBlanko = ($explicitPendaftaranId === 0);
 
-                if (!$pendaftaran) {
-                    // Cek jika ID tersebut milik peserta lain -> larang akses!
-                    $existsOther = PendaftaranAsesi::where('id', $pendaftaranId)->exists();
-                    if ($existsOther) {
-                        abort(403, 'Akses Ditolak: Anda hanya diperbolehkan mengakses berkas dan hasil ujian milik akun Anda sendiri.');
-                    }
-                    abort(404, 'Pendaftaran tidak ditemukan.');
-                } else {
-                    return $pendaftaran;
-                }
-            }
-
-            // Ambil pendaftaran aktif/terbaru milik akun asesi ini
-            $pendaftaran = PendaftaranAsesi::with([
-                'asesi.profilAsesi',
-                'skema.unitKompetensi.elemenKompetensi.kriteriaUnjukKerja',
-                'asesor',
-                'jadwal',
-                'rekomendasi',
-                'mapa01',
-                'mapa02',
-                'jawabanApl02',
-                'iaPenilaian'
-            ])->where('asesi_id', $userId)->latest()->first();
-
-            if ($pendaftaran) {
-                return $pendaftaran;
-            }
-
-            return $this->resolveBlankoSkema($requestedSkemaId ?? $user->skema_id, $user);
-        }
-
-        // UNTUK ASESOR & ADMIN: Gunakan session jika pendaftaran_id tidak ada di URL
-        if (!$pendaftaranId) {
-            $pendaftaranId = request()->get('pendaftaran_id') ?? session('active_asesor_pendaftaran_id');
-        }
-
-        // 2. JIKA USER ADALAH ASESOR
-        if ($user && $user->peran === 'asesor') {
-            if ($pendaftaranId) {
-                $pendaftaran = PendaftaranAsesi::with([
-                    'asesi.profilAsesi',
-                    'skema.unitKompetensi.elemenKompetensi.kriteriaUnjukKerja',
-                    'asesor',
-                    'jadwal',
-                    'rekomendasi',
-                    'mapa01',
-                    'mapa02',
-                    'jawabanApl02',
-                    'iaPenilaian'
-                ])->where(function ($q) use ($user) {
-                    $q->where('asesor_id', $user->id)
-                        ->orWhereHas('jadwal', fn ($jadwal) => $jadwal->where('asesor_id', $user->id));
-                })->find($pendaftaranId);
-
-                if ($pendaftaran) {
-                    session(['active_asesor_pendaftaran_id' => $pendaftaran->id]);
-                    return $pendaftaran;
-                }
-
-                $dummy = $this->resolveBlankoSkema($requestedSkemaId ?? $user->skema_id, $user);
-                if ($dummy) {
-                    return $dummy;
-                }
-
-                abort(403, 'Akses Ditolak: Anda tidak ditugaskan untuk pendaftaran ini.');
-            }
-
-            $pendaftaran = PendaftaranAsesi::with([
-                'asesi.profilAsesi',
-                'skema.unitKompetensi.elemenKompetensi.kriteriaUnjukKerja',
-                'asesor',
-                'jadwal',
-                'rekomendasi',
-                'mapa01',
-                'mapa02',
-                'jawabanApl02',
-                'iaPenilaian'
-            ])->where(function ($q) use ($user) {
-                $q->where('asesor_id', $user->id)
-                    ->orWhereHas('jadwal', fn ($jadwal) => $jadwal->where('asesor_id', $user->id));
-            })->latest()->first();
-
-            if ($pendaftaran) {
-                session(['active_asesor_pendaftaran_id' => $pendaftaran->id]);
-                return $pendaftaran;
-            }
-
-            return $this->resolveBlankoSkema($requestedSkemaId ?? $user->skema_id, $user);
-        }
-
-        // 3. ADMIN / SUPERADMIN / FALLBACK
-        if ($pendaftaranId) {
-            $pendaftaran = PendaftaranAsesi::with([
-                'asesi.profilAsesi',
-                'skema.unitKompetensi.elemenKompetensi.kriteriaUnjukKerja',
-                'asesor',
-                'jadwal',
-                'rekomendasi',
-                'mapa01',
-                'mapa02',
-                'jawabanApl02',
-                'iaPenilaian'
-            ])->find($pendaftaranId);
-
-            if ($pendaftaran) {
-                session(['active_asesor_pendaftaran_id' => $pendaftaran->id]);
-                return $pendaftaran;
-            }
-
-            return $this->resolveBlankoSkema($requestedSkemaId ?? $user?->skema_id, $user);
-        }
-
-        $pendaftaran = PendaftaranAsesi::with([
+        // Helper closures untuk eager load
+        $withRelations = [
             'asesi.profilAsesi',
             'skema.unitKompetensi.elemenKompetensi.kriteriaUnjukKerja',
+            'skema.masterInstruments.questionBanks.kriteriaUnjukKerja',
+            'skema.masterInstruments.productSpecifications',
             'asesor',
             'jadwal',
             'rekomendasi',
@@ -170,14 +45,168 @@ class FormulirController extends Controller
             'mapa02',
             'jawabanApl02',
             'iaPenilaian'
-        ])->latest()->first();
+        ];
 
-        if ($pendaftaran) {
-            session(['active_asesor_pendaftaran_id' => $pendaftaran->id]);
-            return $pendaftaran;
+        $pendaftaran = null;
+
+        // =========================================================================
+        // KASUS A: SKEMA_ID DIKETAHUI SECARA EKSPLISIT (FORM WAJIB MENGIKUTI SKEMA INI)
+        // =========================================================================
+        if ($requestedSkemaId) {
+            session(['active_selected_skema_id' => $requestedSkemaId]);
+
+            // Jika bukan mode blanko eksplisit, coba cari pendaftaran asesi di skema ini
+            if (!$isExplicitBlanko) {
+                // 1. Jika ada explicit pendaftaran_id (> 0), cek kecocokan dengan skema
+                if ($explicitPendaftaranId && $explicitPendaftaranId > 0) {
+                    $query = PendaftaranAsesi::with($withRelations)
+                        ->where('id', $explicitPendaftaranId)
+                        ->where('skema_id', $requestedSkemaId);
+
+                    if ($user && $user->peran === 'asesi') {
+                        $query->where('asesi_id', $user->id);
+                    } elseif ($user && $user->peran === 'asesor') {
+                        $query->where(function ($q) use ($user) {
+                            $q->where('asesor_id', $user->id)
+                                ->orWhereHas('jadwal', fn ($jadwal) => $jadwal->where('asesor_id', $user->id));
+                        });
+                    }
+
+                    $pendaftaran = $query->first();
+                }
+
+                // 2. Jika belum ditemukan, cari pendaftaran asesi yang ada di skema ini
+                if (!$pendaftaran) {
+                    if ($user && $user->peran === 'asesi') {
+                        $pendaftaran = PendaftaranAsesi::with($withRelations)
+                            ->where('asesi_id', $user->id)
+                            ->where('skema_id', $requestedSkemaId)
+                            ->latest()
+                            ->first();
+                    } elseif ($user && $user->peran === 'asesor') {
+                        $pendaftaran = PendaftaranAsesi::with($withRelations)
+                            ->where('skema_id', $requestedSkemaId)
+                            ->where(function ($q) use ($user) {
+                                $q->where('asesor_id', $user->id)
+                                    ->orWhereHas('jadwal', fn ($jadwal) => $jadwal->where('asesor_id', $user->id));
+                            })
+                            ->latest()
+                            ->first();
+                    } else {
+                        $pendaftaran = PendaftaranAsesi::with($withRelations)
+                            ->where('skema_id', $requestedSkemaId)
+                            ->latest()
+                            ->first();
+                    }
+                }
+            }
+
+            // 3. Jika tetap belum ada pendaftaran asesi untuk skema ini atau diminta blanko, buka Master Blanko Skema
+            if (!$pendaftaran) {
+                $pendaftaran = $this->resolveBlankoSkema($requestedSkemaId, $user);
+                session()->forget('active_asesor_pendaftaran_id');
+            } else {
+                if ($pendaftaran->id > 0) {
+                    session(['active_asesor_pendaftaran_id' => $pendaftaran->id]);
+                }
+            }
+        } 
+        // =========================================================================
+        // KASUS B: SKEMA_ID TIDAK DIKETAHUI (GUNAKAN PENDAFTARAN AKTIF)
+        // =========================================================================
+        else {
+            if ($user && $user->peran === 'asesi') {
+                if ($explicitPendaftaranId && $explicitPendaftaranId > 0) {
+                    $pendaftaran = PendaftaranAsesi::with($withRelations)
+                        ->where('id', $explicitPendaftaranId)
+                        ->where('asesi_id', $user->id)
+                        ->first();
+
+                    if (!$pendaftaran) {
+                        $existsOther = PendaftaranAsesi::where('id', $explicitPendaftaranId)->exists();
+                        if ($existsOther) {
+                            abort(403, 'Akses Ditolak: Anda hanya diperbolehkan mengakses berkas dan hasil ujian milik akun Anda sendiri.');
+                        }
+                        abort(404, 'Pendaftaran tidak ditemukan.');
+                    }
+                } else {
+                    $pendaftaran = PendaftaranAsesi::with($withRelations)
+                        ->where('asesi_id', $user->id)
+                        ->latest()
+                        ->first();
+
+                    if (!$pendaftaran) {
+                        $pendaftaran = $this->resolveBlankoSkema($user->skema_id, $user);
+                    }
+                }
+            } elseif ($user && $user->peran === 'asesor') {
+                $targetId = ($explicitPendaftaranId && $explicitPendaftaranId > 0) 
+                    ? $explicitPendaftaranId 
+                    : session('active_asesor_pendaftaran_id');
+
+                if ($targetId) {
+                    $pendaftaran = PendaftaranAsesi::with($withRelations)
+                        ->where(function ($q) use ($user) {
+                            $q->where('asesor_id', $user->id)
+                                ->orWhereHas('jadwal', fn ($jadwal) => $jadwal->where('asesor_id', $user->id));
+                        })
+                        ->find($targetId);
+                }
+
+                if (!$pendaftaran) {
+                    $pendaftaran = PendaftaranAsesi::with($withRelations)
+                        ->where(function ($q) use ($user) {
+                            $q->where('asesor_id', $user->id)
+                                ->orWhereHas('jadwal', fn ($jadwal) => $jadwal->where('asesor_id', $user->id));
+                        })
+                        ->latest()
+                        ->first();
+                }
+
+                if ($pendaftaran) {
+                    session(['active_asesor_pendaftaran_id' => $pendaftaran->id]);
+                    session(['active_selected_skema_id' => $pendaftaran->skema_id]);
+                } else {
+                    $pendaftaran = $this->resolveBlankoSkema($user->skema_id, $user);
+                }
+            } else {
+                // Admin / Superadmin
+                $targetId = ($explicitPendaftaranId && $explicitPendaftaranId > 0) 
+                    ? $explicitPendaftaranId 
+                    : session('active_asesor_pendaftaran_id');
+
+                if ($targetId) {
+                    $pendaftaran = PendaftaranAsesi::with($withRelations)->find($targetId);
+                }
+
+                if (!$pendaftaran) {
+                    $pendaftaran = PendaftaranAsesi::with($withRelations)->latest()->first();
+                }
+
+                if ($pendaftaran) {
+                    session(['active_asesor_pendaftaran_id' => $pendaftaran->id]);
+                    session(['active_selected_skema_id' => $pendaftaran->skema_id]);
+                } else {
+                    $pendaftaran = $this->resolveBlankoSkema($user?->skema_id, $user);
+                }
+            }
         }
 
-        return $this->resolveBlankoSkema($requestedSkemaId ?? $user?->skema_id, $user);
+        // PASTIKAN RELASI SKEMA TER-LOAD LENGKAP DENGAN UNIT, ELEMEN, DAN KUK
+        if ($pendaftaran && $pendaftaran->skema) {
+            $pendaftaran->skema->loadMissing([
+                'unitKompetensi.elemenKompetensi.kriteriaUnjukKerja',
+                'masterInstruments.questionBanks.kriteriaUnjukKerja',
+                'masterInstruments.productSpecifications'
+            ]);
+
+            // Sinkronkan session skema aktif
+            if (!empty($pendaftaran->skema_id)) {
+                session(['active_selected_skema_id' => $pendaftaran->skema_id]);
+            }
+        }
+
+        return $pendaftaran;
     }
 
     /**
@@ -370,7 +399,10 @@ class FormulirController extends Controller
         }
         $iaRecord = $pendaftaran->id ? IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.01')->first() : null;
         $savedData = $iaRecord ? ($iaRecord->data_jawaban ?? []) : [];
-        return view('formulir.fr-ia-01', compact('pendaftaran', 'iaRecord', 'savedData'));
+        $masterInst = \App\Models\SchemeMasterInstrument::where('skema_id', $pendaftaran->skema_id)
+            ->whereIn('instrument_code', \App\Models\SchemeMasterInstrument::getCodeAliases('ia_01'))
+            ->first();
+        return view('formulir.fr-ia-01', compact('pendaftaran', 'iaRecord', 'savedData', 'masterInst'));
     }
 
     public function ia02(Request $request, $pendaftaranId = null)
@@ -387,12 +419,24 @@ class FormulirController extends Controller
         $meta = $masterInst ? ($masterInst->additional_metadata ?? []) : [];
         if (is_string($meta)) $meta = json_decode($meta, true) ?: [];
 
+        $skemaNama = $pendaftaran->skema->nama_skema ?? 'Skema Sertifikasi';
+        $units = $pendaftaran->skema->unitKompetensi ?? collect();
+        $unitTitles = $units->pluck('judul_unit')->filter()->values();
+
+        // Default Skenario dinamis dari database skema aktif
+        $defaultScenario = "Anda ditugaskan untuk mendemonstrasikan tugas praktik kerja pada skema {$skemaNama}, mencakup unit kompetensi: "
+            . ($unitTitles->isNotEmpty() ? $unitTitles->map(fn($t, $i) => ($i + 1) . '. ' . $t)->implode('; ') : 'sesuai unit kompetensi yang dipersyaratkan')
+            . " dengan mengacu kepada Standar Operasional Prosedur (SOP), Instruksi Kerja (WI), dan Kriteria Unjuk Kerja (KUK) yang berlaku.";
+
+        // Default Perlengkapan & Peralatan dinamis dari database skema aktif
+        $defaultTools = "Peralatan kerja, mesin/alat uji, instrumen, bahan kerja, serta Alat Pelindung Diri (APD) standar yang dipersyaratkan untuk pelaksanaan demonstrasi unit kompetensi pada skema {$skemaNama}.";
+
         $saved = $iaRecord ? ($iaRecord->data_jawaban ?? []) : [];
         $dataPraktik = [
-            'judul_tugas' => $saved['judul_tugas'] ?? ($meta['judul_tugas'] ?? ($masterInst?->title ?? 'Tugas Praktik Demonstrasi')),
-            'skenario' => $saved['skenario'] ?? ($meta['skenario'] ?? 'Anda diminta untuk mendemonstrasikan tugas praktik kerja sesuai dengan standar operasional prosedur (SOP) dan kriteria unjuk kerja yang berlaku.'),
-            'peralatan_bahan' => $saved['peralatan_bahan'] ?? ($meta['peralatan_bahan'] ?? 'Peralatan dan bahan praktik standar sesuai unit kompetensi kejuruan.'),
-            'durasi_waktu' => $saved['durasi_waktu'] ?? ($meta['durasi_waktu'] ?? (($masterInst?->time_limit_minutes ?? 120) . ' Menit (2 Jam)')),
+            'judul_tugas' => $saved['judul_tugas'] ?? ($meta['judul_tugas'] ?? ($masterInst?->title ?? ('Tugas Praktik Demonstrasi ' . $skemaNama))),
+            'skenario' => $saved['skenario'] ?? ($meta['scenario'] ?? ($meta['skenario'] ?? $defaultScenario)),
+            'peralatan_bahan' => $saved['peralatan_bahan'] ?? ($meta['tools_equipment'] ?? ($meta['peralatan_bahan'] ?? $defaultTools)),
+            'durasi_waktu' => $saved['durasi_waktu'] ?? ($meta['durasi_waktu'] ?? (($masterInst?->time_limit_minutes ?? 120) . ' Menit')),
             'instruksi_kerja' => $saved['instruksi_kerja'] ?? ($meta['instruksi_kerja'] ?? ($masterInst?->instructions ? explode("\n", $masterInst->instructions) : [])),
             'standar_hasil' => $saved['standar_hasil'] ?? ($meta['standar_hasil'] ?? []),
             'catatan' => $saved['catatan'] ?? ($iaRecord->catatan_asesor ?? ''),
@@ -502,7 +546,39 @@ class FormulirController extends Controller
                         'gambar' => $q->image_path,
                     ];
                 }
-                return $list;
+                if (!empty($list)) {
+                    return $list;
+                }
+            }
+
+            // FALLBACK DINAMIS: Jika belum ada soal kustom di MUK, ambil butir soal dari KUK Skema
+            $skema = SkemaSertifikasi::with('unitKompetensi.elemenKompetensi.kriteriaUnjukKerja')->find($skemaId);
+            if ($skema && $skema->unitKompetensi->count() > 0) {
+                $list = [];
+                $qNum = 1;
+                foreach ($skema->unitKompetensi as $u) {
+                    foreach ($u->elemenKompetensi as $e) {
+                        foreach ($e->kriteriaUnjukKerja as $k) {
+                            $list[$qNum] = [
+                                'no' => $qNum,
+                                'pertanyaan' => "Terkait standar kerja pada unit \"{$u->judul_unit}\", tindakan yang tepat dalam memenuhi kriteria: \"{$k->pernyataan_kuk}\" adalah...",
+                                'opsi' => [
+                                    'A' => "Melaksanakan prosedur kerja sesuai petunjuk teknis operasional dan standar K3 yang berlaku",
+                                    'B' => "Menunda pelaksanaan prosedur keselamatan kerja hingga pekerjaan selesai",
+                                    'C' => "Melakukan tindakan tanpa mengacu pada instruksi kerja yang sah",
+                                    'D' => "Mengabaikan spesifikasi teknis peralatan yang digunakan"
+                                ],
+                                'kunci' => 'A',
+                                'kuk' => "KUK {$k->nomor_kuk} - {$k->pernyataan_kuk} ({$u->kode_unit})",
+                                'pembahasan' => "Sesuai standar kompetensi kerja BNSP, langkah kerja pada KUK {$k->nomor_kuk} harus diterapkan secara cermat sesuai SOP kejuruan.",
+                                'gambar' => null,
+                            ];
+                            $qNum++;
+                            if ($qNum > 20) break 3;
+                        }
+                    }
+                }
+                if (!empty($list)) return $list;
             }
         } else {
             $inst = $query->first();
@@ -551,7 +627,29 @@ class FormulirController extends Controller
                         'kuk' => $q->kriteriaUnjukKerja ? "KUK {$q->kriteriaUnjukKerja->nomor_kuk} - {$q->kriteriaUnjukKerja->pernyataan_kuk}" : 'Standar Kompetensi Kejuruan',
                     ];
                 }
-                return $list;
+                if (!empty($list)) {
+                    return $list;
+                }
+            }
+
+            // FALLBACK DINAMIS ESAI DARI ELEMEN SKEMA
+            $skema = SkemaSertifikasi::with('unitKompetensi.elemenKompetensi.kriteriaUnjukKerja')->find($skemaId);
+            if ($skema && $skema->unitKompetensi->count() > 0) {
+                $list = [];
+                $qNum = 1;
+                foreach ($skema->unitKompetensi as $u) {
+                    foreach ($u->elemenKompetensi as $e) {
+                        $list[$qNum] = [
+                            'no' => $qNum,
+                            'pertanyaan' => "Uraikan langkah kerja sistematis, peralatan kerja yang diperlukan, serta prosedur keselamatan kerja saat Anda melaksanakan: \"{$e->nama_elemen}\" pada unit \"{$u->judul_unit}\" ({$u->kode_unit})!",
+                            'kunci_referensi' => "Asesi wajib menguraikan: 1. Persiapan alat, bahan dan SOP; 2. Urutan pelaksanaan teknis; 3. Penerapan standar keselamatan kerja; 4. Verifikasi mutu hasil kerja.",
+                            'kuk' => "Elemen {$e->nomor_elemen}: {$e->nama_elemen} ({$u->kode_unit})",
+                        ];
+                        $qNum++;
+                        if ($qNum > 10) break 2;
+                    }
+                }
+                if (!empty($list)) return $list;
             }
         } else {
             $inst = $query->first();
@@ -597,7 +695,31 @@ class FormulirController extends Controller
                         'kuk' => $q->kriteriaUnjukKerja ? "KUK {$q->kriteriaUnjukKerja->nomor_kuk} - {$q->kriteriaUnjukKerja->pernyataan_kuk}" : 'Standar Kompetensi Kejuruan',
                     ];
                 }
-                return $list;
+                if (!empty($list)) {
+                    return $list;
+                }
+            }
+
+            // FALLBACK DINAMIS PERTANYAAN LISAN DARI KUK SKEMA
+            $skema = SkemaSertifikasi::with('unitKompetensi.elemenKompetensi.kriteriaUnjukKerja')->find($skemaId);
+            if ($skema && $skema->unitKompetensi->count() > 0) {
+                $list = [];
+                $qNum = 1;
+                foreach ($skema->unitKompetensi as $u) {
+                    foreach ($u->elemenKompetensi as $e) {
+                        foreach ($e->kriteriaUnjukKerja as $k) {
+                            $list[$qNum] = [
+                                'no' => $qNum,
+                                'pertanyaan' => "Bagaimanakah Anda memastikan dan memverifikasi bahwa kriteria unjuk kerja: \"{$k->pernyataan_kuk}\" terpenuhi secara konsisten saat bekerja?",
+                                'kunci_rujukan' => "Asesi mampu menjelaskan parameter pengukuran, urutan verifikasi, serta penanganan kendala teknis sesuai SOP kejuruan.",
+                                'kuk' => "KUK {$k->nomor_kuk} - {$k->pernyataan_kuk} ({$u->kode_unit})",
+                            ];
+                            $qNum++;
+                            if ($qNum > 15) break 3;
+                        }
+                    }
+                }
+                if (!empty($list)) return $list;
             }
         } else {
             $inst = $query->first();
@@ -910,6 +1032,8 @@ class FormulirController extends Controller
                 'peralatan_bahan' => $request->input('peralatan_bahan'),
                 'durasi_waktu' => $request->input('durasi_waktu'),
                 'instruksi_kerja' => $request->input('instruksi_kerja'),
+                'kelompok_skenario' => $request->input('kelompok_skenario', []),
+                'penyusun_validator' => $request->input('penyusun_validator', []),
                 'catatan' => $catatan,
                 'saved_at' => now()->toDateTimeString(),
             ];
@@ -960,11 +1084,32 @@ class FormulirController extends Controller
            --------------------------------------------------------------------- */
         elseif ($kodeForm === 'FR.IA.03') {
             $rekomendasi = $request->input('rekomendasi', 'K');
-            $catatan = $request->input('catatan', '');
+            $catatan = $request->input('umpan_balik', $request->input('catatan', ''));
+            $kelompokSoal = $request->input('kelompok_soal', []);
+            
+            $flatPertanyaan = $request->input('pertanyaan', []);
+            $flatRespon = $request->input('respon', []);
+            $flatPencapaian = $request->input('pencapaian', []);
+
+            if (!empty($kelompokSoal) && is_array($kelompokSoal)) {
+                foreach ($kelompokSoal as $kIdx => $items) {
+                    if (is_array($items)) {
+                        foreach ($items as $qIdx => $val) {
+                            $key = "{$kIdx}_{$qIdx}";
+                            if (isset($val['pertanyaan'])) $flatPertanyaan[$key] = $val['pertanyaan'];
+                            if (isset($val['tanggapan'])) $flatRespon[$key] = $val['tanggapan'];
+                            if (isset($val['pencapaian'])) $flatPencapaian[$key] = $val['pencapaian'];
+                        }
+                    }
+                }
+            }
+
             $dataPayload = [
-                'pertanyaan' => $request->input('pertanyaan', []),
-                'respon' => $request->input('respon', []),
-                'pencapaian' => $request->input('pencapaian', []),
+                'pertanyaan' => $flatPertanyaan,
+                'respon' => $flatRespon,
+                'pencapaian' => $flatPencapaian,
+                'kelompok_soal' => $kelompokSoal,
+                'umpan_balik' => $catatan,
                 'rekomendasi' => $rekomendasi,
                 'catatan' => $catatan,
                 'saved_at' => now()->toDateTimeString(),
