@@ -211,10 +211,18 @@
                             <h2 class="text-base font-bold text-slate-900">FR.IA.01 Ceklis Observasi Aktivitas Praktik di Tempat Kerja / TUK</h2>
                             <p class="text-xs text-slate-500 mt-0.5">Centang K (Kompeten) atau BK (Belum Kompeten) untuk setiap KUK saat mengamati demonstrasi asesi.</p>
                         </div>
-                        <button type="button" @click="setAllKGlobal()" 
-                                class="px-4 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold transition-colors flex-shrink-0">
-                            Set Semua K Global
-                        </button>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <a href="{{ route('formulir.ia01', $pendaftaran->id) }}" target="_blank" 
+                               class="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-xl text-xs font-bold transition-colors inline-flex items-center gap-1.5 shadow-2xs" 
+                               title="Buka Lembar Resmi Standar BNSP FR.IA.01 (Format Cetak)">
+                                <i class="fa-solid fa-print text-slate-600"></i>
+                                <span>Format Resmi BNSP (Cetak)</span>
+                            </a>
+                            <button type="button" @click="setAllKGlobal()" 
+                                    class="px-4 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold transition-colors flex-shrink-0">
+                                Set Semua K Global
+                            </button>
+                        </div>
                     </div>
 
                     @forelse($pendaftaran->skema->unitKompetensi as $indexUnit => $unit)
@@ -343,12 +351,20 @@
                                 <h3 class="text-lg font-bold text-slate-900 mt-1">{{ $panduanPraktik['judul_tugas'] ?? 'Tugas Praktik Demonstrasi' }}</h3>
                                 <p class="text-xs text-slate-500 mt-0.5">Alokasi Waktu: <strong>{{ $panduanPraktik['waktu_menit'] ?? 120 }} Menit</strong></p>
                             </div>
-                            @if($dokumenPraktik)
-                                <a href="{{ asset($dokumenPraktik->file_path) }}" target="_blank" 
-                                   class="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-xs transition-colors flex items-center gap-2">
-                                    <span>Unduh Berkas Asesi</span>
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <a href="{{ route('formulir.ia02', $pendaftaran->id) }}" target="_blank" 
+                                   class="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-xl text-xs font-bold transition-colors inline-flex items-center gap-1.5 shadow-2xs" 
+                                   title="Buka Lembar Resmi Standar BNSP FR.IA.02 (Format Cetak)">
+                                    <i class="fa-solid fa-print text-slate-600"></i>
+                                    <span>Format Resmi BNSP (Cetak)</span>
                                 </a>
-                            @endif
+                                @if($dokumenPraktik)
+                                    <a href="{{ asset($dokumenPraktik->file_path) }}" target="_blank" 
+                                       class="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-xs transition-colors flex items-center gap-2">
+                                        <span>Unduh Berkas Asesi</span>
+                                    </a>
+                                @endif
+                            </div>
                         </div>
 
                         @if(!empty($panduanPraktik['skenario']))
@@ -437,9 +453,19 @@
                  ===================================================================== -->
             @if($pendaftaran->skema->hasInstrumen('FR.IA.03'))
                 <div x-show="activeTab === 'lisan'" class="space-y-5">
-                    <div class="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs">
-                        <h2 class="text-base font-bold text-slate-900">FR.IA.03 Pertanyaan Lisan / Wawancara Pendukung Praktik</h2>
-                        <p class="text-xs text-slate-500 mt-0.5">Ajukan pertanyaan konseptual berikut untuk memverifikasi pemahaman mendalam asesi, catat ringkasan tanggapan, dan beri nilai K/BK.</p>
+                    <div class="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div>
+                            <h2 class="text-base font-bold text-slate-900">FR.IA.03 Pertanyaan Lisan / Wawancara Pendukung Praktik</h2>
+                            <p class="text-xs text-slate-500 mt-0.5">Ajukan pertanyaan konseptual berikut untuk memverifikasi pemahaman mendalam asesi, catat ringkasan tanggapan, dan beri nilai K/BK.</p>
+                        </div>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <a href="{{ route('formulir.ia03', $pendaftaran->id) }}" target="_blank" 
+                               class="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-xl text-xs font-bold transition-colors inline-flex items-center gap-1.5 shadow-2xs" 
+                               title="Buka Lembar Resmi Standar BNSP FR.IA.03 (Format Cetak)">
+                                <i class="fa-solid fa-print text-slate-600"></i>
+                                <span>Format Resmi BNSP (Cetak)</span>
+                            </a>
+                        </div>
                     </div>
 
                     <div class="space-y-4">

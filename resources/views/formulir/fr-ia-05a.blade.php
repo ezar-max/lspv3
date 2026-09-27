@@ -142,56 +142,11 @@
         </div>
 
         <!-- TABEL PENYUSUN DAN VALIDATOR -->
-        <div style="margin-top: 2rem;">
-            <div style="font-weight: 800; font-size: 0.95rem; margin-bottom: 0.6rem; color: #0f172a; text-transform: uppercase;">
-                PENYUSUN DAN VALIDATOR
-            </div>
-            <table class="tabel-bnsp">
-                <thead>
-                    <tr>
-                        <th style="width: 18%; text-align: center;">STATUS</th>
-                        <th style="width: 6%; text-align: center;">NO</th>
-                        <th style="width: 32%;">NAMA</th>
-                        <th style="width: 22%;">NOMOR MET</th>
-                        <th style="width: 22%;">TANDA TANGAN DAN TANGGAL</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td rowspan="2" style="font-weight: 800; vertical-align: middle; text-align: center; background-color: #f8fafc;">PENYUSUN</td>
-                        <td style="text-align: center; font-weight: 700;">1</td>
-                        <td><strong>{{ $asesorNama }}</strong></td>
-                        <td>{{ $asesorMet }}</td>
-                        <td style="text-align: center;">
-                            @if($asesorTtd)
-                                <img src="{{ $asesorTtd }}" alt="TTD" style="max-height: 40px;">
-                            @else
-                                <span style="font-size: 0.78rem; color: #64748b;">{{ date('d/m/Y') }}</span>
-                            @endif
-                        </td>
-                    </tr>
-                    <tr>
-                        <td style="text-align: center; font-weight: 700;">2</td>
-                        <td><input type="text" class="input-inline-bnsp" placeholder="Penyusun 2..."></td>
-                        <td><input type="text" class="input-inline-bnsp" placeholder="No. MET..."></td>
-                        <td><input type="text" class="input-inline-bnsp" placeholder="TTD & Tgl..."></td>
-                    </tr>
-                    <tr>
-                        <td rowspan="2" style="font-weight: 800; vertical-align: middle; text-align: center; background-color: #f8fafc;">VALIDATOR</td>
-                        <td style="text-align: center; font-weight: 700;">1</td>
-                        <td><input type="text" class="input-inline-bnsp" placeholder="Validator 1..."></td>
-                        <td><input type="text" class="input-inline-bnsp" placeholder="No. MET..."></td>
-                        <td><input type="text" class="input-inline-bnsp" placeholder="TTD & Tgl..."></td>
-                    </tr>
-                    <tr>
-                        <td style="text-align: center; font-weight: 700;">2</td>
-                        <td><input type="text" class="input-inline-bnsp" placeholder="Validator 2..."></td>
-                        <td><input type="text" class="input-inline-bnsp" placeholder="No. MET..."></td>
-                        <td><input type="text" class="input-inline-bnsp" placeholder="TTD & Tgl..."></td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
+        @include('komponen.tabel-penyusun-validator', [
+            'pendaftaran' => $pendaftaran,
+            'kodeForm' => 'FR.IA.05A',
+            'tableClass' => 'tabel-bnsp'
+        ])
 
         @include('komponen.navigasi-form-bawah', [
             'nextUrl' => $isAsesi ? route('formulir.ia05c', $pendaftaran->id) : route('formulir.ia05b', $pendaftaran->id),

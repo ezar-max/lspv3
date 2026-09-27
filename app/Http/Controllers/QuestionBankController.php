@@ -34,6 +34,15 @@ class QuestionBankController extends Controller
 
         MasterQuestionBank::create($validated);
 
+        $instrument = SchemeMasterInstrument::find($validated['scheme_master_instrument_id']);
+        if ($instrument) {
+            $meta = $instrument->additional_metadata ?? [];
+            $meta['is_saved'] = true;
+            $meta['saved_at'] = now()->toDateTimeString();
+            $instrument->additional_metadata = $meta;
+            $instrument->save();
+        }
+
         return redirect()->back()->with('sukses', 'Butir soal berhasil ditambahkan ke bank soal!');
     }
 
@@ -137,6 +146,15 @@ class QuestionBankController extends Controller
             'standard_tolerance' => $request->input('standard_tolerance'),
             'order' => $order,
         ]);
+
+        $instrument = SchemeMasterInstrument::find($request->input('scheme_master_instrument_id'));
+        if ($instrument) {
+            $meta = $instrument->additional_metadata ?? [];
+            $meta['is_saved'] = true;
+            $meta['saved_at'] = now()->toDateTimeString();
+            $instrument->additional_metadata = $meta;
+            $instrument->save();
+        }
 
         return redirect()->back()->with('sukses', 'Parameter spesifikasi produk berhasil ditambahkan!');
     }
@@ -365,6 +383,12 @@ class QuestionBankController extends Controller
                     }
                 }
             }
+
+            $meta = $instrument->additional_metadata ?? [];
+            $meta['is_saved'] = true;
+            $meta['saved_at'] = now()->toDateTimeString();
+            $instrument->additional_metadata = $meta;
+            $instrument->save();
 
             DB::commit();
 
@@ -658,6 +682,12 @@ class QuestionBankController extends Controller
                 }
                 fclose($stream);
             }
+
+            $meta = $instrument->additional_metadata ?? [];
+            $meta['is_saved'] = true;
+            $meta['saved_at'] = now()->toDateTimeString();
+            $instrument->additional_metadata = $meta;
+            $instrument->save();
 
             DB::commit();
 

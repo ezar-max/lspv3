@@ -263,44 +263,35 @@
     
     @php
         $isAsesi = auth()->check() && auth()->user()->peran === 'asesi';
-        $asesorNama = $pendaftaran->asesor->nama_lengkap ?? (auth()->user()->peran === 'asesor' ? auth()->user()->nama_lengkap : 'Asesor LSP');
-        $asesorMet = $pendaftaran->asesor->nomor_registrasi ?? 'MET.000.004455.2023';
+        $effectiveAsesor = $pendaftaran->asesor ?? ($pendaftaran->jadwal->asesor ?? null);
+        $asesorNama = $effectiveAsesor->nama_lengkap ?? (auth()->check() && auth()->user()->peran === 'asesor' ? auth()->user()->nama_lengkap : 'Asesor LSP');
+        $asesorMet = $effectiveAsesor->nomor_registrasi ?? (auth()->check() && auth()->user()->peran === 'asesor' ? auth()->user()->nomor_registrasi : 'MET.000.004455.2023');
         $asesiNama = $pendaftaran->asesi->nama_lengkap ?? 'Nama Asesi';
-        $asesorTtd = $pendaftaran->tanda_tangan_asesor ?? (auth()->user()->tanda_tangan ?? null);
+        $asesorTtd = $pendaftaran->tanda_tangan_asesor ?? ($effectiveAsesor->tanda_tangan ?? (auth()->check() && auth()->user()->peran === 'asesor' ? auth()->user()->tanda_tangan : null));
         $asesiTtd = $iaRecord->data_jawaban['ttd_asesi'] ?? ($pendaftaran->tanda_tangan_asesi ?? null);
         $tglTtdAsesi = $iaRecord->data_jawaban['tgl_ttd_asesi'] ?? null;
+        $tukNama = $pendaftaran->jadwal->nama_tuk ?? ($pendaftaran->tuk_type ?? 'Sewaktu');
+        $tglAsesmen = $pendaftaran->jadwal?->tanggal_uji ? \Carbon\Carbon::parse($pendaftaran->jadwal->tanggal_uji)->format('d-m-Y') : date('d-m-Y');
 
         $savedData = $iaRecord->data_jawaban ?? [];
         $savedKelompokSoal = $savedData['kelompok_soal'] ?? [];
-        $umpanBalikVal = $savedData['umpan_balik'] ?? ($savedData['catatan'] ?? ($iaRecord->catatan_asesor ?? 'Asesi menunjukkan pemahaman yang sangat baik terhadap konsep kerja, kepatuhan K3, dan penanganan aspek kritis kejuruan.'));
+        $meta = $masterInst->additional_metadata ?? [];
+        if (!is_array($meta)) $meta = json_decode($meta, true) ?: [];
+        $umpanBalikVal = $savedData['umpan_balik'] ?? ($savedData['catatan'] ?? ($iaRecord->catatan_asesor ?? ($meta['umpan_balik'] ?? '')));
 
         // Data Unit Kompetensi dari Skema Database
         $allUnits = $pendaftaran->skema->unitKompetensi ?? collect();
-        $totalUnits = $allUnits->count();
 
-        // Distribusikan seluruh unit kompetensi ke 3 Kelompok Pekerjaan sesuai template 3 halaman BNSP
-        $kelompokUnits = [
-            1 => collect(),
-            2 => collect(),
-            3 => collect(),
-        ];
-
-        if ($totalUnits <= 1) {
-            $kelompokUnits[1] = $allUnits;
-            $kelompokUnits[2] = $allUnits;
-            $kelompokUnits[3] = $allUnits;
-        } elseif ($totalUnits === 2) {
-            $kelompokUnits[1] = $allUnits->slice(0, 1);
-            $kelompokUnits[2] = $allUnits->slice(1, 1);
-            $kelompokUnits[3] = $allUnits;
+        $kelompokSplit = (int)($meta['kelompok_split'] ?? 0);
+        if ($kelompokSplit > 0 && $allUnits->count() > $kelompokSplit) {
+            $kelompokUnits = [
+                1 => $allUnits->slice(0, $kelompokSplit),
+                2 => $allUnits->slice($kelompokSplit),
+            ];
         } else {
-            $base = intdiv($totalUnits, 3);
-            $remainder = $totalUnits % 3;
-            $s1 = $base + ($remainder > 0 ? 1 : 0);
-            $s2 = $base + ($remainder > 1 ? 1 : 0);
-            $kelompokUnits[1] = $allUnits->slice(0, $s1);
-            $kelompokUnits[2] = $allUnits->slice($s1, $s2);
-            $kelompokUnits[3] = $allUnits->slice($s1 + $s2);
+            $kelompokUnits = [
+                1 => $allUnits,
+            ];
         }
     @endphp
 
@@ -357,7 +348,7 @@
                 <tr>
                     <td colspan="2" style="font-weight: 600;">TUK</td>
                     <td style="text-align: center;">:</td>
-                    <td>Sewaktu/Tempat Kerja/Mandiri*</td>
+                    <td>{{ $tukNama }}</td>
                 </tr>
                 <tr>
                     <td colspan="2" style="font-weight: 600;">Nama Asesor</td>
@@ -372,7 +363,7 @@
                 <tr>
                     <td colspan="2" style="font-weight: 600;">Tanggal</td>
                     <td style="text-align: center;">:</td>
-                    <td>{{ date('d-m-Y') }}</td>
+                    <td>{{ $tglAsesmen }}</td>
                 </tr>
             </table>
             <div class="catatan-coret">*Coret yang tidak perlu</div>
@@ -413,14 +404,13 @@
                 };
             @endphp
 
-            @for($k = 1; $k <= 3; $k++)
+            @foreach($kelompokUnits as $k => $unitsInGroup)
                 @php
-                    $unitsInK = $kelompokUnits[$k]->values();
-                    $maxRows = max($unitsInK->count(), 3);
-                    $leftColRowspan = $maxRows + 2; // header No/Kode/Judul + rows + baris Dst..
+                    $unitsInK = $unitsInGroup->values();
+                    $leftColRowspan = max(1, $unitsInK->count()) + 1;
                 @endphp
 
-                @if($k === 2 || $k === 3)
+                @if($k > 1)
                     <!-- PEMBATAS HALAMAN STANDAR DOKUMEN BNSP (HALAMAN {{ $k }}) -->
                     <div class="page-break-divider"></div>
                 @endif
@@ -438,26 +428,24 @@
                             <th style="text-align: center; border: 1px solid #000000; padding: 6px 8px; font-weight: 700; background-color: #ffffff;">Judul Unit</th>
                         </tr>
 
-                        <!-- Baris 1, 2, 3.. Unit Kompetensi -->
-                        @for($i = 0; $i < $maxRows; $i++)
-                            @php $u = $unitsInK->get($i); @endphp
+                        <!-- Baris Unit Kompetensi Dinamis dari Database -->
+                        @forelse($unitsInK as $i => $u)
                             <tr>
                                 <td style="text-align: center; font-weight: 700; border: 1px solid #000000; padding: 6px 4px;">{{ $i + 1 }}.</td>
                                 <td style="font-weight: 600; border: 1px solid #000000; padding: 6px 8px; font-family: monospace;">
-                                    {{ $u ? $u->kode_unit : '' }}
+                                    {{ $u->kode_unit }}
                                 </td>
                                 <td style="font-weight: 600; border: 1px solid #000000; padding: 6px 8px;">
-                                    {{ $u ? ($u->nama_unit ?? $u->judul_unit) : '' }}
+                                    {{ $u->nama_unit ?? $u->judul_unit }}
                                 </td>
                             </tr>
-                        @endfor
-
-                        <!-- Baris Dst.. (Persis Gambar) -->
-                        <tr>
-                            <td style="text-align: center; font-weight: 700; border: 1px solid #000000; padding: 6px 4px;">Dst..</td>
-                            <td style="border: 1px solid #000000; padding: 6px 8px;"></td>
-                            <td style="border: 1px solid #000000; padding: 6px 8px;"></td>
-                        </tr>
+                        @empty
+                            <tr>
+                                <td colspan="3" style="text-align: center; color: #64748b; font-style: italic; border: 1px solid #000000; padding: 10px;">
+                                    Belum ada data unit kompetensi pada skema ini.
+                                </td>
+                            </tr>
+                        @endforelse
                     </tbody>
                 </table>
 
@@ -480,9 +468,9 @@
                     <tbody>
                         @for($q = 1; $q <= 3; $q++)
                             @php
-                                $defQ = $generateDefaultQ($k, $q, $unitsInK);
-                                $valPertanyaan = $savedKelompokSoal[$k][$q]['pertanyaan'] ?? ($savedData['pertanyaan']["{$k}_{$q}"] ?? $defQ['tanya']);
-                                $valTanggapan = $savedKelompokSoal[$k][$q]['tanggapan'] ?? ($savedData['respon']["{$k}_{$q}"] ?? $defQ['jawab']);
+                                $masterQ = $meta['kelompok_soal'][$k][$q]['pertanyaan'] ?? null;
+                                $valPertanyaan = $savedKelompokSoal[$k][$q]['pertanyaan'] ?? ($savedData['pertanyaan']["{$k}_{$q}"] ?? ($masterQ ?? ''));
+                                $valTanggapan = $savedKelompokSoal[$k][$q]['tanggapan'] ?? ($savedData['respon']["{$k}_{$q}"] ?? '');
                                 $valPencapaian = $savedKelompokSoal[$k][$q]['pencapaian'] ?? ($savedData['pencapaian']["{$k}_{$q}"] ?? 'Ya');
                             @endphp
 
@@ -492,7 +480,7 @@
                                     {{ $q }}.
                                 </td>
                                 <td style="vertical-align: top; border-bottom: none;">
-                                    <textarea name="kelompok_soal[{{ $k }}][{{ $q }}][pertanyaan]" class="input-pertanyaan-ia03" rows="2" placeholder="Tuliskan pertanyaan pendukung observasi..." {{ $isAsesi ? 'readonly' : '' }}>{{ $valPertanyaan }}</textarea>
+                                    <textarea name="kelompok_soal[{{ $k }}][{{ $q }}][pertanyaan]" class="input-pertanyaan-ia03" rows="2" placeholder="Tuliskan pertanyaan pendukung observasi..." {{ $isAsesi ? 'readonly' : 'required' }}>{{ $valPertanyaan }}</textarea>
                                 </td>
                                 <td style="border-bottom: none;"></td>
                                 <td style="border-bottom: none;"></td>
@@ -503,9 +491,9 @@
                                 <td style="border-top: none;"></td>
                                 <td style="vertical-align: top; border-top: none; padding-top: 0;">
                                     <div style="font-weight: 700; font-size: 0.85rem; color: #000000; margin-bottom: 0.2rem;">
-                                        Tanggapan:
+                                        Tanggapan: <span style="color: #ef4444;">*</span>
                                     </div>
-                                    <textarea name="kelompok_soal[{{ $k }}][{{ $q }}][tanggapan]" class="input-tanggapan-ia03" rows="3" placeholder="{{ $isAsesi ? 'Tanggapan dicatat oleh Asesor...' : 'Tuliskan catatan respons/tanggapan asesi...' }}" {{ $isAsesi ? 'readonly' : '' }}>{{ $valTanggapan }}</textarea>
+                                    <textarea name="kelompok_soal[{{ $k }}][{{ $q }}][tanggapan]" class="input-tanggapan-ia03" rows="3" placeholder="{{ $isAsesi ? 'Tanggapan dicatat oleh Asesor...' : 'Tuliskan catatan respons/tanggapan asesi...' }}" {{ $isAsesi ? 'readonly' : 'required' }}>{{ $valTanggapan }}</textarea>
                                 </td>
                                 <td style="text-align: center; vertical-align: middle; border-top: none;">
                                     <input type="radio" name="kelompok_soal[{{ $k }}][{{ $q }}][pencapaian]" value="Ya" class="radio-bnsp" {{ $valPencapaian === 'Ya' ? 'checked' : '' }} {{ $isAsesi ? 'disabled' : '' }}>
@@ -517,12 +505,12 @@
                         @endfor
                     </tbody>
                 </table>
-            @endfor
+            @endforeach
 
             <!-- UMPAN BALIK UNTUK ASESI (PERSIS GAMBAR HALAMAN 3) -->
             <div class="kotak-umpan-balik-ia03">
-                <label class="label-umpan-balik">Umpan balik untuk asesi:</label>
-                <textarea name="umpan_balik" class="textarea-umpan-balik" rows="3" placeholder="Tuliskan catatan umpan balik dan evaluasi kualitatif untuk asesi..." {{ $isAsesi ? 'readonly' : '' }}>{{ $umpanBalikVal }}</textarea>
+                <label class="label-umpan-balik">Umpan balik untuk asesi: <span style="color: #ef4444;">*</span></label>
+                <textarea name="umpan_balik" class="textarea-umpan-balik" rows="3" placeholder="Tuliskan catatan umpan balik dan evaluasi kualitatif untuk asesi..." {{ $isAsesi ? 'readonly' : 'required' }}>{{ $umpanBalikVal }}</textarea>
             </div>
 
             <!-- TABEL PENGESAHAN ASESI & ASESOR (PERSIS GAMBAR HALAMAN 3) -->
@@ -578,11 +566,11 @@
                             <div style="display: flex; align-items: center; gap: 1rem;">
                                 <img src="{{ $asesorTtd }}" alt="TTD Asesor" style="max-height: 45px;">
                                 <span style="font-size: 0.82rem; color: #475569;">
-                                    {{ date('d-m-Y') }}
+                                    {{ $tglAsesmen }}
                                 </span>
                             </div>
                         @else
-                            <span style="font-style: italic; color: #64748b; font-size: 0.82rem;">(Tanda Tangan Digital Asesor) - {{ date('d-m-Y') }}</span>
+                            <span style="font-style: italic; color: #64748b; font-size: 0.82rem;">(Tanda Tangan Digital Asesor) - {{ $tglAsesmen }}</span>
                         @endif
                     </td>
                 </tr>

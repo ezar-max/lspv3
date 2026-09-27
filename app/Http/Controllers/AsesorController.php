@@ -1527,6 +1527,8 @@ class AsesorController extends Controller
      */
     public function mapa(Request $request)
     {
+        SchemeMasterInstrument::cleanUnconfiguredDrafts();
+
         $asesor = auth()->user();
         $asesorId = $asesor->id;
 

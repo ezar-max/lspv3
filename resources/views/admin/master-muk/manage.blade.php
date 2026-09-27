@@ -168,7 +168,7 @@
 @section('konten')
 @php
     $codeKey = \App\Models\SchemeMasterInstrument::normalizeCode($instrument->instrument_code);
-    $hasItems = $instrument->questionBanks->count() > 0 || $instrument->productSpecifications->count() > 0 || !empty($instrument->additional_metadata);
+    $hasItems = $instrument->isConfigured();
 @endphp
 
 <div class="max-w-6xl mx-auto px-2 sm:px-4 py-3 {{ $hasItems ? 'mode-muk-locked' : '' }}" id="container-manage-muk">
@@ -939,28 +939,21 @@
             $skemaKode = $skema->kode_skema ?? '-';
             $totalUnits = $units->count();
 
-            // Distribusikan unit ke 3 kelompok pekerjaan sesuai template gambar BNSP
-            $kelompokUnits = [1 => collect(), 2 => collect(), 3 => collect()];
-            if ($totalUnits <= 1) {
-                $kelompokUnits[1] = $units;
-                $kelompokUnits[2] = $units;
-                $kelompokUnits[3] = $units;
-            } elseif ($totalUnits === 2) {
-                $kelompokUnits[1] = $units->slice(0, 1);
-                $kelompokUnits[2] = $units->slice(1, 1);
-                $kelompokUnits[3] = $units;
+            // Distribusikan unit kompetensi ke kelompok pekerjaan
+            $kelompokSplit = (int)($meta['kelompok_split'] ?? 0);
+            if ($kelompokSplit > 0 && $units->count() > $kelompokSplit) {
+                $kelompokUnits = [
+                    1 => $units->slice(0, $kelompokSplit),
+                    2 => $units->slice($kelompokSplit),
+                ];
             } else {
-                $base = intdiv($totalUnits, 3);
-                $remainder = $totalUnits % 3;
-                $s1 = $base + ($remainder > 0 ? 1 : 0);
-                $s2 = $base + ($remainder > 1 ? 1 : 0);
-                $kelompokUnits[1] = $units->slice(0, $s1);
-                $kelompokUnits[2] = $units->slice($s1, $s2);
-                $kelompokUnits[3] = $units->slice($s1 + $s2);
+                $kelompokUnits = [
+                    1 => $units,
+                ];
             }
 
             $savedKelompokSoal = $meta['kelompok_soal'] ?? [];
-            $savedUmpanBalik = $meta['umpan_balik'] ?? 'Asesi menunjukkan pemahaman yang sangat baik terhadap konsep kerja, kepatuhan K3, dan penanganan aspek kritis kejuruan.';
+            $savedUmpanBalik = $meta['umpan_balik'] ?? '';
 
             $generateDefaultQ = function($kIdx, $qIdx, $unitsInGroup) use ($skemaNama) {
                 $uSample = $unitsInGroup->pluck('judul_unit')->filter()->take(2)->implode(' & ') ?: $skemaNama;
@@ -1048,15 +1041,14 @@
                     </ul>
                 </div>
 
-                <!-- 3 KELOMPOK PEKERJAAN & TABEL PERTANYAAN (PERSIS GAMBAR) -->
-                @for($k = 1; $k <= 3; $k++)
+                <!-- KELOMPOK PEKERJAAN & TABEL PERTANYAAN (PERSIS GAMBAR) -->
+                @foreach($kelompokUnits as $k => $unitsInGroup)
                     @php
-                        $unitsInK = $kelompokUnits[$k]->values();
-                        $maxRows = max($unitsInK->count(), 3);
-                        $leftColRowspan = $maxRows + 2;
+                        $unitsInK = $unitsInGroup->values();
+                        $leftColRowspan = max(1, $unitsInK->count()) + 1;
                     @endphp
 
-                    @if($k === 2 || $k === 3)
+                    @if($k > 1)
                         <div style="border-top: 2px dashed #cbd5e1; margin: 2rem 0 1.5rem 0; text-align: center; position: relative;">
                             <span style="background: #ffffff; padding: 0 12px; font-size: 0.75rem; color: #64748b; font-style: italic; position: relative; top: -10px;">
                                 Halaman {{ $k }} (Standar Dokumen BNSP)
@@ -1076,24 +1068,23 @@
                                 <th style="text-align: center; border: 1px solid #000000; padding: 6px 8px; font-weight: 700; background-color: #ffffff;">Judul Unit</th>
                             </tr>
 
-                            @for($i = 0; $i < $maxRows; $i++)
-                                @php $u = $unitsInK->get($i); @endphp
+                            @forelse($unitsInK as $i => $u)
                                 <tr>
                                     <td style="text-align: center; font-weight: 700; border: 1px solid #000000; padding: 6px 4px;">{{ $i + 1 }}.</td>
                                     <td style="font-weight: 600; border: 1px solid #000000; padding: 6px 8px; font-family: monospace;">
-                                        {{ $u ? $u->kode_unit : '' }}
+                                        {{ $u->kode_unit }}
                                     </td>
                                     <td style="font-weight: 600; border: 1px solid #000000; padding: 6px 8px;">
-                                        {{ $u ? ($u->nama_unit ?? $u->judul_unit) : '' }}
+                                        {{ $u->nama_unit ?? $u->judul_unit }}
                                     </td>
                                 </tr>
-                            @endfor
-
-                            <tr>
-                                <td style="text-align: center; font-weight: 700; border: 1px solid #000000; padding: 6px 4px;">Dst..</td>
-                                <td style="border: 1px solid #000000; padding: 6px 8px;"></td>
-                                <td style="border: 1px solid #000000; padding: 6px 8px;"></td>
-                            </tr>
+                            @empty
+                                <tr>
+                                    <td style="text-align: center; font-weight: 700; border: 1px solid #000000; padding: 6px 4px;">1.</td>
+                                    <td style="border: 1px solid #000000; padding: 6px 8px;">-</td>
+                                    <td style="border: 1px solid #000000; padding: 6px 8px;">Belum ada unit kompetensi</td>
+                                </tr>
+                            @endforelse
                         </tbody>
                     </table>
 
@@ -1116,16 +1107,15 @@
                         <tbody>
                             @for($q = 1; $q <= 3; $q++)
                                 @php
-                                    $defQ = $generateDefaultQ($k, $q, $unitsInK);
-                                    $valPertanyaan = $savedKelompokSoal[$k][$q]['pertanyaan'] ?? $defQ['tanya'];
-                                    $valTanggapan = $savedKelompokSoal[$k][$q]['tanggapan'] ?? $defQ['jawab'];
+                                    $valPertanyaan = $savedKelompokSoal[$k][$q]['pertanyaan'] ?? '';
+                                    $valTanggapan = $savedKelompokSoal[$k][$q]['tanggapan'] ?? '';
                                 @endphp
                                 <tr>
                                     <td style="width: 5%; text-align: center; font-weight: 700; vertical-align: top; border: 1px solid #000000; border-bottom: none; padding: 6px 4px;">
                                         {{ $q }}.
                                     </td>
                                     <td style="vertical-align: top; border: 1px solid #000000; border-bottom: none; padding: 6px 8px;">
-                                        <textarea name="metadata_kelompok_soal[{{ $k }}][{{ $q }}][pertanyaan]" class="w-full bg-slate-50 border border-slate-300 rounded p-1.5 text-xs text-slate-900 font-semibold focus:bg-white focus:border-slate-800 outline-none" rows="2" placeholder="Tuliskan pertanyaan pendukung observasi...">{{ $valPertanyaan }}</textarea>
+                                        <textarea name="metadata_kelompok_soal[{{ $k }}][{{ $q }}][pertanyaan]" class="w-full bg-slate-50 border border-slate-300 rounded p-1.5 text-xs text-slate-900 font-semibold focus:bg-white focus:border-slate-800 outline-none" rows="2" placeholder="Tuliskan pertanyaan pendukung observasi nomor {{ $q }}..." required>{{ $valPertanyaan }}</textarea>
                                     </td>
                                     <td style="border: 1px solid #000000; border-bottom: none;"></td>
                                     <td style="border: 1px solid #000000; border-bottom: none;"></td>
@@ -1133,10 +1123,13 @@
                                 <tr>
                                     <td style="border: 1px solid #000000; border-top: none;"></td>
                                     <td style="vertical-align: top; border: 1px solid #000000; border-top: none; padding: 2px 8px 8px 8px;">
-                                        <div style="font-weight: 700; font-size: 0.85rem; color: #000000; margin-bottom: 0.2rem;">
-                                            Tanggapan:
+                                        <div style="font-weight: 700; font-size: 0.85rem; color: #475569; margin-bottom: 0.2rem; display: flex; align-items: center; justify-content: space-between;">
+                                            <span>Tanggapan:</span>
+                                            <span style="font-size: 0.72rem; font-weight: normal; color: #64748b; font-style: italic;">
+                                                (Diisi oleh Asesor pada saat pelaksanaan asesmen)
+                                            </span>
                                         </div>
-                                        <textarea name="metadata_kelompok_soal[{{ $k }}][{{ $q }}][tanggapan]" class="w-full bg-slate-50 border border-slate-300 rounded p-1.5 text-xs text-slate-800 focus:bg-white focus:border-slate-800 outline-none" rows="2" placeholder="Tuliskan panduan tanggapan / respons yang diharapkan dari asesi...">{{ $valTanggapan }}</textarea>
+                                        <textarea readonly disabled class="w-full bg-slate-100 border border-slate-200 rounded p-1.5 text-xs text-slate-500 italic outline-none cursor-not-allowed select-none" rows="2" placeholder="Kolom tanggapan dinonaktifkan pada pembuatan form master (akan diisi oleh Asesor saat asesmen untuk masing-masing asesi)."></textarea>
                                     </td>
                                     <td style="text-align: center; vertical-align: middle; border: 1px solid #000000; border-top: none;">
                                         <input type="checkbox" checked disabled style="width: 16px; height: 16px; accent-color: #000000;">
@@ -1148,14 +1141,14 @@
                             @endfor
                         </tbody>
                     </table>
-                @endfor
+                @endforeach
 
                 <!-- UMPAN BALIK UNTUK ASESI -->
                 <div style="border: 1px solid #000000; padding: 0.85rem 1rem; margin-bottom: 1.35rem; background-color: #ffffff;">
                     <label style="font-weight: 700; font-size: 0.88rem; color: #000000; margin-bottom: 0.4rem; display: block;">
-                        Umpan balik untuk asesi:
+                        Umpan balik untuk asesi: <span style="font-size: 0.75rem; font-weight: normal; color: #64748b; font-style: italic;">(Opsional / Standar)</span>
                     </label>
-                    <textarea name="metadata_umpan_balik" class="w-full bg-slate-50 border border-slate-300 rounded p-2 text-xs text-slate-800 focus:bg-white focus:border-slate-800 outline-none" rows="3" placeholder="Tuliskan standar catatan umpan balik untuk asesi...">{{ $savedUmpanBalik }}</textarea>
+                    <textarea name="metadata_umpan_balik" class="w-full bg-slate-50 border border-slate-300 rounded p-2 text-xs text-slate-800 focus:bg-white focus:border-slate-800 outline-none" rows="3" placeholder="Tuliskan standar catatan umpan balik untuk asesi (opsional)...">{{ $savedUmpanBalik }}</textarea>
                 </div>
 
                 <!-- TABEL TANDA TANGAN ASESI & ASESOR -->
@@ -1238,17 +1231,10 @@
             $skemaNama = $skema->nama_skema ?? 'Skema Sertifikasi';
             $unitTitles = $units->pluck('judul_unit')->filter()->values();
 
-            // Default Skenario dinamis dari database unit kompetensi jika belum disimpan khusus
-            $defaultScenario = "Anda ditugaskan untuk mendemonstrasikan tugas praktik kerja pada skema {$skemaNama}, mencakup unit kompetensi: "
-                . ($unitTitles->isNotEmpty() ? $unitTitles->map(fn($t, $i) => ($i + 1) . '. ' . $t)->implode('; ') : 'sesuai unit kompetensi yang dipersyaratkan')
-                . " dengan mengacu kepada Standar Operasional Prosedur (SOP), Instruksi Kerja (WI), dan Kriteria Unjuk Kerja (KUK) yang berlaku.";
-
-            // Default Perlengkapan & Bahan dinamis dari skema database
-            $defaultTools = "Peralatan kerja, mesin/alat uji, instrumen, bahan kerja, serta Alat Pelindung Diri (APD) standar yang dipersyaratkan untuk pelaksanaan demonstrasi unit kompetensi pada skema {$skemaNama}.";
-
-            $scenario = $meta['scenario'] ?? ($meta['skenario'] ?? $defaultScenario);
-            $tools = $meta['tools_equipment'] ?? ($meta['peralatan_bahan'] ?? $defaultTools);
-            $durasiWaktu = $instrument->time_limit_minutes ? ($instrument->time_limit_minutes . ' Menit') : ($meta['durasi_waktu'] ?? '120 Menit');
+            // Tidak ada pre-fill dummy text otomatis jika form baru / belum pernah disimpan
+            $scenario = $meta['scenario'] ?? ($meta['skenario'] ?? '');
+            $tools = $meta['tools_equipment'] ?? ($meta['peralatan_bahan'] ?? '');
+            $durasiWaktu = $instrument->time_limit_minutes ? ($instrument->time_limit_minutes . ' Menit') : ($meta['durasi_waktu'] ?? '');
             $kelompokSplit = (int)($meta['kelompok_split'] ?? 0);
             
             $savedPV = $meta['penyusun_validator'] ?? [];
@@ -1317,7 +1303,7 @@
                             Durasi Waktu Praktik (Menit)
                         </label>
                         <div class="relative">
-                            <input type="number" name="time_limit_minutes" value="{{ $instrument->time_limit_minutes ?? 120 }}" min="1" max="1440" class="muk-input-field input-metadata-muk pr-14 font-bold text-slate-800">
+                            <input type="number" name="time_limit_minutes" value="{{ $instrument->time_limit_minutes }}" min="1" max="1440" class="muk-input-field input-metadata-muk pr-14 font-bold text-slate-800" placeholder="Contoh: 120" required>
                             <span class="absolute inset-y-0 right-0 flex items-center px-3 text-slate-400 font-semibold pointer-events-none">
                                 Menit
                             </span>
@@ -1407,13 +1393,12 @@
 
                 @foreach($kelompokList as $kIndex => $unitsInGroup)
                     @php
-                        $kSkenario = $savedKelompok[$kIndex]['skenario'] ?? ($kIndex === 1 ? $scenario : 'Demonstrasikan seluruh proses kerja teknis pada kelompok pekerjaan ' . $kIndex . ' sesuai SOP yang berlaku.');
-                        $kPeralatan = $savedKelompok[$kIndex]['peralatan'] ?? ($kIndex === 1 ? $tools : 'Peralatan dan instrumen kerja standar unit kompetensi.');
-                        $kWaktu = $savedKelompok[$kIndex]['waktu'] ?? ($kIndex === 1 ? $durasiWaktu : '120 Menit');
+                        $kSkenario = $savedKelompok[$kIndex]['skenario'] ?? ($kIndex === 1 ? $scenario : '');
+                        $kPeralatan = $savedKelompok[$kIndex]['peralatan'] ?? ($kIndex === 1 ? $tools : '');
+                        $kWaktu = $savedKelompok[$kIndex]['waktu'] ?? ($kIndex === 1 ? $durasiWaktu : '');
                         
                         $displayUnits = $unitsInGroup->values();
-                        $maxRows = max($displayUnits->count(), 3);
-                        $leftColRowspan = $maxRows + 2;
+                        $leftColRowspan = max(1, $displayUnits->count()) + 1;
                     @endphp
 
                     @if($kIndex > 1)
@@ -1439,58 +1424,49 @@
                             </tr>
 
                             <!-- Baris 1, 2, 3.. Unit Kompetensi -->
-                            @for($i = 0; $i < $maxRows; $i++)
-                                @php $u = $displayUnits->get($i); @endphp
+                            @forelse($displayUnits as $i => $u)
                                 <tr>
                                     <td style="text-align: center; font-weight: 700; border: 1px solid #000000; padding: 6px 4px;">{{ $i + 1 }}.</td>
-                                    <td style="font-weight: 600; border: 1px solid #000000; padding: 6px 8px;">
-                                        {{ $u ? $u->kode_unit : '' }}
+                                    <td style="font-weight: 600; border: 1px solid #000000; padding: 6px 8px; font-family: monospace;">
+                                        {{ $u->kode_unit }}
                                     </td>
                                     <td style="font-weight: 600; border: 1px solid #000000; padding: 6px 8px;">
-                                        {{ $u ? $u->judul_unit : '' }}
+                                        {{ $u->nama_unit ?? $u->judul_unit }}
                                     </td>
                                 </tr>
-                            @endfor
-
-                            <!-- Baris Dst.. (Persis Gambar) -->
-                            <tr>
-                                <td style="text-align: center; font-weight: 700; border: 1px solid #000000; padding: 6px 4px;">Dst..</td>
-                                <td style="border: 1px solid #000000; padding: 6px 8px;"></td>
-                                <td style="border: 1px solid #000000; padding: 6px 8px;"></td>
-                            </tr>
+                            @empty
+                                <tr>
+                                    <td style="text-align: center; font-weight: 700; border: 1px solid #000000; padding: 6px 4px;">1.</td>
+                                    <td style="border: 1px solid #000000; padding: 6px 8px;">-</td>
+                                    <td style="border: 1px solid #000000; padding: 6px 8px;">Belum ada unit kompetensi</td>
+                                </tr>
+                            @endforelse
                         </tbody>
                     </table>
 
                     <!-- ISIAN SKENARIO TUGAS PRAKTIK DEMONSTRASI (PERSIS GAMBAR) -->
                     <label style="font-weight: 700; font-size: 0.88rem; color: #000000; margin-top: 0.75rem; margin-bottom: 0.35rem; display: block;">
-                        Skenario Tugas Praktik Demonstrasi:
+                        Skenario Tugas Praktik Demonstrasi: <span style="color: #ef4444;">*</span>
                     </label>
-                    <textarea name="metadata_kelompok_skenario[{{ $kIndex }}][skenario]" rows="4" class="muk-input-field input-metadata-muk" style="width: 100%; border: 1px solid #94a3b8; border-radius: 2px; padding: 0.5rem 0.65rem; font-size: 0.85rem; line-height: 1.45; margin-bottom: 0.75rem;" placeholder="Tuliskan skenario tugas praktik demonstrasi yang harus dilaksanakan oleh asesi...">{{ $kSkenario }}</textarea>
-                    
-                    @if($kIndex === 1)
-                        <input type="hidden" name="metadata_scenario" value="{{ $kSkenario }}">
-                    @endif
+                    <textarea name="metadata_kelompok_skenario[{{ $kIndex }}][skenario]" rows="4" class="muk-input-field input-metadata-muk" style="width: 100%; border: 1px solid #94a3b8; border-radius: 2px; padding: 0.5rem 0.65rem; font-size: 0.85rem; line-height: 1.45; margin-bottom: 0.75rem;" placeholder="Tuliskan skenario tugas praktik demonstrasi yang harus dilaksanakan oleh asesi..." required>{{ $kSkenario }}</textarea>
 
                     <!-- PERLENGKAPAN, PERALATAN, DAN WAKTU (PERSIS GAMBAR) -->
                     <div style="margin-top: 0.5rem; margin-bottom: 1.5rem; display: flex; flex-direction: column; gap: 0.65rem;">
                         <div style="display: flex; align-items: flex-start; gap: 0.75rem;">
                             <div style="width: 220px; font-weight: 700; color: #000000; font-size: 0.88rem; flex-shrink: 0; padding-top: 0.25rem;">
-                                Perlengkapan dan Peralatan :
+                                Perlengkapan dan Peralatan : <span style="color: #ef4444;">*</span>
                             </div>
                             <div style="flex-grow: 1;">
-                                <textarea name="metadata_kelompok_skenario[{{ $kIndex }}][peralatan]" rows="3" class="muk-input-field input-metadata-muk" style="width: 100%; border: 1px solid #94a3b8; border-radius: 2px; padding: 0.5rem 0.65rem; font-size: 0.85rem; line-height: 1.45;" placeholder="Sebutkan perlengkapan kerja, bahan uji, APD, dan peralatan yang digunakan...">{{ $kPeralatan }}</textarea>
-                                @if($kIndex === 1)
-                                    <input type="hidden" name="metadata_tools" value="{{ $kPeralatan }}">
-                                @endif
+                                <textarea name="metadata_kelompok_skenario[{{ $kIndex }}][peralatan]" rows="3" class="muk-input-field input-metadata-muk" style="width: 100%; border: 1px solid #94a3b8; border-radius: 2px; padding: 0.5rem 0.65rem; font-size: 0.85rem; line-height: 1.45;" placeholder="Sebutkan perlengkapan kerja, bahan uji, APD, dan peralatan yang digunakan..." required>{{ $kPeralatan }}</textarea>
                             </div>
                         </div>
 
                         <div style="display: flex; align-items: center; gap: 0.75rem;">
                             <div style="width: 220px; font-weight: 700; color: #000000; font-size: 0.88rem; flex-shrink: 0;">
-                                {{ $kIndex === 1 ? 'Durasi Waktu :' : 'Waktu :' }}
+                                {{ $kIndex === 1 ? 'Durasi Waktu :' : 'Waktu :' }} <span style="color: #ef4444;">*</span>
                             </div>
                             <div style="flex-grow: 1;">
-                                <input type="text" name="metadata_kelompok_skenario[{{ $kIndex }}][waktu]" value="{{ $kWaktu }}" class="muk-input-field input-metadata-muk" style="max-width: 260px; border: 1px solid #94a3b8; border-radius: 2px; padding: 0.35rem 0.6rem; font-size: 0.85rem;" placeholder="Contoh: 120 Menit">
+                                <input type="text" name="metadata_kelompok_skenario[{{ $kIndex }}][waktu]" value="{{ $kWaktu }}" class="muk-input-field input-metadata-muk" style="max-width: 260px; border: 1px solid #94a3b8; border-radius: 2px; padding: 0.35rem 0.6rem; font-size: 0.85rem;" placeholder="Contoh: 120 Menit" required>
                             </div>
                         </div>
                     </div>
@@ -1573,6 +1549,26 @@
                         PENYUSUN DAN VALIDATOR
                     </div>
                     
+                    @php
+                        $penyusunUser = $instrument->creator;
+                        if (!$penyusunUser && !empty($instrument->created_by)) {
+                            $penyusunUser = \App\Models\Pengguna::find($instrument->created_by);
+                        }
+                        if (!$penyusunUser) {
+                            $penyusunUser = \App\Models\Pengguna::whereIn('peran', ['admin', 'superadmin'])->orderBy('id')->first();
+                        }
+                        $penyusunNama = $penyusunUser?->nama_lengkap ?? 'Administrator LSP';
+                        $penyusunMet = $penyusunUser?->nomor_registrasi ?? 'REG.ADM.LSP.001';
+                        $penyusunTtd = $penyusunUser?->tanda_tangan ?? null;
+                        $penyusunTgl = $instrument->created_at ? $instrument->created_at->format('d-m-Y') : date('d-m-Y');
+
+                        $validatorUser = \App\Models\Pengguna::where('peran', 'asesor')->first();
+                        $validatorNama = $validatorUser?->nama_lengkap ?? 'Asesor Penguji LSP';
+                        $validatorMet = $validatorUser?->nomor_registrasi ?? 'MET.000.004455.2023';
+                        $validatorTtd = $validatorUser?->tanda_tangan ?? null;
+                        $validatorTgl = date('d-m-Y');
+                    @endphp
+
                     <table style="width: 100%; border-collapse: collapse; border: 1px solid #000000; font-size: 0.86rem;">
                         <thead>
                             <tr>
@@ -1586,60 +1582,32 @@
                         <tbody>
                             <!-- PENYUSUN 1 -->
                             <tr>
-                                <td rowspan="2" style="font-weight: 800; text-align: center; vertical-align: middle; background: #ffffff; border: 1px solid #000000; padding: 6px 8px;">
+                                <td style="font-weight: 800; text-align: center; vertical-align: middle; background: #ffffff; border: 1px solid #000000; padding: 6px 8px;">
                                     PENYUSUN
                                 </td>
                                 <td style="text-align: center; font-weight: 700; border: 1px solid #000000; padding: 6px 4px;">1</td>
-                                <td style="padding: 6px 8px; border: 1px solid #000000;"><strong>{{ $asesorNama }}</strong></td>
-                                <td style="padding: 6px 8px; border: 1px solid #000000;">{{ $asesorMet }}</td>
+                                <td style="padding: 6px 8px; border: 1px solid #000000;"><strong>{{ $penyusunNama }}</strong></td>
+                                <td style="padding: 6px 8px; border: 1px solid #000000;">{{ $penyusunMet }}</td>
                                 <td style="text-align: center; padding: 4px; border: 1px solid #000000;">
-                                    @if(!empty($asesorTtd))
-                                        <img src="{{ asset($asesorTtd) }}" alt="TTD" style="max-height: 36px; margin: 0 auto; display: block;">
+                                    @if(!empty($penyusunTtd))
+                                        <img src="{{ asset($penyusunTtd) }}" alt="TTD" style="max-height: 36px; margin: 0 auto; display: block;">
                                     @endif
-                                    <span style="font-size: 0.75rem; color: #475569;">{{ date('d/m/Y') }}</span>
+                                    <span style="font-size: 0.75rem; color: #475569;">{{ $penyusunTgl }}</span>
                                 </td>
                             </tr>
-                            <!-- PENYUSUN 2 -->
-                            <tr>
-                                <td style="text-align: center; font-weight: 700; border: 1px solid #000000; padding: 6px 4px;">2</td>
-                                <td style="padding: 4px; border: 1px solid #000000;">
-                                    <input type="text" name="metadata_penyusun_validator[penyusun_2_nama]" class="muk-input-field input-metadata-muk" style="width: 100%; border: 1px solid #94a3b8; border-radius: 2px; padding: 4px 6px; font-size: 0.82rem;" value="{{ $savedPV['penyusun_2_nama'] ?? '' }}" placeholder="Nama Penyusun 2...">
-                                </td>
-                                <td style="padding: 4px; border: 1px solid #000000;">
-                                    <input type="text" name="metadata_penyusun_validator[penyusun_2_met]" class="muk-input-field input-metadata-muk" style="width: 100%; border: 1px solid #94a3b8; border-radius: 2px; padding: 4px 6px; font-size: 0.82rem;" value="{{ $savedPV['penyusun_2_met'] ?? '' }}" placeholder="No. MET...">
-                                </td>
-                                <td style="padding: 4px; border: 1px solid #000000;">
-                                    <input type="text" name="metadata_penyusun_validator[penyusun_2_ttd]" class="muk-input-field input-metadata-muk" style="width: 100%; text-align: center; border: 1px solid #94a3b8; border-radius: 2px; padding: 4px 6px; font-size: 0.82rem;" value="{{ $savedPV['penyusun_2_ttd'] ?? '' }}" placeholder="TTD & Tgl...">
-                                </td>
-                            </tr>
-
                             <!-- VALIDATOR 1 -->
                             <tr>
-                                <td rowspan="2" style="font-weight: 800; text-align: center; vertical-align: middle; background: #ffffff; border: 1px solid #000000; padding: 6px 8px;">
+                                <td style="font-weight: 800; text-align: center; vertical-align: middle; background: #ffffff; border: 1px solid #000000; padding: 6px 8px;">
                                     VALIDATOR
                                 </td>
                                 <td style="text-align: center; font-weight: 700; border: 1px solid #000000; padding: 6px 4px;">1</td>
-                                <td style="padding: 4px; border: 1px solid #000000;">
-                                    <input type="text" name="metadata_penyusun_validator[validator_1_nama]" class="muk-input-field input-metadata-muk" style="width: 100%; border: 1px solid #94a3b8; border-radius: 2px; padding: 4px 6px; font-size: 0.82rem;" value="{{ $savedPV['validator_1_nama'] ?? '' }}" placeholder="Nama Validator 1...">
-                                </td>
-                                <td style="padding: 4px; border: 1px solid #000000;">
-                                    <input type="text" name="metadata_penyusun_validator[validator_1_met]" class="muk-input-field input-metadata-muk" style="width: 100%; border: 1px solid #94a3b8; border-radius: 2px; padding: 4px 6px; font-size: 0.82rem;" value="{{ $savedPV['validator_1_met'] ?? '' }}" placeholder="No. MET...">
-                                </td>
-                                <td style="padding: 4px; border: 1px solid #000000;">
-                                    <input type="text" name="metadata_penyusun_validator[validator_1_ttd]" class="muk-input-field input-metadata-muk" style="width: 100%; text-align: center; border: 1px solid #94a3b8; border-radius: 2px; padding: 4px 6px; font-size: 0.82rem;" value="{{ $savedPV['validator_1_ttd'] ?? '' }}" placeholder="TTD & Tgl...">
-                                </td>
-                            </tr>
-                            <!-- VALIDATOR 2 -->
-                            <tr>
-                                <td style="text-align: center; font-weight: 700; border: 1px solid #000000; padding: 6px 4px;">2</td>
-                                <td style="padding: 4px; border: 1px solid #000000;">
-                                    <input type="text" name="metadata_penyusun_validator[validator_2_nama]" class="muk-input-field input-metadata-muk" style="width: 100%; border: 1px solid #94a3b8; border-radius: 2px; padding: 4px 6px; font-size: 0.82rem;" value="{{ $savedPV['validator_2_nama'] ?? '' }}" placeholder="Nama Validator 2...">
-                                </td>
-                                <td style="padding: 4px; border: 1px solid #000000;">
-                                    <input type="text" name="metadata_penyusun_validator[validator_2_met]" class="muk-input-field input-metadata-muk" style="width: 100%; border: 1px solid #94a3b8; border-radius: 2px; padding: 4px 6px; font-size: 0.82rem;" value="{{ $savedPV['validator_2_met'] ?? '' }}" placeholder="No. MET...">
-                                </td>
-                                <td style="padding: 4px; border: 1px solid #000000;">
-                                    <input type="text" name="metadata_penyusun_validator[validator_2_ttd]" class="muk-input-field input-metadata-muk" style="width: 100%; text-align: center; border: 1px solid #94a3b8; border-radius: 2px; padding: 4px 6px; font-size: 0.82rem;" value="{{ $savedPV['validator_2_ttd'] ?? '' }}" placeholder="TTD & Tgl...">
+                                <td style="padding: 6px 8px; border: 1px solid #000000;"><strong>{{ $validatorNama }}</strong></td>
+                                <td style="padding: 6px 8px; border: 1px solid #000000;">{{ $validatorMet }}</td>
+                                <td style="text-align: center; padding: 4px; border: 1px solid #000000;">
+                                    @if(!empty($validatorTtd))
+                                        <img src="{{ asset($validatorTtd) }}" alt="TTD" style="max-height: 36px; margin: 0 auto; display: block;">
+                                    @endif
+                                    <span style="font-size: 0.75rem; color: #475569;">{{ $validatorTgl }}</span>
                                 </td>
                             </tr>
                         </tbody>
@@ -1657,9 +1625,11 @@
 
         @php
             $meta = $instrument->additional_metadata ?? [];
-            $scenario = $meta['scenario'] ?? "Anda ditugaskan untuk membangun sistem modul aplikasi berbasis web sesuai spesifikasi kebutuhan bisnis klien...";
-            $tools = $meta['tools_equipment'] ?? "1. Perangkat Komputer / Laptop Terinstal Web Server (Apache/Nginx) & Database MySQL\n2. Code Editor (VS Code/Sublime Text)\n3. Browser Web Modern & Postman API Client";
-            $deliverables = $meta['deliverables'] ?? "1. Source code aplikasi lengkap & skema basis data (.sql)\n2. Dokumentasi API & Manual Penggunaan Sistem\n3. Lembar hasil pengujian sistem";
+            $scenario = $meta['scenario'] ?? '';
+            $waktuMenit = $meta['waktu_menit'] ?? ($meta['durasi_waktu'] ?? '');
+            $demonstrasi = $meta['demonstrasi'] ?? ($meta['deliverables'] ?? '');
+            $waktuDemo = $meta['waktu_demo'] ?? '';
+            $umpanBalik = $meta['umpan_balik'] ?? '';
         @endphp
 
         <div class="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-6 mb-8">
@@ -1669,10 +1639,10 @@
                 </div>
                 <div>
                     <h2 class="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
-                        Editor Skenario Proyek & Format Luaran (FR.IA.04A)
+                        Isi Formulir FR.IA.04A — Daftar Instruksi Terstruktur
                     </h2>
                     <p class="text-xs text-slate-500">
-                        Atur narasi penugasan proyek singkat, sarana Tempat Uji Kompetensi (TUK), serta luaran berkas yang wajib diserahkan.
+                        Lengkapi seluruh isi yang akan tampil pada lembar FR.IA.04A untuk asesi.
                     </p>
                 </div>
             </div>
@@ -1680,34 +1650,46 @@
             <form action="{{ route('admin.master-muk.update-metadata', $instrument->id) }}" method="POST">
                 @csrf
 
-                <!-- SKENARIO MASALAH / TUGAS -->
+                <!-- ISI FORMULIR FR.IA.04A -->
                 <div class="mb-5">
                     <label class="block font-semibold text-xs text-slate-700 mb-1.5">
-                        Skenario Masalah & Batasan Proyek
+                        Skenario proyek singkat / kegiatan terstruktur lainnya <span class="text-rose-500">*</span>
                     </label>
-                    <textarea name="metadata_scenario" rows="5" class="muk-input-field input-metadata-muk leading-relaxed font-sans text-xs sm:text-sm">{{ old('metadata_scenario', $scenario) }}</textarea>
+                    <textarea name="metadata_scenario" rows="5" class="muk-input-field input-metadata-muk leading-relaxed font-sans text-xs sm:text-sm" placeholder="Tuliskan data, lingkup bahasan, dan instruksi proyek untuk asesi..." required>{{ old('metadata_scenario', $scenario) }}</textarea>
                 </div>
 
-                <!-- DAFTAR ALAT & BAHAN TUK -->
                 <div class="mb-5">
                     <label class="block font-semibold text-xs text-slate-700 mb-1.5">
-                        Kebutuhan Alat & Bahan Tempat Uji Kompetensi (TUK)
+                        Waktu pengerjaan proyek <span class="text-rose-500">*</span>
                     </label>
-                    <textarea name="metadata_tools" rows="4" class="muk-input-field input-metadata-muk leading-relaxed font-sans text-xs sm:text-sm">{{ old('metadata_tools', $tools) }}</textarea>
+                    <input type="text" name="metadata_waktu_menit" value="{{ old('metadata_waktu_menit', $waktuMenit) }}" class="muk-input-field input-metadata-muk text-xs sm:text-sm" placeholder="Contoh: 90 Menit" required>
                 </div>
 
-                <!-- FORMAT LUARAN / DELIVERABLES -->
                 <div class="mb-6">
                     <label class="block font-semibold text-xs text-slate-700 mb-1.5">
-                        Format Luaran / Berkas Proyek yang Wajib Diserahkan Asesi (Deliverables)
+                        Hasil yang perlu didemonstrasikan / dipresentasikan <span class="text-rose-500">*</span>
                     </label>
-                    <textarea name="metadata_deliverables" rows="4" class="muk-input-field input-metadata-muk leading-relaxed font-sans text-xs sm:text-sm">{{ old('metadata_deliverables', $deliverables) }}</textarea>
+                    <textarea name="metadata_demonstrasi" rows="4" class="muk-input-field input-metadata-muk leading-relaxed font-sans text-xs sm:text-sm" placeholder="Tuliskan hasil proyek atau kegiatan yang harus didemonstrasikan / dipresentasikan oleh asesi..." required>{{ old('metadata_demonstrasi', $demonstrasi) }}</textarea>
+                </div>
+
+                <div class="mb-6">
+                    <label class="block font-semibold text-xs text-slate-700 mb-1.5">
+                        Waktu demonstrasi / presentasi <span class="text-rose-500">*</span>
+                    </label>
+                    <input type="text" name="metadata_waktu_demo" value="{{ old('metadata_waktu_demo', $waktuDemo) }}" class="muk-input-field input-metadata-muk text-xs sm:text-sm" placeholder="Contoh: 30 Menit" required>
+                </div>
+
+                <div class="mb-6">
+                    <label class="block font-semibold text-xs text-slate-700 mb-1.5">
+                        Umpan balik untuk asesi <span class="text-rose-500">*</span>
+                    </label>
+                    <textarea name="metadata_umpan_balik" rows="3" class="muk-input-field input-metadata-muk leading-relaxed font-sans text-xs sm:text-sm" placeholder="Tuliskan umpan balik atau arahan untuk asesi..." required>{{ old('metadata_umpan_balik', $umpanBalik) }}</textarea>
                 </div>
 
                 <div class="flex items-center justify-end pt-2 border-t border-slate-100">
                     <button type="submit" class="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-700 active:bg-violet-800 text-white font-semibold text-xs shadow-xs transition-all cursor-pointer btn-submit-metadata">
                         <i class="fa-solid fa-floppy-disk text-xs"></i>
-                        <span>Simpan Skenario & Format Tugas</span>
+                        <span>Simpan Formulir FR.IA.04A</span>
                     </button>
                 </div>
             </form>
@@ -1845,10 +1827,10 @@
             $meta = $instrument->additional_metadata ?? [];
             if (!is_array($meta)) $meta = json_decode($meta, true) ?: [];
             
-            $defaultStandard = $meta['default_standard'] ?? ('Standar Operasional Prosedur (SOP) & SKKNI ' . ($instrument->skema->kode_skema ?? ''));
+            $defaultStandard = $meta['default_standard'] ?? '';
             $standarPerElemen = $meta['standar_elemen'] ?? [];
             $kelompokSplit = (int)($meta['kelompok_split'] ?? 0);
-            $umpanBalik = $meta['umpan_balik'] ?? 'Seluruh instruksi kerja dan demonstrasi praktik telah diobservasi dengan baik sesuai standar kompetensi SKKNI.';
+            $umpanBalik = $meta['umpan_balik'] ?? '';
 
             $totalKukCount = 0;
             foreach ($units as $u) {
@@ -1914,7 +1896,7 @@
                             Estimasi Waktu Observasi
                         </label>
                         <div class="relative">
-                            <input type="number" name="time_limit_minutes" value="{{ $instrument->time_limit_minutes ?? 120 }}" min="1" max="1440" class="muk-input-field pr-14 font-bold text-slate-800">
+                            <input type="number" name="time_limit_minutes" value="{{ $instrument->time_limit_minutes }}" min="1" max="1440" class="muk-input-field pr-14 font-bold text-slate-800" placeholder="Contoh: 120" required>
                             <span class="absolute inset-y-0 right-0 flex items-center px-3 text-slate-400 font-semibold pointer-events-none">
                                 Menit
                             </span>
@@ -2015,27 +1997,25 @@
                 <!-- ========================================================================= -->
                 <!-- KELOMPOK PEKERJAAN 1 -->
                 <!-- ========================================================================= -->
-                <table class="tabel-bnsp" style="width: 100%; border-collapse: collapse; margin-bottom: 1.5rem; font-size: 0.86rem;">
-                    <thead>
-                        <tr>
-                            <th rowspan="{{ $group1Units->count() + 1 }}" style="width: 25%; text-align: center; vertical-align: middle; font-weight: 800; background-color: #ffffff; border: 1px solid #0f172a; padding: 8px 10px;">
-                                Kelompok Pekerjaan 1
-                            </th>
-                            <th style="width: 8%; text-align: center; font-weight: 700; border: 1px solid #0f172a; padding: 6px;">No.</th>
-                            <th style="width: 27%; text-align: center; font-weight: 700; border: 1px solid #0f172a; padding: 6px;">Kode Unit</th>
-                            <th style="text-align: center; font-weight: 700; border: 1px solid #0f172a; padding: 6px;">Judul Unit</th>
-                        </tr>
-                    </thead>
+                <table class="tabel-bnsp" style="width: 100%; border-collapse: collapse; margin-bottom: 1.5rem; font-size: 0.88rem; border: 1px solid #000000;">
                     <tbody>
+                        <tr>
+                            <td rowspan="{{ max(1, $group1Units->count()) + 1 }}" style="width: 25%; text-align: center; vertical-align: middle; font-weight: 700; font-size: 0.95rem; border: 1px solid #000000; padding: 10px; background-color: #ffffff; color: #000000;">
+                                <span style="display: inline-block; max-width: 130px; line-height: 1.35;">Kelompok Pekerjaan 1</span>
+                            </td>
+                            <th style="width: 8%; text-align: center; font-weight: 700; border: 1px solid #000000; padding: 6px 4px; background-color: #ffffff; color: #000000;">No.</th>
+                            <th style="width: 28%; text-align: center; font-weight: 700; border: 1px solid #000000; padding: 6px 8px; background-color: #ffffff; color: #000000;">Kode Unit</th>
+                            <th style="text-align: center; font-weight: 700; border: 1px solid #000000; padding: 6px 8px; background-color: #ffffff; color: #000000;">Judul Unit</th>
+                        </tr>
                         @forelse($group1Units as $idx => $unit)
                             <tr>
-                                <td style="text-align: center; font-weight: 700; border: 1px solid #0f172a; padding: 6px;">{{ $idx + 1 }}.</td>
-                                <td style="font-weight: 600; color: #0f172a; border: 1px solid #0f172a; padding: 6px 10px;">{{ $unit->kode_unit }}</td>
-                                <td style="font-weight: 600; color: #0f172a; border: 1px solid #0f172a; padding: 6px 10px;">{{ $unit->judul_unit }}</td>
+                                <td style="text-align: center; font-weight: 700; border: 1px solid #000000; padding: 6px 4px; color: #000000;">{{ $idx + 1 }}.</td>
+                                <td style="font-weight: 700; color: #000000; border: 1px solid #000000; padding: 6px 10px;">{{ $unit->kode_unit }}</td>
+                                <td style="font-weight: 700; color: #000000; border: 1px solid #000000; padding: 6px 10px;">{{ $unit->judul_unit }}</td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="3" style="text-align: center; color: #64748b; font-style: italic; border: 1px solid #0f172a; padding: 10px;">
+                                <td colspan="3" style="text-align: center; color: #64748b; font-style: italic; border: 1px solid #000000; padding: 10px;">
                                     Belum ada data unit kompetensi terdaftar pada skema.
                                 </td>
                             </tr>
@@ -2151,32 +2131,30 @@
                 <!-- ========================================================================= -->
                 <div style="border: 1px solid #0f172a; padding: 0.85rem 1rem; margin-top: 1.5rem; margin-bottom: 2rem;">
                     <div style="font-weight: 700; font-size: 0.92rem; margin-bottom: 0.45rem; color: #0f172a;">
-                        Umpan Balik untuk asesi:
+                        Umpan Balik untuk asesi: <span style="color: #ef4444;">*</span>
                     </div>
-                    <textarea name="metadata_umpan_balik" rows="3" class="input-inline-bnsp" style="width: 100%; border: 1px dashed #cbd5e1; padding: 0.5rem; font-size: 0.85rem; border-radius: 4px; box-sizing: border-box;" placeholder="Tuliskan umpan balik standar untuk asesi...">{{ old('metadata_umpan_balik', $umpanBalik) }}</textarea>
+                    <textarea name="metadata_umpan_balik" rows="3" class="input-inline-bnsp" style="width: 100%; border: 1px dashed #cbd5e1; padding: 0.5rem; font-size: 0.85rem; border-radius: 4px; box-sizing: border-box;" placeholder="Tuliskan umpan balik standar untuk asesi..." required>{{ old('metadata_umpan_balik', $umpanBalik) }}</textarea>
                 </div>
 
                 <!-- ========================================================================= -->
                 <!-- KELOMPOK PEKERJAAN 2 (JIKA DIBAGI / ADA KELOMPOK KEDUA) -->
                 <!-- ========================================================================= -->
                 @if($group2Units->count() > 0)
-                    <table class="tabel-bnsp" style="width: 100%; border-collapse: collapse; margin-top: 2rem; margin-bottom: 1.5rem; font-size: 0.86rem;">
-                        <thead>
-                            <tr>
-                                <th rowspan="{{ $group2Units->count() + 1 }}" style="width: 25%; text-align: center; vertical-align: middle; font-weight: 800; background-color: #ffffff; border: 1px solid #0f172a; padding: 8px 10px;">
-                                    Kelompok Pekerjaan 2
-                                </th>
-                                <th style="width: 8%; text-align: center; font-weight: 700; border: 1px solid #0f172a; padding: 6px;">No.</th>
-                                <th style="width: 27%; text-align: center; font-weight: 700; border: 1px solid #0f172a; padding: 6px;">Kode Unit</th>
-                                <th style="text-align: center; font-weight: 700; border: 1px solid #0f172a; padding: 6px;">Judul Unit</th>
-                            </tr>
-                        </thead>
+                    <table class="tabel-bnsp" style="width: 100%; border-collapse: collapse; margin-top: 2rem; margin-bottom: 1.5rem; font-size: 0.88rem; border: 1px solid #000000;">
                         <tbody>
+                            <tr>
+                                <td rowspan="{{ max(1, $group2Units->count()) + 1 }}" style="width: 25%; text-align: center; vertical-align: middle; font-weight: 700; font-size: 0.95rem; border: 1px solid #000000; padding: 10px; background-color: #ffffff; color: #000000;">
+                                    <span style="display: inline-block; max-width: 130px; line-height: 1.35;">Kelompok Pekerjaan 2</span>
+                                </td>
+                                <th style="width: 8%; text-align: center; font-weight: 700; border: 1px solid #000000; padding: 6px 4px; background-color: #ffffff; color: #000000;">No.</th>
+                                <th style="width: 28%; text-align: center; font-weight: 700; border: 1px solid #000000; padding: 6px 8px; background-color: #ffffff; color: #000000;">Kode Unit</th>
+                                <th style="text-align: center; font-weight: 700; border: 1px solid #000000; padding: 6px 8px; background-color: #ffffff; color: #000000;">Judul Unit</th>
+                            </tr>
                             @foreach($group2Units as $idx => $unit)
                                 <tr>
-                                    <td style="text-align: center; font-weight: 700; border: 1px solid #0f172a; padding: 6px;">{{ $idx + 1 }}.</td>
-                                    <td style="font-weight: 600; color: #0f172a; border: 1px solid #0f172a; padding: 6px 10px;">{{ $unit->kode_unit }}</td>
-                                    <td style="font-weight: 600; color: #0f172a; border: 1px solid #0f172a; padding: 6px 10px;">{{ $unit->judul_unit }}</td>
+                                    <td style="text-align: center; font-weight: 700; border: 1px solid #000000; padding: 6px 4px; color: #000000;">{{ $idx + 1 }}.</td>
+                                    <td style="font-weight: 700; color: #000000; border: 1px solid #000000; padding: 6px 10px;">{{ $unit->kode_unit }}</td>
+                                    <td style="font-weight: 700; color: #000000; border: 1px solid #000000; padding: 6px 10px;">{{ $unit->judul_unit }}</td>
                                 </tr>
                             @endforeach
                         </tbody>

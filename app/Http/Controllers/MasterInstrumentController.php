@@ -27,6 +27,8 @@ class MasterInstrumentController extends Controller
      */
     public function index(Request $request)
     {
+        SchemeMasterInstrument::cleanUnconfiguredDrafts();
+
         $user = auth()->user();
         $isAsesor = $user && $user->peran === 'asesor';
 
@@ -197,7 +199,10 @@ class MasterInstrumentController extends Controller
             'instrument_code' => $normalized,
             'unit_kompetensi_id' => $defaultUnitId,
             'title' => $defaultTitle,
+            'time_limit_minutes' => null,
             'is_active' => true,
+            'additional_metadata' => ['is_saved' => false],
+            'created_by' => auth()->id(),
         ]);
 
         LogAktivitas::create([
@@ -217,6 +222,7 @@ class MasterInstrumentController extends Controller
     {
         $validated = $request->validated();
         $validated['is_active'] = $request->boolean('is_active', true);
+        $validated['created_by'] = auth()->id();
 
         if ($request->has('additional_metadata')) {
             $validated['additional_metadata'] = $request->input('additional_metadata');
@@ -255,8 +261,10 @@ class MasterInstrumentController extends Controller
         $validated = $request->validated();
         $validated['is_active'] = $request->boolean('is_active', true);
 
-        if ($request->has('additional_metadata')) {
-            $validated['additional_metadata'] = $request->input('additional_metadata');
+        $meta = $request->has('additional_metadata') ? $request->input('additional_metadata') : ($instrument->additional_metadata ?? []);
+        if (is_array($meta)) {
+            $meta['is_saved'] = true;
+            $validated['additional_metadata'] = $meta;
         }
 
         $instrument->update($validated);
@@ -326,6 +334,61 @@ class MasterInstrumentController extends Controller
     {
         $instrument = SchemeMasterInstrument::findOrFail($id);
 
+        $code = SchemeMasterInstrument::normalizeCode($instrument->instrument_code);
+
+        // Validasi wajib isi untuk setiap jenis formulir jika user submit
+        if (in_array($code, ['ia_02', 'ia02'])) {
+            if ($request->has('metadata_kelompok_skenario')) {
+                $request->validate([
+                    'metadata_kelompok_skenario' => 'required|array|min:1',
+                    'metadata_kelompok_skenario.*.skenario' => 'required|string',
+                    'metadata_kelompok_skenario.*.peralatan' => 'required|string',
+                    'metadata_kelompok_skenario.*.waktu' => 'required|string',
+                ], [
+                    'metadata_kelompok_skenario.required' => 'Skenario kelompok pekerjaan wajib diisi.',
+                    'metadata_kelompok_skenario.*.skenario.required' => 'Skenario Tugas Praktik Demonstrasi wajib diisi.',
+                    'metadata_kelompok_skenario.*.peralatan.required' => 'Perlengkapan dan Peralatan wajib diisi.',
+                    'metadata_kelompok_skenario.*.waktu.required' => 'Durasi Waktu wajib diisi.',
+                ]);
+            } else {
+                $request->validate([
+                    'metadata_scenario' => 'required|string',
+                ], [
+                    'metadata_scenario.required' => 'Skenario Tugas Praktik Demonstrasi wajib diisi.',
+                ]);
+            }
+        } elseif (in_array($code, ['ia_01', 'ia01'])) {
+            $request->validate([
+                'metadata_default_standard' => 'required|string',
+                'metadata_umpan_balik' => 'required|string',
+            ], [
+                'metadata_default_standard.required' => 'Standar acuan utama (SOP) wajib diisi.',
+                'metadata_umpan_balik.required' => 'Umpan balik untuk asesi wajib diisi.',
+            ]);
+        } elseif (in_array($code, ['ia_03', 'ia03'])) {
+            $request->validate([
+                'metadata_kelompok_soal' => 'required|array|min:1',
+                'metadata_kelompok_soal.*.*.pertanyaan' => 'required|string',
+                'metadata_umpan_balik' => 'nullable|string',
+            ], [
+                'metadata_kelompok_soal.*.*.pertanyaan.required' => 'Butir pertanyaan pendukung observasi wajib diisi.',
+            ]);
+        } elseif (in_array($code, ['ia_04a', 'ia04a'])) {
+            $request->validate([
+                'metadata_scenario' => 'required|string',
+                'metadata_waktu_menit' => 'required|string|max:50',
+                'metadata_demonstrasi' => 'required|string',
+                'metadata_waktu_demo' => 'required|string|max:50',
+                'metadata_umpan_balik' => 'required|string',
+            ], [
+                'metadata_scenario.required' => 'Skenario proyek singkat wajib diisi.',
+                'metadata_waktu_menit.required' => 'Waktu pengerjaan proyek wajib diisi.',
+                'metadata_demonstrasi.required' => 'Hasil yang perlu didemonstrasikan wajib diisi.',
+                'metadata_waktu_demo.required' => 'Waktu demonstrasi wajib diisi.',
+                'metadata_umpan_balik.required' => 'Umpan balik untuk asesi wajib diisi.',
+            ]);
+        }
+
         $request->validate([
             'instructions' => 'nullable|string',
             'time_limit_minutes' => 'nullable|integer|min:1',
@@ -344,6 +407,15 @@ class MasterInstrumentController extends Controller
         }
         if ($request->has('metadata_deliverables')) {
             $meta['deliverables'] = $request->input('metadata_deliverables');
+        }
+        if ($request->has('metadata_waktu_menit')) {
+            $meta['waktu_menit'] = $request->input('metadata_waktu_menit');
+        }
+        if ($request->has('metadata_demonstrasi')) {
+            $meta['demonstrasi'] = $request->input('metadata_demonstrasi');
+        }
+        if ($request->has('metadata_waktu_demo')) {
+            $meta['waktu_demo'] = $request->input('metadata_waktu_demo');
         }
         if ($request->has('metadata_instructions')) {
             $meta['instructions'] = $request->input('metadata_instructions');
@@ -370,11 +442,29 @@ class MasterInstrumentController extends Controller
             $meta['penyusun_validator'] = $request->input('metadata_penyusun_validator');
         }
         if ($request->has('metadata_kelompok_skenario')) {
-            $meta['kelompok_skenario'] = $request->input('metadata_kelompok_skenario');
+            $kelompokSkenario = $request->input('metadata_kelompok_skenario');
+            $meta['kelompok_skenario'] = $kelompokSkenario;
+            if (isset($kelompokSkenario[1]['skenario'])) {
+                $meta['scenario'] = $kelompokSkenario[1]['skenario'];
+            }
+            if (isset($kelompokSkenario[1]['peralatan'])) {
+                $meta['tools_equipment'] = $kelompokSkenario[1]['peralatan'];
+            }
+            if (isset($kelompokSkenario[1]['waktu'])) {
+                $meta['durasi_waktu'] = $kelompokSkenario[1]['waktu'];
+                if (empty($instrument->time_limit_minutes) && preg_match('/(\d+)/', $kelompokSkenario[1]['waktu'], $m)) {
+                    $instrument->time_limit_minutes = (int) $m[1];
+                }
+            }
         }
         if ($request->has('metadata_kelompok_soal')) {
             $meta['kelompok_soal'] = $request->input('metadata_kelompok_soal');
         }
+        if (empty($instrument->created_by) && auth()->check()) {
+            $instrument->created_by = auth()->id();
+        }
+        $meta['is_saved'] = true;
+        $meta['saved_at'] = now()->toDateTimeString();
         $instrument->additional_metadata = $meta;
         $instrument->save();
 
@@ -396,6 +486,7 @@ class MasterInstrumentController extends Controller
         DB::beginTransaction();
         try {
             $newInstrument = $source->replicate();
+            $newInstrument->created_by = auth()->id();
             $newInstrument->skema_id = $request->input('target_skema_id');
             $newInstrument->title = $request->input('new_title');
             $newInstrument->created_at = now();

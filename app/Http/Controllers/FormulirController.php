@@ -39,7 +39,7 @@ class FormulirController extends Controller
             'skema.masterInstruments.questionBanks.kriteriaUnjukKerja',
             'skema.masterInstruments.productSpecifications',
             'asesor',
-            'jadwal',
+            'jadwal.asesor',
             'rekomendasi',
             'mapa01',
             'mapa02',
@@ -50,33 +50,48 @@ class FormulirController extends Controller
         $pendaftaran = null;
 
         // =========================================================================
-        // KASUS A: SKEMA_ID DIKETAHUI SECARA EKSPLISIT (FORM WAJIB MENGIKUTI SKEMA INI)
+        // PRIORITAS 1: JIKA ADA PENDAFTARAN_ID EKSPLISIT (> 0)
+        // INI ADALAH ASESMEN NYATA UNTUK ASESI TERTENTU DARI DATABASE
         // =========================================================================
-        if ($requestedSkemaId) {
-            session(['active_selected_skema_id' => $requestedSkemaId]);
+        if ($explicitPendaftaranId && $explicitPendaftaranId > 0 && !$isExplicitBlanko) {
+            $query = PendaftaranAsesi::with($withRelations)->where('id', $explicitPendaftaranId);
 
-            // Jika bukan mode blanko eksplisit, coba cari pendaftaran asesi di skema ini
-            if (!$isExplicitBlanko) {
-                // 1. Jika ada explicit pendaftaran_id (> 0), cek kecocokan dengan skema
-                if ($explicitPendaftaranId && $explicitPendaftaranId > 0) {
-                    $query = PendaftaranAsesi::with($withRelations)
-                        ->where('id', $explicitPendaftaranId)
-                        ->where('skema_id', $requestedSkemaId);
+            if ($user && $user->peran === 'asesi') {
+                $query->where('asesi_id', $user->id);
+            } elseif ($user && $user->peran === 'asesor') {
+                $query->where(function ($q) use ($user) {
+                    $q->where('asesor_id', $user->id)
+                        ->orWhereHas('jadwal', fn ($jadwal) => $jadwal->where('asesor_id', $user->id));
+                });
+            }
 
-                    if ($user && $user->peran === 'asesi') {
-                        $query->where('asesi_id', $user->id);
-                    } elseif ($user && $user->peran === 'asesor') {
-                        $query->where(function ($q) use ($user) {
-                            $q->where('asesor_id', $user->id)
-                                ->orWhereHas('jadwal', fn ($jadwal) => $jadwal->where('asesor_id', $user->id));
-                        });
-                    }
+            $pendaftaran = $query->first();
 
-                    $pendaftaran = $query->first();
+            if ($pendaftaran) {
+                session(['active_asesor_pendaftaran_id' => $pendaftaran->id]);
+                session(['active_selected_skema_id' => $pendaftaran->skema_id]);
+                $requestedSkemaId = $pendaftaran->skema_id;
+            } elseif ($user && $user->peran === 'asesi') {
+                $existsOther = PendaftaranAsesi::where('id', $explicitPendaftaranId)->exists();
+                if ($existsOther) {
+                    abort(403, 'Akses Ditolak: Anda hanya diperbolehkan mengakses berkas dan hasil ujian milik akun Anda sendiri.');
                 }
+                abort(404, 'Pendaftaran tidak ditemukan.');
+            }
+        }
 
-                // 2. Jika belum ditemukan, cari pendaftaran asesi yang ada di skema ini
-                if (!$pendaftaran) {
+        // =========================================================================
+        // PRIORITAS 2: JIKA BELUM ADA PENDAFTARAN EKSPLISIT ATAU MASIH NULL
+        // =========================================================================
+        if (!$pendaftaran) {
+            // =========================================================================
+            // KASUS A: SKEMA_ID DIKETAHUI (REQUEST ATAU SESSION)
+            // =========================================================================
+            if ($requestedSkemaId) {
+                session(['active_selected_skema_id' => $requestedSkemaId]);
+
+                // Jika bukan mode blanko eksplisit, coba cari pendaftaran asesi di skema ini
+                if (!$isExplicitBlanko) {
                     if ($user && $user->peran === 'asesi') {
                         $pendaftaran = PendaftaranAsesi::with($withRelations)
                             ->where('asesi_id', $user->id)
@@ -99,37 +114,22 @@ class FormulirController extends Controller
                             ->first();
                     }
                 }
-            }
 
-            // 3. Jika tetap belum ada pendaftaran asesi untuk skema ini atau diminta blanko, buka Master Blanko Skema
-            if (!$pendaftaran) {
-                $pendaftaran = $this->resolveBlankoSkema($requestedSkemaId, $user);
-                session()->forget('active_asesor_pendaftaran_id');
-            } else {
-                if ($pendaftaran->id > 0) {
-                    session(['active_asesor_pendaftaran_id' => $pendaftaran->id]);
-                }
-            }
-        } 
-        // =========================================================================
-        // KASUS B: SKEMA_ID TIDAK DIKETAHUI (GUNAKAN PENDAFTARAN AKTIF)
-        // =========================================================================
-        else {
-            if ($user && $user->peran === 'asesi') {
-                if ($explicitPendaftaranId && $explicitPendaftaranId > 0) {
-                    $pendaftaran = PendaftaranAsesi::with($withRelations)
-                        ->where('id', $explicitPendaftaranId)
-                        ->where('asesi_id', $user->id)
-                        ->first();
-
-                    if (!$pendaftaran) {
-                        $existsOther = PendaftaranAsesi::where('id', $explicitPendaftaranId)->exists();
-                        if ($existsOther) {
-                            abort(403, 'Akses Ditolak: Anda hanya diperbolehkan mengakses berkas dan hasil ujian milik akun Anda sendiri.');
-                        }
-                        abort(404, 'Pendaftaran tidak ditemukan.');
-                    }
+                // Jika tetap belum ada pendaftaran asesi untuk skema ini atau diminta blanko, buka Master Blanko Skema
+                if (!$pendaftaran) {
+                    $pendaftaran = $this->resolveBlankoSkema($requestedSkemaId, $user);
+                    session()->forget('active_asesor_pendaftaran_id');
                 } else {
+                    if ($pendaftaran->id > 0) {
+                        session(['active_asesor_pendaftaran_id' => $pendaftaran->id]);
+                    }
+                }
+            } 
+            // =========================================================================
+            // KASUS B: SKEMA_ID TIDAK DIKETAHUI (GUNAKAN PENDAFTARAN AKTIF)
+            // =========================================================================
+            else {
+                if ($user && $user->peran === 'asesi') {
                     $pendaftaran = PendaftaranAsesi::with($withRelations)
                         ->where('asesi_id', $user->id)
                         ->latest()
@@ -138,56 +138,52 @@ class FormulirController extends Controller
                     if (!$pendaftaran) {
                         $pendaftaran = $this->resolveBlankoSkema($user->skema_id, $user);
                     }
-                }
-            } elseif ($user && $user->peran === 'asesor') {
-                $targetId = ($explicitPendaftaranId && $explicitPendaftaranId > 0) 
-                    ? $explicitPendaftaranId 
-                    : session('active_asesor_pendaftaran_id');
+                } elseif ($user && $user->peran === 'asesor') {
+                    $targetId = session('active_asesor_pendaftaran_id');
 
-                if ($targetId) {
-                    $pendaftaran = PendaftaranAsesi::with($withRelations)
-                        ->where(function ($q) use ($user) {
-                            $q->where('asesor_id', $user->id)
-                                ->orWhereHas('jadwal', fn ($jadwal) => $jadwal->where('asesor_id', $user->id));
-                        })
-                        ->find($targetId);
-                }
+                    if ($targetId) {
+                        $pendaftaran = PendaftaranAsesi::with($withRelations)
+                            ->where(function ($q) use ($user) {
+                                $q->where('asesor_id', $user->id)
+                                    ->orWhereHas('jadwal', fn ($jadwal) => $jadwal->where('asesor_id', $user->id));
+                            })
+                            ->find($targetId);
+                    }
 
-                if (!$pendaftaran) {
-                    $pendaftaran = PendaftaranAsesi::with($withRelations)
-                        ->where(function ($q) use ($user) {
-                            $q->where('asesor_id', $user->id)
-                                ->orWhereHas('jadwal', fn ($jadwal) => $jadwal->where('asesor_id', $user->id));
-                        })
-                        ->latest()
-                        ->first();
-                }
+                    if (!$pendaftaran) {
+                        $pendaftaran = PendaftaranAsesi::with($withRelations)
+                            ->where(function ($q) use ($user) {
+                                $q->where('asesor_id', $user->id)
+                                    ->orWhereHas('jadwal', fn ($jadwal) => $jadwal->where('asesor_id', $user->id));
+                            })
+                            ->latest()
+                            ->first();
+                    }
 
-                if ($pendaftaran) {
-                    session(['active_asesor_pendaftaran_id' => $pendaftaran->id]);
-                    session(['active_selected_skema_id' => $pendaftaran->skema_id]);
+                    if ($pendaftaran) {
+                        session(['active_asesor_pendaftaran_id' => $pendaftaran->id]);
+                        session(['active_selected_skema_id' => $pendaftaran->skema_id]);
+                    } else {
+                        $pendaftaran = $this->resolveBlankoSkema($user->skema_id, $user);
+                    }
                 } else {
-                    $pendaftaran = $this->resolveBlankoSkema($user->skema_id, $user);
-                }
-            } else {
-                // Admin / Superadmin
-                $targetId = ($explicitPendaftaranId && $explicitPendaftaranId > 0) 
-                    ? $explicitPendaftaranId 
-                    : session('active_asesor_pendaftaran_id');
+                    // Admin / Superadmin
+                    $targetId = session('active_asesor_pendaftaran_id');
 
-                if ($targetId) {
-                    $pendaftaran = PendaftaranAsesi::with($withRelations)->find($targetId);
-                }
+                    if ($targetId) {
+                        $pendaftaran = PendaftaranAsesi::with($withRelations)->find($targetId);
+                    }
 
-                if (!$pendaftaran) {
-                    $pendaftaran = PendaftaranAsesi::with($withRelations)->latest()->first();
-                }
+                    if (!$pendaftaran) {
+                        $pendaftaran = PendaftaranAsesi::with($withRelations)->latest()->first();
+                    }
 
-                if ($pendaftaran) {
-                    session(['active_asesor_pendaftaran_id' => $pendaftaran->id]);
-                    session(['active_selected_skema_id' => $pendaftaran->skema_id]);
-                } else {
-                    $pendaftaran = $this->resolveBlankoSkema($user?->skema_id, $user);
+                    if ($pendaftaran) {
+                        session(['active_asesor_pendaftaran_id' => $pendaftaran->id]);
+                        session(['active_selected_skema_id' => $pendaftaran->skema_id]);
+                    } else {
+                        $pendaftaran = $this->resolveBlankoSkema($user?->skema_id, $user);
+                    }
                 }
             }
         }
@@ -423,20 +419,12 @@ class FormulirController extends Controller
         $units = $pendaftaran->skema->unitKompetensi ?? collect();
         $unitTitles = $units->pluck('judul_unit')->filter()->values();
 
-        // Default Skenario dinamis dari database skema aktif
-        $defaultScenario = "Anda ditugaskan untuk mendemonstrasikan tugas praktik kerja pada skema {$skemaNama}, mencakup unit kompetensi: "
-            . ($unitTitles->isNotEmpty() ? $unitTitles->map(fn($t, $i) => ($i + 1) . '. ' . $t)->implode('; ') : 'sesuai unit kompetensi yang dipersyaratkan')
-            . " dengan mengacu kepada Standar Operasional Prosedur (SOP), Instruksi Kerja (WI), dan Kriteria Unjuk Kerja (KUK) yang berlaku.";
-
-        // Default Perlengkapan & Peralatan dinamis dari database skema aktif
-        $defaultTools = "Peralatan kerja, mesin/alat uji, instrumen, bahan kerja, serta Alat Pelindung Diri (APD) standar yang dipersyaratkan untuk pelaksanaan demonstrasi unit kompetensi pada skema {$skemaNama}.";
-
         $saved = $iaRecord ? ($iaRecord->data_jawaban ?? []) : [];
         $dataPraktik = [
             'judul_tugas' => $saved['judul_tugas'] ?? ($meta['judul_tugas'] ?? ($masterInst?->title ?? ('Tugas Praktik Demonstrasi ' . $skemaNama))),
-            'skenario' => $saved['skenario'] ?? ($meta['scenario'] ?? ($meta['skenario'] ?? $defaultScenario)),
-            'peralatan_bahan' => $saved['peralatan_bahan'] ?? ($meta['tools_equipment'] ?? ($meta['peralatan_bahan'] ?? $defaultTools)),
-            'durasi_waktu' => $saved['durasi_waktu'] ?? ($meta['durasi_waktu'] ?? (($masterInst?->time_limit_minutes ?? 120) . ' Menit')),
+            'skenario' => $saved['skenario'] ?? ($meta['scenario'] ?? ($meta['skenario'] ?? '')),
+            'peralatan_bahan' => $saved['peralatan_bahan'] ?? ($meta['tools_equipment'] ?? ($meta['peralatan_bahan'] ?? '')),
+            'durasi_waktu' => $saved['durasi_waktu'] ?? ($meta['durasi_waktu'] ?? ($masterInst?->time_limit_minutes ? ($masterInst->time_limit_minutes . ' Menit') : '')),
             'instruksi_kerja' => $saved['instruksi_kerja'] ?? ($meta['instruksi_kerja'] ?? ($masterInst?->instructions ? explode("\n", $masterInst->instructions) : [])),
             'standar_hasil' => $saved['standar_hasil'] ?? ($meta['standar_hasil'] ?? []),
             'catatan' => $saved['catatan'] ?? ($iaRecord->catatan_asesor ?? ''),
@@ -479,10 +467,14 @@ class FormulirController extends Controller
         $saved = $iaRecord ? ($iaRecord->data_jawaban ?? []) : [];
         $dataProyek = [
             'judul_proyek' => $saved['judul_proyek'] ?? ($meta['judul_proyek'] ?? ($masterInst?->title ?? 'Penjelasan Proyek Singkat / Kegiatan Terstruktur')),
-            'skenario' => $saved['skenario'] ?? ($meta['skenario'] ?? 'Laksanakan proyek singkat sesuai batasan waktu dan spesifikasi teknis kerja.'),
+            'skenario' => $saved['skenario'] ?? ($meta['scenario'] ?? ($meta['skenario'] ?? '')),
+            'waktu_menit' => $saved['waktu_menit'] ?? ($meta['waktu_menit'] ?? ''),
+            'demonstrasi' => $saved['demonstrasi'] ?? ($meta['demonstrasi'] ?? ($meta['deliverables'] ?? '')),
+            'waktu_demo' => $saved['waktu_demo'] ?? ($meta['waktu_demo'] ?? ''),
+            'umpan_balik' => $saved['umpan_balik'] ?? ($meta['umpan_balik'] ?? ''),
             'instruksi_terstruktur' => $saved['instruksi_terstruktur'] ?? ($meta['instruksi_terstruktur'] ?? ($masterInst?->instructions ? explode("\n", $masterInst->instructions) : [])),
-            'durasi_waktu' => $saved['durasi_waktu'] ?? ($meta['durasi_waktu'] ?? (($masterInst?->time_limit_minutes ?? 180) . ' Menit (3 Jam)')),
-            'peralatan_bahan' => $saved['peralatan_bahan'] ?? ($meta['peralatan_bahan'] ?? 'Perangkat dan bahan proyek yang relevan.'),
+            'durasi_waktu' => $saved['durasi_waktu'] ?? ($meta['durasi_waktu'] ?? ($masterInst?->time_limit_minutes ? ($masterInst->time_limit_minutes . ' Menit') : '')),
+            'peralatan_bahan' => $saved['peralatan_bahan'] ?? ($meta['tools_equipment'] ?? ($meta['peralatan_bahan'] ?? '')),
         ];
         return view('formulir.fr-ia-04a', compact('pendaftaran', 'iaRecord', 'masterInst', 'dataProyek'));
     }
@@ -1049,6 +1041,7 @@ class FormulirController extends Controller
                         'instrument_code' => 'ia_02',
                         'title' => $request->input('judul_tugas') ?: 'Tugas Praktik Demonstrasi',
                         'is_active' => true,
+                        'created_by' => auth()->id() ?? $pendaftaran->asesor_id,
                     ]);
                 }
                 $meta = $inst->additional_metadata ?? [];
@@ -1143,6 +1136,7 @@ class FormulirController extends Controller
                         'instrument_code' => 'ia_04a',
                         'title' => 'Penjelasan Proyek Singkat (DIT)',
                         'is_active' => true,
+                        'created_by' => auth()->id() ?? $pendaftaran->asesor_id,
                     ]);
                 }
                 $meta = $inst->additional_metadata ?? [];

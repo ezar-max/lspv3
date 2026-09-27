@@ -11,12 +11,15 @@
     
     @php
         $isAsesi = auth()->check() && auth()->user()->peran === 'asesi';
-        $asesorNama = $pendaftaran->asesor->nama_lengkap ?? (auth()->user()->peran === 'asesor' ? auth()->user()->nama_lengkap : 'Asesor LSP');
-        $asesorMet = $pendaftaran->asesor->nomor_registrasi ?? 'MET.000.004455.2023';
+        $effectiveAsesor = $pendaftaran->asesor ?? ($pendaftaran->jadwal->asesor ?? null);
+        $asesorNama = $effectiveAsesor->nama_lengkap ?? (auth()->check() && auth()->user()->peran === 'asesor' ? auth()->user()->nama_lengkap : 'Asesor LSP');
+        $asesorMet = $effectiveAsesor->nomor_registrasi ?? (auth()->check() && auth()->user()->peran === 'asesor' ? auth()->user()->nomor_registrasi : 'MET.000.004455.2023');
         $asesiNama = $pendaftaran->asesi->nama_lengkap ?? 'Nama Asesi';
-        $asesorTtd = $pendaftaran->tanda_tangan_asesor ?? (auth()->user()->tanda_tangan ?? null);
+        $asesorTtd = $pendaftaran->tanda_tangan_asesor ?? ($effectiveAsesor->tanda_tangan ?? (auth()->check() && auth()->user()->peran === 'asesor' ? auth()->user()->tanda_tangan : null));
         $asesiTtd = $iaRecord->data_jawaban['ttd_asesi'] ?? ($pendaftaran->tanda_tangan_asesi ?? null);
         $tglTtdAsesi = $iaRecord->data_jawaban['tgl_ttd_asesi'] ?? null;
+        $tukNama = $pendaftaran->jadwal->nama_tuk ?? ($pendaftaran->tuk_type ?? 'Sewaktu');
+        $tglAsesmen = $pendaftaran->jadwal?->tanggal_uji ? \Carbon\Carbon::parse($pendaftaran->jadwal->tanggal_uji)->format('d-m-Y') : date('d-m-Y');
     @endphp
 
     <!-- ACTION BAR ATAS -->
@@ -70,7 +73,7 @@
             <tr>
                 <td colspan="2" style="font-weight: 600;">TUK</td>
                 <td>:</td>
-                <td>Sewaktu / Tempat Kerja / Mandiri* (<strong>{{ $pendaftaran->tuk_type ?? '' }}</strong>)</td>
+                <td>Sewaktu / Tempat Kerja / Mandiri* (<strong>{{ $tukNama }}</strong>)</td>
             </tr>
             <tr>
                 <td colspan="2" style="font-weight: 600;">Nama Asesor</td>
@@ -85,7 +88,7 @@
             <tr>
                 <td colspan="2" style="font-weight: 600;">Tanggal</td>
                 <td>:</td>
-                <td>{{ date('d-m-Y') }}</td>
+                <td>{{ $tglAsesmen }}</td>
             </tr>
         </table>
         <div style="font-size: 0.75rem; font-style: italic; color: #64748b; margin-top: -1rem; margin-bottom: 1.25rem;">*Coret yang tidak perlu</div>
@@ -129,26 +132,24 @@
             @endphp
 
         <!-- KELOMPOK PEKERJAAN 1 -->
-        <table class="tabel-bnsp" style="width: 100%; border-collapse: collapse; margin-bottom: 1.5rem; font-size: 0.86rem;">
-            <thead>
-                <tr>
-                    <th rowspan="{{ $group1Units->count() + 1 }}" style="width: 25%; text-align: center; vertical-align: middle; font-weight: 800; background-color: #ffffff; border: 1px solid #0f172a; padding: 8px 10px;">
-                        Kelompok Pekerjaan 1
-                    </th>
-                    <th style="width: 8%; text-align: center; font-weight: 700; border: 1px solid #0f172a; padding: 6px;">No.</th>
-                    <th style="width: 27%; text-align: center; font-weight: 700; border: 1px solid #0f172a; padding: 6px;">Kode Unit</th>
-                    <th style="text-align: center; font-weight: 700; border: 1px solid #0f172a; padding: 6px;">Judul Unit</th>
-                </tr>
-            </thead>
+        <table class="tabel-bnsp" style="width: 100%; border-collapse: collapse; margin-bottom: 1.5rem; font-size: 0.88rem; border: 1px solid #000000;">
             <tbody>
+                <tr>
+                    <td rowspan="{{ max(1, $group1Units->count()) + 1 }}" style="width: 25%; text-align: center; vertical-align: middle; font-weight: 700; font-size: 0.95rem; border: 1px solid #000000; padding: 10px; background-color: #ffffff; color: #000000;">
+                        <span style="display: inline-block; max-width: 130px; line-height: 1.35;">Kelompok Pekerjaan 1</span>
+                    </td>
+                    <th style="width: 8%; text-align: center; font-weight: 700; border: 1px solid #000000; padding: 6px 4px; background-color: #ffffff; color: #000000;">No.</th>
+                    <th style="width: 28%; text-align: center; font-weight: 700; border: 1px solid #000000; padding: 6px 8px; background-color: #ffffff; color: #000000;">Kode Unit</th>
+                    <th style="text-align: center; font-weight: 700; border: 1px solid #000000; padding: 6px 8px; background-color: #ffffff; color: #000000;">Judul Unit</th>
+                </tr>
                 @forelse($group1Units as $indexUnit => $unit)
                     <tr>
-                        <td style="text-align: center; font-weight: 700; border: 1px solid #0f172a; padding: 6px;">{{ $indexUnit + 1 }}.</td>
-                        <td style="font-weight: 600; color: #0f172a; border: 1px solid #0f172a; padding: 6px 10px;">{{ $unit->kode_unit }}</td>
-                        <td style="font-weight: 600; color: #0f172a; border: 1px solid #0f172a; padding: 6px 10px;">{{ $unit->judul_unit }}</td>
+                        <td style="text-align: center; font-weight: 700; border: 1px solid #000000; padding: 6px 4px; color: #000000;">{{ $indexUnit + 1 }}.</td>
+                        <td style="font-weight: 700; color: #000000; border: 1px solid #000000; padding: 6px 10px;">{{ $unit->kode_unit }}</td>
+                        <td style="font-weight: 700; color: #000000; border: 1px solid #000000; padding: 6px 10px;">{{ $unit->judul_unit }}</td>
                     </tr>
                 @empty
-                    <tr><td colspan="3" style="text-align: center; color: #64748b; font-style: italic; border: 1px solid #0f172a; padding: 10px;">Belum ada data unit kompetensi.</td></tr>
+                    <tr><td colspan="3" style="text-align: center; color: #64748b; font-style: italic; border: 1px solid #000000; padding: 10px;">Belum ada data unit kompetensi.</td></tr>
                 @endforelse
             </tbody>
         </table>
@@ -194,8 +195,7 @@
                                 $totalKuk = count($elem->kriteriaUnjukKerja);
                                 $elemStandar = $standarMap[$elem->id] 
                                     ?? ($standarElemenMaster[$elem->id] 
-                                    ?? ($defaultStandarMaster 
-                                    ?? ('SKKNI ' . $unit->kode_unit)));
+                                    ?? ($defaultStandarMaster ?? ''));
                             @endphp
                             @if($totalKuk > 0)
                                 @foreach($elem->kriteriaUnjukKerja as $kIdx => $kuk)
@@ -223,7 +223,7 @@
                                         @if($kIdx === 0)
                                             <!-- Standar Industri per Elemen Spanning Row (Sesuai Gambar) -->
                                             <td rowspan="{{ $totalKuk }}" style="border: 1px solid #0f172a; padding: 6px; vertical-align: middle; text-align: center; background: #fafafa;">
-                                                <textarea name="standar_industri[{{ $elem->id }}]" rows="{{ max(2, $totalKuk) }}" class="input-inline-bnsp" style="width: 100%; border: 1px dashed #94a3b8; padding: 4px; font-size: 0.78rem; text-align: center; resize: vertical;" placeholder="Standar Industri..." {{ $isAsesi ? 'readonly' : '' }}>{{ $elemStandar }}</textarea>
+                                                <textarea name="standar_industri[{{ $elem->id }}]" rows="{{ max(2, $totalKuk) }}" class="input-inline-bnsp" style="width: 100%; border: 1px dashed #94a3b8; padding: 4px; font-size: 0.78rem; text-align: center; resize: vertical;" placeholder="Standar Industri..." {{ $isAsesi ? 'readonly' : 'required' }}>{{ $elemStandar }}</textarea>
                                             </td>
                                         @endif
 
@@ -243,7 +243,7 @@
                                     <td style="text-align: center; font-weight: 700; border: 1px solid #0f172a; padding: 6px;">{{ $idxElem + 1 }}</td>
                                     <td style="font-weight: 600; border: 1px solid #0f172a; padding: 6px 8px;">{{ $elem->nomor_elemen }}. {{ $elem->nama_elemen }}</td>
                                     <td style="font-style: italic; color: #64748b; border: 1px solid #0f172a; padding: 6px 8px;">KUK belum diinput.</td>
-                                    <td style="border: 1px solid #0f172a; padding: 6px;"><input type="text" class="input-inline-bnsp" value="SKKNI" style="font-size: 0.78rem;"></td>
+                                    <td style="border: 1px solid #0f172a; padding: 6px;"><input type="text" class="input-inline-bnsp" value="" style="font-size: 0.78rem;"></td>
                                     <td style="text-align: center; border: 1px solid #0f172a; padding: 4px;"><input type="checkbox" checked style="width: 16px; height: 16px;"></td>
                                     <td style="text-align: center; border: 1px solid #0f172a; padding: 4px;"><input type="checkbox" style="width: 16px; height: 16px;"></td>
                                     <td style="border: 1px solid #0f172a; padding: 4px;"><input type="text" class="input-inline-bnsp" style="font-size: 0.78rem;"></td>
@@ -262,9 +262,9 @@
         <!-- ========================================================================= -->
         <div style="border: 1px solid #0f172a; padding: 0.85rem 1rem; margin-top: 1.5rem; margin-bottom: 1.5rem;">
             <div style="font-weight: 700; font-size: 0.92rem; margin-bottom: 0.45rem; color: #0f172a;">
-                Umpan Balik untuk asesi:
+                Umpan Balik untuk asesi: <span style="color: #ef4444;">*</span>
             </div>
-            <textarea name="umpan_balik" class="input-inline-bnsp" rows="3" style="width: 100%; border: 1px dashed #cbd5e1; padding: 0.5rem; font-size: 0.85rem; border-radius: 4px; box-sizing: border-box;" placeholder="Tuliskan umpan balik untuk asesi..." {{ $isAsesi ? 'readonly' : '' }}>{{ $iaRecord->catatan_asesor ?? ($savedData['umpan_balik'] ?? ($meta['umpan_balik'] ?? 'Seluruh instruksi kerja dan demonstrasi praktik telah diobservasi dengan baik sesuai standar kompetensi SKKNI.')) }}</textarea>
+            <textarea name="umpan_balik" class="input-inline-bnsp" rows="3" style="width: 100%; border: 1px dashed #cbd5e1; padding: 0.5rem; font-size: 0.85rem; border-radius: 4px; box-sizing: border-box;" placeholder="Tuliskan umpan balik untuk asesi..." {{ $isAsesi ? 'readonly' : 'required' }}>{{ $iaRecord->catatan_asesor ?? ($savedData['umpan_balik'] ?? ($meta['umpan_balik'] ?? '')) }}</textarea>
             
             <div style="margin-top: 0.85rem; padding: 0.75rem 1rem; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 4px;">
                 <div style="font-weight: 700; font-size: 0.88rem; color: #0f172a; margin-bottom: 0.35rem;">Rekomendasi Keputusan Asesor:</div>
@@ -283,23 +283,21 @@
 
         <!-- KELOMPOK PEKERJAAN 2 (JIKA ADA) -->
         @if($group2Units->count() > 0)
-            <table class="tabel-bnsp" style="width: 100%; border-collapse: collapse; margin-top: 2rem; margin-bottom: 1.5rem; font-size: 0.86rem;">
-                <thead>
-                    <tr>
-                        <th rowspan="{{ $group2Units->count() + 1 }}" style="width: 25%; text-align: center; vertical-align: middle; font-weight: 800; background-color: #ffffff; border: 1px solid #0f172a; padding: 8px 10px;">
-                            Kelompok Pekerjaan 2
-                        </th>
-                        <th style="width: 8%; text-align: center; font-weight: 700; border: 1px solid #0f172a; padding: 6px;">No.</th>
-                        <th style="width: 27%; text-align: center; font-weight: 700; border: 1px solid #0f172a; padding: 6px;">Kode Unit</th>
-                        <th style="text-align: center; font-weight: 700; border: 1px solid #0f172a; padding: 6px;">Judul Unit</th>
-                    </tr>
-                </thead>
+            <table class="tabel-bnsp" style="width: 100%; border-collapse: collapse; margin-top: 2rem; margin-bottom: 1.5rem; font-size: 0.88rem; border: 1px solid #000000;">
                 <tbody>
+                    <tr>
+                        <td rowspan="{{ max(1, $group2Units->count()) + 1 }}" style="width: 25%; text-align: center; vertical-align: middle; font-weight: 700; font-size: 0.95rem; border: 1px solid #000000; padding: 10px; background-color: #ffffff; color: #000000;">
+                            <span style="display: inline-block; max-width: 130px; line-height: 1.35;">Kelompok Pekerjaan 2</span>
+                        </td>
+                        <th style="width: 8%; text-align: center; font-weight: 700; border: 1px solid #000000; padding: 6px 4px; background-color: #ffffff; color: #000000;">No.</th>
+                        <th style="width: 28%; text-align: center; font-weight: 700; border: 1px solid #000000; padding: 6px 8px; background-color: #ffffff; color: #000000;">Kode Unit</th>
+                        <th style="text-align: center; font-weight: 700; border: 1px solid #000000; padding: 6px 8px; background-color: #ffffff; color: #000000;">Judul Unit</th>
+                    </tr>
                     @foreach($group2Units as $indexUnit => $unit)
                         <tr>
-                            <td style="text-align: center; font-weight: 700; border: 1px solid #0f172a; padding: 6px;">{{ $indexUnit + 1 }}.</td>
-                            <td style="font-weight: 600; color: #0f172a; border: 1px solid #0f172a; padding: 6px 10px;">{{ $unit->kode_unit }}</td>
-                            <td style="font-weight: 600; color: #0f172a; border: 1px solid #0f172a; padding: 6px 10px;">{{ $unit->judul_unit }}</td>
+                            <td style="text-align: center; font-weight: 700; border: 1px solid #000000; padding: 6px 4px; color: #000000;">{{ $indexUnit + 1 }}.</td>
+                            <td style="font-weight: 700; color: #000000; border: 1px solid #000000; padding: 6px 10px;">{{ $unit->kode_unit }}</td>
+                            <td style="font-weight: 700; color: #000000; border: 1px solid #000000; padding: 6px 10px;">{{ $unit->judul_unit }}</td>
                         </tr>
                     @endforeach
                 </tbody>
@@ -344,8 +342,7 @@
                                     $totalKuk = count($elem->kriteriaUnjukKerja);
                                     $elemStandar = $standarMap[$elem->id] 
                                         ?? ($standarElemenMaster[$elem->id] 
-                                        ?? ($defaultStandarMaster 
-                                        ?? ('SKKNI ' . $unit->kode_unit)));
+                                        ?? ($defaultStandarMaster ?? ''));
                                 @endphp
                                 @if($totalKuk > 0)
                                     @foreach($elem->kriteriaUnjukKerja as $kIdx => $kuk)
@@ -369,7 +366,7 @@
 
                                             @if($kIdx === 0)
                                                 <td rowspan="{{ $totalKuk }}" style="border: 1px solid #0f172a; padding: 6px; vertical-align: middle; text-align: center; background: #fafafa;">
-                                                    <textarea name="standar_industri[{{ $elem->id }}]" rows="{{ max(2, $totalKuk) }}" class="input-inline-bnsp" style="width: 100%; border: 1px dashed #94a3b8; padding: 4px; font-size: 0.78rem; text-align: center; resize: vertical;" placeholder="Standar Industri..." {{ $isAsesi ? 'readonly' : '' }}>{{ $elemStandar }}</textarea>
+                                                    <textarea name="standar_industri[{{ $elem->id }}]" rows="{{ max(2, $totalKuk) }}" class="input-inline-bnsp" style="width: 100%; border: 1px dashed #94a3b8; padding: 4px; font-size: 0.78rem; text-align: center; resize: vertical;" placeholder="Standar Industri..." {{ $isAsesi ? 'readonly' : 'required' }}>{{ $elemStandar }}</textarea>
                                                 </td>
                                             @endif
 
@@ -439,63 +436,18 @@
                         @else
                             <span style="font-style: italic; color: #64748b;">(Tanda Tangan Digital Asesor)</span>
                         @endif
-                        <div style="font-size: 0.78rem; color: #64748b; margin-top: 0.25rem;">{{ date('d-m-Y') }}</div>
+                        <div style="font-size: 0.78rem; color: #64748b; margin-top: 0.25rem;">{{ $tglAsesmen }}</div>
                     </div>
                 </td>
             </tr>
         </table>
 
         <!-- TABEL PENYUSUN DAN VALIDATOR -->
-        <div style="margin-top: 2rem;">
-            <div style="font-weight: 800; font-size: 0.95rem; margin-bottom: 0.6rem; color: #0f172a; text-transform: uppercase;">
-                PENYUSUN DAN VALIDATOR
-            </div>
-            <table class="tabel-bnsp">
-                <thead>
-                    <tr>
-                        <th style="width: 18%; text-align: center;">STATUS</th>
-                        <th style="width: 6%; text-align: center;">NO</th>
-                        <th style="width: 32%;">NAMA</th>
-                        <th style="width: 22%;">NOMOR MET</th>
-                        <th style="width: 22%;">TANDA TANGAN DAN TANGGAL</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td rowspan="2" style="font-weight: 800; vertical-align: middle; text-align: center; background-color: #f8fafc;">PENYUSUN</td>
-                        <td style="text-align: center; font-weight: 700;">1</td>
-                        <td><strong>{{ $asesorNama }}</strong></td>
-                        <td>{{ $asesorMet }}</td>
-                        <td style="text-align: center;">
-                            @if($asesorTtd)
-                                <img src="{{ $asesorTtd }}" alt="TTD" style="max-height: 40px;">
-                            @else
-                                <span style="font-size: 0.78rem; color: #64748b;">{{ date('d/m/Y') }}</span>
-                            @endif
-                        </td>
-                    </tr>
-                    <tr>
-                        <td style="text-align: center; font-weight: 700;">2</td>
-                        <td><input type="text" class="input-inline-bnsp" placeholder="Penyusun 2..."></td>
-                        <td><input type="text" class="input-inline-bnsp" placeholder="No. MET..."></td>
-                        <td><input type="text" class="input-inline-bnsp" placeholder="TTD & Tgl..."></td>
-                    </tr>
-                    <tr>
-                        <td rowspan="2" style="font-weight: 800; vertical-align: middle; text-align: center; background-color: #f8fafc;">VALIDATOR</td>
-                        <td style="text-align: center; font-weight: 700;">1</td>
-                        <td><input type="text" class="input-inline-bnsp" placeholder="Validator 1..."></td>
-                        <td><input type="text" class="input-inline-bnsp" placeholder="No. MET..."></td>
-                        <td><input type="text" class="input-inline-bnsp" placeholder="TTD & Tgl..."></td>
-                    </tr>
-                    <tr>
-                        <td style="text-align: center; font-weight: 700;">2</td>
-                        <td><input type="text" class="input-inline-bnsp" placeholder="Validator 2..."></td>
-                        <td><input type="text" class="input-inline-bnsp" placeholder="No. MET..."></td>
-                        <td><input type="text" class="input-inline-bnsp" placeholder="TTD & Tgl..."></td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
+        @include('komponen.tabel-penyusun-validator', [
+            'pendaftaran' => $pendaftaran,
+            'kodeForm' => 'FR.IA.01',
+            'tableClass' => 'tabel-bnsp'
+        ])
 
     </div>
 </div>

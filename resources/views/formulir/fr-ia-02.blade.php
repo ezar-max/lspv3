@@ -194,12 +194,15 @@
     
     @php
         $isAsesi = auth()->check() && auth()->user()->peran === 'asesi';
-        $asesorNama = $pendaftaran->asesor->nama_lengkap ?? (auth()->user()->peran === 'asesor' ? auth()->user()->nama_lengkap : 'Asesor LSP');
-        $asesorMet = $pendaftaran->asesor->nomor_registrasi ?? 'MET.000.004455.2023';
+        $effectiveAsesor = $pendaftaran->asesor ?? ($pendaftaran->jadwal->asesor ?? null);
+        $asesorNama = $effectiveAsesor->nama_lengkap ?? (auth()->check() && auth()->user()->peran === 'asesor' ? auth()->user()->nama_lengkap : 'Asesor LSP');
+        $asesorMet = $effectiveAsesor->nomor_registrasi ?? (auth()->check() && auth()->user()->peran === 'asesor' ? auth()->user()->nomor_registrasi : 'MET.000.004455.2023');
         $asesiNama = $pendaftaran->asesi->nama_lengkap ?? 'Nama Asesi';
-        $asesorTtd = $pendaftaran->tanda_tangan_asesor ?? (auth()->user()->tanda_tangan ?? null);
+        $asesorTtd = $pendaftaran->tanda_tangan_asesor ?? ($effectiveAsesor->tanda_tangan ?? (auth()->check() && auth()->user()->peran === 'asesor' ? auth()->user()->tanda_tangan : null));
         $asesiTtd = $iaRecord->data_jawaban['ttd_asesi'] ?? ($pendaftaran->tanda_tangan_asesi ?? null);
         $tglTtdAsesi = $iaRecord->data_jawaban['tgl_ttd_asesi'] ?? null;
+        $tukNama = $pendaftaran->jadwal->nama_tuk ?? ($pendaftaran->tuk_type ?? 'Sewaktu');
+        $tglAsesmen = $pendaftaran->jadwal?->tanggal_uji ? \Carbon\Carbon::parse($pendaftaran->jadwal->tanggal_uji)->format('d-m-Y') : date('d-m-Y');
 
         $savedPV = $iaRecord->data_jawaban['penyusun_validator'] ?? [];
         $savedKelompok = $iaRecord->data_jawaban['kelompok_skenario'] ?? [];
@@ -222,9 +225,9 @@
         }
 
         $judulTugasVal = $dataPraktik['judul_tugas'] ?? ($pendaftaran->skema ? 'Tugas Praktik Demonstrasi ' . $pendaftaran->skema->nama_skema : 'Tugas Praktik Demonstrasi');
-        $skenarioVal = $dataPraktik['skenario'] ?? 'Anda diminta untuk mendemonstrasikan tugas praktik kerja sesuai dengan standar operasional prosedur (SOP) dan kriteria unjuk kerja yang berlaku.';
-        $peralatanVal = is_array($dataPraktik['peralatan_bahan'] ?? null) ? implode("\n", $dataPraktik['peralatan_bahan']) : ($dataPraktik['peralatan_bahan'] ?? 'Peralatan dan bahan praktik standar sesuai unit kompetensi kejuruan.');
-        $durasiVal = $dataPraktik['durasi_waktu'] ?? '120 Menit';
+        $skenarioVal = $dataPraktik['skenario'] ?? '';
+        $peralatanVal = is_array($dataPraktik['peralatan_bahan'] ?? null) ? implode("\n", $dataPraktik['peralatan_bahan']) : ($dataPraktik['peralatan_bahan'] ?? '');
+        $durasiVal = $dataPraktik['durasi_waktu'] ?? '';
     @endphp
 
     <!-- ACTION BAR ATAS (NAVIGASI RESMI) -->
@@ -259,6 +262,11 @@
             <!-- HEADER JUDUL RESMI (PERSIS GAMBAR) -->
             <div class="header-judul-ia02">
                 FR.IA.02. &nbsp; TPD - TUGAS PRAKTIK DEMONSTRASI
+                @if(!empty($judulTugasVal) && $judulTugasVal !== 'Tugas Praktik Demonstrasi')
+                    <div style="font-size: 0.95rem; font-weight: 700; margin-top: 0.25rem; text-transform: uppercase;">
+                        {{ $judulTugasVal }}
+                    </div>
+                @endif
             </div>
 
             <!-- TABEL IDENTITAS (PERSIS GAMBAR) -->
@@ -280,7 +288,7 @@
                 <tr>
                     <td colspan="2" style="font-weight: 600;">TUK</td>
                     <td style="text-align: center;">:</td>
-                    <td>Sewaktu/Tempat Kerja/Mandiri*</td>
+                    <td>Sewaktu/Tempat Kerja/Mandiri* (<strong>{{ $tukNama }}</strong>)</td>
                 </tr>
                 <tr>
                     <td colspan="2" style="font-weight: 600;">Nama Asesor</td>
@@ -295,7 +303,7 @@
                 <tr>
                     <td colspan="2" style="font-weight: 600;">Tanggal</td>
                     <td style="text-align: center;">:</td>
-                    <td>{{ date('d-m-Y') }}</td>
+                    <td>{{ $tglAsesmen }}</td>
                 </tr>
             </table>
             <div class="catatan-coret">*Coret yang tidak perlu</div>
@@ -314,13 +322,12 @@
 
             @foreach($kelompokList as $kIndex => $unitsInGroup)
                 @php
-                    $kSkenario = $savedKelompok[$kIndex]['skenario'] ?? ($kIndex === 1 ? $skenarioVal : 'Demonstrasikan seluruh proses kerja teknis pada kelompok pekerjaan ' . $kIndex . ' sesuai SOP yang berlaku.');
-                    $kPeralatan = $savedKelompok[$kIndex]['peralatan'] ?? ($kIndex === 1 ? $peralatanVal : 'Peralatan dan instrumen kerja standar unit kompetensi.');
-                    $kWaktu = $savedKelompok[$kIndex]['waktu'] ?? ($kIndex === 1 ? $durasiVal : '120 Menit');
+                    $kSkenario = $savedKelompok[$kIndex]['skenario'] ?? ($kIndex === 1 ? $skenarioVal : '');
+                    $kPeralatan = $savedKelompok[$kIndex]['peralatan'] ?? ($kIndex === 1 ? $peralatanVal : '');
+                    $kWaktu = $savedKelompok[$kIndex]['waktu'] ?? ($kIndex === 1 ? $durasiVal : '');
                     
                     $displayUnits = $unitsInGroup->values();
-                    $maxRows = max($displayUnits->count(), 3);
-                    $leftColRowspan = $maxRows + 2; // 1 baris header (No/Kode/Judul) + maxRows unit + 1 baris Dst..
+                    $leftColRowspan = max(1, $displayUnits->count()) + 1;
                 @endphp
 
                 @if($kIndex > 1)
@@ -341,32 +348,30 @@
                             <th style="text-align: center; border: 1px solid #000000; padding: 6px 8px; font-weight: 700; background-color: #ffffff;">Judul Unit</th>
                         </tr>
 
-                        <!-- Baris 1, 2, 3.. Unit Kompetensi -->
-                        @for($i = 0; $i < $maxRows; $i++)
-                            @php $u = $displayUnits->get($i); @endphp
+                        <!-- Baris Unit Kompetensi Dinamis dari Database -->
+                        @forelse($displayUnits as $i => $u)
                             <tr>
                                 <td style="text-align: center; font-weight: 700; border: 1px solid #000000; padding: 6px 4px;">{{ $i + 1 }}.</td>
                                 <td style="font-weight: 600; border: 1px solid #000000; padding: 6px 8px;">
-                                    {{ $u ? $u->kode_unit : '' }}
+                                    {{ $u->kode_unit }}
                                 </td>
                                 <td style="font-weight: 600; border: 1px solid #000000; padding: 6px 8px;">
-                                    {{ $u ? $u->judul_unit : '' }}
+                                    {{ $u->judul_unit }}
                                 </td>
                             </tr>
-                        @endfor
-
-                        <!-- Baris Dst.. (Persis Gambar) -->
-                        <tr>
-                            <td style="text-align: center; font-weight: 700; border: 1px solid #000000; padding: 6px 4px;">Dst..</td>
-                            <td style="border: 1px solid #000000; padding: 6px 8px;"></td>
-                            <td style="border: 1px solid #000000; padding: 6px 8px;"></td>
-                        </tr>
+                        @empty
+                            <tr>
+                                <td colspan="3" style="text-align: center; color: #64748b; font-style: italic; border: 1px solid #000000; padding: 10px;">
+                                    Belum ada data unit kompetensi pada skema ini.
+                                </td>
+                            </tr>
+                        @endforelse
                     </tbody>
                 </table>
 
                 <!-- ISIAN SKENARIO TUGAS PRAKTIK DEMONSTRASI (PERSIS GAMBAR) -->
-                <label class="label-skenario">Skenario Tugas Praktik Demonstrasi:</label>
-                <textarea name="kelompok_skenario[{{ $kIndex }}][skenario]" class="textarea-skenario" rows="4" placeholder="{{ $isAsesi ? 'Skenario demonstrasi praktik belum diisi oleh Asesor.' : 'Tuliskan skenario tugas praktik demonstrasi yang harus dilaksanakan oleh asesi...' }}" {{ $isAsesi ? 'readonly' : '' }}>{{ $kSkenario }}</textarea>
+                <label class="label-skenario">Skenario Tugas Praktik Demonstrasi: <span style="color: #ef4444;">*</span></label>
+                <textarea name="kelompok_skenario[{{ $kIndex }}][skenario]" class="textarea-skenario" rows="4" placeholder="{{ $isAsesi ? 'Skenario demonstrasi praktik belum diisi oleh Asesor.' : 'Tuliskan skenario tugas praktik demonstrasi yang harus dilaksanakan oleh asesi...' }}" {{ $isAsesi ? 'readonly' : 'required' }}>{{ $kSkenario }}</textarea>
                 
                 @if($kIndex === 1)
                     <!-- Simpan juga ke field root skenario untuk backward compatibility -->
@@ -376,9 +381,9 @@
                 <!-- PERLENGKAPAN, PERALATAN, DAN WAKTU (PERSIS GAMBAR) -->
                 <div class="grup-peralatan-waktu">
                     <div class="baris-label-input">
-                        <div class="nama-label">Perlengkapan dan Peralatan :</div>
+                        <div class="nama-label">Perlengkapan dan Peralatan : <span style="color: #ef4444;">*</span></div>
                         <div class="isi-input">
-                            <textarea name="kelompok_skenario[{{ $kIndex }}][peralatan]" class="textarea-skenario" rows="2" placeholder="{{ $isAsesi ? 'Daftar perlengkapan dan peralatan belum diisi.' : 'Sebutkan perlengkapan kerja, bahan uji, APD, dan peralatan yang digunakan...' }}" {{ $isAsesi ? 'readonly' : '' }}>{{ $kPeralatan }}</textarea>
+                            <textarea name="kelompok_skenario[{{ $kIndex }}][peralatan]" class="textarea-skenario" rows="2" placeholder="{{ $isAsesi ? 'Daftar perlengkapan dan peralatan belum diisi.' : 'Sebutkan perlengkapan kerja, bahan uji, APD, dan peralatan yang digunakan...' }}" {{ $isAsesi ? 'readonly' : 'required' }}>{{ $kPeralatan }}</textarea>
                             @if($kIndex === 1)
                                 <input type="hidden" name="peralatan_bahan" value="{{ $kPeralatan }}">
                             @endif
@@ -386,9 +391,9 @@
                     </div>
 
                     <div class="baris-label-input" style="align-items: center;">
-                        <div class="nama-label">{{ $kIndex === 1 ? 'Durasi Waktu :' : 'Waktu :' }}</div>
+                        <div class="nama-label">{{ $kIndex === 1 ? 'Durasi Waktu :' : 'Waktu :' }} <span style="color: #ef4444;">*</span></div>
                         <div class="isi-input">
-                            <input type="text" name="kelompok_skenario[{{ $kIndex }}][waktu]" class="input-baris-ia02" style="max-width: 250px;" value="{{ $kWaktu }}" placeholder="Contoh: 120 Menit" {{ $isAsesi ? 'readonly' : '' }}>
+                            <input type="text" name="kelompok_skenario[{{ $kIndex }}][waktu]" class="input-baris-ia02" style="max-width: 250px;" value="{{ $kWaktu }}" placeholder="Contoh: 120 Menit" {{ $isAsesi ? 'readonly' : 'required' }}>
                             @if($kIndex === 1)
                                 <input type="hidden" name="durasi_waktu" value="{{ $kWaktu }}">
                             @endif
@@ -471,83 +476,11 @@
             </table>
 
             <!-- TABEL PENYUSUN DAN VALIDATOR (PERSIS GAMBAR HALAMAN 3) -->
-            <div>
-                <div style="font-weight: 800; font-size: 0.92rem; color: #000000; margin-bottom: 0.5rem; text-transform: uppercase;">
-                    PENYUSUN DAN VALIDATOR
-                </div>
-                
-                <table class="tabel-ia02">
-                    <thead>
-                        <tr>
-                            <th style="width: 18%; text-align: center;">STATUS</th>
-                            <th style="width: 6%; text-align: center;">NO</th>
-                            <th style="width: 32%; text-align: center;">NAMA</th>
-                            <th style="width: 22%; text-align: center;">NOMOR MET</th>
-                            <th style="width: 22%; text-align: center;">TANDA TANGAN DAN TANGGAL</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <!-- PENYUSUN 1 -->
-                        <tr>
-                            <td rowspan="2" style="font-weight: 800; text-align: center; vertical-align: middle; background: #ffffff;">
-                                PENYUSUN
-                            </td>
-                            <td style="text-align: center; font-weight: 700;">1</td>
-                            <td style="padding: 6px 8px;"><strong>{{ $asesorNama }}</strong></td>
-                            <td style="padding: 6px 8px;">{{ $asesorMet }}</td>
-                            <td style="text-align: center; padding: 4px;">
-                                @if(!empty($asesorTtd))
-                                    <img src="{{ asset($asesorTtd) }}" alt="TTD" style="max-height: 36px; margin: 0 auto; display: block;">
-                                @endif
-                                <span style="font-size: 0.75rem; color: #475569;">{{ date('d/m/Y') }}</span>
-                            </td>
-                        </tr>
-                        <!-- PENYUSUN 2 -->
-                        <tr>
-                            <td style="text-align: center; font-weight: 700;">2</td>
-                            <td style="padding: 4px;">
-                                <input type="text" name="penyusun_validator[penyusun_2_nama]" class="input-baris-ia02" style="width: 100%;" value="{{ $savedPV['penyusun_2_nama'] ?? '' }}" placeholder="Nama Penyusun 2..." {{ $isAsesi ? 'readonly' : '' }}>
-                            </td>
-                            <td style="padding: 4px;">
-                                <input type="text" name="penyusun_validator[penyusun_2_met]" class="input-baris-ia02" style="width: 100%;" value="{{ $savedPV['penyusun_2_met'] ?? '' }}" placeholder="No. MET..." {{ $isAsesi ? 'readonly' : '' }}>
-                            </td>
-                            <td style="padding: 4px;">
-                                <input type="text" name="penyusun_validator[penyusun_2_ttd]" class="input-baris-ia02" style="width: 100%; text-align: center;" value="{{ $savedPV['penyusun_2_ttd'] ?? '' }}" placeholder="TTD & Tgl..." {{ $isAsesi ? 'readonly' : '' }}>
-                            </td>
-                        </tr>
-
-                        <!-- VALIDATOR 1 -->
-                        <tr>
-                            <td rowspan="2" style="font-weight: 800; text-align: center; vertical-align: middle; background: #ffffff;">
-                                VALIDATOR
-                            </td>
-                            <td style="text-align: center; font-weight: 700;">1</td>
-                            <td style="padding: 4px;">
-                                <input type="text" name="penyusun_validator[validator_1_nama]" class="input-baris-ia02" style="width: 100%;" value="{{ $savedPV['validator_1_nama'] ?? '' }}" placeholder="Nama Validator 1..." {{ $isAsesi ? 'readonly' : '' }}>
-                            </td>
-                            <td style="padding: 4px;">
-                                <input type="text" name="penyusun_validator[validator_1_met]" class="input-baris-ia02" style="width: 100%;" value="{{ $savedPV['validator_1_met'] ?? '' }}" placeholder="No. MET..." {{ $isAsesi ? 'readonly' : '' }}>
-                            </td>
-                            <td style="padding: 4px;">
-                                <input type="text" name="penyusun_validator[validator_1_ttd]" class="input-baris-ia02" style="width: 100%; text-align: center;" value="{{ $savedPV['validator_1_ttd'] ?? '' }}" placeholder="TTD & Tgl..." {{ $isAsesi ? 'readonly' : '' }}>
-                            </td>
-                        </tr>
-                        <!-- VALIDATOR 2 -->
-                        <tr>
-                            <td style="text-align: center; font-weight: 700;">2</td>
-                            <td style="padding: 4px;">
-                                <input type="text" name="penyusun_validator[validator_2_nama]" class="input-baris-ia02" style="width: 100%;" value="{{ $savedPV['validator_2_nama'] ?? '' }}" placeholder="Nama Validator 2..." {{ $isAsesi ? 'readonly' : '' }}>
-                            </td>
-                            <td style="padding: 4px;">
-                                <input type="text" name="penyusun_validator[validator_2_met]" class="input-baris-ia02" style="width: 100%;" value="{{ $savedPV['validator_2_met'] ?? '' }}" placeholder="No. MET..." {{ $isAsesi ? 'readonly' : '' }}>
-                            </td>
-                            <td style="padding: 4px;">
-                                <input type="text" name="penyusun_validator[validator_2_ttd]" class="input-baris-ia02" style="width: 100%; text-align: center;" value="{{ $savedPV['validator_2_ttd'] ?? '' }}" placeholder="TTD & Tgl..." {{ $isAsesi ? 'readonly' : '' }}>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
+            @include('komponen.tabel-penyusun-validator', [
+                'pendaftaran' => $pendaftaran,
+                'kodeForm' => 'FR.IA.02',
+                'tableClass' => 'tabel-ia02'
+            ])
 
         </form>
 

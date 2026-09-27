@@ -582,7 +582,7 @@
                                 return \App\Models\SchemeMasterInstrument::normalizeCode($m->instrument_code) === \App\Models\SchemeMasterInstrument::normalizeCode($code);
                             }) : null;
 
-                            $isExist = !is_null($existingInst);
+                            $isExist = $existingInst && $existingInst->isConfigured();
                             $jumlahSoal = $existingInst ? $existingInst->questionBanks->count() : 0;
                             $jumlahSpec = $existingInst ? $existingInst->productSpecifications->count() : 0;
 
@@ -600,6 +600,10 @@
 
                             // Link Pratinjau / Cetak
                             $cetakUrl = route('formulir.' . $item['route_view'], ['skema_id' => $selectedSkema?->id, 'pendaftaran_id' => $samplePendaftaran?->id]);
+
+                            // FR.IA.04 diisi langsung pada lembar formulirnya agar
+                            // tampilan "Tambah Form" sama dengan tampilan pratinjau.
+                            $tambahLangsungKeForm = $code === 'ia04a';
                         @endphp
 
                         <div class="ia-card">
@@ -645,7 +649,7 @@
                                         <span>Kelola Form</span>
                                     </a>
                                 @elseif($selectedSkema)
-                                    <a href="{{ $kelolaUrl }}" class="flex-1 inline-flex items-center justify-center px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-2xs transition">
+                                    <a href="{{ $tambahLangsungKeForm ? $cetakUrl : $kelolaUrl }}" class="flex-1 inline-flex items-center justify-center px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-2xs transition">
                                         <span>Tambah Form +</span>
                                     </a>
                                 @else

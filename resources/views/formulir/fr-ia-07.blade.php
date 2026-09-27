@@ -73,12 +73,15 @@
     @php
         $isAsesi = auth()->check() && auth()->user()->peran === 'asesi';
         $isAsesor = auth()->check() && auth()->user()->peran === 'asesor';
-        $asesorNama = $pendaftaran->asesor->nama_lengkap ?? ($isAsesor ? auth()->user()->nama_lengkap : 'Asesor LSP');
-        $asesorMet = $pendaftaran->asesor->nomor_registrasi ?? 'MET.000.004455.2023';
+        $effectiveAsesor = $pendaftaran->asesor ?? ($pendaftaran->jadwal->asesor ?? null);
+        $asesorNama = $effectiveAsesor->nama_lengkap ?? ($isAsesor ? auth()->user()->nama_lengkap : 'Asesor LSP');
+        $asesorMet = $effectiveAsesor->nomor_registrasi ?? ($isAsesor ? auth()->user()->nomor_registrasi : 'MET.000.004455.2023');
         $asesiNama = $pendaftaran->asesi->nama_lengkap ?? 'Nama Asesi';
-        $asesorTtd = $pendaftaran->tanda_tangan_asesor ?? (auth()->user()->tanda_tangan ?? null);
+        $asesorTtd = $pendaftaran->tanda_tangan_asesor ?? ($effectiveAsesor->tanda_tangan ?? ($isAsesor ? auth()->user()->tanda_tangan : null));
         $asesiTtd = $iaRecord->data_jawaban['ttd_asesi'] ?? ($pendaftaran->tanda_tangan_asesi ?? null);
         $tglTtdAsesi = $iaRecord->data_jawaban['tgl_ttd_asesi'] ?? null;
+        $tukNama = $pendaftaran->jadwal->nama_tuk ?? ($pendaftaran->tuk_type ?? 'Sewaktu');
+        $tglAsesmen = $pendaftaran->jadwal?->tanggal_uji ? \Carbon\Carbon::parse($pendaftaran->jadwal->tanggal_uji)->format('d-m-Y') : date('d-m-Y');
         
         $isCompleted = ($iaRecord && $iaRecord->status === 'completed');
         $savedRespon = $iaRecord->data_jawaban['respon_lisan'] ?? [];
@@ -154,7 +157,7 @@
                 <tr>
                     <td colspan="2" style="font-weight: 600;">TUK</td>
                     <td>:</td>
-                    <td>Sewaktu / Tempat Kerja / Mandiri* (<strong>{{ $pendaftaran->tuk_type ?? '' }}</strong>)</td>
+                    <td>Sewaktu / Tempat Kerja / Mandiri* (<strong>{{ $tukNama }}</strong>)</td>
                 </tr>
                 <tr>
                     <td colspan="2" style="font-weight: 600;">Nama Asesor</td>
@@ -169,7 +172,7 @@
                 <tr>
                     <td colspan="2" style="font-weight: 600;">Tanggal</td>
                     <td>:</td>
-                    <td>{{ date('d-m-Y') }}</td>
+                    <td>{{ $tglAsesmen }}</td>
                 </tr>
             </table>
             <div style="font-size: 0.75rem; font-style: italic; color: #64748b; margin-top: -1rem; margin-bottom: 1.25rem;">*Coret yang tidak perlu</div>
@@ -310,10 +313,10 @@
                     </td>
                 </tr>
                 <tr>
-                    <td style="font-weight: 700; background: #f8fafc;">Umpan Balik Asesor</td>
+                    <td style="font-weight: 700; background: #f8fafc;">Umpan Balik Asesor <span style="color: #ef4444;">*</span></td>
                     <td>:</td>
                     <td>
-                        <textarea name="catatan" class="input-inline-bnsp" rows="2" placeholder="Tuliskan umpan balik / catatan pelaksanaan uji lisan..." {{ $isAsesi ? 'readonly' : '' }}>{{ $iaRecord->catatan_asesor ?? 'Asesi mampu menjawab dan mengklarifikasi pertanyaan teknis lisan secara jelas dan runtut.' }}</textarea>
+                        <textarea name="catatan" class="input-inline-bnsp" rows="2" placeholder="Tuliskan umpan balik / catatan pelaksanaan uji lisan..." {{ $isAsesi ? 'readonly' : 'required' }}>{{ $iaRecord->catatan_asesor ?? '' }}</textarea>
                     </td>
                 </tr>
             </table>
@@ -338,7 +341,7 @@
                                 </div>
                             @else
                                 <span style="font-style: italic; color: #64748b;">(Tanda Tangan Digital Akun Asesi)</span>
-                                <div style="font-size: 0.78rem; color: #64748b; margin-top: 0.25rem;">{{ date('d-m-Y') }}</div>
+                                <div style="font-size: 0.78rem; color: #64748b; margin-top: 0.25rem;">{{ $tglAsesmen }}</div>
                             @endif
                         </div>
                     </td>
@@ -352,7 +355,7 @@
                             @else
                                 <span style="font-style: italic; color: #64748b;">(Tanda Tangan Digital Asesor)</span>
                             @endif
-                            <div style="font-size: 0.78rem; color: #64748b; margin-top: 0.25rem;">{{ date('d-m-Y') }}</div>
+                            <div style="font-size: 0.78rem; color: #64748b; margin-top: 0.25rem;">{{ $tglAsesmen }}</div>
                         </div>
                     </td>
                 </tr>

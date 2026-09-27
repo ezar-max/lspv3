@@ -20,6 +20,7 @@ class SchemeMasterInstrument extends Model
         'time_limit_minutes',
         'is_active',
         'additional_metadata',
+        'created_by',
     ];
 
     protected $casts = [
@@ -27,6 +28,11 @@ class SchemeMasterInstrument extends Model
         'additional_metadata' => 'array',
         'time_limit_minutes' => 'integer',
     ];
+
+    public function creator()
+    {
+        return $this->belongsTo(Pengguna::class, 'created_by');
+    }
 
     public function skema()
     {
@@ -46,6 +52,50 @@ class SchemeMasterInstrument extends Model
     public function productSpecifications()
     {
         return $this->hasMany(MasterProductSpecification::class, 'scheme_master_instrument_id')->orderBy('order', 'asc');
+    }
+
+    /**
+     * Cek apakah formulir instrumen ini benar-benar sudah disimpan / dikonfigurasi oleh user
+     */
+    public function isConfigured(): bool
+    {
+        if ($this->relationLoaded('questionBanks') ? $this->questionBanks->isNotEmpty() : $this->questionBanks()->exists()) {
+            return true;
+        }
+        if ($this->relationLoaded('productSpecifications') ? $this->productSpecifications->isNotEmpty() : $this->productSpecifications()->exists()) {
+            return true;
+        }
+        $meta = $this->additional_metadata;
+        if (is_array($meta)) {
+            if (isset($meta['is_saved'])) {
+                return (bool) $meta['is_saved'];
+            }
+            if (!empty($meta['scenario']) || !empty($meta['skenario']) || !empty($meta['default_standard']) || !empty($meta['kelompok_skenario']) || !empty($meta['kelompok_soal']) || !empty($meta['standar_elemen'])) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Bersihkan instrumen draft yang belum pernah disimpan sama sekali (hanya diklik tambah lalu kembali)
+     */
+    public static function cleanUnconfiguredDrafts(?int $skemaId = null): void
+    {
+        $query = self::query();
+        if ($skemaId) {
+            $query->where('skema_id', $skemaId);
+        }
+
+        $drafts = $query->whereDoesntHave('questionBanks')
+            ->whereDoesntHave('productSpecifications')
+            ->get();
+
+        foreach ($drafts as $draft) {
+            if (!$draft->isConfigured()) {
+                $draft->delete();
+            }
+        }
     }
 
     /**

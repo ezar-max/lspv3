@@ -261,10 +261,10 @@
                         </td>
                     </tr>
                     <tr>
-                        <td style="font-weight: 700; background: #f8fafc;">Catatan Evaluasi Asesor</td>
+                        <td style="font-weight: 700; background: #f8fafc;">Catatan Evaluasi Asesor <span style="color: #ef4444;">*</span></td>
                         <td>:</td>
                         <td>
-                            <textarea name="catatan" class="input-inline-bnsp" rows="2" placeholder="Tuliskan catatan evaluasi pencapaian pengetahuan asesi...">{{ $iaRecord05b->catatan_asesor ?? ($ia05cRecord->catatan_asesor ?? 'Asesi menunjukkan penguasaan teori pengetahuan yang baik sesuai standar kompetensi.') }}</textarea>
+                            <textarea name="catatan" class="input-inline-bnsp" rows="2" placeholder="Tuliskan catatan evaluasi pencapaian pengetahuan asesi..." required>{{ $iaRecord05b->catatan_asesor ?? ($ia05cRecord->catatan_asesor ?? '') }}</textarea>
                         </td>
                     </tr>
                 </table>

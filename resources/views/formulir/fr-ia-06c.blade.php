@@ -364,10 +364,10 @@
                         </td>
                     </tr>
                     <tr>
-                        <td style="font-weight: 700; background: #f8fafc;">Umpan Balik / Catatan Umum</td>
+                        <td style="font-weight: 700; background: #f8fafc;">Umpan Balik / Catatan Umum <span style="color: #ef4444;">*</span></td>
                         <td>:</td>
                         <td>
-                            <textarea name="catatan" class="input-inline-bnsp" rows="2" placeholder="Catatan evaluasi menyeluruh untuk asesi...">{{ $iaRecord->catatan_asesor ?? 'Asesi mampu menguraikan konsep teknis dan metodologi pemecahan masalah dengan baik.' }}</textarea>
+                            <textarea name="catatan" class="input-inline-bnsp" rows="2" placeholder="Catatan evaluasi menyeluruh untuk asesi..." required>{{ $iaRecord->catatan_asesor ?? '' }}</textarea>
                         </td>
                     </tr>
                 </table>

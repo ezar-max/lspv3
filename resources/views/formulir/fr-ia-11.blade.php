@@ -11,12 +11,15 @@
     
     @php
         $isAsesi = auth()->check() && auth()->user()->peran === 'asesi';
-        $asesorNama = $pendaftaran->asesor->nama_lengkap ?? (auth()->user()->peran === 'asesor' ? auth()->user()->nama_lengkap : 'Asesor LSP');
-        $asesorMet = $pendaftaran->asesor->nomor_registrasi ?? 'MET.000.004455.2023';
+        $effectiveAsesor = $pendaftaran->asesor ?? ($pendaftaran->jadwal->asesor ?? null);
+        $asesorNama = $effectiveAsesor->nama_lengkap ?? (auth()->check() && auth()->user()->peran === 'asesor' ? auth()->user()->nama_lengkap : 'Asesor LSP');
+        $asesorMet = $effectiveAsesor->nomor_registrasi ?? (auth()->check() && auth()->user()->peran === 'asesor' ? auth()->user()->nomor_registrasi : 'MET.000.004455.2023');
         $asesiNama = $pendaftaran->asesi->nama_lengkap ?? 'Nama Asesi';
-        $asesorTtd = $pendaftaran->tanda_tangan_asesor ?? (auth()->user()->tanda_tangan ?? null);
+        $asesorTtd = $pendaftaran->tanda_tangan_asesor ?? ($effectiveAsesor->tanda_tangan ?? (auth()->check() && auth()->user()->peran === 'asesor' ? auth()->user()->tanda_tangan : null));
         $asesiTtd = $iaRecord->data_jawaban['ttd_asesi'] ?? ($pendaftaran->tanda_tangan_asesi ?? null);
         $tglTtdAsesi = $iaRecord->data_jawaban['tgl_ttd_asesi'] ?? null;
+        $tukNama = $pendaftaran->jadwal->nama_tuk ?? ($pendaftaran->tuk_type ?? 'Sewaktu');
+        $tglAsesmen = $pendaftaran->jadwal?->tanggal_uji ? \Carbon\Carbon::parse($pendaftaran->jadwal->tanggal_uji)->format('d-m-Y') : date('d-m-Y');
     @endphp
 
     <!-- ACTION BAR ATAS -->
@@ -70,7 +73,7 @@
                 <tr>
                     <td colspan="2" style="font-weight: 600;">TUK</td>
                     <td>:</td>
-                    <td>Sewaktu / Tempat Kerja / Mandiri* (<strong>{{ $pendaftaran->tuk_type ?? '' }}</strong>)</td>
+                    <td>Sewaktu / Tempat Kerja / Mandiri* (<strong>{{ $tukNama }}</strong>)</td>
                 </tr>
                 <tr>
                     <td colspan="2" style="font-weight: 600;">Nama Asesor</td>
@@ -85,7 +88,7 @@
                 <tr>
                     <td colspan="2" style="font-weight: 600;">Tanggal</td>
                     <td>:</td>
-                    <td>{{ date('d-m-Y') }}</td>
+                    <td>{{ $tglAsesmen }}</td>
                 </tr>
             </table>
             <div style="font-size: 0.75rem; font-style: italic; color: #64748b; margin-top: -1rem; margin-bottom: 1.25rem;">*Coret yang tidak perlu</div>
@@ -155,17 +158,17 @@
                         <td style="font-weight: 700; background: #f8fafc;">Spesifikasi produk secara umum</td>
                         <td>
                             <div style="display: flex; flex-direction: column; gap: 0.35rem;">
-                                <div>Dimensi / Format : <input type="text" name="dimensi_format" class="input-inline-bnsp" placeholder="Dimensi atau format produk..." value="{{ $savedData['data_teknis']['dimensi_format'] ?? 'Sesuai lembar spesifikasi teknis / SOP kerja' }}" style="display: inline-block; max-width: 400px; padding: 0.2rem 0.4rem;"></div>
-                                <div>Bahan / Teknologi : <input type="text" name="bahan_teknologi" class="input-inline-bnsp" placeholder="Bahan atau teknologi yang digunakan..." value="{{ $savedData['data_teknis']['bahan_teknologi'] ?? 'Peralatan dan material standar ' . $namaSkemaAktif }}" style="display: inline-block; max-width: 400px; padding: 0.2rem 0.4rem;"></div>
-                                <div>Kapasitas / Ukuran : <input type="text" name="kapasitas_ukuran" class="input-inline-bnsp" placeholder="Kapasitas atau ukuran..." value="{{ $savedData['data_teknis']['kapasitas_ukuran'] ?? 'Sesuai toleransi lembar kerja standar' }}" style="display: inline-block; max-width: 400px; padding: 0.2rem 0.4rem;"></div>
+                                <div>Dimensi / Format : <input type="text" name="dimensi_format" class="input-inline-bnsp" placeholder="Dimensi atau format produk..." value="{{ $savedData['data_teknis']['dimensi_format'] ?? '' }}" style="display: inline-block; max-width: 400px; padding: 0.2rem 0.4rem;" required></div>
+                                <div>Bahan / Teknologi : <input type="text" name="bahan_teknologi" class="input-inline-bnsp" placeholder="Bahan atau teknologi yang digunakan..." value="{{ $savedData['data_teknis']['bahan_teknologi'] ?? '' }}" style="display: inline-block; max-width: 400px; padding: 0.2rem 0.4rem;" required></div>
+                                <div>Kapasitas / Ukuran : <input type="text" name="kapasitas_ukuran" class="input-inline-bnsp" placeholder="Kapasitas atau ukuran..." value="{{ $savedData['data_teknis']['kapasitas_ukuran'] ?? '' }}" style="display: inline-block; max-width: 400px; padding: 0.2rem 0.4rem;" required></div>
                             </div>
                         </td>
                     </tr>
                     <tr>
-                        <td style="font-weight: 700; background: #f8fafc;">Spesifikasi produk secara teknis</td>
+                        <td style="font-weight: 700; background: #f8fafc;">Spesifikasi produk secara teknis <span style="color: #ef4444;">*</span></td>
                         <td>
                             <div>Data Teknis :</div>
-                            <textarea name="data_teknis_detail" class="input-inline-bnsp" rows="2" style="margin-top: 0.25rem;" placeholder="Rincian data teknis produk...">{{ $savedData['data_teknis']['data_teknis'] ?? ('Parameter kerja mengacu standar unit kompetensi: ' . ($sampleUnits ?: $namaSkemaAktif) . ', memenuhi prosedur mutu dan K3.') }}</textarea>
+                            <textarea name="data_teknis_detail" class="input-inline-bnsp" rows="2" style="margin-top: 0.25rem;" placeholder="Rincian data teknis produk..." required>{{ $savedData['data_teknis']['data_teknis'] ?? '' }}</textarea>
                         </td>
                     </tr>
                     <tr>
@@ -295,7 +298,7 @@
                                 </div>
                             @else
                                 <span style="font-style: italic; color: #64748b;">(Tanda Tangan Digital Akun Asesi)</span>
-                                <div style="font-size: 0.78rem; color: #64748b; margin-top: 0.25rem;">{{ date('d-m-Y') }}</div>
+                                <div style="font-size: 0.78rem; color: #64748b; margin-top: 0.25rem;">{{ $tglAsesmen }}</div>
                             @endif
                         </div>
                     </td>
@@ -309,7 +312,7 @@
                             @else
                                 <span style="font-style: italic; color: #64748b;">(Tanda Tangan Digital Asesor)</span>
                             @endif
-                            <div style="font-size: 0.78rem; color: #64748b; margin-top: 0.25rem;">{{ date('d-m-Y') }}</div>
+                            <div style="font-size: 0.78rem; color: #64748b; margin-top: 0.25rem;">{{ $tglAsesmen }}</div>
                         </div>
                     </td>
                 </tr>
@@ -318,62 +321,17 @@
             <!-- CATATAN TEMUAN HASIL REVIU PRODUK -->
             <div style="border: 1px solid #334155; padding: 1rem; border-radius: 4px; margin-bottom: 1.5rem; background: #f8fafc;">
                 <div style="font-weight: 700; font-size: 0.88rem; margin-bottom: 0.35rem; color: #0f172a;">
-                    Catatan : Tuliskan temuan asesmen pencapaian hasil reviu produk, jika belum/tidak terpenuhi :
+                    Catatan : Tuliskan temuan asesmen pencapaian hasil reviu produk, jika belum/tidak terpenuhi <span style="color: #ef4444;">*</span>:
                 </div>
-                <textarea name="catatan" class="input-inline-bnsp" rows="3" placeholder="Tuliskan catatan temuan asesmen...">{{ $savedData['catatan'] ?? 'Seluruh spesifikasi produk sistem informasi telah terpenuhi dengan baik dan siap diimplementasikan secara penuh.' }}</textarea>
+                <textarea name="catatan" class="input-inline-bnsp" rows="3" placeholder="Tuliskan catatan temuan asesmen..." required>{{ $savedData['catatan'] ?? '' }}</textarea>
             </div>
 
             <!-- TABEL PENYUSUN DAN VALIDATOR -->
-            <div style="margin-bottom: 1.5rem;">
-                <div style="font-weight: 800; font-size: 0.95rem; margin-bottom: 0.6rem; color: #0f172a; text-transform: uppercase;">
-                    PENYUSUN DAN VALIDATOR
-                </div>
-                <table class="tabel-bnsp">
-                    <thead>
-                        <tr>
-                            <th style="width: 18%; text-align: center;">STATUS</th>
-                            <th style="width: 6%; text-align: center;">NO</th>
-                            <th style="width: 32%;">NAMA</th>
-                            <th style="width: 22%;">NOMOR MET</th>
-                            <th style="width: 22%;">TANDA TANGAN DAN TANGGAL</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td rowspan="2" style="font-weight: 800; vertical-align: middle; text-align: center; background-color: #f8fafc;">PENYUSUN</td>
-                            <td style="text-align: center; font-weight: 700;">1</td>
-                            <td><strong>{{ $asesorNama }}</strong></td>
-                            <td>{{ $asesorMet }}</td>
-                            <td style="text-align: center;">
-                                @if($asesorTtd)
-                                    <img src="{{ $asesorTtd }}" alt="TTD" style="max-height: 40px;">
-                                @else
-                                    <span style="font-size: 0.78rem; color: #64748b;">{{ date('d/m/Y') }}</span>
-                                @endif
-                            </td>
-                        </tr>
-                        <tr>
-                            <td style="text-align: center; font-weight: 700;">2</td>
-                            <td><input type="text" name="penyusun_2_nama" class="input-inline-bnsp" placeholder="Penyusun 2..." value="{{ $savedData['validator']['penyusun_2_nama'] ?? '' }}"></td>
-                            <td><input type="text" name="penyusun_2_met" class="input-inline-bnsp" placeholder="No. MET..." value="{{ $savedData['validator']['penyusun_2_met'] ?? '' }}"></td>
-                            <td><input type="text" name="penyusun_2_ttd" class="input-inline-bnsp" placeholder="TTD & Tgl..." value="{{ $savedData['validator']['penyusun_2_ttd'] ?? '' }}"></td>
-                        </tr>
-                        <tr>
-                            <td rowspan="2" style="font-weight: 800; vertical-align: middle; text-align: center; background-color: #f8fafc;">VALIDATOR</td>
-                            <td style="text-align: center; font-weight: 700;">1</td>
-                            <td><input type="text" name="validator_1_nama" class="input-inline-bnsp" placeholder="Validator 1..." value="{{ $savedData['validator']['validator_1_nama'] ?? '' }}"></td>
-                            <td><input type="text" name="validator_1_met" class="input-inline-bnsp" placeholder="No. MET..." value="{{ $savedData['validator']['validator_1_met'] ?? '' }}"></td>
-                            <td><input type="text" name="validator_1_ttd" class="input-inline-bnsp" placeholder="TTD & Tgl..." value="{{ $savedData['validator']['validator_1_ttd'] ?? '' }}"></td>
-                        </tr>
-                        <tr>
-                            <td style="text-align: center; font-weight: 700;">2</td>
-                            <td><input type="text" name="validator_2_nama" class="input-inline-bnsp" placeholder="Validator 2..." value="{{ $savedData['validator']['validator_2_nama'] ?? '' }}"></td>
-                            <td><input type="text" name="validator_2_met" class="input-inline-bnsp" placeholder="No. MET..." value="{{ $savedData['validator']['validator_2_met'] ?? '' }}"></td>
-                            <td><input type="text" name="validator_2_ttd" class="input-inline-bnsp" placeholder="TTD & Tgl..." value="{{ $savedData['validator']['validator_2_ttd'] ?? '' }}"></td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
+            @include('komponen.tabel-penyusun-validator', [
+                'pendaftaran' => $pendaftaran,
+                'kodeForm' => 'FR.IA.11',
+                'tableClass' => 'tabel-bnsp'
+            ])
 
             @include('komponen.navigasi-form-bawah', [
                 'pendaftaranId' => $pendaftaran->id,
