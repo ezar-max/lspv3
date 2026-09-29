@@ -355,13 +355,30 @@ class FormulirController extends Controller
     public function index(Request $request)
     {
         $user = auth()->user();
+        $skemaId = $request->get('skema_id');
+        if (!$skemaId && $request->has('pendaftaran_id') && (int)$request->get('pendaftaran_id') > 0) {
+            $skemaId = PendaftaranAsesi::where('id', $request->get('pendaftaran_id'))->value('skema_id');
+        }
+        if (!$skemaId && $user && !empty($user->skema_id)) {
+            $skemaId = $user->skema_id;
+        }
+        if (!$skemaId) {
+            $skemaId = session('active_selected_skema_id');
+        }
+
         if ($user && $user->peran === 'asesor') {
-            return redirect()->route('asesor.daftar-peserta');
+            if ($skemaId) {
+                return redirect()->route('asesor.mapa', ['skema_id' => $skemaId]);
+            }
+            return redirect()->route('asesor.mapa');
         }
         if ($user && $user->peran === 'asesi') {
             return redirect()->route('asesi.tahapan');
         }
-        return redirect()->route('admin.dokumen.index');
+        if ($skemaId) {
+            return redirect()->route('admin.master-muk.index', ['skema_id' => $skemaId]);
+        }
+        return redirect()->route('admin.master-muk.index');
     }
 
     /**
@@ -370,10 +387,11 @@ class FormulirController extends Controller
     protected function redirectFallback(?string $pesan = null)
     {
         $user = auth()->user();
+        $skemaId = request('skema_id') ?? ($user?->skema_id) ?? session('active_selected_skema_id');
         $redirect = match ($user?->peran) {
-            'asesor' => redirect()->route('asesor.daftar-peserta'),
+            'asesor' => $skemaId ? redirect()->route('asesor.mapa', ['skema_id' => $skemaId]) : redirect()->route('asesor.mapa'),
             'asesi' => redirect()->route('asesi.tahapan'),
-            default => redirect()->route('admin.dokumen.index')
+            default => $skemaId ? redirect()->route('admin.master-muk.index', ['skema_id' => $skemaId]) : redirect()->route('admin.master-muk.index')
         };
 
         if ($pesan) {
@@ -1319,6 +1337,19 @@ class FormulirController extends Controller
            8. CEKLIS VERIFIKASI PORTOFOLIO (FR.IA.08)
            --------------------------------------------------------------------- */
         elseif ($kodeForm === 'FR.IA.08') {
+            $request->validate([
+                'dokumen_portofolio' => 'required|array|min:1',
+                'dokumen_portofolio.*.valid' => 'required|in:ya,tidak',
+                'dokumen_portofolio.*.asli' => 'required|in:ya,tidak',
+                'dokumen_portofolio.*.terkini' => 'required|in:ya,tidak',
+                'dokumen_portofolio.*.memadai' => 'required|in:ya,tidak',
+            ], [
+                'dokumen_portofolio.required' => 'Daftar dokumen bukti portofolio wajib dinilai.',
+                'dokumen_portofolio.*.valid.required' => 'Aturan bukti Valid (Ya/Tidak) wajib dipilih untuk setiap portofolio.',
+                'dokumen_portofolio.*.asli.required' => 'Aturan bukti Asli (Ya/Tidak) wajib dipilih untuk setiap portofolio.',
+                'dokumen_portofolio.*.terkini.required' => 'Aturan bukti Terkini (Ya/Tidak) wajib dipilih untuk setiap portofolio.',
+                'dokumen_portofolio.*.memadai.required' => 'Aturan bukti Memadai (Ya/Tidak) wajib dipilih untuk setiap portofolio.',
+            ]);
             $status = 'completed';
             $rekomendasi = $request->input('rekomendasi', 'K');
             $catatan = $request->input('catatan', $request->input('bukti_tambahan', ''));

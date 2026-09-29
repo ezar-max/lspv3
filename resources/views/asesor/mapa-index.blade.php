@@ -478,9 +478,9 @@
                     ],
                     [
                         'code' => 'ia04a',
-                        'kode_resmi' => 'FR.IA.04A & 04B',
-                        'judul' => 'Penjelasan Proyek Singkat & Format Penilaian Produk',
-                        'deskripsi' => 'Terms of Reference (TOR) proyek terstruktur dan format penilaian spesifikasi mutu produk hasil kerja asesi.',
+                        'kode_resmi' => 'FR.IA.04A',
+                        'judul' => 'Penjelasan Proyek Singkat (DIT)',
+                        'deskripsi' => 'Terms of Reference (TOR) proyek terstruktur dan Daftar Instruksi Terstruktur (DIT) untuk penugasan asesi.',
                         'route_view' => 'ia04a',
                     ],
                 ]

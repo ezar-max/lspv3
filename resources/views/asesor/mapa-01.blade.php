@@ -618,7 +618,10 @@
     <div class="tombol-aksi-container no-print" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem;">
         <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
             @php
-                $halamanFormulir = route('asesor.mapa', array_filter(['skema_id' => $pendaftaran->skema_id ?? request('skema_id')]));
+                $isAdminUser = auth()->check() && in_array(auth()->user()->peran, ['admin', 'superadmin']);
+                $halamanFormulir = $isAdminUser 
+                    ? route('admin.master-muk.index', array_filter(['skema_id' => $pendaftaran->skema_id ?? request('skema_id')]))
+                    : route('asesor.mapa', array_filter(['skema_id' => $pendaftaran->skema_id ?? request('skema_id')]));
                 $prevUrl = url()->previous();
                 
                 // Mencegah bug: jangan pernah kembali ke halaman MAPA 01 atau MAPA 02 itu sendiri
@@ -1833,7 +1836,10 @@
 
             <!-- TOMBOL AKSI & NAVIGASI DI BAWAH -->
             @php
-                $halamanFormulirBawah = route('asesor.mapa', array_filter(['skema_id' => $pendaftaran->skema_id ?? request('skema_id')]));
+                $isAdminUserBawah = auth()->check() && in_array(auth()->user()->peran, ['admin', 'superadmin']);
+                    $halamanFormulirBawah = $isAdminUserBawah
+                        ? route('admin.master-muk.index', array_filter(['skema_id' => $pendaftaran->skema_id ?? request('skema_id')]))
+                        : route('asesor.mapa', array_filter(['skema_id' => $pendaftaran->skema_id ?? request('skema_id')]));
                 $prevUrlBawah = url()->previous();
                 
                 // Mencegah bug: jangan pernah kembali ke MAPA 01 atau MAPA 02

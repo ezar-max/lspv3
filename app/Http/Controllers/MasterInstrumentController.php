@@ -205,6 +205,32 @@ class MasterInstrumentController extends Controller
             'created_by' => auth()->id(),
         ]);
 
+        if (in_array($normalized, ['ia_07', 'ia07'])) {
+            $defaultSoal = \App\Http\Controllers\FormulirController::getSoalIa07($skemaId);
+            $order = 1;
+            $soalMeta = [];
+            foreach ($defaultSoal as $s) {
+                $instrument->questionBanks()->create([
+                    'question_type' => 'oral',
+                    'order' => $order,
+                    'question_text' => $s['pertanyaan'],
+                    'correct_answer' => $s['kunci_rujukan'] ?? '',
+                ]);
+                $soalMeta[] = [
+                    'pertanyaan' => $s['pertanyaan'],
+                    'kunci' => $s['kunci_rujukan'] ?? '',
+                    'kuk' => $s['kuk'] ?? '',
+                ];
+                $order++;
+            }
+            $meta = $instrument->additional_metadata ?? [];
+            if (!is_array($meta)) $meta = json_decode($meta, true) ?: [];
+            $meta['pertanyaan_lisan'] = $soalMeta;
+            $meta['is_saved'] = true;
+            $instrument->additional_metadata = $meta;
+            $instrument->save();
+        }
+
         LogAktivitas::create([
             'pengguna_id' => auth()->id(),
             'aktivitas' => 'Membuat Form Master Instrumen ' . strtoupper($instrument->instrument_code) . ' - ' . $instrument->title,
@@ -336,6 +362,9 @@ class MasterInstrumentController extends Controller
 
         $code = SchemeMasterInstrument::normalizeCode($instrument->instrument_code);
 
+        $meta = $instrument->additional_metadata ?? [];
+        if (!is_array($meta)) $meta = json_decode($meta, true) ?: [];
+
         // Validasi wajib isi untuk setiap jenis formulir jika user submit
         if (in_array($code, ['ia_02', 'ia02'])) {
             if ($request->has('metadata_kelompok_skenario')) {
@@ -387,6 +416,103 @@ class MasterInstrumentController extends Controller
                 'metadata_waktu_demo.required' => 'Waktu demonstrasi wajib diisi.',
                 'metadata_umpan_balik.required' => 'Umpan balik untuk asesi wajib diisi.',
             ]);
+        } elseif (in_array($code, ['ia_07', 'ia07'])) {
+            $request->validate([
+                'metadata_pertanyaan_lisan' => 'required|array|min:1',
+                'metadata_pertanyaan_lisan.*.pertanyaan' => 'required|string',
+                'metadata_pertanyaan_lisan.*.kunci' => 'required|string',
+            ], [
+                'metadata_pertanyaan_lisan.required' => 'Daftar pertanyaan lisan wajib diisi.',
+                'metadata_pertanyaan_lisan.*.pertanyaan.required' => 'Pertanyaan lisan wajib diisi.',
+                'metadata_pertanyaan_lisan.*.kunci.required' => 'Kunci rujukan asesor wajib diisi.',
+            ]);
+
+            $pertanyaanLisan = $request->input('metadata_pertanyaan_lisan', []);
+            $meta = $instrument->additional_metadata ?? [];
+            if (!is_array($meta)) $meta = json_decode($meta, true) ?: [];
+            $meta['pertanyaan_lisan'] = array_values($pertanyaanLisan);
+
+            // Sinkronkan ke tabel question_banks
+            $instrument->questionBanks()->delete();
+            $order = 1;
+            foreach ($pertanyaanLisan as $p) {
+                if (!empty($p['pertanyaan'])) {
+                    $instrument->questionBanks()->create([
+                        'question_type' => 'oral',
+                        'order' => $order++,
+                        'question_text' => $p['pertanyaan'],
+                        'correct_answer' => $p['kunci'] ?? '',
+                        'kuk_id' => !empty($p['kuk_id']) ? $p['kuk_id'] : null,
+                    ]);
+                }
+            }
+        } elseif (in_array($code, ['ia_08', 'ia08'])) {
+            $request->validate([
+                'metadata_dokumen_portofolio' => 'nullable|array',
+                'metadata_dokumen_portofolio.*.nama' => 'nullable|string',
+                'metadata_dokumen_portofolio.*.valid' => 'nullable|in:ya,tidak',
+                'metadata_dokumen_portofolio.*.asli' => 'nullable|in:ya,tidak',
+                'metadata_dokumen_portofolio.*.terkini' => 'nullable|in:ya,tidak',
+                'metadata_dokumen_portofolio.*.memadai' => 'nullable|in:ya,tidak',
+                'metadata_bukti_tambahan' => 'nullable|string',
+                'metadata_umpan_balik' => 'nullable|string',
+            ]);
+
+            $meta = $instrument->additional_metadata ?? [];
+            if (!is_array($meta)) $meta = json_decode($meta, true) ?: [];
+
+            $rawDocs = $request->input('metadata_dokumen_portofolio', []);
+            $cleanedDocs = [];
+            if (is_array($rawDocs)) {
+                foreach ($rawDocs as $rd) {
+                    if (is_array($rd) && !empty(trim($rd['nama'] ?? ''))) {
+                        $cleanedDocs[] = [
+                            'nama' => trim($rd['nama']),
+                            'valid' => $rd['valid'] ?? '',
+                            'asli' => $rd['asli'] ?? '',
+                            'terkini' => $rd['terkini'] ?? '',
+                            'memadai' => $rd['memadai'] ?? '',
+                        ];
+                    }
+                }
+            }
+            $meta['dokumen_portofolio'] = $cleanedDocs;
+            $meta['bukti_tambahan'] = $request->input('metadata_bukti_tambahan');
+            $meta['klarifikasi_elemen'] = $request->input('metadata_klarifikasi_elemen', []);
+            $meta['materi_klarifikasi'] = $request->input('metadata_materi_klarifikasi', []);
+            $meta['umpan_balik'] = $request->input('metadata_umpan_balik');
+        } elseif (in_array($code, ['ia_09', 'ia09'])) {
+            $request->validate([
+                'metadata_pertanyaan_wawancara' => 'required|array|min:1',
+                'metadata_pertanyaan_wawancara.*.pertanyaan' => 'required|string',
+                'metadata_umpan_balik' => 'required|string',
+            ], [
+                'metadata_pertanyaan_wawancara.required' => 'Daftar pertanyaan wawancara wajib diisi.',
+                'metadata_pertanyaan_wawancara.*.pertanyaan.required' => 'Pertanyaan wawancara wajib diisi untuk setiap elemen kompetensi.',
+                'metadata_umpan_balik.required' => 'Kesimpulan atau arahan wawancara wajib diisi.',
+            ]);
+
+            $meta = $instrument->additional_metadata ?? [];
+            if (!is_array($meta)) $meta = json_decode($meta, true) ?: [];
+            $meta['pertanyaan_wawancara'] = $request->input('metadata_pertanyaan_wawancara', []);
+            $meta['umpan_balik'] = $request->input('metadata_umpan_balik');
+        } elseif (in_array($code, ['ia_10', 'ia10'])) {
+            $request->validate([
+                'metadata_petunjuk_supervisor' => 'required|string',
+                'metadata_pertanyaan_konsistensi' => 'required|string',
+                'metadata_umpan_balik' => 'required|string',
+            ], [
+                'metadata_petunjuk_supervisor.required' => 'Petunjuk supervisor pihak ketiga wajib diisi.',
+                'metadata_pertanyaan_konsistensi.required' => 'Pertanyaan konfirmasi konsistensi kinerja wajib diisi.',
+                'metadata_umpan_balik.required' => 'Panduan rekomendasi atau catatan wajib diisi.',
+            ]);
+
+            $meta = $instrument->additional_metadata ?? [];
+            if (!is_array($meta)) $meta = json_decode($meta, true) ?: [];
+            $meta['petunjuk_supervisor'] = $request->input('metadata_petunjuk_supervisor');
+            $meta['pertanyaan_konsistensi'] = $request->input('metadata_pertanyaan_konsistensi');
+            $meta['umpan_balik'] = $request->input('metadata_umpan_balik');
+            $meta['verifikasi_kinerja'] = $request->input('metadata_verifikasi_kinerja', []);
         }
 
         $request->validate([
@@ -398,7 +524,10 @@ class MasterInstrumentController extends Controller
         $instrument->instructions = $request->input('instructions', $instrument->instructions);
         $instrument->time_limit_minutes = $request->input('time_limit_minutes', $instrument->time_limit_minutes);
         
-        $meta = $instrument->additional_metadata ?? [];
+        if (!isset($meta) || !is_array($meta)) {
+            $meta = $instrument->additional_metadata ?? [];
+            if (!is_array($meta)) $meta = json_decode($meta, true) ?: [];
+        }
         if ($request->has('metadata_scenario')) {
             $meta['scenario'] = $request->input('metadata_scenario');
         }

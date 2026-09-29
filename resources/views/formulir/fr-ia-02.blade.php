@@ -232,7 +232,6 @@
 
     <!-- ACTION BAR ATAS (NAVIGASI RESMI) -->
     @include('komponen.action-bar-formulir', [
-        'kembaliRoute' => (!empty($pendaftaran->skema_id) ? route('asesor.mapa', ['skema_id' => $pendaftaran->skema_id]) : route('asesor.daftar-peserta')),
         'kodeForm' => 'FR.IA.02',
         'namaForm' => 'FR.IA.02 Tugas Praktik Demonstrasi',
         'pendaftaranId' => $pendaftaran->id,
@@ -489,7 +488,6 @@
     <!-- NAVIGASI BAWAH FORMULIR -->
     @include('komponen.navigasi-form-bawah', [
         'pendaftaran' => $pendaftaran,
-        'kembaliRoute' => (!empty($pendaftaran->skema_id) ? route('asesor.mapa', ['skema_id' => $pendaftaran->skema_id]) : route('asesor.daftar-peserta'))
     ])
 
 </div>

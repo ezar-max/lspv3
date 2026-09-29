@@ -204,7 +204,15 @@
                     Mode Ujian Aktif (Sesi Pengerjaan Berlangsung)
                 </span>
             @else
-                <a href="{{ route('formulir.index', ['pendaftaran_id' => $pendaftaran->id]) }}" class="tombol tombol-sekunder tombol-sm">
+                @php
+                    $skemaTargetId05c = $pendaftaran->skema_id ?? request('skema_id') ?? session('active_selected_skema_id');
+                    $backUrl05c = match(auth()->user()?->peran) {
+                        'asesi' => route('asesi.tahapan'),
+                        'asesor' => (!empty($skemaTargetId05c) ? route('asesor.mapa', ['skema_id' => $skemaTargetId05c]) : route('asesor.mapa')),
+                        default => (!empty($skemaTargetId05c) ? route('admin.master-muk.index', ['skema_id' => $skemaTargetId05c]) : route('admin.master-muk.index')),
+                    };
+                @endphp
+                <a href="{{ $backUrl05c }}" class="tombol tombol-sekunder tombol-sm">
                     Kembali ke Daftar Formulir
                 </a>
             @endif
@@ -284,8 +292,16 @@
             <p style="font-size: 0.92rem; color: #64748b; line-height: 1.6; margin: 0 0 1.5rem 0;">
                 Perangkat instrumen & bank soal pilihan ganda untuk skema <strong>{{ $pendaftaran->skema->nama_skema ?? 'Skema Terpilih' }}</strong> ({{ $pendaftaran->skema->kode_skema ?? '-' }}) belum diunggah atau belum diterbitkan oleh Tim Asesor / LSP. Lembar ujian belum dapat diisi saat ini.
             </p>
-            <a href="{{ route('formulir.index', ['pendaftaran_id' => $pendaftaran->id]) }}" class="tombol tombol-utama" style="background: #2563eb; border-color: #2563eb; padding: 0.65rem 1.5rem; font-weight: 700;">
-                Kembali ke Galeri Formulir
+            @php
+                $skemaTargetId05c = $pendaftaran->skema_id ?? request('skema_id') ?? session('active_selected_skema_id');
+                $backUrl05c = match(auth()->user()?->peran) {
+                    'asesi' => route('asesi.tahapan'),
+                    'asesor' => (!empty($skemaTargetId05c) ? route('asesor.mapa', ['skema_id' => $skemaTargetId05c]) : route('asesor.mapa')),
+                    default => (!empty($skemaTargetId05c) ? route('admin.master-muk.index', ['skema_id' => $skemaTargetId05c]) : route('admin.master-muk.index')),
+                };
+            @endphp
+            <a href="{{ $backUrl05c }}" class="tombol tombol-utama" style="background: #2563eb; border-color: #2563eb; padding: 0.65rem 1.5rem; font-weight: 700;">
+                Kembali ke Daftar Formulir
             </a>
         </div>
     @else

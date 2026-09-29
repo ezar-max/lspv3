@@ -33,13 +33,21 @@
         $tglTtdAsesi = $iaRecord->data_jawaban['tgl_ttd_asesi'] ?? null;
 
         $savedPW = $savedData['pertanyaan_wawancara'] ?? [];
-        $kesimpulanVal = $savedData['kesimpulan'] ?? ($iaRecord->catatan_asesor ?? '');
+        $masterIa09 = null;
+        if ($pendaftaran->skema_id) {
+            $masterIa09 = \App\Models\SchemeMasterInstrument::where('skema_id', $pendaftaran->skema_id)
+                ->whereIn('instrument_code', ['ia_09', 'ia09'])
+                ->first();
+        }
+        $masterPW = ($masterIa09 && !empty($masterIa09->additional_metadata['pertanyaan_wawancara']))
+            ? $masterIa09->additional_metadata['pertanyaan_wawancara']
+            : [];
+        $kesimpulanVal = $savedData['kesimpulan'] ?? ($iaRecord->catatan_asesor ?? ($masterIa09->additional_metadata['umpan_balik'] ?? ''));
         $rekomendasiVal = $savedData['rekomendasi'] ?? ($iaRecord->rekomendasi ?? 'K');
     @endphp
 
     <!-- ACTION BAR ATAS -->
     @include('komponen.action-bar-formulir', [
-        'kembaliRoute' => route('formulir.index', ['pendaftaran_id' => $pendaftaran->id]),
         'kodeForm' => 'FR.IA.09',
         'namaForm' => 'FR.IA.09 Pertanyaan Wawancara',
         'pendaftaranId' => $pendaftaran->id,
@@ -153,7 +161,8 @@
                                     $rowKey = $elem->id;
                                     $savedRow = $savedPW[$rowKey] ?? [];
 
-                                    $defaultTanya = 'Bagaimana Anda membuktikan penerapan standar dan prosedur kerja pada pelaksanaan ' . $elem->nama_elemen . ' sesuai kriteria unjuk kerja yang berlaku?';
+                                    $masterTanya = $masterPW[$elem->id]['pertanyaan'] ?? null;
+                                    $defaultTanya = !empty($masterTanya) ? $masterTanya : ('Bagaimana Anda membuktikan penerapan standar dan prosedur kerja pada pelaksanaan ' . $elem->nama_elemen . ' sesuai kriteria unjuk kerja yang berlaku?');
                                     $tanyaVal = $savedRow['pertanyaan'] ?? $defaultTanya;
                                     $tanggapanVal = $savedRow['tanggapan'] ?? ($isAsesi ? 'Asesi memberikan tanggapan secara komprehensif dan sistematis sesuai SOP kejuruan.' : '');
                                     $keputusanVal = $savedRow['keputusan'] ?? ($isAsesi ? 'M' : 'M');

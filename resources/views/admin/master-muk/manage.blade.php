@@ -772,155 +772,333 @@
         </div>
 
     <!-- ========================================================================= -->
-    <!-- BAGIAN 3: FR.IA.07 (PERTANYAAN LISAN / DPL) -->
+    <!-- BAGIAN 3: FR.IA.07 (PERTANYAAN LISAN / DPL - PERSIS GAMBAR BNSP) -->
     <!-- ========================================================================= -->
     @elseif(in_array($codeKey, ['ia_07', 'ia07']))
 
-        <!-- FORM TAMBAH SOAL LISAN -->
-        <div class="form-tambah-soal-card bg-white rounded-2xl border border-slate-200/90 shadow-2xs overflow-hidden mb-8">
-            <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
-                <div class="flex items-center gap-3">
-                    <div class="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 border border-amber-100 flex items-center justify-center font-bold">
-                        <i class="fa-solid fa-comments text-sm"></i>
-                    </div>
-                    <div>
-                        <h2 class="text-base font-bold text-slate-900 tracking-tight">
-                            Tambah Butir Pertanyaan Lisan ({{ strtoupper($instrument->instrument_code) }})
-                        </h2>
-                        <p class="text-xs text-slate-500">
-                            Pertanyaan klarifikasi lisan untuk menguji pemahaman konsep dan aspek kritis asesi.
-                        </p>
-                    </div>
+        @php
+            $skema = $instrument->skema;
+            $units = ($skema && $skema->unitKompetensi->isNotEmpty()) 
+                ? $skema->unitKompetensi 
+                : ($instrument->unitKompetensi ? collect([$instrument->unitKompetensi]) : collect());
+            $meta = $instrument->additional_metadata ?? [];
+            if (!is_array($meta)) $meta = json_decode($meta, true) ?: [];
+
+            $skemaNama = $skema->nama_skema ?? 'Skema Sertifikasi';
+            $skemaKode = $skema->kode_skema ?? '-';
+
+            // Ambil pertanyaan: dari questionBanks, dari metadata, atau generate otomatis dari KUK Skema
+            $soalList = [];
+            if ($instrument->questionBanks->count() > 0) {
+                foreach ($instrument->questionBanks as $idx => $q) {
+                    $num = $q->order ?? ($idx + 1);
+                    $soalList[$num] = [
+                        'no' => $num,
+                        'pertanyaan' => $q->question_text,
+                        'kunci' => $q->correct_answer,
+                        'kuk' => $q->kriteriaUnjukKerja ? "KUK {$q->kriteriaUnjukKerja->nomor_kuk} - {$q->kriteriaUnjukKerja->pernyataan_kuk}" : 'Standar Kompetensi Kejuruan',
+                        'kuk_id' => $q->kuk_id,
+                    ];
+                }
+            } elseif (!empty($meta['pertanyaan_lisan'])) {
+                foreach ($meta['pertanyaan_lisan'] as $idx => $p) {
+                    $num = $idx + 1;
+                    $soalList[$num] = [
+                        'no' => $num,
+                        'pertanyaan' => $p['pertanyaan'] ?? '',
+                        'kunci' => $p['kunci'] ?? '',
+                        'kuk' => $p['kuk'] ?? 'Standar Kompetensi Kejuruan',
+                        'kuk_id' => $p['kuk_id'] ?? null,
+                    ];
+                }
+            } else {
+                $generated = \App\Http\Controllers\FormulirController::getSoalIa07($instrument->skema_id);
+                foreach ($generated as $num => $g) {
+                    $soalList[$num] = [
+                        'no' => $num,
+                        'pertanyaan' => $g['pertanyaan'],
+                        'kunci' => $g['kunci_rujukan'],
+                        'kuk' => $g['kuk'],
+                        'kuk_id' => null,
+                    ];
+                }
+            }
+
+            $savedUmpanBalik = $meta['umpan_balik'] ?? '';
+
+            $penyusunUser = $instrument->creator;
+            if (!$penyusunUser && !empty($instrument->created_by)) {
+                $penyusunUser = \App\Models\Pengguna::find($instrument->created_by);
+            }
+            if (!$penyusunUser) {
+                $penyusunUser = \App\Models\Pengguna::whereIn('peran', ['admin', 'superadmin'])->orderBy('id')->first();
+            }
+            $penyusunNama = $penyusunUser?->nama_lengkap ?? 'Administrator LSP';
+            $penyusunMet = $penyusunUser?->nomor_registrasi ?? 'REG.ADM.LSP.001';
+            $penyusunTtd = $penyusunUser?->tanda_tangan ?? null;
+            $penyusunTgl = $instrument->created_at ? $instrument->created_at->format('d-m-Y') : date('d-m-Y');
+
+            $validatorUser = \App\Models\Pengguna::where('peran', 'asesor')->first();
+            $validatorNama = $validatorUser?->nama_lengkap ?? 'Asesor Penguji LSP';
+            $validatorMet = $validatorUser?->nomor_registrasi ?? 'MET.000.004455.2023';
+            $validatorTtd = $validatorUser?->tanda_tangan ?? null;
+            $validatorTgl = date('d-m-Y');
+        @endphp
+
+        <form action="{{ route('admin.master-muk.update-metadata', $instrument->id) }}" method="POST">
+            @csrf
+
+            <!-- DOKUMEN PERSIS GAMBAR BNSP -->
+            <div class="dokumen-kertas-preview p-6 sm:p-10 bg-white rounded-2xl border border-slate-200 shadow-sm max-w-5xl mx-auto mb-8 text-slate-900" style="font-family: 'Segoe UI', Arial, sans-serif; font-size: 0.88rem; line-height: 1.5;">
+
+                <!-- HEADER RESMI -->
+                <div style="font-size: 0.95rem; font-weight: 800; color: #000000; margin-bottom: 0.85rem; letter-spacing: 0.3px; text-transform: uppercase;">
+                    FR.IA.07. &nbsp; DAFTAR PERTANYAAN LISAN (DPL)
                 </div>
-            </div>
 
-            <form action="{{ route('admin.master-muk.soal.store') }}" method="POST" class="p-6">
-                @csrf
-                <input type="hidden" name="scheme_master_instrument_id" value="{{ $instrument->id }}">
-                <input type="hidden" name="question_type" value="oral">
+                <!-- TABEL IDENTITAS -->
+                <table style="width: 100%; border-collapse: collapse; border: 1px solid #000000; margin-bottom: 0.5rem; font-size: 0.86rem;">
+                    <tr>
+                        <td rowspan="2" style="width: 25%; font-weight: 700; vertical-align: middle; border: 1px solid #000000; padding: 6px 10px;">
+                            Skema Sertifikasi<br>
+                            <span style="font-weight: normal; font-size: 0.82rem;">(KKNI/Okupasi/Klaster)</span>
+                        </td>
+                        <td style="width: 14%; font-weight: 600; border: 1px solid #000000; padding: 6px 10px;">Judul</td>
+                        <td style="width: 2%; text-align: center; border: 1px solid #000000; padding: 6px 10px;">:</td>
+                        <td style="font-weight: 700; border: 1px solid #000000; padding: 6px 10px;">{{ $skemaNama }}</td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight: 600; border: 1px solid #000000; padding: 6px 10px;">Nomor</td>
+                        <td style="text-align: center; border: 1px solid #000000; padding: 6px 10px;">:</td>
+                        <td style="font-weight: 700; border: 1px solid #000000; padding: 6px 10px;">{{ $skemaKode }}</td>
+                    </tr>
+                    <tr>
+                        <td colspan="2" style="font-weight: 600; border: 1px solid #000000; padding: 6px 10px;">TUK</td>
+                        <td style="text-align: center; border: 1px solid #000000; padding: 6px 10px;">:</td>
+                        <td style="border: 1px solid #000000; padding: 6px 10px;">Sewaktu/Tempat Kerja/Mandiri*</td>
+                    </tr>
+                    <tr>
+                        <td colspan="2" style="font-weight: 600; border: 1px solid #000000; padding: 6px 10px;">Nama Asesor</td>
+                        <td style="text-align: center; border: 1px solid #000000; padding: 6px 10px;">:</td>
+                        <td style="border: 1px solid #000000; padding: 6px 10px;"><strong>{{ auth()->user()->nama_lengkap ?? 'Asesor LSP' }}</strong></td>
+                    </tr>
+                    <tr>
+                        <td colspan="2" style="font-weight: 600; border: 1px solid #000000; padding: 6px 10px;">Nama Asesi</td>
+                        <td style="text-align: center; border: 1px solid #000000; padding: 6px 10px;">:</td>
+                        <td style="border: 1px solid #000000; padding: 6px 10px;">Nama Asesi Terdaftar</td>
+                    </tr>
+                    <tr>
+                        <td colspan="2" style="font-weight: 600; border: 1px solid #000000; padding: 6px 10px;">Tanggal</td>
+                        <td style="text-align: center; border: 1px solid #000000; padding: 6px 10px;">:</td>
+                        <td style="border: 1px solid #000000; padding: 6px 10px;">{{ date('d-m-Y') }}</td>
+                    </tr>
+                </table>
+                <div style="font-size: 0.75rem; font-style: italic; color: #222222; margin-top: -0.25rem; margin-bottom: 1.25rem;">*Coret yang tidak perlu</div>
 
-                <div class="mb-4">
-                    <label class="block font-semibold text-xs text-slate-700 mb-1.5">
-                        Relasi Elemen / KUK Standar Kompetensi
-                    </label>
-                    <div class="relative">
-                        <select name="kuk_id" class="muk-input-field appearance-none pr-10 cursor-pointer">
-                            <option value="">-- Umum / Seluruh Unit Kompetensi --</option>
-                            @foreach($kukList as $k)
-                                <option value="{{ $k['id'] }}">{{ $k['label'] }}</option>
-                            @endforeach
-                        </select>
-                        <div class="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none text-slate-400">
-                            <i class="fa-solid fa-chevron-down text-xs"></i>
+                <!-- DAFTAR UNIT KOMPETENSI SKEMA -->
+                <div style="font-weight: 800; font-size: 0.88rem; color: #000000; margin-bottom: 0.4rem; text-transform: uppercase;">
+                    Unit Kompetensi
+                </div>
+                <table style="width: 100%; border-collapse: collapse; border: 1px solid #000000; margin-bottom: 1.25rem; font-size: 0.86rem;">
+                    <thead>
+                        <tr style="background-color: #f8fafc;">
+                            <th style="width: 6%; text-align: center; border: 1px solid #000000; padding: 6px 4px; font-weight: 700;">No.</th>
+                            <th style="width: 25%; text-align: center; border: 1px solid #000000; padding: 6px 8px; font-weight: 700;">Kode Unit</th>
+                            <th style="text-align: center; border: 1px solid #000000; padding: 6px 8px; font-weight: 700;">Judul Unit Kompetensi</th>
+                            <th style="width: 20%; text-align: center; border: 1px solid #000000; padding: 6px 8px; font-weight: 700;">Standar</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($units as $idxU => $u)
+                            <tr>
+                                <td style="text-align: center; font-weight: 700; border: 1px solid #000000; padding: 6px 4px;">{{ $idxU + 1 }}.</td>
+                                <td style="font-weight: 600; border: 1px solid #000000; padding: 6px 8px; font-family: monospace;">{{ $u->kode_unit }}</td>
+                                <td style="font-weight: 600; border: 1px solid #000000; padding: 6px 8px;">{{ $u->nama_unit ?? $u->judul_unit }}</td>
+                                <td style="font-size: 0.82rem; color: #475569; border: 1px solid #000000; padding: 6px 8px; text-align: center;">{{ $u->standar_kompetensi ?? 'SKKNI' }}</td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="4" style="text-align: center; border: 1px solid #000000; padding: 8px; color: #94a3b8; font-style: italic;">
+                                    Belum ada unit kompetensi terdaftar pada skema ini.
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+
+                <!-- PANDUAN BAGI ASESOR -->
+                <div style="border: 1px solid #000000; padding: 0.85rem 1.15rem; margin-bottom: 1.35rem; background-color: #ffffff;">
+                    <div style="font-weight: 800; font-size: 0.88rem; color: #000000; margin-bottom: 0.45rem; text-transform: uppercase;">
+                        PANDUAN BAGI ASESOR
+                    </div>
+                    <ul style="margin: 0; padding-left: 1.2rem; font-size: 0.84rem; color: #000000; line-height: 1.6;">
+                        <li style="margin-bottom: 0.3rem;">Formulir ini diisi oleh asesor untuk menyusun daftar pertanyaan lisan yang akan diajukan kepada asesi guna mengonfirmasi pemahaman konsep, batasan variabel, dan aspek kritis.</li>
+                        <li style="margin-bottom: 0.3rem;">Pertanyaan lisan dirancang berdasarkan Kriteria Unjuk Kerja (KUK) dan elemen kompetensi pada skema sertifikasi.</li>
+                        <li style="margin-bottom: 0.3rem;">Kunci jawaban rujukan merupakan acuan jawaban atau poin penting yang diharapkan dijawab oleh asesi saat asesmen lisan berlangsung.</li>
+                        <li style="margin-bottom: 0.3rem;">Anda dapat menyesuaikan kalimat pertanyaan dan kunci rujukan, atau menambah pertanyaan baru sesuai kebutuhan uji skema.</li>
+                    </ul>
+                </div>
+
+                <!-- DAFTAR BUTIR PERTANYAAN LISAN & KUNCI RUJUKAN -->
+                <div style="margin-bottom: 1.35rem;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
+                        <div style="font-weight: 800; font-size: 0.92rem; color: #000000; text-transform: uppercase;">
+                            Daftar Butir Pertanyaan Lisan & Kunci Rujukan Asesor (<span id="total-soal-count">{{ count($soalList) }}</span> Butir)
                         </div>
-                    </div>
-                </div>
-
-                <div class="mb-4">
-                    <label class="block font-semibold text-xs text-slate-700 mb-1.5">
-                        Butir Pertanyaan Lisan yang Diajukan Asesor <span class="text-rose-500">*</span>
-                    </label>
-                    <textarea name="question_text" rows="2" class="muk-input-field leading-relaxed resize-y" placeholder="Pertanyaan lisan untuk mengklarifikasi pemahaman atau aspek kritis..." required></textarea>
-                </div>
-
-                <div class="mb-5">
-                    <label class="block font-semibold text-xs text-slate-700 mb-1.5">
-                        Kunci Jawaban Rujukan Asesor <span class="text-rose-500">*</span>
-                    </label>
-                    <textarea name="correct_answer" rows="2" class="muk-input-field leading-relaxed resize-y" placeholder="Poin jawaban lisan yang diharapkan dari asesi..." required></textarea>
-                </div>
-
-                <div class="flex items-center justify-end pt-2 border-t border-slate-100">
-                    <button type="submit" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 active:bg-amber-800 text-white font-semibold text-xs shadow-xs transition-all cursor-pointer">
-                        <i class="fa-solid fa-floppy-disk text-xs"></i>
-                        <span>Simpan Butir Pertanyaan Lisan</span>
-                    </button>
-                </div>
-            </form>
-        </div>
-
-        <!-- DAFTAR PERTANYAAN LISAN -->
-        <div class="mb-8">
-            <div class="flex items-center justify-between mb-4">
-                <div class="flex items-center gap-2.5">
-                    <h3 class="text-base font-bold text-slate-900 tracking-tight">
-                        Daftar Pertanyaan Lisan
-                    </h3>
-                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200/60">
-                        {{ $instrument->questionBanks->count() }} Butir
-                    </span>
-                </div>
-            </div>
-
-            @if($instrument->questionBanks->count() > 0)
-                <!-- Bulk Selection Toolbar -->
-                <div class="p-3 mb-4 rounded-xl bg-slate-50 border border-slate-200/90 flex flex-wrap items-center justify-between gap-3 shadow-2xs">
-                    <div class="flex items-center gap-3">
-                        <label class="inline-flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer select-none">
-                            <input type="checkbox" onchange="togglePilihSemuaSoal(this)" class="w-4 h-4 rounded border-slate-300 text-rose-600 focus:ring-rose-500 cursor-pointer checkbox-select-all">
-                            <span>Pilih Semua Soal</span>
-                        </label>
-                        <span class="text-slate-300">|</span>
-                        <span class="text-xs text-slate-500">
-                            <span class="font-bold text-slate-800 count-terpilih">0</span> soal dipilih
-                        </span>
-                    </div>
-
-                    <div>
-                        <button type="button" onclick="hapusSoalTerpilih()" class="btn-hapus-bulk inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 active:bg-rose-800 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold text-xs shadow-2xs transition-all cursor-pointer" disabled>
-                            <i class="fa-regular fa-trash-can text-xs"></i>
-                            <span>Hapus Terpilih</span>
+                        <button type="button" onclick="tambahBarisSoalLisan()" class="btn-submit-metadata inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold border border-indigo-200 transition cursor-pointer">
+                            <i class="fa-solid fa-plus text-[10px]"></i>
+                            <span>Tambah Butir Soal</span>
                         </button>
                     </div>
+
+                    <div id="wadah-soal-lisan" class="space-y-4">
+                        @foreach($soalList as $qNo => $item)
+                            <div class="item-soal-lisan border border-slate-300 rounded-xl p-4 bg-slate-50/50 hover:bg-white transition" data-nomor="{{ $qNo }}">
+                                <div class="flex items-center justify-between gap-3 mb-2.5">
+                                    <div class="flex items-center gap-2">
+                                        <span class="nomor-badge w-6 h-6 rounded-lg bg-amber-600 text-white font-mono font-bold text-xs flex items-center justify-center">
+                                            {{ $qNo }}
+                                        </span>
+                                        <span class="text-xs font-bold text-slate-700">
+                                            {{ $item['kuk'] }}
+                                        </span>
+                                        <input type="hidden" name="metadata_pertanyaan_lisan[{{ $qNo }}][kuk]" value="{{ $item['kuk'] }}">
+                                        <input type="hidden" name="metadata_pertanyaan_lisan[{{ $qNo }}][kuk_id]" value="{{ $item['kuk_id'] ?? '' }}">
+                                    </div>
+                                    <button type="button" onclick="hapusBarisSoalLisan(this)" class="btn-hapus-item text-xs text-rose-500 hover:text-rose-700 font-semibold flex items-center gap-1 transition cursor-pointer" title="Hapus butir ini">
+                                        <i class="fa-regular fa-trash-can text-[11px]"></i>
+                                        <span>Hapus</span>
+                                    </button>
+                                </div>
+
+                                <div class="space-y-3">
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-700 mb-1">
+                                            Butir Pertanyaan Lisan yang Diajukan Asesor <span class="text-rose-500">*</span>:
+                                        </label>
+                                        <textarea name="metadata_pertanyaan_lisan[{{ $qNo }}][pertanyaan]" rows="2" class="muk-input-field input-metadata-muk text-xs leading-relaxed" placeholder="Tuliskan pertanyaan lisan untuk menguji pemahaman KUK..." required>{{ $item['pertanyaan'] }}</textarea>
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-xs font-bold text-amber-900 mb-1">
+                                            Kunci Jawaban Rujukan Asesor <span class="text-rose-500">*</span>:
+                                        </label>
+                                        <textarea name="metadata_pertanyaan_lisan[{{ $qNo }}][kunci]" rows="2" class="muk-input-field input-metadata-muk text-xs leading-relaxed bg-amber-50/60 border-amber-200" placeholder="Poin-poin jawaban yang diharapkan dari asesi..." required>{{ $item['kunci'] }}</textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
                 </div>
-            @endif
 
-            @forelse($instrument->questionBanks as $q)
-                <div class="muk-question-card" data-question-id="{{ $q->id }}">
-                    <div class="flex items-center justify-between gap-3 mb-3">
-                        <div class="flex items-center gap-2.5 flex-wrap">
-                            <input type="checkbox" name="selected_questions[]" value="{{ $q->id }}" onchange="updateBulkSelectionState()" class="w-4 h-4 rounded border-slate-300 text-rose-600 focus:ring-rose-500 cursor-pointer checkbox-item-soal" title="Pilih butir soal ini">
-
-                            <span class="w-7 h-7 rounded-lg bg-amber-600 text-white font-mono font-bold text-xs flex items-center justify-center shadow-2xs">
-                                {{ $q->order }}
-                            </span>
-                            @if($q->kriteriaUnjukKerja)
-                                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200/60">
-                                    <i class="fa-solid fa-tag text-[10px]"></i>
-                                    <span>KUK {{ $q->kriteriaUnjukKerja->nomor_kuk }}</span>
-                                </span>
-                            @endif
-                        </div>
-                        <div>
-                            <form action="{{ route('admin.master-muk.soal.destroy', $q->id) }}" method="POST" onsubmit="return konfirmasiHapus(event, this, 'butir pertanyaan lisan #{{ $q->order }}')" class="inline btn-hapus-item">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 font-semibold text-xs border border-rose-200/70 transition-all cursor-pointer">
-                                    <i class="fa-regular fa-trash-can text-[11px]"></i>
-                                    <span>Hapus</span>
-                                </button>
-                            </form>
-                        </div>
-                    </div>
-
-                    <div class="text-sm sm:text-base font-semibold text-slate-800 leading-relaxed mb-3">
-                        {{ $q->question_text }}
-                    </div>
-
-                    <div class="bg-amber-50/70 border-l-3 border-amber-500 px-3.5 py-2.5 rounded-r-xl text-xs text-amber-900">
-                        <strong class="text-amber-950 font-bold block mb-0.5">Kunci Jawaban Rujukan Asesor:</strong>
-                        <span>{{ $q->correct_answer }}</span>
-                    </div>
+                <!-- UMPAN BALIK UNTUK ASESI -->
+                <div style="border: 1px solid #000000; padding: 0.85rem 1rem; margin-bottom: 1.35rem; background-color: #ffffff;">
+                    <label style="font-weight: 700; font-size: 0.88rem; color: #000000; margin-bottom: 0.4rem; display: block;">
+                        Umpan Balik / Catatan untuk Asesi: <span style="font-size: 0.75rem; font-weight: normal; color: #64748b; font-style: italic;">(Opsional / Standar)</span>
+                    </label>
+                    <textarea name="metadata_umpan_balik" class="w-full bg-slate-50 border border-slate-300 rounded p-2 text-xs text-slate-800 focus:bg-white focus:border-slate-800 outline-none muk-input-field input-metadata-muk" rows="3" placeholder="Tuliskan standar catatan atau panduan umpan balik hasil uji lisan...">{{ $savedUmpanBalik }}</textarea>
                 </div>
-            @empty
-                <div class="bg-white rounded-2xl border-2 border-dashed border-slate-200/90 p-10 text-center">
-                    <div class="w-14 h-14 rounded-2xl bg-amber-50 text-amber-600 border border-amber-100 flex items-center justify-center mx-auto mb-3 text-xl shadow-2xs">
-                        <i class="fa-solid fa-comments"></i>
+
+                <!-- TABEL TANDA TANGAN ASESI & ASESOR -->
+                <table style="width: 100%; border-collapse: collapse; border: 1px solid #000000; margin-top: 1.25rem; font-size: 0.86rem;">
+                    <tr>
+                        <td colspan="3" style="font-weight: 700; background-color: #ffffff; border: 1px solid #000000; padding: 6px 10px;">Asesi :</td>
+                    </tr>
+                    <tr>
+                        <td style="width: 25%; font-weight: 600; border: 1px solid #000000; padding: 6px 10px;">Nama</td>
+                        <td style="width: 2%; text-align: center; border: 1px solid #000000; padding: 6px 10px;">:</td>
+                        <td style="font-weight: 700; border: 1px solid #000000; padding: 6px 10px;">Nama Asesi Terdaftar</td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight: 600; vertical-align: top; border: 1px solid #000000; padding: 6px 10px;">Tanda tangan dan Tanggal</td>
+                        <td style="text-align: center; vertical-align: top; border: 1px solid #000000; padding: 6px 10px;">:</td>
+                        <td style="min-height: 45px; vertical-align: middle; border: 1px solid #000000; padding: 6px 10px; color: #64748b; font-style: italic;">
+                            (Area Tanda Tangan Digital & Tanggal Asesi)
+                        </td>
+                    </tr>
+                    <tr>
+                        <td colspan="3" style="font-weight: 700; background-color: #ffffff; border: 1px solid #000000; padding: 6px 10px;">Asesor :</td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight: 600; border: 1px solid #000000; padding: 6px 10px;">Nama</td>
+                        <td style="text-align: center; border: 1px solid #000000; padding: 6px 10px;">:</td>
+                        <td style="font-weight: 700; border: 1px solid #000000; padding: 6px 10px;">{{ auth()->user()->nama_lengkap ?? 'Asesor LSP' }}</td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight: 600; border: 1px solid #000000; padding: 6px 10px;">No. Reg</td>
+                        <td style="text-align: center; border: 1px solid #000000; padding: 6px 10px;">:</td>
+                        <td style="border: 1px solid #000000; padding: 6px 10px;">{{ auth()->user()->nomor_registrasi ?? 'MET.000.004455.2023' }}</td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight: 600; vertical-align: top; border: 1px solid #000000; padding: 6px 10px;">Tanda tangan dan Tanggal</td>
+                        <td style="text-align: center; vertical-align: top; border: 1px solid #000000; padding: 6px 10px;">:</td>
+                        <td style="min-height: 45px; vertical-align: middle; border: 1px solid #000000; padding: 6px 10px;">
+                            <span style="font-weight: 600; color: #0f172a;">{{ date('d-m-Y') }}</span>
+                        </td>
+                    </tr>
+                </table>
+
+                <!-- TABEL PENYUSUN DAN VALIDATOR -->
+                <div style="margin-top: 1.5rem;">
+                    <div style="font-weight: 800; font-size: 0.92rem; color: #000000; margin-bottom: 0.5rem; text-transform: uppercase;">
+                        PENYUSUN DAN VALIDATOR
                     </div>
-                    <p class="text-sm font-semibold text-slate-600">Belum ada butir pertanyaan lisan di paket ini.</p>
+
+                    <table style="width: 100%; border-collapse: collapse; border: 1px solid #000000; font-size: 0.86rem;">
+                        <thead>
+                            <tr>
+                                <th style="width: 18%; text-align: center; border: 1px solid #000000; padding: 6px 8px; font-weight: 700; background-color: #ffffff;">STATUS</th>
+                                <th style="width: 6%; text-align: center; border: 1px solid #000000; padding: 6px 4px; font-weight: 700; background-color: #ffffff;">NO</th>
+                                <th style="width: 32%; text-align: center; border: 1px solid #000000; padding: 6px 8px; font-weight: 700; background-color: #ffffff;">NAMA</th>
+                                <th style="width: 22%; text-align: center; border: 1px solid #000000; padding: 6px 8px; font-weight: 700; background-color: #ffffff;">NOMOR MET</th>
+                                <th style="width: 22%; text-align: center; border: 1px solid #000000; padding: 6px 8px; font-weight: 700; background-color: #ffffff;">TANDA TANGAN DAN TANGGAL</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- PENYUSUN 1 -->
+                            <tr>
+                                <td style="font-weight: 800; text-align: center; vertical-align: middle; background: #ffffff; border: 1px solid #000000; padding: 6px 8px;">
+                                    PENYUSUN
+                                </td>
+                                <td style="text-align: center; font-weight: 700; border: 1px solid #000000; padding: 6px 4px;">1</td>
+                                <td style="padding: 6px 8px; border: 1px solid #000000;"><strong>{{ $penyusunNama }}</strong></td>
+                                <td style="padding: 6px 8px; border: 1px solid #000000;">{{ $penyusunMet }}</td>
+                                <td style="text-align: center; padding: 4px; border: 1px solid #000000;">
+                                    @if(!empty($penyusunTtd))
+                                        <img src="{{ asset($penyusunTtd) }}" alt="TTD" style="max-height: 36px; margin: 0 auto; display: block;">
+                                    @endif
+                                    <span style="font-size: 0.75rem; color: #475569;">{{ $penyusunTgl }}</span>
+                                </td>
+                            </tr>
+                            <!-- VALIDATOR 1 -->
+                            <tr>
+                                <td style="font-weight: 800; text-align: center; vertical-align: middle; background: #ffffff; border: 1px solid #000000; padding: 6px 8px;">
+                                    VALIDATOR
+                                </td>
+                                <td style="text-align: center; font-weight: 700; border: 1px solid #000000; padding: 6px 4px;">1</td>
+                                <td style="padding: 6px 8px; border: 1px solid #000000;"><strong>{{ $validatorNama }}</strong></td>
+                                <td style="padding: 6px 8px; border: 1px solid #000000;">{{ $validatorMet }}</td>
+                                <td style="text-align: center; padding: 4px; border: 1px solid #000000;">
+                                    @if(!empty($validatorTtd))
+                                        <img src="{{ asset($validatorTtd) }}" alt="TTD" style="max-height: 36px; margin: 0 auto; display: block;">
+                                    @endif
+                                    <span style="font-size: 0.75rem; color: #475569;">{{ $validatorTgl }}</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
-            @endforelse
-        </div>
+
+            </div>
+
+            <!-- TOMBOL SIMPAN PERUBAHAN MASTER FR.IA.07 (HANYA MUNCUL SAAT MODE EDIT) -->
+            <div class="btn-submit-metadata max-w-5xl mx-auto mt-6 flex justify-end">
+                <button type="submit" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold shadow-md transition-all cursor-pointer">
+                    <i class="fa-solid fa-floppy-disk"></i>
+                    <span>Simpan Perubahan Master FR.IA.07</span>
+                </button>
+            </div>
+        </form>
 
     <!-- ========================================================================= -->
     <!-- BAGIAN 3B: FR.IA.03 (PERTANYAAN UNTUK MENDUKUNG OBSERVASI - PERSIS GAMBAR BNSP) -->
@@ -1196,21 +1374,12 @@
                 </div>
             </div>
 
-            <!-- TOMBOL SIMPAN MASTER FR.IA.03 STICKY / FLOATING ACTION BAR -->
-            <div class="sticky bottom-6 z-30 max-w-5xl mx-auto flex items-center justify-between bg-slate-900/95 backdrop-blur-md text-white px-6 py-4 rounded-2xl shadow-xl border border-slate-700/60">
-                <div>
-                    <div class="font-bold text-sm text-white">Kelola Master Instrumen FR.IA.03</div>
-                    <div class="text-xs text-slate-300">Simpan susunan pertanyaan dan panduan tanggapan ke bank instrumen skema.</div>
-                </div>
-                <div class="flex items-center gap-3">
-                    <a href="{{ route('admin.master-muk.index', ['skema_id' => $instrument->skema_id]) }}" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-600 transition-all">
-                        Kembali
-                    </a>
-                    <button type="submit" class="px-5 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold shadow-md transition-all flex items-center gap-2 cursor-pointer">
-                        <i class="fa-solid fa-floppy-disk"></i>
-                        <span>Simpan Perubahan Master FR.IA.03</span>
-                    </button>
-                </div>
+            <!-- TOMBOL SIMPAN PERUBAHAN MASTER FR.IA.03 (HANYA MUNCUL SAAT MODE EDIT) -->
+            <div class="btn-submit-metadata max-w-5xl mx-auto mt-6 flex justify-end">
+                <button type="submit" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold shadow-md transition-all cursor-pointer">
+                    <i class="fa-solid fa-floppy-disk"></i>
+                    <span>Simpan Perubahan Master FR.IA.03</span>
+                </button>
             </div>
         </form>
 
@@ -2273,6 +2442,764 @@
             </div>
         </form>
 
+    <!-- ========================================================================= -->
+    <!-- BAGIAN 7: FR.IA.08 (CVP – CEKLIS VERIFIKASI PORTOFOLIO - PERSIS PRATINJAU BNSP) -->
+    <!-- ========================================================================= -->
+    @elseif(in_array($codeKey, ['ia_08', 'ia08']))
+
+        @php
+            $skema = $instrument->skema;
+            $units = ($skema && $skema->unitKompetensi->isNotEmpty()) 
+                ? $skema->unitKompetensi 
+                : ($instrument->unitKompetensi ? collect([$instrument->unitKompetensi]) : collect());
+            $meta = $instrument->additional_metadata ?? [];
+            if (!is_array($meta)) $meta = json_decode($meta, true) ?: [];
+
+            $skemaNama = $skema->nama_skema ?? 'Skema Sertifikasi';
+            $skemaKode = $skema->kode_skema ?? '-';
+
+            // Kertas formulir kosong (blank template) - belum ada pemilik/isinya
+            $savedDocs = $meta['dokumen_portofolio'] ?? [];
+            $savedKlarifikasi = $meta['klarifikasi_elemen'] ?? [];
+            $savedMateri = $meta['materi_klarifikasi'] ?? [];
+            $buktiTambahanVal = $meta['bukti_tambahan'] ?? '';
+            $umpanBalikVal = $meta['umpan_balik'] ?? '';
+
+            $penyusunUser = $instrument->creator;
+            if (!$penyusunUser && !empty($instrument->created_by)) {
+                $penyusunUser = \App\Models\Pengguna::find($instrument->created_by);
+            }
+            if (!$penyusunUser) {
+                $penyusunUser = \App\Models\Pengguna::whereIn('peran', ['admin', 'superadmin'])->orderBy('id')->first();
+            }
+            $penyusunNama = $penyusunUser?->nama_lengkap ?? 'Administrator LSP';
+            $penyusunMet = $penyusunUser?->nomor_registrasi ?? 'REG.ADM.LSP.001';
+            $penyusunTtd = $penyusunUser?->tanda_tangan ?? null;
+            $penyusunTgl = $instrument->created_at ? $instrument->created_at->format('d-m-Y') : date('d-m-Y');
+
+            $validatorUser = \App\Models\Pengguna::where('peran', 'asesor')->first();
+            $validatorNama = $validatorUser?->nama_lengkap ?? 'Asesor Penguji LSP';
+            $validatorMet = $validatorUser?->nomor_registrasi ?? 'MET.000.004455.2023';
+            $validatorTtd = $validatorUser?->tanda_tangan ?? null;
+            $validatorTgl = date('d-m-Y');
+        @endphp
+
+        <form action="{{ route('admin.master-muk.update-metadata', $instrument->id) }}" method="POST">
+            @csrf
+
+            <!-- DOKUMEN PERSIS GAMBAR BNSP -->
+            <div class="dokumen-kertas-preview p-6 sm:p-10 bg-white rounded-2xl border border-slate-200 shadow-sm max-w-5xl mx-auto mb-8 text-slate-900" style="font-family: 'Segoe UI', Arial, sans-serif; font-size: 0.88rem; line-height: 1.5;">
+
+                <!-- HEADER RESMI -->
+                <div style="font-size: 0.95rem; font-weight: 800; color: #000000; margin-bottom: 0.85rem; letter-spacing: 0.3px; text-transform: uppercase;">
+                    FR.IA.08. &nbsp; CVP – CEKLIS VERIFIKASI PORTOFOLIO
+                </div>
+
+                <!-- TABEL IDENTITAS -->
+                <table style="width: 100%; border-collapse: collapse; border: 1px solid #000000; margin-bottom: 0.5rem; font-size: 0.86rem;">
+                    <tr>
+                        <td rowspan="2" style="width: 25%; font-weight: 700; vertical-align: middle; border: 1px solid #000000; padding: 6px 10px;">
+                            Skema Sertifikasi<br>
+                            <span style="font-weight: normal; font-size: 0.82rem;">(KKNI/Okupasi/Klaster)</span>
+                        </td>
+                        <td style="width: 14%; font-weight: 600; border: 1px solid #000000; padding: 6px 10px;">Judul</td>
+                        <td style="width: 2%; text-align: center; border: 1px solid #000000; padding: 6px 10px;">:</td>
+                        <td style="font-weight: 700; border: 1px solid #000000; padding: 6px 10px;">{{ $skemaNama }}</td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight: 600; border: 1px solid #000000; padding: 6px 10px;">Nomor</td>
+                        <td style="text-align: center; border: 1px solid #000000; padding: 6px 10px;">:</td>
+                        <td style="font-weight: 700; border: 1px solid #000000; padding: 6px 10px;">{{ $skemaKode }}</td>
+                    </tr>
+                    <tr>
+                        <td colspan="2" style="font-weight: 600; border: 1px solid #000000; padding: 6px 10px;">TUK</td>
+                        <td style="text-align: center; border: 1px solid #000000; padding: 6px 10px;">:</td>
+                        <td style="border: 1px solid #000000; padding: 6px 10px;">Sewaktu / Tempat Kerja / Mandiri*</td>
+                    </tr>
+                    <tr>
+                        <td colspan="2" style="font-weight: 600; border: 1px solid #000000; padding: 6px 10px;">Nama Asesor</td>
+                        <td style="text-align: center; border: 1px solid #000000; padding: 6px 10px;">:</td>
+                        <td style="border: 1px solid #000000; padding: 6px 10px;">-</td>
+                    </tr>
+                    <tr>
+                        <td colspan="2" style="font-weight: 600; border: 1px solid #000000; padding: 6px 10px;">Nama Asesi</td>
+                        <td style="text-align: center; border: 1px solid #000000; padding: 6px 10px;">:</td>
+                        <td style="border: 1px solid #000000; padding: 6px 10px;">-</td>
+                    </tr>
+                    <tr>
+                        <td colspan="2" style="font-weight: 600; border: 1px solid #000000; padding: 6px 10px;">Tanggal</td>
+                        <td style="text-align: center; border: 1px solid #000000; padding: 6px 10px;">:</td>
+                        <td style="border: 1px solid #000000; padding: 6px 10px;">-</td>
+                    </tr>
+                </table>
+                <div style="font-size: 0.72rem; font-style: italic; color: #475569; margin-bottom: 0.85rem;">*Coret yang tidak perlu</div>
+
+                <!-- PANDUAN BAGI ASESOR -->
+                <div style="border: 1px solid #000000; padding: 10px 14px; margin-bottom: 1.25rem; background-color: #fafafa; font-size: 0.83rem;">
+                    <strong style="display: block; margin-bottom: 4px; text-transform: uppercase;">Panduan Bagi Asesor:</strong>
+                    <ul style="margin: 0; padding-left: 1.25rem; line-height: 1.45;">
+                        <li>Verifikasi portofolio dapat dilakukan untuk keseluruhan unit kompetensi dalam skema sertifikasi atau dilakukan untuk masing-masing kelompok pekerjaan dalam satu skema sertifikasi.</li>
+                        <li>Isilah bukti portofolio sesuai ketentuan bukti berkualitas dan relevan dengan standar kompetensi kerja sebagaimana yang telah disepakati pada rekaman asesmen mandiri.</li>
+                        <li>Lakukan verifikasi portofolio berdasarkan aturan bukti (Valid, Asli, Terkini, Memadai - VATM).</li>
+                        <li>Berikan hasil verifikasi portofolio dengan memberi centang (&radic;) pada kolom yang sesuai.</li>
+                        <li>Jika hasil verifikasi dokumen portofolio belum memenuhi aturan bukti maka asesor melanjutkan dengan metode tanya jawab pertanyaan wawancara dan/atau verifikasi pihak ketiga.</li>
+                    </ul>
+                </div>
+
+                <!-- TABEL ATURAN BUKTI (VATM) -->
+                <div style="margin-bottom: 1.25rem;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+                        <strong style="text-transform: uppercase; font-size: 0.88rem;">1. Dokumen Bukti Portofolio yang Disyaratkan Skema (Aturan Bukti VATM)</strong>
+                    </div>
+
+                    <table style="width: 100%; border-collapse: collapse; border: 1px solid #000000; font-size: 0.84rem;" id="tabel-portofolio-ia08">
+                        <thead>
+                            <tr style="background-color: #f1f5f9;">
+                                <th rowspan="2" style="width: 45%; vertical-align: middle; border: 1px solid #000000; padding: 6px 8px; text-align: left;">Bukti Portofolio yang Dipersyaratkan:</th>
+                                <th colspan="8" style="text-align: center; border: 1px solid #000000; padding: 6px 8px; background: #e2e8f0; font-weight: 700;">Aturan Bukti</th>
+                            </tr>
+                            <tr style="background-color: #f1f5f9; text-align: center;">
+                                <th colspan="2" style="border: 1px solid #000000; padding: 4px; width: 13.75%;">Valid</th>
+                                <th colspan="2" style="border: 1px solid #000000; padding: 4px; width: 13.75%;">Asli</th>
+                                <th colspan="2" style="border: 1px solid #000000; padding: 4px; width: 13.75%;">Terkini</th>
+                                <th colspan="2" style="border: 1px solid #000000; padding: 4px; width: 13.75%;">Memadai</th>
+                            </tr>
+                            <tr style="background-color: #f8fafc; text-align: center; font-size: 0.78rem;">
+                                <th style="border: 1px solid #000000;"></th>
+                                <th style="border: 1px solid #000000; padding: 3px;">Ya</th><th style="border: 1px solid #000000; padding: 3px;">Tdk</th>
+                                <th style="border: 1px solid #000000; padding: 3px;">Ya</th><th style="border: 1px solid #000000; padding: 3px;">Tdk</th>
+                                <th style="border: 1px solid #000000; padding: 3px;">Ya</th><th style="border: 1px solid #000000; padding: 3px;">Tdk</th>
+                                <th style="border: 1px solid #000000; padding: 3px;">Ya</th><th style="border: 1px solid #000000; padding: 3px;">Tdk</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody-portofolio-ia08">
+                            <tr id="empty-row-portofolio">
+                                <td colspan="9" style="border: 1px solid #000000; text-align: center; padding: 18px 12px; color: #64748b; background-color: #f8fafc; font-style: italic;">
+                                    Kertas formulir kosong (Bukti portofolio asesi akan otomatis dimuat dari database berkas pendaftaran saat pelaksanaan asesmen).
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- SUBSTANSI WAWANCARA TINDAK LANJUT -->
+                <div style="margin-bottom: 1.25rem;">
+                    <strong style="text-transform: uppercase; font-size: 0.88rem; display: block; margin-bottom: 0.5rem;">
+                        2. Sebagai tindak lanjut dari hasil verifikasi bukti, substansi materi di bawah ini (no elemen yang diceklist) harus diklarifikasi selama wawancara:
+                    </strong>
+
+                    <table style="width: 100%; border-collapse: collapse; border: 1px solid #000000; font-size: 0.84rem;">
+                        <thead>
+                            <tr style="background-color: #f1f5f9;">
+                                <th style="width: 8%; text-align: center; border: 1px solid #000000; padding: 6px 8px;">Cek List</th>
+                                <th style="width: 25%; border: 1px solid #000000; padding: 6px 8px;">No. Unit Kompetensi</th>
+                                <th style="width: 15%; text-align: center; border: 1px solid #000000; padding: 6px 8px;">No. Elemen</th>
+                                <th style="border: 1px solid #000000; padding: 6px 8px;">Materi / Substansi Wawancara / KUK</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($units as $u)
+                                @php
+                                    $elemenList = $u->elemenKompetensi;
+                                    $count = $elemenList->count();
+                                @endphp
+                                @if($count > 0)
+                                    @foreach($elemenList as $e)
+                                        <tr>
+                                            <td style="border: 1px solid #000000; text-align: center; vertical-align: middle;">
+                                                <input type="checkbox" name="metadata_klarifikasi_elemen[{{ $e->id }}]" value="1" {{ !empty($savedKlarifikasi[$e->id]) ? 'checked' : '' }} class="input-metadata-muk">
+                                            </td>
+                                            @if($loop->first)
+                                                <td rowspan="{{ $count }}" style="border: 1px solid #000000; padding: 6px 8px; vertical-align: top; background-color: #ffffff;">
+                                                    <strong style="color: #002554;">{{ $u->kode_unit }}</strong><br>
+                                                    <span style="font-size: 0.78rem; color: #475569;">{{ $u->judul_unit }}</span>
+                                                </td>
+                                            @endif
+                                            <td style="border: 1px solid #000000; text-align: center; font-weight: 700; padding: 6px 8px; vertical-align: middle;">
+                                                Elemen {{ $e->nomor_elemen }}
+                                            </td>
+                                            <td style="border: 1px solid #000000; padding: 6px 8px; vertical-align: middle;">
+                                                <strong>{{ $e->nama_elemen }}</strong>
+                                                <div style="font-size: 0.78rem; color: #64748b; margin-top: 0.2rem;">Klarifikasi bukti implementasi KUK pada proyek asesi.</div>
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                @else
+                                    <tr>
+                                        <td style="border: 1px solid #000000; text-align: center; vertical-align: middle;">-</td>
+                                        <td style="border: 1px solid #000000; padding: 6px 8px; vertical-align: top; background-color: #ffffff;">
+                                            <strong style="color: #002554;">{{ $u->kode_unit }}</strong><br>
+                                            <span style="font-size: 0.78rem; color: #475569;">{{ $u->judul_unit }}</span>
+                                        </td>
+                                        <td style="border: 1px solid #000000; text-align: center; color: #64748b; padding: 6px 8px;">-</td>
+                                        <td style="border: 1px solid #000000; color: #64748b; padding: 6px 8px;">Belum ada elemen kompetensi.</td>
+                                    </tr>
+                                @endif
+                            @empty
+                                <tr>
+                                    <td colspan="4" style="text-align: center; color: #64748b; padding: 1rem; border: 1px solid #000000;">Belum ada unit kompetensi pada skema ini.</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- BUKTI TAMBAHAN -->
+                <div style="border: 1px solid #000000; padding: 10px 14px; margin-bottom: 1.25rem; background: #ffffff;">
+                    <label style="font-weight: 700; font-size: 0.88rem; display: block; margin-bottom: 0.35rem; color: #000000;">
+                        Bukti tambahan diperlukan pada unit / elemen kompetensi sebagai berikut:
+                    </label>
+                    <textarea name="metadata_bukti_tambahan" class="muk-input-field input-metadata-muk" rows="3" placeholder="Tuliskan jika terdapat ketentuan bukti tambahan yang dipersyaratkan oleh skema...">{{ old('metadata_bukti_tambahan', $buktiTambahanVal) }}</textarea>
+                </div>
+
+                <!-- PANDUAN REKOMENDASI ASESOR -->
+                <div style="border: 1px solid #000000; padding: 10px 14px; margin-bottom: 1.25rem; background: #ffffff;">
+                    <label style="font-weight: 700; font-size: 0.88rem; display: block; margin-bottom: 0.35rem; color: #000000;">
+                        Panduan Rekomendasi & Catatan Kelulusan Portofolio Asesor:
+                    </label>
+                    <textarea name="metadata_umpan_balik" class="muk-input-field input-metadata-muk" rows="2" placeholder="Tuliskan arahan kriteria pemenuhan aturan bukti (VATM) atau catatan verifikasi...">{{ old('metadata_umpan_balik', $umpanBalikVal) }}</textarea>
+                </div>
+
+                <!-- TABEL PENYUSUN & VALIDATOR RESMI BNSP -->
+                <div style="margin-bottom: 0.5rem;">
+                    <table style="width: 100%; border-collapse: collapse; border: 1px solid #000000; font-size: 0.86rem;">
+                        <thead>
+                            <tr>
+                                <th style="width: 18%; text-align: center; border: 1px solid #000000; padding: 6px 8px; font-weight: 700; background-color: #ffffff;">STATUS</th>
+                                <th style="width: 6%; text-align: center; border: 1px solid #000000; padding: 6px 4px; font-weight: 700; background-color: #ffffff;">NO</th>
+                                <th style="width: 32%; text-align: center; border: 1px solid #000000; padding: 6px 8px; font-weight: 700; background-color: #ffffff;">NAMA</th>
+                                <th style="width: 22%; text-align: center; border: 1px solid #000000; padding: 6px 8px; font-weight: 700; background-color: #ffffff;">NOMOR MET</th>
+                                <th style="width: 22%; text-align: center; border: 1px solid #000000; padding: 6px 8px; font-weight: 700; background-color: #ffffff;">TANDA TANGAN DAN TANGGAL</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td style="font-weight: 800; text-align: center; vertical-align: middle; background: #ffffff; border: 1px solid #000000; padding: 6px 8px;">PENYUSUN</td>
+                                <td style="text-align: center; font-weight: 700; border: 1px solid #000000; padding: 6px 4px;">1</td>
+                                <td style="padding: 6px 8px; border: 1px solid #000000;"><strong>{{ $penyusunNama }}</strong></td>
+                                <td style="padding: 6px 8px; border: 1px solid #000000;">{{ $penyusunMet }}</td>
+                                <td style="text-align: center; padding: 4px; border: 1px solid #000000;">
+                                    @if(!empty($penyusunTtd))
+                                        <img src="{{ asset($penyusunTtd) }}" alt="TTD" style="max-height: 36px; margin: 0 auto; display: block;">
+                                    @endif
+                                    <span style="font-size: 0.75rem; color: #475569;">{{ $penyusunTgl }}</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="font-weight: 800; text-align: center; vertical-align: middle; background: #ffffff; border: 1px solid #000000; padding: 6px 8px;">VALIDATOR</td>
+                                <td style="text-align: center; font-weight: 700; border: 1px solid #000000; padding: 6px 4px;">1</td>
+                                <td style="padding: 6px 8px; border: 1px solid #000000;"><strong>{{ $validatorNama }}</strong></td>
+                                <td style="padding: 6px 8px; border: 1px solid #000000;">{{ $validatorMet }}</td>
+                                <td style="text-align: center; padding: 4px; border: 1px solid #000000;">
+                                    @if(!empty($validatorTtd))
+                                        <img src="{{ asset($validatorTtd) }}" alt="TTD" style="max-height: 36px; margin: 0 auto; display: block;">
+                                    @endif
+                                    <span style="font-size: 0.75rem; color: #475569;">{{ $validatorTgl }}</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div style="font-size: 0.72rem; color: #333333; margin-top: 0.5rem; font-style: italic; line-height: 1.4;">
+                    Diadaptasi dari template yang disediakan di Departemen Pendidikan dan Pelatihan, Australia, Merancang instrumen asesmen untuk hasil yang berkualitas di VET, 2008.
+                </div>
+            </div>
+
+            <!-- TOMBOL SIMPAN MASTER FR.IA.08 -->
+            <div class="btn-submit-metadata max-w-5xl mx-auto mt-6 flex justify-end">
+                <button type="submit" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold shadow-md transition-all cursor-pointer">
+                    <i class="fa-solid fa-floppy-disk"></i>
+                    <span>Simpan Formulir Master FR.IA.08</span>
+                </button>
+            </div>
+        </form>
+
+    <!-- ========================================================================= -->
+    <!-- BAGIAN 8: FR.IA.09 (PW – PERTANYAAN WAWANCARA - PERSIS PRATINJAU BNSP) -->
+    <!-- ========================================================================= -->
+    @elseif(in_array($codeKey, ['ia_09', 'ia09']))
+
+        @php
+            $skema = $instrument->skema;
+            $units = ($skema && $skema->unitKompetensi->isNotEmpty()) 
+                ? $skema->unitKompetensi 
+                : ($instrument->unitKompetensi ? collect([$instrument->unitKompetensi]) : collect());
+            $meta = $instrument->additional_metadata ?? [];
+            if (!is_array($meta)) $meta = json_decode($meta, true) ?: [];
+
+            $skemaNama = $skema->nama_skema ?? 'Skema Sertifikasi';
+            $skemaKode = $skema->kode_skema ?? '-';
+
+            $savedPW = $meta['pertanyaan_wawancara'] ?? [];
+            $umpanBalikVal = $meta['umpan_balik'] ?? '';
+
+            $penyusunUser = $instrument->creator;
+            if (!$penyusunUser && !empty($instrument->created_by)) {
+                $penyusunUser = \App\Models\Pengguna::find($instrument->created_by);
+            }
+            if (!$penyusunUser) {
+                $penyusunUser = \App\Models\Pengguna::whereIn('peran', ['admin', 'superadmin'])->orderBy('id')->first();
+            }
+            $penyusunNama = $penyusunUser?->nama_lengkap ?? 'Administrator LSP';
+            $penyusunMet = $penyusunUser?->nomor_registrasi ?? 'REG.ADM.LSP.001';
+            $penyusunTtd = $penyusunUser?->tanda_tangan ?? null;
+            $penyusunTgl = $instrument->created_at ? $instrument->created_at->format('d-m-Y') : date('d-m-Y');
+
+            $validatorUser = \App\Models\Pengguna::where('peran', 'asesor')->first();
+            $validatorNama = $validatorUser?->nama_lengkap ?? 'Asesor Penguji LSP';
+            $validatorMet = $validatorUser?->nomor_registrasi ?? 'MET.000.004455.2023';
+            $validatorTtd = $validatorUser?->tanda_tangan ?? null;
+            $validatorTgl = date('d-m-Y');
+        @endphp
+
+        <form action="{{ route('admin.master-muk.update-metadata', $instrument->id) }}" method="POST">
+            @csrf
+
+            <div class="dokumen-kertas-preview p-6 sm:p-10 bg-white rounded-2xl border border-slate-200 shadow-sm max-w-5xl mx-auto mb-8 text-slate-900" style="font-family: 'Segoe UI', Arial, sans-serif; font-size: 0.88rem; line-height: 1.5;">
+
+                <!-- HEADER RESMI -->
+                <div style="font-size: 0.95rem; font-weight: 800; color: #000000; margin-bottom: 0.85rem; letter-spacing: 0.3px; text-transform: uppercase;">
+                    FR.IA.09. &nbsp; PW – PERTANYAAN WAWANCARA
+                </div>
+
+                <!-- TABEL IDENTITAS -->
+                <table style="width: 100%; border-collapse: collapse; border: 1px solid #000000; margin-bottom: 0.5rem; font-size: 0.86rem;">
+                    <tr>
+                        <td rowspan="2" style="width: 25%; font-weight: 700; vertical-align: middle; border: 1px solid #000000; padding: 6px 10px;">
+                            Skema Sertifikasi<br>
+                            <span style="font-weight: normal; font-size: 0.82rem;">(KKNI/Okupasi/Klaster)</span>
+                        </td>
+                        <td style="width: 14%; font-weight: 600; border: 1px solid #000000; padding: 6px 10px;">Judul</td>
+                        <td style="width: 2%; text-align: center; border: 1px solid #000000; padding: 6px 10px;">:</td>
+                        <td style="font-weight: 700; border: 1px solid #000000; padding: 6px 10px;">{{ $skemaNama }}</td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight: 600; border: 1px solid #000000; padding: 6px 10px;">Nomor</td>
+                        <td style="text-align: center; border: 1px solid #000000; padding: 6px 10px;">:</td>
+                        <td style="font-weight: 700; border: 1px solid #000000; padding: 6px 10px;">{{ $skemaKode }}</td>
+                    </tr>
+                    <tr>
+                        <td colspan="2" style="font-weight: 600; border: 1px solid #000000; padding: 6px 10px;">TUK</td>
+                        <td style="text-align: center; border: 1px solid #000000; padding: 6px 10px;">:</td>
+                        <td style="border: 1px solid #000000; padding: 6px 10px;">Sewaktu / Tempat Kerja / Mandiri*</td>
+                    </tr>
+                    <tr>
+                        <td colspan="2" style="font-weight: 600; border: 1px solid #000000; padding: 6px 10px;">Nama Asesor</td>
+                        <td style="text-align: center; border: 1px solid #000000; padding: 6px 10px;">:</td>
+                        <td style="border: 1px solid #000000; padding: 6px 10px;"><strong>{{ auth()->user()->nama_lengkap ?? 'Asesor LSP' }}</strong></td>
+                    </tr>
+                    <tr>
+                        <td colspan="2" style="font-weight: 600; border: 1px solid #000000; padding: 6px 10px;">Nama Asesi</td>
+                        <td style="text-align: center; border: 1px solid #000000; padding: 6px 10px;">:</td>
+                        <td style="border: 1px solid #000000; padding: 6px 10px;">Nama Asesi Terdaftar</td>
+                    </tr>
+                    <tr>
+                        <td colspan="2" style="font-weight: 600; border: 1px solid #000000; padding: 6px 10px;">Tanggal</td>
+                        <td style="text-align: center; border: 1px solid #000000; padding: 6px 10px;">:</td>
+                        <td style="border: 1px solid #000000; padding: 6px 10px;">{{ date('d-m-Y') }}</td>
+                    </tr>
+                </table>
+                <div style="font-size: 0.72rem; font-style: italic; color: #475569; margin-bottom: 0.85rem;">*Coret yang tidak perlu</div>
+
+                <!-- PANDUAN BAGI ASESOR -->
+                <div style="border: 1px solid #000000; padding: 10px 14px; margin-bottom: 1.25rem; background-color: #fafafa; font-size: 0.83rem;">
+                    <strong style="display: block; margin-bottom: 4px; text-transform: uppercase;">Panduan Bagi Asesor:</strong>
+                    <ul style="margin: 0; padding-left: 1.25rem; line-height: 1.45;">
+                        <li>Formulir ini digunakan untuk mengklarifikasi pemenuhan bukti portofolio asesi yang belum memadai (VATM) pada FR.IA.08.</li>
+                        <li>Pertanyaan wawancara dikembangkan berdasarkan unit kompetensi dan elemen kompetensi yang tercantum pada skema sertifikasi.</li>
+                        <li>Tuliskan butir pertanyaan wawancara klarifikasi untuk setiap elemen kompetensi. Kolom tanggapan dan keputusan akan diisi oleh asesor saat pelaksanaan asesmen.</li>
+                    </ul>
+                </div>
+
+                <!-- DAFTAR PERTANYAAN WAWANCARA PER UNIT & ELEMEN SKEMA -->
+                @forelse($units as $uIdx => $u)
+                    <div style="margin-bottom: 1.25rem; border: 1px solid #000000;">
+                        <div style="background-color: #1e293b; color: #ffffff; font-weight: 700; padding: 6px 10px; font-size: 0.88rem;">
+                            Unit Kompetensi {{ $uIdx + 1 }}: {{ $u->kode_unit }} - {{ $u->judul_unit }}
+                        </div>
+                        <table style="width: 100%; border-collapse: collapse; border: 1px solid #000000; font-size: 0.84rem;">
+                            <thead>
+                                <tr style="background-color: #f1f5f9;">
+                                    <th style="width: 5%; text-align: center; border: 1px solid #000000; padding: 6px;">No.</th>
+                                    <th style="width: 25%; border: 1px solid #000000; padding: 6px 8px;">Elemen Kompetensi</th>
+                                    <th style="width: 45%; border: 1px solid #000000; padding: 6px 8px;">Daftar Pertanyaan Wawancara <span class="text-rose-500">*</span></th>
+                                    <th style="width: 25%; border: 1px solid #000000; padding: 6px 8px;">Tanggapan Asesi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse($u->elemenKompetensi as $eIdx => $elem)
+                                    <tr>
+                                        <td style="border: 1px solid #000000; text-align: center; font-weight: 700; vertical-align: top; padding: 6px;">
+                                            {{ $eIdx + 1 }}.
+                                        </td>
+                                        <td style="border: 1px solid #000000; vertical-align: top; padding: 6px 8px;">
+                                            <strong>Elemen {{ $elem->nomor_elemen }}:</strong><br>
+                                            <span style="color: #334155;">{{ $elem->nama_elemen }}</span>
+                                        </td>
+                                        <td style="border: 1px solid #000000; vertical-align: top; padding: 6px 8px;">
+                                            <textarea name="metadata_pertanyaan_wawancara[{{ $elem->id }}][pertanyaan]" class="muk-input-field input-metadata-muk" rows="3" placeholder="Ketik pertanyaan wawancara klarifikasi untuk elemen ini..." required>{{ old('metadata_pertanyaan_wawancara.'.$elem->id.'.pertanyaan', $savedPW[$elem->id]['pertanyaan'] ?? '') }}</textarea>
+                                        </td>
+                                        <td style="border: 1px solid #000000; vertical-align: top; padding: 6px 8px; background: #f8fafc; color: #64748b; font-style: italic; font-size: 0.78rem;">
+                                            Diisi oleh Asesor pada saat wawancara asesi berlangsung (M / BM)
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="4" style="text-align: center; color: #64748b; padding: 8px; border: 1px solid #000000;">Belum ada elemen kompetensi.</td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                @empty
+                    <div style="text-align: center; color: #64748b; padding: 1.5rem; border: 1px solid #000000; margin-bottom: 1rem;">
+                        Belum ada unit kompetensi pada skema ini.
+                    </div>
+                @endforelse
+
+                <!-- KESIMPULAN DAN ARAHAN WAWANCARA -->
+                <div style="border: 1px solid #000000; padding: 10px 14px; margin-bottom: 1.25rem; background: #ffffff;">
+                    <label style="font-weight: 700; font-size: 0.88rem; display: block; margin-bottom: 0.35rem; color: #000000;">
+                        Kesimpulan dan Arahan Wawancara: <span class="text-rose-500">*</span>
+                    </label>
+                    <textarea name="metadata_umpan_balik" class="muk-input-field input-metadata-muk" rows="2" placeholder="Tuliskan arahan kesimpulan / panduan penetapan hasil wawancara..." required>{{ old('metadata_umpan_balik', $umpanBalikVal) }}</textarea>
+                </div>
+
+                <!-- TABEL PENYUSUN & VALIDATOR RESMI BNSP -->
+                <div style="margin-bottom: 0.5rem;">
+                    <table style="width: 100%; border-collapse: collapse; border: 1px solid #000000; font-size: 0.86rem;">
+                        <thead>
+                            <tr>
+                                <th style="width: 18%; text-align: center; border: 1px solid #000000; padding: 6px 8px; font-weight: 700; background-color: #ffffff;">STATUS</th>
+                                <th style="width: 6%; text-align: center; border: 1px solid #000000; padding: 6px 4px; font-weight: 700; background-color: #ffffff;">NO</th>
+                                <th style="width: 32%; text-align: center; border: 1px solid #000000; padding: 6px 8px; font-weight: 700; background-color: #ffffff;">NAMA</th>
+                                <th style="width: 22%; text-align: center; border: 1px solid #000000; padding: 6px 8px; font-weight: 700; background-color: #ffffff;">NOMOR MET</th>
+                                <th style="width: 22%; text-align: center; border: 1px solid #000000; padding: 6px 8px; font-weight: 700; background-color: #ffffff;">TANDA TANGAN DAN TANGGAL</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td style="font-weight: 800; text-align: center; vertical-align: middle; background: #ffffff; border: 1px solid #000000; padding: 6px 8px;">PENYUSUN</td>
+                                <td style="text-align: center; font-weight: 700; border: 1px solid #000000; padding: 6px 4px;">1</td>
+                                <td style="padding: 6px 8px; border: 1px solid #000000;"><strong>{{ $penyusunNama }}</strong></td>
+                                <td style="padding: 6px 8px; border: 1px solid #000000;">{{ $penyusunMet }}</td>
+                                <td style="text-align: center; padding: 4px; border: 1px solid #000000;">
+                                    @if(!empty($penyusunTtd))
+                                        <img src="{{ asset($penyusunTtd) }}" alt="TTD" style="max-height: 36px; margin: 0 auto; display: block;">
+                                    @endif
+                                    <span style="font-size: 0.75rem; color: #475569;">{{ $penyusunTgl }}</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="font-weight: 800; text-align: center; vertical-align: middle; background: #ffffff; border: 1px solid #000000; padding: 6px 8px;">VALIDATOR</td>
+                                <td style="text-align: center; font-weight: 700; border: 1px solid #000000; padding: 6px 4px;">1</td>
+                                <td style="padding: 6px 8px; border: 1px solid #000000;"><strong>{{ $validatorNama }}</strong></td>
+                                <td style="padding: 6px 8px; border: 1px solid #000000;">{{ $validatorMet }}</td>
+                                <td style="text-align: center; padding: 4px; border: 1px solid #000000;">
+                                    @if(!empty($validatorTtd))
+                                        <img src="{{ asset($validatorTtd) }}" alt="TTD" style="max-height: 36px; margin: 0 auto; display: block;">
+                                    @endif
+                                    <span style="font-size: 0.75rem; color: #475569;">{{ $validatorTgl }}</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div style="font-size: 0.72rem; color: #333333; margin-top: 0.5rem; font-style: italic; line-height: 1.4;">
+                    Diadaptasi dari template yang disediakan di Departemen Pendidikan dan Pelatihan, Australia, Merancang instrumen asesmen untuk hasil yang berkualitas di VET, 2008.
+                </div>
+            </div>
+
+            <!-- TOMBOL SIMPAN MASTER FR.IA.09 -->
+            <div class="btn-submit-metadata max-w-5xl mx-auto mt-6 flex justify-end">
+                <button type="submit" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold shadow-md transition-all cursor-pointer">
+                    <i class="fa-solid fa-floppy-disk"></i>
+                    <span>Simpan Formulir Master FR.IA.09</span>
+                </button>
+            </div>
+        </form>
+
+    <!-- ========================================================================= -->
+    <!-- BAGIAN 9: FR.IA.10 (VPK – VERIFIKASI PIHAK KETIGA - PERSIS PRATINJAU BNSP) -->
+    <!-- ========================================================================= -->
+    @elseif(in_array($codeKey, ['ia_10', 'ia10']))
+
+        @php
+            $skema = $instrument->skema;
+            $units = ($skema && $skema->unitKompetensi->isNotEmpty()) 
+                ? $skema->unitKompetensi 
+                : ($instrument->unitKompetensi ? collect([$instrument->unitKompetensi]) : collect());
+            $meta = $instrument->additional_metadata ?? [];
+            if (!is_array($meta)) $meta = json_decode($meta, true) ?: [];
+
+            $skemaNama = $skema->nama_skema ?? 'Skema Sertifikasi';
+            $skemaKode = $skema->kode_skema ?? '-';
+
+            $petunjukSuper = $meta['petunjuk_supervisor'] ?? '';
+            $pertanyaanKonsistensi = $meta['pertanyaan_konsistensi'] ?? '';
+            $umpanBalikVal = $meta['umpan_balik'] ?? '';
+            $verifikasiKinerja = $meta['verifikasi_kinerja'] ?? [];
+
+            $penyusunUser = $instrument->creator;
+            if (!$penyusunUser && !empty($instrument->created_by)) {
+                $penyusunUser = \App\Models\Pengguna::find($instrument->created_by);
+            }
+            if (!$penyusunUser) {
+                $penyusunUser = \App\Models\Pengguna::whereIn('peran', ['admin', 'superadmin'])->orderBy('id')->first();
+            }
+            $penyusunNama = $penyusunUser?->nama_lengkap ?? 'Administrator LSP';
+            $penyusunMet = $penyusunUser?->nomor_registrasi ?? 'REG.ADM.LSP.001';
+            $penyusunTtd = $penyusunUser?->tanda_tangan ?? null;
+            $penyusunTgl = $instrument->created_at ? $instrument->created_at->format('d-m-Y') : date('d-m-Y');
+
+            $validatorUser = \App\Models\Pengguna::where('peran', 'asesor')->first();
+            $validatorNama = $validatorUser?->nama_lengkap ?? 'Asesor Penguji LSP';
+            $validatorMet = $validatorUser?->nomor_registrasi ?? 'MET.000.004455.2023';
+            $validatorTtd = $validatorUser?->tanda_tangan ?? null;
+            $validatorTgl = date('d-m-Y');
+        @endphp
+
+        <form action="{{ route('admin.master-muk.update-metadata', $instrument->id) }}" method="POST">
+            @csrf
+
+            <div class="dokumen-kertas-preview p-6 sm:p-10 bg-white rounded-2xl border border-slate-200 shadow-sm max-w-5xl mx-auto mb-8 text-slate-900" style="font-family: 'Segoe UI', Arial, sans-serif; font-size: 0.88rem; line-height: 1.5;">
+
+                <!-- HEADER RESMI -->
+                <div style="font-size: 0.95rem; font-weight: 800; color: #000000; margin-bottom: 0.85rem; letter-spacing: 0.3px; text-transform: uppercase;">
+                    FR.IA.10. &nbsp; VPK – VERIFIKASI PIHAK KETIGA
+                </div>
+
+                <!-- TABEL IDENTITAS -->
+                <table style="width: 100%; border-collapse: collapse; border: 1px solid #000000; margin-bottom: 0.5rem; font-size: 0.86rem;">
+                    <tr>
+                        <td rowspan="2" style="width: 25%; font-weight: 700; vertical-align: middle; border: 1px solid #000000; padding: 6px 10px;">
+                            Skema Sertifikasi<br>
+                            <span style="font-weight: normal; font-size: 0.82rem;">(KKNI/Okupasi/Klaster)</span>
+                        </td>
+                        <td style="width: 14%; font-weight: 600; border: 1px solid #000000; padding: 6px 10px;">Judul</td>
+                        <td style="width: 2%; text-align: center; border: 1px solid #000000; padding: 6px 10px;">:</td>
+                        <td style="font-weight: 700; border: 1px solid #000000; padding: 6px 10px;">{{ $skemaNama }}</td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight: 600; border: 1px solid #000000; padding: 6px 10px;">Nomor</td>
+                        <td style="text-align: center; border: 1px solid #000000; padding: 6px 10px;">:</td>
+                        <td style="font-weight: 700; border: 1px solid #000000; padding: 6px 10px;">{{ $skemaKode }}</td>
+                    </tr>
+                    <tr>
+                        <td colspan="2" style="font-weight: 600; border: 1px solid #000000; padding: 6px 10px;">TUK</td>
+                        <td style="text-align: center; border: 1px solid #000000; padding: 6px 10px;">:</td>
+                        <td style="border: 1px solid #000000; padding: 6px 10px;">Sewaktu / Tempat Kerja / Mandiri*</td>
+                    </tr>
+                    <tr>
+                        <td colspan="2" style="font-weight: 600; border: 1px solid #000000; padding: 6px 10px;">Nama Asesor</td>
+                        <td style="text-align: center; border: 1px solid #000000; padding: 6px 10px;">:</td>
+                        <td style="border: 1px solid #000000; padding: 6px 10px;"><strong>{{ auth()->user()->nama_lengkap ?? 'Asesor LSP' }}</strong></td>
+                    </tr>
+                    <tr>
+                        <td colspan="2" style="font-weight: 600; border: 1px solid #000000; padding: 6px 10px;">Nama Asesi</td>
+                        <td style="text-align: center; border: 1px solid #000000; padding: 6px 10px;">:</td>
+                        <td style="border: 1px solid #000000; padding: 6px 10px;">Nama Asesi Terdaftar</td>
+                    </tr>
+                    <tr>
+                        <td colspan="2" style="font-weight: 600; border: 1px solid #000000; padding: 6px 10px;">Tanggal</td>
+                        <td style="text-align: center; border: 1px solid #000000; padding: 6px 10px;">:</td>
+                        <td style="border: 1px solid #000000; padding: 6px 10px;">{{ date('d-m-Y') }}</td>
+                    </tr>
+                </table>
+                <div style="font-size: 0.72rem; font-style: italic; color: #475569; margin-bottom: 0.85rem;">*Coret yang tidak perlu</div>
+
+                <!-- PANDUAN BAGI ASESOR -->
+                <div style="border: 1px solid #000000; padding: 10px 14px; margin-bottom: 1.25rem; background-color: #fafafa; font-size: 0.83rem;">
+                    <strong style="display: block; margin-bottom: 4px; text-transform: uppercase;">Panduan Bagi Asesor:</strong>
+                    <ol style="margin: 0; padding-left: 1.25rem; line-height: 1.45;">
+                        <li>Verifikasi pihak ketiga dapat dilakukan untuk keseluruhan unit kompetensi dalam skema sertifikasi atau dilakukan untuk masing-masing kelompok pekerjaan.</li>
+                        <li>Tentukan pihak ketiga yang akan dimintai verifikasi (atasan langsung, supervisor proyek, atau rekan kerja senior).</li>
+                        <li>Ajukan pertanyaan kepada pihak ketiga untuk memverifikasi konsistensi kinerja asesi di tempat kerja.</li>
+                    </ol>
+                </div>
+
+                <!-- TABEL UNIT KOMPETENSI SKEMA YANG DIVERIFIKASI -->
+                <div style="margin-bottom: 1.25rem;">
+                    <strong style="text-transform: uppercase; font-size: 0.88rem; display: block; margin-bottom: 0.5rem;">
+                        1. Unit Kompetensi Skema yang Diverifikasi
+                    </strong>
+                    <table style="width: 100%; border-collapse: collapse; border: 1px solid #000000; font-size: 0.84rem;">
+                        <thead>
+                            <tr style="background-color: #f1f5f9;">
+                                <th style="width: 8%; text-align: center; border: 1px solid #000000; padding: 6px;">No.</th>
+                                <th style="width: 25%; text-align: center; border: 1px solid #000000; padding: 6px 8px;">Kode Unit</th>
+                                <th style="border: 1px solid #000000; padding: 6px 8px;">Judul Unit Kompetensi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($units as $idx => $u)
+                                <tr>
+                                    <td style="border: 1px solid #000000; text-align: center; font-weight: 700; padding: 6px;">{{ $idx + 1 }}.</td>
+                                    <td style="border: 1px solid #000000; text-align: center; font-weight: 600; color: #0369a1; padding: 6px 8px;">{{ $u->kode_unit }}</td>
+                                    <td style="border: 1px solid #000000; font-weight: 600; padding: 6px 8px;">{{ $u->judul_unit }}</td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="3" style="text-align: center; color: #64748b; padding: 8px; border: 1px solid #000000;">Belum ada unit kompetensi pada skema ini.</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- PETUNJUK SUPERVISOR INDUSTRI -->
+                <div style="border: 1px solid #000000; padding: 10px 14px; margin-bottom: 1.25rem; background: #ffffff;">
+                    <label style="font-weight: 700; font-size: 0.88rem; display: block; margin-bottom: 0.35rem; color: #000000;">
+                        2. Petunjuk & Panduan Verifikasi untuk Pihak Ketiga (Supervisor / Atasan di Tempat Kerja): <span class="text-rose-500">*</span>
+                    </label>
+                    <textarea name="metadata_petunjuk_supervisor" class="muk-input-field input-metadata-muk" rows="3" placeholder="Tuliskan instruksi atau panduan pengisian bagi atasan/supervisor di industri tempat kerja asesi..." required>{{ old('metadata_petunjuk_supervisor', $petunjukSuper) }}</textarea>
+                </div>
+
+                <!-- PERTANYAAN STANDAR KINERJA K3 & KELOMPOK -->
+                <div style="margin-bottom: 1.25rem;">
+                    <strong style="text-transform: uppercase; font-size: 0.88rem; display: block; margin-bottom: 0.5rem;">
+                        3. Pertanyaan Verifikasi Kinerja Nyata di Tempat Kerja (Standar BNSP)
+                    </strong>
+                    <table style="width: 100%; border-collapse: collapse; border: 1px solid #000000; font-size: 0.84rem;">
+                        <thead>
+                            <tr style="background-color: #f1f5f9;">
+                                <th style="border: 1px solid #000000; padding: 6px 8px; text-align: left;">Butir Verifikasi Performa di Tempat Kerja</th>
+                                <th style="width: 10%; text-align: center; border: 1px solid #000000; padding: 6px 4px;">Ya</th>
+                                <th style="width: 10%; text-align: center; border: 1px solid #000000; padding: 6px 4px;">Tdk</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td style="border: 1px solid #000000; padding: 6px 8px;">Apakah asesi bekerja dengan mempertimbangkan Kesehatan, Keamanan dan Keselamatan Kerja?</td>
+                                <td style="border: 1px solid #000000; text-align: center;">
+                                    <input type="radio" name="metadata_verifikasi_kinerja[k3]" value="ya" {{ ($verifikasiKinerja['k3'] ?? '') === 'ya' ? 'checked' : '' }} class="input-metadata-muk cursor-pointer">
+                                </td>
+                                <td style="border: 1px solid #000000; text-align: center;">
+                                    <input type="radio" name="metadata_verifikasi_kinerja[k3]" value="tidak" {{ ($verifikasiKinerja['k3'] ?? '') === 'tidak' ? 'checked' : '' }} class="input-metadata-muk cursor-pointer">
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="border: 1px solid #000000; padding: 6px 8px;">Apakah asesi berinteraksi dengan harmonis didalam kelompoknya?</td>
+                                <td style="border: 1px solid #000000; text-align: center;">
+                                    <input type="radio" name="metadata_verifikasi_kinerja[tim]" value="ya" {{ ($verifikasiKinerja['tim'] ?? '') === 'ya' ? 'checked' : '' }} class="input-metadata-muk cursor-pointer">
+                                </td>
+                                <td style="border: 1px solid #000000; text-align: center;">
+                                    <input type="radio" name="metadata_verifikasi_kinerja[tim]" value="tidak" {{ ($verifikasiKinerja['tim'] ?? '') === 'tidak' ? 'checked' : '' }} class="input-metadata-muk cursor-pointer">
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="border: 1px solid #000000; padding: 6px 8px;">Apakah asesi dapat mengelola tugas-tugas secara bersamaan?</td>
+                                <td style="border: 1px solid #000000; text-align: center;">
+                                    <input type="radio" name="metadata_verifikasi_kinerja[kelola]" value="ya" {{ ($verifikasiKinerja['kelola'] ?? '') === 'ya' ? 'checked' : '' }} class="input-metadata-muk cursor-pointer">
+                                </td>
+                                <td style="border: 1px solid #000000; text-align: center;">
+                                    <input type="radio" name="metadata_verifikasi_kinerja[kelola]" value="tidak" {{ ($verifikasiKinerja['kelola'] ?? '') === 'tidak' ? 'checked' : '' }} class="input-metadata-muk cursor-pointer">
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="border: 1px solid #000000; padding: 6px 8px;">Apakah asesi dapat dengan cepat beradaptasi dengan peralatan dan lingkungan yang baru?</td>
+                                <td style="border: 1px solid #000000; text-align: center;">
+                                    <input type="radio" name="metadata_verifikasi_kinerja[adaptasi]" value="ya" {{ ($verifikasiKinerja['adaptasi'] ?? '') === 'ya' ? 'checked' : '' }} class="input-metadata-muk cursor-pointer">
+                                </td>
+                                <td style="border: 1px solid #000000; text-align: center;">
+                                    <input type="radio" name="metadata_verifikasi_kinerja[adaptasi]" value="tidak" {{ ($verifikasiKinerja['adaptasi'] ?? '') === 'tidak' ? 'checked' : '' }} class="input-metadata-muk cursor-pointer">
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="border: 1px solid #000000; padding: 6px 8px;">Apakah asesi dapat merespon dengan cepat masalah-masalah yang ada di tempat kerjanya?</td>
+                                <td style="border: 1px solid #000000; text-align: center;">
+                                    <input type="radio" name="metadata_verifikasi_kinerja[respon]" value="ya" {{ ($verifikasiKinerja['respon'] ?? '') === 'ya' ? 'checked' : '' }} class="input-metadata-muk cursor-pointer">
+                                </td>
+                                <td style="border: 1px solid #000000; text-align: center;">
+                                    <input type="radio" name="metadata_verifikasi_kinerja[respon]" value="tidak" {{ ($verifikasiKinerja['respon'] ?? '') === 'tidak' ? 'checked' : '' }} class="input-metadata-muk cursor-pointer">
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="border: 1px solid #000000; padding: 6px 8px;">Apakah Anda bersedia dihubungi jika verifikasi lebih lanjut dari pernyataan ini diperlukan?</td>
+                                <td style="border: 1px solid #000000; text-align: center;">
+                                    <input type="radio" name="metadata_verifikasi_kinerja[kontak]" value="ya" {{ ($verifikasiKinerja['kontak'] ?? '') === 'ya' ? 'checked' : '' }} class="input-metadata-muk cursor-pointer">
+                                </td>
+                                <td style="border: 1px solid #000000; text-align: center;">
+                                    <input type="radio" name="metadata_verifikasi_kinerja[kontak]" value="tidak" {{ ($verifikasiKinerja['kontak'] ?? '') === 'tidak' ? 'checked' : '' }} class="input-metadata-muk cursor-pointer">
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- PERTANYAAN WAWANCARA KONSISTENSI -->
+                <div style="border: 1px solid #000000; padding: 10px 14px; margin-bottom: 1.25rem; background: #ffffff;">
+                    <label style="font-weight: 700; font-size: 0.88rem; display: block; margin-bottom: 0.35rem; color: #000000;">
+                        3. Pertanyaan Verifikasi Konsistensi Standar Kinerja di Tempat Kerja: <span class="text-rose-500">*</span>
+                    </label>
+                    <textarea name="metadata_pertanyaan_konsistensi" class="muk-input-field input-metadata-muk" rows="3" placeholder="Tuliskan butir pertanyaan spesifik untuk mengonfirmasi konsistensi pencapaian standar kompetensi asesi di tempat kerja..." required>{{ old('metadata_pertanyaan_konsistensi', $pertanyaanKonsistensi) }}</textarea>
+                </div>
+
+                <!-- PANDUAN REKOMENDASI ASESOR -->
+                <div style="border: 1px solid #000000; padding: 10px 14px; margin-bottom: 1.25rem; background: #ffffff;">
+                    <label style="font-weight: 700; font-size: 0.88rem; display: block; margin-bottom: 0.35rem; color: #000000;">
+                        Panduan Rekomendasi & Catatan Kelayakan Asesi dari Pihak Ketiga: <span class="text-rose-500">*</span>
+                    </label>
+                    <textarea name="metadata_umpan_balik" class="muk-input-field input-metadata-muk" rows="2" placeholder="Tuliskan panduan rekomendasi atau catatan kriteria pemenuhan pihak ketiga..." required>{{ old('metadata_umpan_balik', $umpanBalikVal) }}</textarea>
+                </div>
+
+                <!-- TABEL PENYUSUN & VALIDATOR RESMI BNSP -->
+                <div style="margin-bottom: 0.5rem;">
+                    <table style="width: 100%; border-collapse: collapse; border: 1px solid #000000; font-size: 0.86rem;">
+                        <thead>
+                            <tr>
+                                <th style="width: 18%; text-align: center; border: 1px solid #000000; padding: 6px 8px; font-weight: 700; background-color: #ffffff;">STATUS</th>
+                                <th style="width: 6%; text-align: center; border: 1px solid #000000; padding: 6px 4px; font-weight: 700; background-color: #ffffff;">NO</th>
+                                <th style="width: 32%; text-align: center; border: 1px solid #000000; padding: 6px 8px; font-weight: 700; background-color: #ffffff;">NAMA</th>
+                                <th style="width: 22%; text-align: center; border: 1px solid #000000; padding: 6px 8px; font-weight: 700; background-color: #ffffff;">NOMOR MET</th>
+                                <th style="width: 22%; text-align: center; border: 1px solid #000000; padding: 6px 8px; font-weight: 700; background-color: #ffffff;">TANDA TANGAN DAN TANGGAL</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td style="font-weight: 800; text-align: center; vertical-align: middle; background: #ffffff; border: 1px solid #000000; padding: 6px 8px;">PENYUSUN</td>
+                                <td style="text-align: center; font-weight: 700; border: 1px solid #000000; padding: 6px 4px;">1</td>
+                                <td style="padding: 6px 8px; border: 1px solid #000000;"><strong>{{ $penyusunNama }}</strong></td>
+                                <td style="padding: 6px 8px; border: 1px solid #000000;">{{ $penyusunMet }}</td>
+                                <td style="text-align: center; padding: 4px; border: 1px solid #000000;">
+                                    @if(!empty($penyusunTtd))
+                                        <img src="{{ asset($penyusunTtd) }}" alt="TTD" style="max-height: 36px; margin: 0 auto; display: block;">
+                                    @endif
+                                    <span style="font-size: 0.75rem; color: #475569;">{{ $penyusunTgl }}</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="font-weight: 800; text-align: center; vertical-align: middle; background: #ffffff; border: 1px solid #000000; padding: 6px 8px;">VALIDATOR</td>
+                                <td style="text-align: center; font-weight: 700; border: 1px solid #000000; padding: 6px 4px;">1</td>
+                                <td style="padding: 6px 8px; border: 1px solid #000000;"><strong>{{ $validatorNama }}</strong></td>
+                                <td style="padding: 6px 8px; border: 1px solid #000000;">{{ $validatorMet }}</td>
+                                <td style="text-align: center; padding: 4px; border: 1px solid #000000;">
+                                    @if(!empty($validatorTtd))
+                                        <img src="{{ asset($validatorTtd) }}" alt="TTD" style="max-height: 36px; margin: 0 auto; display: block;">
+                                    @endif
+                                    <span style="font-size: 0.75rem; color: #475569;">{{ $validatorTgl }}</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div style="font-size: 0.72rem; color: #333333; margin-top: 0.5rem; font-style: italic; line-height: 1.4;">
+                    Diadaptasi dari template yang disediakan di Departemen Pendidikan dan Pelatihan, Australia, Merancang instrumen asesmen untuk hasil yang berkualitas di VET, 2008.
+                </div>
+            </div>
+
+            <!-- TOMBOL SIMPAN MASTER FR.IA.10 -->
+            <div class="btn-submit-metadata max-w-5xl mx-auto mt-6 flex justify-end">
+                <button type="submit" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold shadow-md transition-all cursor-pointer">
+                    <i class="fa-solid fa-floppy-disk"></i>
+                    <span>Simpan Formulir Master FR.IA.10</span>
+                </button>
+            </div>
+        </form>
+
     @else
         <!-- ========================================================================= -->
         <!-- FALLBACK UNTUK INSTRUMEN LAINNYA (GENERIC MUK BUILDER) -->
@@ -2849,5 +3776,78 @@
             const modalEditSpec = document.getElementById('modal-edit-spec');
             if (e.target === modalEditSpec) tutupModalEditSpec(e);
         });
+
+        // Helper Tambah & Hapus Butir Pertanyaan Lisan FR.IA.07
+        window.tambahBarisSoalLisan = function() {
+            const wadah = document.getElementById('wadah-soal-lisan');
+            if (!wadah) return;
+            const items = wadah.querySelectorAll('.item-soal-lisan');
+            const newNo = items.length + 1;
+            const div = document.createElement('div');
+            div.className = 'item-soal-lisan border border-slate-300 rounded-xl p-4 bg-slate-50/50 hover:bg-white transition';
+            div.dataset.nomor = newNo;
+            div.innerHTML = `
+                <div class="flex items-center justify-between gap-3 mb-2.5">
+                    <div class="flex items-center gap-2">
+                        <span class="nomor-badge w-6 h-6 rounded-lg bg-amber-600 text-white font-mono font-bold text-xs flex items-center justify-center">
+                            ${newNo}
+                        </span>
+                        <span class="text-xs font-bold text-slate-700">
+                            Standar Kompetensi Kejuruan
+                        </span>
+                        <input type="hidden" name="metadata_pertanyaan_lisan[${newNo}][kuk]" value="Standar Kompetensi Kejuruan">
+                    </div>
+                    <button type="button" onclick="hapusBarisSoalLisan(this)" class="btn-hapus-item text-xs text-rose-500 hover:text-rose-700 font-semibold flex items-center gap-1 transition cursor-pointer" title="Hapus butir ini">
+                        <i class="fa-regular fa-trash-can text-[11px]"></i>
+                        <span>Hapus</span>
+                    </button>
+                </div>
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">
+                            Butir Pertanyaan Lisan yang Diajukan Asesor <span class="text-rose-500">*</span>:
+                        </label>
+                        <textarea name="metadata_pertanyaan_lisan[${newNo}][pertanyaan]" rows="2" class="muk-input-field input-metadata-muk text-xs leading-relaxed" placeholder="Tuliskan pertanyaan lisan..." required></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-amber-900 mb-1">
+                            Kunci Jawaban Rujukan Asesor <span class="text-rose-500">*</span>:
+                        </label>
+                        <textarea name="metadata_pertanyaan_lisan[${newNo}][kunci]" rows="2" class="muk-input-field input-metadata-muk text-xs leading-relaxed bg-amber-50/60 border-amber-200" placeholder="Poin-poin jawaban yang diharapkan dari asesi..." required></textarea>
+                    </div>
+                </div>
+            `;
+            wadah.appendChild(div);
+            const countEl = document.getElementById('total-soal-count');
+            if (countEl) countEl.textContent = wadah.querySelectorAll('.item-soal-lisan').length;
+        };
+
+        window.hapusBarisSoalLisan = function(btn) {
+            if (confirm('Hapus butir pertanyaan lisan ini?')) {
+                const item = btn.closest('.item-soal-lisan');
+                const wadah = document.getElementById('wadah-soal-lisan');
+                if (item) item.remove();
+                if (wadah) {
+                    const allItems = wadah.querySelectorAll('.item-soal-lisan');
+                    allItems.forEach((el, idx) => {
+                        const num = idx + 1;
+                        el.dataset.nomor = num;
+                        const badge = el.querySelector('.nomor-badge');
+                        if (badge) badge.textContent = num;
+                        const textareaTanya = el.querySelector('textarea[name*="[pertanyaan]"]');
+                        if (textareaTanya) textareaTanya.name = `metadata_pertanyaan_lisan[${num}][pertanyaan]`;
+                        const textareaKunci = el.querySelector('textarea[name*="[kunci]"]');
+                        if (textareaKunci) textareaKunci.name = `metadata_pertanyaan_lisan[${num}][kunci]`;
+                        const inputKuk = el.querySelector('input[name*="[kuk]"]');
+                        if (inputKuk) inputKuk.name = `metadata_pertanyaan_lisan[${num}][kuk]`;
+                        const inputKukId = el.querySelector('input[name*="[kuk_id]"]');
+                        if (inputKukId) inputKukId.name = `metadata_pertanyaan_lisan[${num}][kuk_id]`;
+                    });
+                    const countEl = document.getElementById('total-soal-count');
+                    if (countEl) countEl.textContent = allItems.length;
+                }
+            }
+        };
+
     </script>
 @endpush

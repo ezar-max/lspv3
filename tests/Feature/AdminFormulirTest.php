@@ -618,6 +618,225 @@ class AdminFormulirTest extends TestCase
             'kode_formulir' => 'FR.IA.03',
         ]);
     }
+
+    public function test_fr_ia_08_cvp_matches_bnsp_structure_starts_empty_and_requires_filling_before_saving()
+    {
+        // 1. Tambah form FR.IA.08
+        $this->actingAs($this->admin)->get(route('admin.master-muk.create', [
+            'skema_id' => $this->skemaA->id,
+            'code' => 'ia08',
+        ]));
+
+        $instrumentIa08 = \App\Models\SchemeMasterInstrument::where('skema_id', $this->skemaA->id)
+            ->where('instrument_code', 'ia_08')
+            ->first();
+        $this->assertNotNull($instrumentIa08);
+        $this->assertFalse($instrumentIa08->isConfigured());
+
+        // 2. Buka halaman kelola form master FR.IA.08
+        $manageResp = $this->actingAs($this->admin)->get(route('admin.master-muk.manage', $instrumentIa08->id));
+        $manageResp->assertStatus(200);
+        $manageResp->assertSee('FR.IA.08.');
+        $manageResp->assertSee('CVP – CEKLIS VERIFIKASI PORTOFOLIO');
+        $manageResp->assertSee('Aturan Bukti');
+        $manageResp->assertSee('Simpan Formulir Master FR.IA.08');
+
+        // Pastikan halaman pembuatan form master berstatus KERTAS FORMULIR KOSONG (belum ada pemilik/isinya)
+        $manageResp->assertSee('Kertas formulir kosong (Bukti portofolio asesi akan otomatis dimuat dari database berkas pendaftaran saat pelaksanaan asesmen).', false);
+        $manageResp->assertDontSee('Tambah Bukti Portofolio');
+
+        // Pastikan identitas form master belum ada pemiliknya (-)
+        $manageResp->assertSee('<td style="border: 1px solid #000000; padding: 6px 10px;">-</td>', false);
+
+        // 3. Simpan dengan isian formulir master yang ditentukan
+        $validPostResp = $this->actingAs($this->admin)->post(route('admin.master-muk.update-metadata', $instrumentIa08->id), [
+            'metadata_bukti_tambahan' => 'Dokumen hasil test coverage dan diagram arsitektur.',
+            'metadata_umpan_balik' => 'Portofolio lengkap dan memenuhi kaidah validitas BNSP.',
+        ]);
+        $validPostResp->assertSessionHasNoErrors();
+        $validPostResp->assertRedirect();
+
+        // Cek bahwa instrumen sekarang configured
+        $instrumentIa08->refresh();
+        $this->assertTrue($instrumentIa08->isConfigured());
+
+        // 4. Buka kembali form master yang sudah tersimpan
+        $savedManageResp = $this->actingAs($this->admin)->get(route('admin.master-muk.manage', $instrumentIa08->id));
+        $savedManageResp->assertStatus(200);
+        $savedManageResp->assertSee('Dokumen hasil test coverage');
+
+        // 5. Cek di halaman asesmen (FR.IA.08): Portofolio asesi dimuat, nama tidak bisa diketik lagi, dan ada popup gambar
+        $pendaftaran = PendaftaranAsesi::create([
+            'skema_id' => $this->skemaA->id,
+            'asesi_id' => $this->admin->id,
+            'nomor_pendaftaran' => 'REG-IA08-TEST-001',
+            'status' => 'terdaftar',
+            'tanggal_daftar' => now()->toDateString(),
+        ]);
+
+        \App\Models\DokumenAsesi::create([
+            'pendaftaran_id' => $pendaftaran->id,
+            'jenis_dokumen' => 'Portofolio Sertifikat/Karya',
+            'nama_dokumen' => 'Sertifikat_Junior_Web_Developer_BNSP.png',
+            'file_path' => 'dokumen/sample_sertifikat.png',
+            'status_verifikasi' => 'valid',
+        ]);
+
+        $asesmenResp = $this->actingAs($this->admin)->get(route('formulir.ia08', ['pendaftaran_id' => $pendaftaran->id]));
+        $asesmenResp->assertStatus(200);
+        $asesmenResp->assertSee('Sertifikat_Junior_Web_Developer_BNSP.png');
+
+        // Di halaman asesmen, nama TIDAK BISA DIKETIK LAGI (berupa hidden input)
+        $asesmenResp->assertSee('type="hidden" name="dokumen_portofolio[0][nama]"', false);
+
+        // Di halaman asesmen, nama bisa dipencet/diklik untuk memunculkan modal popup gambar
+        $asesmenResp->assertSee('lihatPratinjauGambar', false);
+        $asesmenResp->assertSee('modalPratinjauGambar', false);
+    }
+
+    public function test_fr_ia_09_pw_matches_bnsp_structure_starts_empty_and_requires_filling_before_saving()
+    {
+        $elem = \App\Models\ElemenKompetensi::whereHas('unitKompetensi', function ($q) {
+            $q->where('skema_id', $this->skemaA->id);
+        })->first();
+        $this->assertNotNull($elem);
+
+        // 1. Tambah form FR.IA.09
+        $this->actingAs($this->admin)->get(route('admin.master-muk.create', [
+            'skema_id' => $this->skemaA->id,
+            'code' => 'ia09',
+        ]));
+
+        $instrumentIa09 = \App\Models\SchemeMasterInstrument::where('skema_id', $this->skemaA->id)
+            ->where('instrument_code', 'ia_09')
+            ->first();
+        $this->assertNotNull($instrumentIa09);
+        $this->assertFalse($instrumentIa09->isConfigured());
+
+        // 2. Buka halaman kelola form master FR.IA.09
+        $manageResp = $this->actingAs($this->admin)->get(route('admin.master-muk.manage', $instrumentIa09->id));
+        $manageResp->assertStatus(200);
+        $manageResp->assertSee('FR.IA.09.');
+        $manageResp->assertSee('PW – PERTANYAAN WAWANCARA');
+        $manageResp->assertSee('Elemen ' . $elem->nomor_elemen . ':');
+        $manageResp->assertSee('Simpan Formulir Master FR.IA.09');
+
+        // 3. Simpan dengan isian kosong harus ditolak
+        $emptyPostResp = $this->actingAs($this->admin)->post(route('admin.master-muk.update-metadata', $instrumentIa09->id), [
+            'metadata_pertanyaan_wawancara' => [
+                $elem->id => ['pertanyaan' => '']
+            ],
+            'metadata_umpan_balik' => '',
+        ]);
+        $emptyPostResp->assertSessionHasErrors([
+            'metadata_pertanyaan_wawancara.' . $elem->id . '.pertanyaan',
+            'metadata_umpan_balik',
+        ]);
+
+        // 4. Simpan dengan isian valid harus berhasil
+        $validPostResp = $this->actingAs($this->admin)->post(route('admin.master-muk.update-metadata', $instrumentIa09->id), [
+            'metadata_pertanyaan_wawancara' => [
+                $elem->id => ['pertanyaan' => 'Bagaimana Anda memastikan kode bebas dari kerentanan SQL Injection?']
+            ],
+            'metadata_umpan_balik' => 'Asesi wajib menjelaskan penggunaan Prepared Statements atau ORM.',
+        ]);
+        $validPostResp->assertSessionHasNoErrors();
+        $validPostResp->assertRedirect();
+
+        // Cek bahwa instrumen sekarang configured
+        $instrumentIa09->refresh();
+        $this->assertTrue($instrumentIa09->isConfigured());
+
+        // 5. Cek di halaman asesmen (FR.IA.09)
+        $pendaftaran = PendaftaranAsesi::create([
+            'skema_id' => $this->skemaA->id,
+            'asesi_id' => $this->admin->id,
+            'nomor_pendaftaran' => 'REG-IA09-TEST-001',
+            'status' => 'terdaftar',
+            'tanggal_daftar' => now()->toDateString(),
+        ]);
+
+        $asesmenResp = $this->actingAs($this->admin)->get(route('formulir.ia09', ['pendaftaran_id' => $pendaftaran->id]));
+        $asesmenResp->assertStatus(200);
+        $asesmenResp->assertSee('Bagaimana Anda memastikan kode bebas dari kerentanan SQL Injection?');
+    }
+
+    public function test_fr_ia_10_third_party_matches_bnsp_structure_starts_empty_and_requires_filling_before_saving()
+    {
+        // 1. Tambah form FR.IA.10
+        $this->actingAs($this->admin)->get(route('admin.master-muk.create', [
+            'skema_id' => $this->skemaA->id,
+            'code' => 'ia10',
+        ]));
+
+        $instrumentIa10 = \App\Models\SchemeMasterInstrument::where('skema_id', $this->skemaA->id)
+            ->where('instrument_code', 'ia_10')
+            ->first();
+        $this->assertNotNull($instrumentIa10);
+        $this->assertFalse($instrumentIa10->isConfigured());
+
+        // 2. Buka halaman kelola form master FR.IA.10
+        $manageResp = $this->actingAs($this->admin)->get(route('admin.master-muk.manage', $instrumentIa10->id));
+        $manageResp->assertStatus(200);
+        $manageResp->assertSee('FR.IA.10.');
+        $manageResp->assertSee('VERIFIKASI PIHAK KETIGA');
+        $manageResp->assertSee('Simpan Formulir Master FR.IA.10');
+
+        // Pastikan radio button verifikasi kinerja dapat diisi dan tidak terkunci/disabled
+        $manageResp->assertDontSee('checked disabled');
+        $manageResp->assertSee('name="metadata_verifikasi_kinerja[k3]"', false);
+
+        // 3. Simpan dengan isian kosong harus ditolak
+        $emptyPostResp = $this->actingAs($this->admin)->post(route('admin.master-muk.update-metadata', $instrumentIa10->id), [
+            'metadata_petunjuk_supervisor' => '',
+            'metadata_pertanyaan_konsistensi' => '',
+            'metadata_umpan_balik' => '',
+        ]);
+        $emptyPostResp->assertSessionHasErrors([
+            'metadata_petunjuk_supervisor',
+            'metadata_pertanyaan_konsistensi',
+            'metadata_umpan_balik',
+        ]);
+
+        // 4. Simpan dengan isian valid harus berhasil
+        $validPostResp = $this->actingAs($this->admin)->post(route('admin.master-muk.update-metadata', $instrumentIa10->id), [
+            'metadata_petunjuk_supervisor' => 'Mohon atasan di tempat kerja memvalidasi jam terbang asesi dalam proyek tim minimal 6 bulan.',
+            'metadata_pertanyaan_konsistensi' => 'Apakah asesi konsisten menyelesaikan modul sesuai sprint dan standar coding guideline industri?',
+            'metadata_umpan_balik' => 'Atasan langsung harus memiliki jabatan minimal Lead Developer.',
+            'metadata_verifikasi_kinerja' => [
+                'k3' => 'ya',
+                'tim' => 'tidak',
+            ],
+        ]);
+        $validPostResp->assertSessionHasNoErrors();
+        $validPostResp->assertRedirect();
+
+        // Cek bahwa instrumen sekarang configured
+        $instrumentIa10->refresh();
+        $this->assertTrue($instrumentIa10->isConfigured());
+
+        // Buka kembali master form untuk memastikan pilihan tersimpan dengan benar
+        $savedResp = $this->actingAs($this->admin)->get(route('admin.master-muk.manage', $instrumentIa10->id));
+        $savedResp->assertStatus(200);
+        $savedResp->assertSee('name="metadata_verifikasi_kinerja[k3]" value="ya" checked', false);
+        $savedResp->assertSee('name="metadata_verifikasi_kinerja[tim]" value="tidak" checked', false);
+
+        // 5. Cek di halaman asesmen (FR.IA.10)
+        $pendaftaran = PendaftaranAsesi::create([
+            'skema_id' => $this->skemaA->id,
+            'asesi_id' => $this->admin->id,
+            'nomor_pendaftaran' => 'REG-IA10-TEST-001',
+            'status' => 'terdaftar',
+            'tanggal_daftar' => now()->toDateString(),
+        ]);
+
+        $asesmenResp = $this->actingAs($this->admin)->get(route('formulir.ia10', ['pendaftaran_id' => $pendaftaran->id]));
+        $asesmenResp->assertStatus(200);
+        $asesmenResp->assertSee('Mohon atasan di tempat kerja memvalidasi jam terbang asesi dalam proyek tim minimal 6 bulan.');
+        $asesmenResp->assertSee('Apakah asesi konsisten menyelesaikan modul sesuai sprint dan standar coding guideline industri?');
+        // Pastikan tidak ada radio button yang terpilih otomatis secara default pada formulir baru
+        $asesmenResp->assertDontSee('name="q_k3" value="1" checked');
+    }
 }
 
 

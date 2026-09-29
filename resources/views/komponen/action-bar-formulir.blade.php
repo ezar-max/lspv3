@@ -2,7 +2,6 @@
 @php
     $pendaftaranId = $pendaftaranId ?? ($pendaftaran->id ?? null);
     $tipeForm = $tipeForm ?? null;
-    $galeriUrl = $galeriUrl ?? ($pendaftaranId ? route('formulir.index', array_filter(['pendaftaran_id' => $pendaftaranId, 'tipe_form' => $tipeForm])) : '#');
     $isAsesi = $isAsesi ?? (auth()->check() && auth()->user()->peran === 'asesi');
     $showSave = $showSave ?? !$isAsesi;
     $showPrint = $showPrint ?? true;
@@ -14,13 +13,19 @@
     $signRoute = $signRoute ?? null;
     $signLabel = $signLabel ?? 'Tanda Tangani Hasil Asesmen';
     $role = auth()->check() ? auth()->user()->peran : null;
+
+    $skemaId = $skemaId ?? ($pendaftaran->skema_id ?? request('skema_id') ?? (auth()->check() ? auth()->user()->skema_id : null) ?? session('active_selected_skema_id'));
+
     $defaultBack = match($role) {
         'asesi' => route('asesi.tahapan'),
-        'asesor' => (!empty($pendaftaran->skema_id) ? route('asesor.mapa', ['skema_id' => $pendaftaran->skema_id]) : route('asesor.daftar-peserta')),
-        default => (!empty($pendaftaran->skema_id) ? route('admin.master-muk.index', ['skema_id' => $pendaftaran->skema_id]) : route('admin.dokumen.index')),
+        'asesor' => (!empty($skemaId) ? route('asesor.mapa', ['skema_id' => $skemaId]) : route('asesor.mapa')),
+        default => (!empty($skemaId) ? route('admin.master-muk.index', ['skema_id' => $skemaId]) : route('admin.master-muk.index')),
     };
-    $targetKembali = $kembaliRoute ?? $galeriUrl ?? $defaultBack;
-    if ($targetKembali === '#' || empty($targetKembali)) {
+
+    $targetKembali = $kembaliRoute ?? null;
+    if (empty($targetKembali) || $targetKembali === '#' || $targetKembali === route('formulir.index') || str_contains($targetKembali, route('formulir.index')) || (str_contains($targetKembali, 'daftar-peserta') && !empty($skemaId))) {
+        $targetKembali = $defaultBack;
+    } elseif ($role !== 'asesor' && str_contains($targetKembali, 'asesor/mapa')) {
         $targetKembali = $defaultBack;
     }
 @endphp

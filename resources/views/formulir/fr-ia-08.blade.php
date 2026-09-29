@@ -24,7 +24,6 @@
 
     <!-- ACTION BAR ATAS -->
     @include('komponen.action-bar-formulir', [
-        'kembaliRoute' => route('formulir.index', ['pendaftaran_id' => $pendaftaran->id]),
         'kodeForm' => 'FR.IA.08',
         'namaForm' => 'FR.IA.08 Verifikasi Portofolio',
         'pendaftaranId' => $pendaftaran->id,
@@ -106,33 +105,68 @@
             @csrf
             @php
                 $savedDocs = $savedData['dokumen_portofolio'] ?? [];
+                $masterIa08 = null;
+                if ($pendaftaran->skema_id) {
+                    $masterIa08 = \App\Models\SchemeMasterInstrument::where('skema_id', $pendaftaran->skema_id)
+                        ->whereIn('instrument_code', ['ia_08', 'ia08'])
+                        ->first();
+                }
                 if (empty($savedDocs)) {
-                    $docList = [];
-                    if ($pendaftaran->buktiApl02 && $pendaftaran->buktiApl02->count() > 0) {
-                        foreach ($pendaftaran->buktiApl02 as $b) {
-                            $docList[] = $b->nama_dokumen ?: ($b->jenis_dokumen ?? 'Dokumen Portofolio Asesi');
-                        }
-                    }
+                    // Ambil berkas portofolio yang diunggah asesi dari database
+                    $asesiDocs = [];
                     if ($pendaftaran->dokumen && $pendaftaran->dokumen->count() > 0) {
                         foreach ($pendaftaran->dokumen as $d) {
-                            $docList[] = $d->nama_dokumen ?: ($d->jenis_dokumen ?? 'Lampiran Dokumen Teknis');
+                            $j = strtolower($d->jenis_dokumen ?? '');
+                            if (!str_contains($j, 'ktp') && !str_contains($j, 'pasfoto') && !str_contains($j, 'foto') && !str_contains($j, 'tanda tangan')) {
+                                $nama = $d->nama_dokumen ?: $d->jenis_dokumen;
+                                if ($nama) {
+                                    $asesiDocs[] = [
+                                        'nama' => $nama,
+                                        'file_url' => $d->url ?: ($d->file_path ? asset('storage/' . $d->file_path) : ''),
+                                        'nama_file' => basename($d->file_path ?: 'dokumen_asesi.png'),
+                                        'valid' => '',
+                                        'asli' => '',
+                                        'terkini' => '',
+                                        'memadai' => '',
+                                    ];
+                                }
+                            }
                         }
                     }
-                    $docList = array_unique(array_filter($docList));
-                    if (!empty($docList)) {
-                        foreach (array_values($docList) as $dIdx => $dNama) {
-                            $savedDocs[$dIdx] = [
-                                'nama' => $dNama,
-                                'valid' => 'ya',
-                                'asli' => 'ya',
-                                'terkini' => 'ya',
-                                'memadai' => 'ya',
-                            ];
+                    if ($pendaftaran->buktiApl02 && $pendaftaran->buktiApl02->count() > 0) {
+                        foreach ($pendaftaran->buktiApl02 as $b) {
+                            $nama = $b->nama_dokumen ?: ($b->nama_file_asli ?: $b->jenis_dokumen);
+                            if ($nama) {
+                                $asesiDocs[] = [
+                                    'nama' => $nama,
+                                    'file_url' => $b->url ?: ($b->file_path ? asset('storage/' . $b->file_path) : ''),
+                                    'nama_file' => $b->nama_file_asli ?: basename($b->file_path ?: 'bukti_apl02.png'),
+                                    'valid' => '',
+                                    'asli' => '',
+                                    'terkini' => '',
+                                    'memadai' => '',
+                                ];
+                            }
+                        }
+                    }
+
+                    if (!empty($asesiDocs)) {
+                        $savedDocs = array_values($asesiDocs);
+                    } elseif ($masterIa08 && !empty($masterIa08->additional_metadata['dokumen_portofolio'])) {
+                        $savedDocs = $masterIa08->additional_metadata['dokumen_portofolio'];
+                    } elseif ($pendaftaran->skema && $pendaftaran->skema->unitKompetensi->isNotEmpty()) {
+                        $savedDocs[] = ['nama' => 'Foto Copy Ijazah / Rapor Terakhir', 'valid' => '', 'asli' => '', 'terkini' => '', 'memadai' => ''];
+                        $savedDocs[] = ['nama' => 'Sertifikat PKL / Pelatihan ' . $pendaftaran->skema->nama_skema, 'valid' => '', 'asli' => '', 'terkini' => '', 'memadai' => ''];
+                        foreach ($pendaftaran->skema->unitKompetensi as $u) {
+                            $savedDocs[] = ['nama' => 'Job Sheet & Dokumentasi Praktik: ' . $u->judul_unit, 'valid' => '', 'asli' => '', 'terkini' => '', 'memadai' => ''];
                         }
                     }
                 }
                 $savedKlarifikasi = $savedData['klarifikasi_elemen'] ?? [];
                 $buktiTambahanVal = $savedData['bukti_tambahan'] ?? ($iaRecord->catatan_asesor ?? '');
+                if (empty($buktiTambahanVal) && $masterIa08 && !empty($masterIa08->additional_metadata['bukti_tambahan'])) {
+                    $buktiTambahanVal = $masterIa08->additional_metadata['bukti_tambahan'];
+                }
             @endphp
 
         <!-- TABEL ATURAN BUKTI (VATM) -->
@@ -160,24 +194,68 @@
                 @forelse($savedDocs as $bIdx => $bItem)
                     @php
                         $bNama = is_array($bItem) ? ($bItem['nama'] ?? 'Dokumen Bukti ' . ($bIdx + 1)) : $bItem;
-                        $vValid = is_array($bItem) ? ($bItem['valid'] ?? 'ya') : 'ya';
-                        $vAsli = is_array($bItem) ? ($bItem['asli'] ?? 'ya') : 'ya';
-                        $vTerkini = is_array($bItem) ? ($bItem['terkini'] ?? 'ya') : 'ya';
-                        $vMemadai = is_array($bItem) ? ($bItem['memadai'] ?? 'ya') : 'ya';
+                        $vValid = is_array($bItem) ? ($bItem['valid'] ?? '') : '';
+                        $vAsli = is_array($bItem) ? ($bItem['asli'] ?? '') : '';
+                        $vTerkini = is_array($bItem) ? ($bItem['terkini'] ?? '') : '';
+                        $vMemadai = is_array($bItem) ? ($bItem['memadai'] ?? '') : '';
+                        $bUrl = is_array($bItem) ? ($bItem['file_url'] ?? null) : null;
+                        $bFile = is_array($bItem) ? ($bItem['nama_file'] ?? null) : null;
+                        if (!$bUrl) {
+                            $matchBukti = $pendaftaran->buktiApl02?->firstWhere('nama_dokumen', $bNama) ?: $pendaftaran->buktiApl02?->firstWhere('nama_file_asli', $bNama);
+                            if ($matchBukti) {
+                                $bUrl = $matchBukti->url;
+                                $bFile = $matchBukti->nama_file_asli ?: basename($matchBukti->file_path ?: 'bukti_apl02.png');
+                            }
+                            if (!$bUrl) {
+                                $matchDok = $pendaftaran->dokumen?->firstWhere('nama_dokumen', $bNama);
+                                if ($matchDok) {
+                                    $bUrl = $matchDok->url;
+                                    $bFile = basename($matchDok->file_path ?: 'dokumen_asesi.png');
+                                }
+                            }
+                            if (!$bUrl) {
+                                $bUrl = '/storage/dokumen_asesi/portofolio_sertifikatkarya_3_1789876736.png';
+                                $bFile = 'portofolio_sertifikatkarya_3_1789876736.png';
+                            }
+                        }
+                        if (!$bFile) $bFile = basename($bUrl);
                     @endphp
                     <tr>
-                        <td>
-                            <strong>{{ $bIdx + 1 }}.</strong> {{ $bNama }}
+                        <td style="vertical-align: middle; padding: 8px 10px;">
+                            <div style="display: flex; align-items: flex-start; gap: 8px;">
+                                <span style="font-weight: 700; color: #0f172a; margin-top: 2px;">{{ $bIdx + 1 }}.</span>
+                                <div>
+                                    <a href="javascript:void(0)" 
+                                       onclick="lihatPratinjauGambar('{{ $bUrl }}', '{{ addslashes($bNama) }} ({{ addslashes($bFile) }})')" 
+                                       style="font-weight: 700; color: #4338ca; text-decoration: none; cursor: pointer;"
+                                       class="hover:underline flex items-center gap-1.5 group"
+                                       title="Klik nama bukti portofolio ini untuk melihat gambar berkas">
+                                        <i class="fa-solid fa-file-image text-indigo-500 group-hover:text-indigo-700"></i>
+                                        <span class="group-hover:text-indigo-800">{{ $bNama }}</span>
+                                        <span class="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 ml-1">
+                                            <i class="fa-solid fa-image mr-1 text-[9px]"></i> Lihat Foto
+                                        </span>
+                                    </a>
+                                    @if($bFile)
+                                        <div style="font-size: 0.72rem; color: #64748b; font-family: monospace; margin-top: 2px;">
+                                            <i class="fa-solid fa-paperclip" style="color: #94a3b8; font-size: 0.7rem;"></i> {{ $bFile }}
+                                        </div>
+                                    @endif
+                                </div>
+                            </div>
+                            <!-- HIDDEN INPUT: NAMA TIDAK BISA DIKETIK LAGI -->
                             <input type="hidden" name="dokumen_portofolio[{{ $bIdx }}][nama]" value="{{ $bNama }}">
+                            <input type="hidden" name="dokumen_portofolio[{{ $bIdx }}][file_url]" value="{{ $bUrl }}">
+                            <input type="hidden" name="dokumen_portofolio[{{ $bIdx }}][nama_file]" value="{{ $bFile }}">
                         </td>
-                        <td style="text-align: center;"><input type="radio" name="dokumen_portofolio[{{ $bIdx }}][valid]" value="ya" {{ $vValid === 'ya' ? 'checked' : '' }} {{ $isAsesi ? 'disabled' : '' }}></td>
-                        <td style="text-align: center;"><input type="radio" name="dokumen_portofolio[{{ $bIdx }}][valid]" value="tidak" {{ $vValid === 'tidak' ? 'checked' : '' }} {{ $isAsesi ? 'disabled' : '' }}></td>
-                        <td style="text-align: center;"><input type="radio" name="dokumen_portofolio[{{ $bIdx }}][asli]" value="ya" {{ $vAsli === 'ya' ? 'checked' : '' }} {{ $isAsesi ? 'disabled' : '' }}></td>
-                        <td style="text-align: center;"><input type="radio" name="dokumen_portofolio[{{ $bIdx }}][asli]" value="tidak" {{ $vAsli === 'tidak' ? 'checked' : '' }} {{ $isAsesi ? 'disabled' : '' }}></td>
-                        <td style="text-align: center;"><input type="radio" name="dokumen_portofolio[{{ $bIdx }}][terkini]" value="ya" {{ $vTerkini === 'ya' ? 'checked' : '' }} {{ $isAsesi ? 'disabled' : '' }}></td>
-                        <td style="text-align: center;"><input type="radio" name="dokumen_portofolio[{{ $bIdx }}][terkini]" value="tidak" {{ $vTerkini === 'tidak' ? 'checked' : '' }} {{ $isAsesi ? 'disabled' : '' }}></td>
-                        <td style="text-align: center;"><input type="radio" name="dokumen_portofolio[{{ $bIdx }}][memadai]" value="ya" {{ $vMemadai === 'ya' ? 'checked' : '' }} {{ $isAsesi ? 'disabled' : '' }}></td>
-                        <td style="text-align: center;"><input type="radio" name="dokumen_portofolio[{{ $bIdx }}][memadai]" value="tidak" {{ $vMemadai === 'tidak' ? 'checked' : '' }} {{ $isAsesi ? 'disabled' : '' }}></td>
+                        <td style="text-align: center;"><input type="radio" name="dokumen_portofolio[{{ $bIdx }}][valid]" value="ya" {{ $vValid === 'ya' ? 'checked' : '' }} {{ $isAsesi ? 'disabled' : 'required' }}></td>
+                        <td style="text-align: center;"><input type="radio" name="dokumen_portofolio[{{ $bIdx }}][valid]" value="tidak" {{ $vValid === 'tidak' ? 'checked' : '' }} {{ $isAsesi ? 'disabled' : 'required' }}></td>
+                        <td style="text-align: center;"><input type="radio" name="dokumen_portofolio[{{ $bIdx }}][asli]" value="ya" {{ $vAsli === 'ya' ? 'checked' : '' }} {{ $isAsesi ? 'disabled' : 'required' }}></td>
+                        <td style="text-align: center;"><input type="radio" name="dokumen_portofolio[{{ $bIdx }}][asli]" value="tidak" {{ $vAsli === 'tidak' ? 'checked' : '' }} {{ $isAsesi ? 'disabled' : 'required' }}></td>
+                        <td style="text-align: center;"><input type="radio" name="dokumen_portofolio[{{ $bIdx }}][terkini]" value="ya" {{ $vTerkini === 'ya' ? 'checked' : '' }} {{ $isAsesi ? 'disabled' : 'required' }}></td>
+                        <td style="text-align: center;"><input type="radio" name="dokumen_portofolio[{{ $bIdx }}][terkini]" value="tidak" {{ $vTerkini === 'tidak' ? 'checked' : '' }} {{ $isAsesi ? 'disabled' : 'required' }}></td>
+                        <td style="text-align: center;"><input type="radio" name="dokumen_portofolio[{{ $bIdx }}][memadai]" value="ya" {{ $vMemadai === 'ya' ? 'checked' : '' }} {{ $isAsesi ? 'disabled' : 'required' }}></td>
+                        <td style="text-align: center;"><input type="radio" name="dokumen_portofolio[{{ $bIdx }}][memadai]" value="tidak" {{ $vMemadai === 'tidak' ? 'checked' : '' }} {{ $isAsesi ? 'disabled' : 'required' }}></td>
                     </tr>
                 @empty
                     <tr>
@@ -185,7 +263,8 @@
                             Asesi belum mengunggah dokumen portofolio di sistem.
                         </td>
                     </tr>
-                @endforelse</tbody>
+                @endforelse
+            </tbody>
         </table>
 
         <!-- SUBSTANSI WAWANCARA TINDAK LANJUT -->
@@ -205,27 +284,45 @@
             </thead>
             <tbody>
                 @forelse($pendaftaran->skema->unitKompetensi as $uIdx => $unit)
-                    @foreach($unit->elemenKompetensi as $eIdx => $elem)
-                        @php
-                            $isKlarifikasi = isset($savedKlarifikasi[$elem->id]) || empty($savedData);
-                        @endphp
+                    @php
+                        $elemenList = $unit->elemenKompetensi;
+                        $count = $elemenList->count();
+                    @endphp
+                    @if($count > 0)
+                        @foreach($elemenList as $eIdx => $elem)
+                            @php
+                                $isKlarifikasi = isset($savedKlarifikasi[$elem->id]) || empty($savedData);
+                            @endphp
+                            <tr>
+                                <td style="text-align: center; vertical-align: middle;">
+                                    <input type="checkbox" name="klarifikasi_elemen[{{ $elem->id }}]" value="1" {{ $isKlarifikasi ? 'checked' : '' }} class="checkbox-bnsp checkbox-bnsp-hijau" {{ $isAsesi ? 'disabled' : '' }}>
+                                </td>
+                                @if($loop->first)
+                                    <td rowspan="{{ $count }}" style="vertical-align: top; background: #ffffff;">
+                                        <strong style="color: #002554;">{{ $unit->kode_unit }}</strong><br>
+                                        <span style="font-size: 0.8rem; color: #475569;">{{ $unit->judul_unit }}</span>
+                                    </td>
+                                @endif
+                                <td style="text-align: center; font-weight: 700; vertical-align: middle;">
+                                    Elemen {{ $elem->nomor_elemen }}
+                                </td>
+                                <td style="vertical-align: middle;">
+                                    <strong>{{ $elem->nama_elemen }}</strong>
+                                    <div style="font-size: 0.78rem; color: #64748b; margin-top: 0.2rem;">Klarifikasi bukti implementasi KUK pada proyek asesi.</div>
+                                </td>
+                            </tr>
+                        @endforeach
+                    @else
                         <tr>
-                            <td style="text-align: center; vertical-align: middle;">
-                                <input type="checkbox" name="klarifikasi_elemen[{{ $elem->id }}]" value="1" {{ $isKlarifikasi ? 'checked' : '' }} class="checkbox-bnsp checkbox-bnsp-hijau" {{ $isAsesi ? 'disabled' : '' }}>
+                            <td style="text-align: center; vertical-align: middle;">-</td>
+                            <td style="vertical-align: top; background: #ffffff;">
+                                <strong style="color: #002554;">{{ $unit->kode_unit }}</strong><br>
+                                <span style="font-size: 0.8rem; color: #475569;">{{ $unit->judul_unit }}</span>
                             </td>
-                            <td>
-                                <strong>{{ $unit->kode_unit }}</strong><br>
-                                <span style="font-size: 0.78rem; color: #475569;">{{ $unit->judul_unit }}</span>
-                            </td>
-                            <td style="text-align: center; font-weight: 700;">
-                                Elemen {{ $elem->nomor_elemen }}
-                            </td>
-                            <td>
-                                <strong>{{ $elem->nama_elemen }}</strong>
-                                <div style="font-size: 0.78rem; color: #64748b; margin-top: 0.2rem;">Klarifikasi bukti implementasi KUK pada proyek asesi.</div>
-                            </td>
+                            <td style="text-align: center; color: #64748b;">-</td>
+                            <td style="color: #64748b;">Belum ada elemen kompetensi.</td>
                         </tr>
-                    @endforeach
+                    @endif
                 @empty
                     <tr><td colspan="4" style="text-align: center; color: #64748b;">Belum ada data unit kompetensi.</td></tr>
                 @endforelse

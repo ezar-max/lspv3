@@ -440,4 +440,81 @@ class FormulirSkemaDatabaseBindingTest extends TestCase
         $respB->assertSee('MET.ASESOR.B.2026');
         $respB->assertSee('Hj. Siti Aminah, S.E. (Admin LSP Validator)');
     }
+
+    public function test_action_bar_kembali_button_returns_to_mapa_for_asesor_and_never_daftar_peserta()
+    {
+        $this->actingAs($this->asesor);
+
+        $routesToTest = [
+            'formulir.ia01',
+            'formulir.ia02',
+            'formulir.ia03',
+            'formulir.ia04a',
+            'formulir.ia04b',
+            'formulir.ia05a',
+            'formulir.ia05b',
+            'formulir.ia05c',
+            'formulir.ia06a',
+            'formulir.ia06b',
+            'formulir.ia06c',
+            'formulir.ia07',
+            'formulir.ia08',
+            'formulir.ia09',
+            'formulir.ia10',
+            'formulir.ia11',
+            'formulir.ak01',
+        ];
+
+        $expectedBackUrl = route('asesor.mapa', ['skema_id' => $this->skemaA->id]);
+        $pesertaPenilaianUrl = route('asesor.daftar-peserta');
+
+        foreach ($routesToTest as $routeName) {
+            $response = $this->get(route($routeName, ['skema_id' => $this->skemaA->id]));
+            $response->assertOk();
+            $response->assertSee($expectedBackUrl);
+            $response->assertDontSee($pesertaPenilaianUrl);
+        }
+
+        // Test direct access to formulir.index redirects to asesor.mapa
+        $indexResponse = $this->get(route('formulir.index', ['skema_id' => $this->skemaA->id]));
+        $indexResponse->assertRedirect($expectedBackUrl);
+    }
+
+    public function test_action_bar_kembali_button_returns_to_master_muk_for_admin()
+    {
+        $this->actingAs($this->admin);
+
+        $routesToTest = [
+            'formulir.ia01',
+            'formulir.ia02',
+            'formulir.ia03',
+            'formulir.ia04a',
+            'formulir.ia04b',
+            'formulir.ia05a',
+            'formulir.ia05b',
+            'formulir.ia05c',
+            'formulir.ia06a',
+            'formulir.ia06b',
+            'formulir.ia06c',
+            'formulir.ia07',
+            'formulir.ia08',
+            'formulir.ia09',
+            'formulir.ia10',
+            'formulir.ia11',
+            'formulir.ak01',
+        ];
+
+        $expectedBackUrl = route('admin.master-muk.index', ['skema_id' => $this->skemaA->id]);
+
+        foreach ($routesToTest as $routeName) {
+            $response = $this->get(route($routeName, ['skema_id' => $this->skemaA->id]));
+            $response->assertOk();
+            $response->assertSee($expectedBackUrl);
+            $response->assertDontSee(route('asesor.daftar-peserta'));
+        }
+
+        // Test direct access to formulir.index redirects to admin.master-muk.index
+        $indexResponse = $this->get(route('formulir.index', ['skema_id' => $this->skemaA->id]));
+        $indexResponse->assertRedirect($expectedBackUrl);
+    }
 }

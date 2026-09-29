@@ -70,7 +70,7 @@ class SchemeMasterInstrument extends Model
             if (isset($meta['is_saved'])) {
                 return (bool) $meta['is_saved'];
             }
-            if (!empty($meta['scenario']) || !empty($meta['skenario']) || !empty($meta['default_standard']) || !empty($meta['kelompok_skenario']) || !empty($meta['kelompok_soal']) || !empty($meta['standar_elemen'])) {
+            if (!empty($meta['scenario']) || !empty($meta['skenario']) || !empty($meta['default_standard']) || !empty($meta['kelompok_skenario']) || !empty($meta['kelompok_soal']) || !empty($meta['standar_elemen']) || !empty($meta['dokumen_portofolio']) || !empty($meta['pertanyaan_wawancara']) || !empty($meta['petunjuk_supervisor'])) {
                 return true;
             }
         }
@@ -190,6 +190,39 @@ class SchemeMasterInstrument extends Model
             'dot_color' => 'bg-teal-500',
             'icon' => 'fa-cube',
         ],
+        'ia_08' => [
+            'code' => 'FR.IA.08',
+            'name' => 'Ceklis Verifikasi Portofolio',
+            'full_name' => 'CVP - Ceklis Verifikasi Portofolio (VATM)',
+            'badge' => 'Portofolio',
+            'category' => 'portofolio',
+            'color' => 'amber',
+            'badge_classes' => 'bg-amber-50 text-amber-700 border-amber-200',
+            'dot_color' => 'bg-amber-500',
+            'icon' => 'fa-folder-open',
+        ],
+        'ia_09' => [
+            'code' => 'FR.IA.09',
+            'name' => 'Pertanyaan Wawancara',
+            'full_name' => 'PW - Pertanyaan Wawancara Klarifikasi Portofolio',
+            'badge' => 'Wawancara',
+            'category' => 'wawancara',
+            'color' => 'amber',
+            'badge_classes' => 'bg-amber-50 text-amber-700 border-amber-200',
+            'dot_color' => 'bg-amber-500',
+            'icon' => 'fa-comments',
+        ],
+        'ia_10' => [
+            'code' => 'FR.IA.10',
+            'name' => 'Klarifikasi Pihak Ketiga',
+            'full_name' => 'VPK - Verifikasi Pihak Ketiga (Supervisor Industri)',
+            'badge' => 'Pihak Ketiga',
+            'category' => 'portofolio',
+            'color' => 'blue',
+            'badge_classes' => 'bg-blue-50 text-blue-700 border-blue-200',
+            'dot_color' => 'bg-blue-500',
+            'icon' => 'fa-user-tie',
+        ],
     ];
 
     /**
@@ -210,6 +243,9 @@ class SchemeMasterInstrument extends Model
             'ia05', 'ia_05', 'dptpg', 'cbt', 'pilihanganda' => 'ia_05',
             'ia06', 'ia_06', 'dptesai', 'esai' => 'ia_06',
             'ia07', 'ia_07', 'dpl', 'lisan' => 'ia_07',
+            'ia08', 'ia_08', 'cvp', 'portofolio', 'verifikasiportofolio' => 'ia_08',
+            'ia09', 'ia_09', 'pw', 'wawancara' => 'ia_09',
+            'ia10', 'ia_10', 'vpk', 'pihakketiga' => 'ia_10',
             'ia04a', 'ia_04a', 'ia04', 'ia_04', 'tor', 'proyek' => 'ia_04a',
             'ia11', 'ia_11', 'crp', 'mutu', 'produk' => 'ia_11',
             default => str_starts_with($c, 'ia') ? (str_contains($c, '_') ? $c : substr_replace($c, '_', 2, 0)) : 'ia_05'

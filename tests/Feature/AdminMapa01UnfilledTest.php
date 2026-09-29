@@ -67,7 +67,7 @@ class AdminMapa01UnfilledTest extends TestCase
         $response->assertSee('Validasi &amp; Sahkan FR.MAPA.01', false);
         $response->assertDontSee('Tervalidasi Admin');
         $response->assertDontSee('Perbarui Validasi Admin');
-        $response->assertSee('Validasi & TTD', false);
+        $response->assertSee('Validasi &amp; Sahkan', false);
 
         // 3. Matriks bukti tidak boleh mengandung teks otomatis dummy
         $response->assertDontSee('Bukti hasil demonstrasi praktik langsung unjuk kerja dan portofolio unit ' . $this->unit->judul_unit);

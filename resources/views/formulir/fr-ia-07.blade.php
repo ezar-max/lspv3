@@ -91,7 +91,6 @@
 
     <!-- ACTION BAR ATAS -->
     @include('komponen.action-bar-formulir', [
-        'kembaliRoute' => route('formulir.index', ['pendaftaran_id' => $pendaftaran->id]),
         'kodeForm' => 'FR.IA.07',
         'namaForm' => 'FR.IA.07 Pertanyaan Lisan',
         'pendaftaranId' => $pendaftaran->id,

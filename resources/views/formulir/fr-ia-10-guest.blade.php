@@ -185,32 +185,32 @@
                 <tbody>
                     <tr>
                         <td>1. Apakah asesi bekerja dengan mempertimbangkan Kesehatan, Keamanan dan Keselamatan Kerja (K3)?</td>
-                        <td style="text-align: center;"><input type="radio" name="q_k3" value="Ya" checked class="checkbox-bnsp checkbox-bnsp-hijau"></td>
+                        <td style="text-align: center;"><input type="radio" name="q_k3" value="Ya" class="checkbox-bnsp checkbox-bnsp-hijau"></td>
                         <td style="text-align: center;"><input type="radio" name="q_k3" value="Tidak" class="checkbox-bnsp checkbox-bnsp-merah"></td>
                     </tr>
                     <tr>
                         <td>2. Apakah asesi berinteraksi dengan harmonis di dalam kelompok / tim kerjanya?</td>
-                        <td style="text-align: center;"><input type="radio" name="q_tim" value="Ya" checked class="checkbox-bnsp checkbox-bnsp-hijau"></td>
+                        <td style="text-align: center;"><input type="radio" name="q_tim" value="Ya" class="checkbox-bnsp checkbox-bnsp-hijau"></td>
                         <td style="text-align: center;"><input type="radio" name="q_tim" value="Tidak" class="checkbox-bnsp checkbox-bnsp-merah"></td>
                     </tr>
                     <tr>
                         <td>3. Apakah asesi dapat mengelola tugas-tugas pekerjaan secara bersamaan (multi-tasking)?</td>
-                        <td style="text-align: center;"><input type="radio" name="q_kelola" value="Ya" checked class="checkbox-bnsp checkbox-bnsp-hijau"></td>
+                        <td style="text-align: center;"><input type="radio" name="q_kelola" value="Ya" class="checkbox-bnsp checkbox-bnsp-hijau"></td>
                         <td style="text-align: center;"><input type="radio" name="q_kelola" value="Tidak" class="checkbox-bnsp checkbox-bnsp-merah"></td>
                     </tr>
                     <tr>
                         <td>4. Apakah asesi dapat dengan cepat beradaptasi dengan peralatan dan teknologi/lingkungan yang baru?</td>
-                        <td style="text-align: center;"><input type="radio" name="q_adaptasi" value="Ya" checked class="checkbox-bnsp checkbox-bnsp-hijau"></td>
+                        <td style="text-align: center;"><input type="radio" name="q_adaptasi" value="Ya" class="checkbox-bnsp checkbox-bnsp-hijau"></td>
                         <td style="text-align: center;"><input type="radio" name="q_adaptasi" value="Tidak" class="checkbox-bnsp checkbox-bnsp-merah"></td>
                     </tr>
                     <tr>
                         <td>5. Apakah asesi dapat merespon dengan cepat masalah-masalah teknis yang ada di tempat kerjanya?</td>
-                        <td style="text-align: center;"><input type="radio" name="q_respon" value="Ya" checked class="checkbox-bnsp checkbox-bnsp-hijau"></td>
+                        <td style="text-align: center;"><input type="radio" name="q_respon" value="Ya" class="checkbox-bnsp checkbox-bnsp-hijau"></td>
                         <td style="text-align: center;"><input type="radio" name="q_respon" value="Tidak" class="checkbox-bnsp checkbox-bnsp-merah"></td>
                     </tr>
                     <tr>
                         <td>6. Apakah Anda bersedia dihubungi jika verifikasi lebih lanjut dari pernyataan ini diperlukan oleh pihak LSP/BNSP?</td>
-                        <td style="text-align: center;"><input type="radio" name="q_kontak" value="Ya" checked class="checkbox-bnsp checkbox-bnsp-hijau"></td>
+                        <td style="text-align: center;"><input type="radio" name="q_kontak" value="Ya" class="checkbox-bnsp checkbox-bnsp-hijau"></td>
                         <td style="text-align: center;"><input type="radio" name="q_kontak" value="Tidak" class="checkbox-bnsp checkbox-bnsp-merah"></td>
                     </tr>
                 </tbody>

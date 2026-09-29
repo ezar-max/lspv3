@@ -297,7 +297,6 @@
 
     <!-- ACTION BAR ATAS (NAVIGASI RESMI) -->
     @include('komponen.action-bar-formulir', [
-        'kembaliRoute' => (!empty($pendaftaran->skema_id) ? route('asesor.mapa', ['skema_id' => $pendaftaran->skema_id]) : route('asesor.daftar-peserta')),
         'kodeForm' => 'FR.IA.03',
         'namaForm' => 'FR.IA.03 Pertanyaan untuk Mendukung Observasi',
         'pendaftaranId' => $pendaftaran->id,
@@ -593,7 +592,6 @@
 
     <!-- NAVIGASI BAWAH FORMULIR -->
     @include('komponen.navigasi-form-bawah', [
-        'kembaliRoute' => (!empty($pendaftaran->skema_id) ? route('asesor.mapa', ['skema_id' => $pendaftaran->skema_id]) : route('asesor.daftar-peserta'))
     ])
 
 </div>
