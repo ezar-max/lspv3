@@ -107,7 +107,7 @@
                         <tr>
                             <td style="text-align: center;">{{ $idxU + 1 }}</td>
                             <td style="font-weight: 700; font-family: monospace;">{{ $u->kode_unit }}</td>
-                            <td>{{ $u->nama_unit }}</td>
+                            <td>{{ $u->judul_unit ?? $u->nama_unit }}</td>
                             <td style="font-size: 0.85rem; color: #475569;">{{ $u->standar_kompetensi ?? 'SKKNI' }}</td>
                         </tr>
                     @empty
@@ -132,8 +132,9 @@
 
             @php
                 $namaSkemaAktif = $pendaftaran->skema->nama_skema ?? 'Kompetensi';
-                $sampleUnits = $pendaftaran->skema->unitKompetensi->pluck('nama_unit')->take(2)->implode(', ');
+                $sampleUnits = $pendaftaran->skema->unitKompetensi->map(fn($u) => $u->judul_unit ?? $u->nama_unit)->take(2)->implode(', ');
             @endphp
+
 
             <!-- RANCANGAN PRODUK ATAU DATA TEKNIS PRODUK -->
             <table class="tabel-bnsp" style="margin-bottom: 1.5rem;">
@@ -147,37 +148,37 @@
                 <tbody>
                     <tr>
                         <td style="width: 30%; font-weight: 700; background: #f8fafc;">Nama produk yang dihasilkan</td>
-                        <td><input type="text" name="nama_produk" class="input-inline-bnsp" placeholder="Nama produk yang dihasilkan..." value="{{ $savedData['data_teknis']['nama_produk'] ?? 'Produk Hasil Uji / Karya Bidang ' . $namaSkemaAktif }}"></td>
+                        <td><input type="text" name="nama_produk" class="input-inline-bnsp" placeholder="Nama produk yang dihasilkan..." value="{{ $savedData['data_teknis']['nama_produk'] ?? '' }}"></td>
                     </tr>
                     <tr>
                         <td style="font-weight: 700; background: #f8fafc;">Standar Industri atau tempat kerja</td>
-                        <td><input type="text" name="standar_industri" class="input-inline-bnsp" placeholder="Standar acuan industri..." value="{{ $savedData['data_teknis']['standar_industri'] ?? 'Standar Kerja Industri / Acuan SKKNI ' . $namaSkemaAktif }}"></td>
+                        <td><input type="text" name="standar_industri" class="input-inline-bnsp" placeholder="Standar acuan industri..." value="{{ $savedData['data_teknis']['standar_industri'] ?? '' }}"></td>
                     </tr>
                     <tr>
                         <td style="font-weight: 700; background: #f8fafc;">Spesifikasi produk secara umum</td>
                         <td>
                             <div style="display: flex; flex-direction: column; gap: 0.35rem;">
-                                <div>Dimensi / Format : <input type="text" name="dimensi_format" class="input-inline-bnsp" placeholder="Dimensi atau format produk..." value="{{ $savedData['data_teknis']['dimensi_format'] ?? '' }}" style="display: inline-block; max-width: 400px; padding: 0.2rem 0.4rem;" required></div>
-                                <div>Bahan / Teknologi : <input type="text" name="bahan_teknologi" class="input-inline-bnsp" placeholder="Bahan atau teknologi yang digunakan..." value="{{ $savedData['data_teknis']['bahan_teknologi'] ?? '' }}" style="display: inline-block; max-width: 400px; padding: 0.2rem 0.4rem;" required></div>
-                                <div>Kapasitas / Ukuran : <input type="text" name="kapasitas_ukuran" class="input-inline-bnsp" placeholder="Kapasitas atau ukuran..." value="{{ $savedData['data_teknis']['kapasitas_ukuran'] ?? '' }}" style="display: inline-block; max-width: 400px; padding: 0.2rem 0.4rem;" required></div>
+                                <div>Dimensi / Format : <input type="text" name="dimensi_format" class="input-inline-bnsp" placeholder="Dimensi atau format produk..." value="{{ $savedData['data_teknis']['dimensi_format'] ?? '' }}" style="display: inline-block; max-width: 400px; padding: 0.2rem 0.4rem;"></div>
+                                <div>Bahan / Teknologi : <input type="text" name="bahan_teknologi" class="input-inline-bnsp" placeholder="Bahan atau teknologi yang digunakan..." value="{{ $savedData['data_teknis']['bahan_teknologi'] ?? '' }}" style="display: inline-block; max-width: 400px; padding: 0.2rem 0.4rem;"></div>
+                                <div>Kapasitas / Ukuran : <input type="text" name="kapasitas_ukuran" class="input-inline-bnsp" placeholder="Kapasitas atau ukuran..." value="{{ $savedData['data_teknis']['kapasitas_ukuran'] ?? '' }}" style="display: inline-block; max-width: 400px; padding: 0.2rem 0.4rem;"></div>
                             </div>
                         </td>
                     </tr>
                     <tr>
-                        <td style="font-weight: 700; background: #f8fafc;">Spesifikasi produk secara teknis <span style="color: #ef4444;">*</span></td>
+                        <td style="font-weight: 700; background: #f8fafc;">Spesifikasi produk secara teknis</td>
                         <td>
                             <div>Data Teknis :</div>
-                            <textarea name="data_teknis_detail" class="input-inline-bnsp" rows="2" style="margin-top: 0.25rem;" placeholder="Rincian data teknis produk..." required>{{ $savedData['data_teknis']['data_teknis'] ?? '' }}</textarea>
+                            <textarea name="data_teknis_detail" class="input-inline-bnsp" rows="2" style="margin-top: 0.25rem;" placeholder="Rincian data teknis produk...">{{ $savedData['data_teknis']['data_teknis'] ?? '' }}</textarea>
                         </td>
                     </tr>
                     <tr>
                         <td style="font-weight: 700; background: #f8fafc;">Tanggal pengoperasian / penggunaan</td>
-                        <td><input type="text" name="tgl_pengoperasian" class="input-inline-bnsp" value="{{ $savedData['data_teknis']['tgl_pengoperasian'] ?? date('d F Y') }}"></td>
+                        <td><input type="text" name="tgl_pengoperasian" class="input-inline-bnsp" placeholder="Tanggal pengoperasian / penggunaan..." value="{{ $savedData['data_teknis']['tgl_pengoperasian'] ?? '' }}"></td>
                     </tr>
                     <tr>
                         <td style="font-weight: 700; background: #f8fafc;">Gambar produk (jika ada)</td>
                         <td>
-                            <input type="text" name="gambar_produk" class="input-inline-bnsp" placeholder="URL lampiran foto / tangkapan layar produk..." value="{{ $savedData['data_teknis']['gambar_produk'] ?? 'assets/dokumen/preview-produk-asesi.png' }}">
+                            <input type="text" name="gambar_produk" class="input-inline-bnsp" placeholder="URL lampiran foto / tangkapan layar produk..." value="{{ $savedData['data_teknis']['gambar_produk'] ?? '' }}">
                         </td>
                     </tr>
                 </tbody>
@@ -203,18 +204,18 @@
                             1. Spesifikasi produk
                         </td>
                         <td>Ukuran produk sesuai rencana atau gambar kerja</td>
-                        <td style="text-align: center;"><input type="radio" name="reviu_spesifikasi[ukuran_produk]" value="1" {{ ($savedData['reviu_spesifikasi']['ukuran_produk'] ?? '1') == '1' ? 'checked' : '' }} class="checkbox-bnsp checkbox-bnsp-hijau"></td>
-                        <td style="text-align: center;"><input type="radio" name="reviu_spesifikasi[ukuran_produk]" value="0" {{ ($savedData['reviu_spesifikasi']['ukuran_produk'] ?? '1') == '0' ? 'checked' : '' }} class="checkbox-bnsp checkbox-bnsp-merah"></td>
+                        <td style="text-align: center;"><input type="radio" name="reviu_spesifikasi[ukuran_produk]" value="1" {{ ($savedData['reviu_spesifikasi']['ukuran_produk'] ?? '') === '1' ? 'checked' : '' }} class="checkbox-bnsp checkbox-bnsp-hijau"></td>
+                        <td style="text-align: center;"><input type="radio" name="reviu_spesifikasi[ukuran_produk]" value="0" {{ ($savedData['reviu_spesifikasi']['ukuran_produk'] ?? '') === '0' ? 'checked' : '' }} class="checkbox-bnsp checkbox-bnsp-merah"></td>
                     </tr>
                     <tr>
                         <td>Estetika / penampilan produk</td>
-                        <td style="text-align: center;"><input type="radio" name="reviu_spesifikasi[estetika]" value="1" {{ ($savedData['reviu_spesifikasi']['estetika'] ?? '1') == '1' ? 'checked' : '' }} class="checkbox-bnsp checkbox-bnsp-hijau"></td>
-                        <td style="text-align: center;"><input type="radio" name="reviu_spesifikasi[estetika]" value="0" {{ ($savedData['reviu_spesifikasi']['estetika'] ?? '1') == '0' ? 'checked' : '' }} class="checkbox-bnsp checkbox-bnsp-merah"></td>
+                        <td style="text-align: center;"><input type="radio" name="reviu_spesifikasi[estetika]" value="1" {{ ($savedData['reviu_spesifikasi']['estetika'] ?? '') === '1' ? 'checked' : '' }} class="checkbox-bnsp checkbox-bnsp-hijau"></td>
+                        <td style="text-align: center;"><input type="radio" name="reviu_spesifikasi[estetika]" value="0" {{ ($savedData['reviu_spesifikasi']['estetika'] ?? '') === '0' ? 'checked' : '' }} class="checkbox-bnsp checkbox-bnsp-merah"></td>
                     </tr>
                     <tr>
                         <td>Kebersihan dan kerapian permukaan produk</td>
-                        <td style="text-align: center;"><input type="radio" name="reviu_spesifikasi[kebersihan]" value="1" {{ ($savedData['reviu_spesifikasi']['kebersihan'] ?? '1') == '1' ? 'checked' : '' }} class="checkbox-bnsp checkbox-bnsp-hijau"></td>
-                        <td style="text-align: center;"><input type="radio" name="reviu_spesifikasi[kebersihan]" value="0" {{ ($savedData['reviu_spesifikasi']['kebersihan'] ?? '1') == '0' ? 'checked' : '' }} class="checkbox-bnsp checkbox-bnsp-merah"></td>
+                        <td style="text-align: center;"><input type="radio" name="reviu_spesifikasi[kebersihan]" value="1" {{ ($savedData['reviu_spesifikasi']['kebersihan'] ?? '') === '1' ? 'checked' : '' }} class="checkbox-bnsp checkbox-bnsp-hijau"></td>
+                        <td style="text-align: center;"><input type="radio" name="reviu_spesifikasi[kebersihan]" value="0" {{ ($savedData['reviu_spesifikasi']['kebersihan'] ?? '') === '0' ? 'checked' : '' }} class="checkbox-bnsp checkbox-bnsp-merah"></td>
                     </tr>
 
                     <!-- 2. PERFORMA PRODUK -->
@@ -223,28 +224,28 @@
                             2. Performa produk atau Karakteristik Produk
                         </td>
                         <td>Kesesuaian ukuran (dimensi dan/atau berat)</td>
-                        <td style="text-align: center;"><input type="radio" name="reviu_dimensi[kesesuaian_ukuran]" value="1" {{ ($savedData['reviu_dimensi']['kesesuaian_ukuran'] ?? '1') == '1' ? 'checked' : '' }} class="checkbox-bnsp checkbox-bnsp-hijau"></td>
-                        <td style="text-align: center;"><input type="radio" name="reviu_dimensi[kesesuaian_ukuran]" value="0" {{ ($savedData['reviu_dimensi']['kesesuaian_ukuran'] ?? '1') == '0' ? 'checked' : '' }} class="checkbox-bnsp checkbox-bnsp-merah"></td>
+                        <td style="text-align: center;"><input type="radio" name="reviu_dimensi[kesesuaian_ukuran]" value="1" {{ ($savedData['reviu_dimensi']['kesesuaian_ukuran'] ?? '') === '1' ? 'checked' : '' }} class="checkbox-bnsp checkbox-bnsp-hijau"></td>
+                        <td style="text-align: center;"><input type="radio" name="reviu_dimensi[kesesuaian_ukuran]" value="0" {{ ($savedData['reviu_dimensi']['kesesuaian_ukuran'] ?? '') === '0' ? 'checked' : '' }} class="checkbox-bnsp checkbox-bnsp-merah"></td>
                     </tr>
                     <tr>
                         <td>Kesesuaian dengan gambar kerja atau bentuk</td>
-                        <td style="text-align: center;"><input type="radio" name="reviu_dimensi[kesesuaian_gambar]" value="1" {{ ($savedData['reviu_dimensi']['kesesuaian_gambar'] ?? '1') == '1' ? 'checked' : '' }} class="checkbox-bnsp checkbox-bnsp-hijau"></td>
-                        <td style="text-align: center;"><input type="radio" name="reviu_dimensi[kesesuaian_gambar]" value="0" {{ ($savedData['reviu_dimensi']['kesesuaian_gambar'] ?? '1') == '0' ? 'checked' : '' }} class="checkbox-bnsp checkbox-bnsp-merah"></td>
+                        <td style="text-align: center;"><input type="radio" name="reviu_dimensi[kesesuaian_gambar]" value="1" {{ ($savedData['reviu_dimensi']['kesesuaian_gambar'] ?? '') === '1' ? 'checked' : '' }} class="checkbox-bnsp checkbox-bnsp-hijau"></td>
+                        <td style="text-align: center;"><input type="radio" name="reviu_dimensi[kesesuaian_gambar]" value="0" {{ ($savedData['reviu_dimensi']['kesesuaian_gambar'] ?? '') === '0' ? 'checked' : '' }} class="checkbox-bnsp checkbox-bnsp-merah"></td>
                     </tr>
                     <tr>
                         <td>Kerapian dan kerapatan sambungan</td>
-                        <td style="text-align: center;"><input type="radio" name="reviu_dimensi[kerapian_sambungan]" value="1" {{ ($savedData['reviu_dimensi']['kerapian_sambungan'] ?? '1') == '1' ? 'checked' : '' }} class="checkbox-bnsp checkbox-bnsp-hijau"></td>
-                        <td style="text-align: center;"><input type="radio" name="reviu_dimensi[kerapian_sambungan]" value="0" {{ ($savedData['reviu_dimensi']['kerapian_sambungan'] ?? '1') == '0' ? 'checked' : '' }} class="checkbox-bnsp checkbox-bnsp-merah"></td>
+                        <td style="text-align: center;"><input type="radio" name="reviu_dimensi[kerapian_sambungan]" value="1" {{ ($savedData['reviu_dimensi']['kerapian_sambungan'] ?? '') === '1' ? 'checked' : '' }} class="checkbox-bnsp checkbox-bnsp-hijau"></td>
+                        <td style="text-align: center;"><input type="radio" name="reviu_dimensi[kerapian_sambungan]" value="0" {{ ($savedData['reviu_dimensi']['kerapian_sambungan'] ?? '') === '0' ? 'checked' : '' }} class="checkbox-bnsp checkbox-bnsp-merah"></td>
                     </tr>
                     <tr>
                         <td>Pemasangan perlengkapan bahan penolong</td>
-                        <td style="text-align: center;"><input type="radio" name="reviu_dimensi[pemasangan_bahan]" value="1" {{ ($savedData['reviu_dimensi']['pemasangan_bahan'] ?? '1') == '1' ? 'checked' : '' }} class="checkbox-bnsp checkbox-bnsp-hijau"></td>
-                        <td style="text-align: center;"><input type="radio" name="reviu_dimensi[pemasangan_bahan]" value="0" {{ ($savedData['reviu_dimensi']['pemasangan_bahan'] ?? '1') == '0' ? 'checked' : '' }} class="checkbox-bnsp checkbox-bnsp-merah"></td>
+                        <td style="text-align: center;"><input type="radio" name="reviu_dimensi[pemasangan_bahan]" value="1" {{ ($savedData['reviu_dimensi']['pemasangan_bahan'] ?? '') === '1' ? 'checked' : '' }} class="checkbox-bnsp checkbox-bnsp-hijau"></td>
+                        <td style="text-align: center;"><input type="radio" name="reviu_dimensi[pemasangan_bahan]" value="0" {{ ($savedData['reviu_dimensi']['pemasangan_bahan'] ?? '') === '0' ? 'checked' : '' }} class="checkbox-bnsp checkbox-bnsp-merah"></td>
                     </tr>
                     <tr>
                         <td>Kualitas produk sesuai dengan rujukan</td>
-                        <td style="text-align: center;"><input type="radio" name="reviu_dimensi[kualitas_rujukan]" value="1" {{ ($savedData['reviu_dimensi']['kualitas_rujukan'] ?? '1') == '1' ? 'checked' : '' }} class="checkbox-bnsp checkbox-bnsp-hijau"></td>
-                        <td style="text-align: center;"><input type="radio" name="reviu_dimensi[kualitas_rujukan]" value="0" {{ ($savedData['reviu_dimensi']['kualitas_rujukan'] ?? '1') == '0' ? 'checked' : '' }} class="checkbox-bnsp checkbox-bnsp-merah"></td>
+                        <td style="text-align: center;"><input type="radio" name="reviu_dimensi[kualitas_rujukan]" value="1" {{ ($savedData['reviu_dimensi']['kualitas_rujukan'] ?? '') === '1' ? 'checked' : '' }} class="checkbox-bnsp checkbox-bnsp-hijau"></td>
+                        <td style="text-align: center;"><input type="radio" name="reviu_dimensi[kualitas_rujukan]" value="0" {{ ($savedData['reviu_dimensi']['kualitas_rujukan'] ?? '') === '0' ? 'checked' : '' }} class="checkbox-bnsp checkbox-bnsp-merah"></td>
                     </tr>
                 </tbody>
             </table>
@@ -320,9 +321,9 @@
             <!-- CATATAN TEMUAN HASIL REVIU PRODUK -->
             <div style="border: 1px solid #334155; padding: 1rem; border-radius: 4px; margin-bottom: 1.5rem; background: #f8fafc;">
                 <div style="font-weight: 700; font-size: 0.88rem; margin-bottom: 0.35rem; color: #0f172a;">
-                    Catatan : Tuliskan temuan asesmen pencapaian hasil reviu produk, jika belum/tidak terpenuhi <span style="color: #ef4444;">*</span>:
+                    Catatan : Tuliskan temuan asesmen pencapaian hasil reviu produk, jika belum/tidak terpenuhi:
                 </div>
-                <textarea name="catatan" class="input-inline-bnsp" rows="3" placeholder="Tuliskan catatan temuan asesmen..." required>{{ $savedData['catatan'] ?? '' }}</textarea>
+                <textarea name="catatan" class="input-inline-bnsp" rows="3" placeholder="Tuliskan catatan temuan asesmen...">{{ $savedData['catatan'] ?? '' }}</textarea>
             </div>
 
             <!-- TABEL PENYUSUN DAN VALIDATOR -->

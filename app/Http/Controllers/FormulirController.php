@@ -962,7 +962,14 @@ class FormulirController extends Controller
     public function simpanIa(Request $request, $kodeForm, $pendaftaranId)
     {
         $user = auth()->user();
-        $pendaftaran = PendaftaranAsesi::findOrFail($pendaftaranId);
+        $pendaftaranIdInt = (int) $pendaftaranId;
+        if ($pendaftaranIdInt > 0) {
+            $pendaftaran = PendaftaranAsesi::findOrFail($pendaftaranIdInt);
+        } else {
+            $pendaftaran = $this->dapatkanPendaftaran(0);
+            abort_unless($pendaftaran, 404, 'Data skema sertifikasi tidak ditemukan.');
+        }
+
         $kodeForm = strtoupper(trim($kodeForm));
         $kodeFormValid = [
             'FR.IA.01', 'FR.IA.02', 'FR.IA.03', 'FR.IA.04', 'FR.IA.04A', 'FR.IA.04B',
@@ -973,39 +980,44 @@ class FormulirController extends Controller
         abort_unless(in_array($kodeForm, $kodeFormValid, true), 422, 'Kode formulir IA tidak valid.');
         $role = $user ? $user->peran : 'asesor';
 
-        // Validasi keamanan peran Asesi
-        if ($user && $user->peran === 'asesi') {
-            if ($pendaftaran->asesi_id !== $user->id) {
-                abort(403, 'Akses Ditolak: Anda tidak dapat menyimpan data untuk peserta lain.');
-            }
-            $allowedAsesiForms = ['FR.IA.05C', 'FR.IA.06C', 'FR.APL.01', 'FR.APL.02', 'FR.AK.01'];
-            if (!in_array($kodeForm, $allowedAsesiForms)) {
-                abort(403, 'Akses Ditolak: Formulir ini hanya dapat dinilai dan disimpan oleh Asesor Penguji.');
-            }
+        if ($pendaftaran->id > 0) {
+            // Validasi keamanan peran Asesi
+            if ($user && $user->peran === 'asesi') {
+                if ($pendaftaran->asesi_id !== $user->id) {
+                    abort(403, 'Akses Ditolak: Anda tidak dapat menyimpan data untuk peserta lain.');
+                }
+                $allowedAsesiForms = ['FR.IA.05C', 'FR.IA.06C', 'FR.APL.01', 'FR.APL.02', 'FR.AK.01'];
+                if (!in_array($kodeForm, $allowedAsesiForms)) {
+                    abort(403, 'Akses Ditolak: Formulir ini hanya dapat dinilai dan disimpan oleh Asesor Penguji.');
+                }
 
-            // Kunci 1x Kirim untuk Ujian Asesi (FR.IA.05C & FR.IA.06C)
-            if (in_array($kodeForm, ['FR.IA.05C', 'FR.IA.06C'])) {
-                $alreadyDone = IaPenilaian::where('pendaftaran_id', $pendaftaran->id)
-                    ->where('kode_formulir', $kodeForm)
-                    ->whereIn('status', ['completed', 'submitted', 'evaluated'])
-                    ->first();
-                if ($alreadyDone) {
-                    return back()->with('error', 'Gagal mengirim: Lembar ujian ' . $kodeForm . ' ini telah dikirimkan sebelumnya dan berstatus terkunci. Jawaban hanya dapat dikirimkan 1 (satu) kali.');
+                // Kunci 1x Kirim untuk Ujian Asesi (FR.IA.05C & FR.IA.06C)
+                if (in_array($kodeForm, ['FR.IA.05C', 'FR.IA.06C'])) {
+                    $alreadyDone = IaPenilaian::where('pendaftaran_id', $pendaftaran->id)
+                        ->where('kode_formulir', $kodeForm)
+                        ->whereIn('status', ['completed', 'submitted', 'evaluated'])
+                        ->first();
+                    if ($alreadyDone) {
+                        return back()->with('error', 'Gagal mengirim: Lembar ujian ' . $kodeForm . ' ini telah dikirimkan sebelumnya dan berstatus terkunci. Jawaban hanya dapat dikirimkan 1 (satu) kali.');
+                    }
                 }
             }
-        }
 
-        if ($user && $user->peran === 'asesor') {
-            $isAssigned = $pendaftaran->asesor_id === $user->id
-                || $pendaftaran->jadwal()->where('asesor_id', $user->id)->exists();
-            abort_unless($isAssigned, 403, 'Akses Ditolak: Anda tidak ditugaskan untuk pendaftaran ini.');
-        }
-
-        // Cek instrumen aktif (admin/superadmin dilewati; asesor dicek bila ada konfigurasi MAPA.02)
-        if ($user && !in_array($user->peran, ['admin', 'superadmin'])) {
-            if ($pendaftaran->hasMapa02Config() && !$pendaftaran->isInstrumenAktif($kodeForm)) {
-                abort(422, 'Instrumen ini tidak aktif pada MAPA.02 untuk pendaftaran tersebut.');
+            if ($user && $user->peran === 'asesor') {
+                $isAssigned = $pendaftaran->asesor_id === $user->id
+                    || $pendaftaran->jadwal()->where('asesor_id', $user->id)->exists();
+                abort_unless($isAssigned, 403, 'Akses Ditolak: Anda tidak ditugaskan untuk pendaftaran ini.');
             }
+
+            // Cek instrumen aktif (admin/superadmin dilewati; asesor dicek bila ada konfigurasi MAPA.02)
+            if ($user && !in_array($user->peran, ['admin', 'superadmin'])) {
+                if ($pendaftaran->hasMapa02Config() && !$pendaftaran->isInstrumenAktif($kodeForm)) {
+                    abort(422, 'Instrumen ini tidak aktif pada MAPA.02 untuk pendaftaran tersebut.');
+                }
+            }
+        } else {
+            // Mode Master Blanko / Template Skema (id == 0)
+            abort_unless($user && in_array($user->peran, ['admin', 'superadmin', 'asesor']), 403, 'Akses Ditolak.');
         }
 
         $dataPayload = $request->except(['_token', 'tanda_tangan']);
@@ -1473,22 +1485,48 @@ class FormulirController extends Controller
             $catatan = $request->catatan ?? ($request->umpan_balik ?? null);
         }
 
-        IaPenilaian::updateOrCreate(
-            ['pendaftaran_id' => $pendaftaran->id, 'kode_formulir' => $kodeForm],
-            [
-                'user_id' => $user ? $user->id : null,
-                'role' => $role,
-                'data_jawaban' => $dataPayload,
-                'rekomendasi' => $rekomendasi,
-                'catatan_asesor' => $catatan,
-                'status' => $status,
-                'tanda_tangan' => $tandaTangan,
-                'tanggal_tanda_tangan' => now(),
-            ]
-        );
+        // Sinkronkan ke SchemeMasterInstrument untuk seluruh form IA
+        if ($pendaftaran->skema_id) {
+            $rawCode = strtolower(str_replace(['FR.', 'fr.', '.'], '', $kodeForm));
+            $instCode = \App\Models\SchemeMasterInstrument::normalizeCode($rawCode);
+            $inst = \App\Models\SchemeMasterInstrument::where('skema_id', $pendaftaran->skema_id)
+                ->whereIn('instrument_code', \App\Models\SchemeMasterInstrument::getCodeAliases($instCode))
+                ->first();
+            if (!$inst) {
+                $inst = \App\Models\SchemeMasterInstrument::create([
+                    'skema_id' => $pendaftaran->skema_id,
+                    'instrument_code' => $instCode,
+                    'title' => $kodeForm,
+                    'is_active' => true,
+                    'created_by' => auth()->id(),
+                ]);
+            }
+            $meta = $inst->additional_metadata ?? [];
+            if (!is_array($meta)) $meta = json_decode($meta, true) ?: [];
+            $meta = array_merge($meta, $dataPayload);
+            $meta['is_saved'] = true;
+            $inst->additional_metadata = $meta;
+            $inst->save();
+        }
 
-        // Periksa apakah seluruh instrumen asesmen yang disepakati selesai dinilai
-        $this->evaluasiKelengkapanAsesmen($pendaftaran);
+        if ($pendaftaran->id > 0) {
+            IaPenilaian::updateOrCreate(
+                ['pendaftaran_id' => $pendaftaran->id, 'kode_formulir' => $kodeForm],
+                [
+                    'user_id' => $user ? $user->id : null,
+                    'role' => $role,
+                    'data_jawaban' => $dataPayload,
+                    'rekomendasi' => $rekomendasi,
+                    'catatan_asesor' => $catatan,
+                    'status' => $status,
+                    'tanda_tangan' => $tandaTangan,
+                    'tanggal_tanda_tangan' => now(),
+                ]
+            );
+
+            // Periksa apakah seluruh instrumen asesmen yang disepakati selesai dinilai
+            $this->evaluasiKelengkapanAsesmen($pendaftaran);
+        }
 
         return back()->with('sukses', $suksesMsg);
     }

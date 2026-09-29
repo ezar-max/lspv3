@@ -18,6 +18,15 @@ class UnitKompetensi extends Model
         'standar_kompetensi',
     ];
 
+    protected $appends = [
+        'nama_unit',
+    ];
+
+    public function getNamaUnitAttribute()
+    {
+        return $this->attributes['judul_unit'] ?? null;
+    }
+
     public function skema()
     {
         return $this->belongsTo(SkemaSertifikasi::class, 'skema_id');
@@ -28,3 +37,4 @@ class UnitKompetensi extends Model
         return $this->hasMany(ElemenKompetensi::class, 'unit_id')->orderBy('nomor_elemen', 'asc');
     }
 }
+

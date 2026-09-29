@@ -603,7 +603,7 @@
 
                             // FR.IA.04 diisi langsung pada lembar formulirnya agar
                             // tampilan "Tambah Form" sama dengan tampilan pratinjau.
-                            $tambahLangsungKeForm = $code === 'ia04a';
+                            $tambahLangsungKeForm = true; // Ditampilkan langsung pada lembar formulir seperti tombol pratinjau
                         @endphp
 
                         <div class="ia-card">
