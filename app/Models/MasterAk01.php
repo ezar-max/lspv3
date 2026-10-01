@@ -65,8 +65,12 @@ class MasterAk01 extends Model
             }
 
             // Tanda tangan asesor jika belum diisi
-            if (!empty($this->tanda_tangan_asesor) && empty($p->tanda_tangan_asesor_ak01)) {
-                $dataToUpdate['tanda_tangan_asesor_ak01'] = $this->tanda_tangan_asesor;
+            $ttdAsesor = $this->tanda_tangan_asesor 
+                ?: ($this->asesor?->tanda_tangan 
+                ?: ($p->asesor?->tanda_tangan ?? null));
+
+            if (!empty($ttdAsesor) && empty($p->tanda_tangan_asesor_ak01)) {
+                $dataToUpdate['tanda_tangan_asesor_ak01'] = $ttdAsesor;
                 $dataToUpdate['tanggal_ttd_asesor_ak01'] = $this->tanggal_ttd_asesor ?? now();
             }
 

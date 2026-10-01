@@ -32,7 +32,7 @@ class QuestionBankController extends Controller
             $validated['order'] = $lastOrder + 1;
         }
 
-        MasterQuestionBank::create($validated);
+        $question = MasterQuestionBank::create($validated);
 
         $instrument = SchemeMasterInstrument::find($validated['scheme_master_instrument_id']);
         if ($instrument) {
@@ -41,6 +41,14 @@ class QuestionBankController extends Controller
             $meta['saved_at'] = now()->toDateTimeString();
             $instrument->additional_metadata = $meta;
             $instrument->save();
+        }
+
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Butir soal berhasil ditambahkan.',
+                'data' => $question
+            ]);
         }
 
         return redirect()->back()->with('sukses', 'Butir soal berhasil ditambahkan ke bank soal!');

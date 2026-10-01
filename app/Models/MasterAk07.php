@@ -71,8 +71,12 @@ class MasterAk07 extends Model
             }
 
             // Tanda tangan asesor diselaraskan dari master
-            if (!empty($this->tanda_tangan_asesor) && (empty($ak07->asesor_signature) || $ak07->asesor_signature !== $this->tanda_tangan_asesor)) {
-                $ak07->asesor_signature = $this->tanda_tangan_asesor;
+            $ttdAsesor = $this->tanda_tangan_asesor 
+                ?: ($this->asesor?->tanda_tangan 
+                ?: ($p->asesor?->tanda_tangan ?? null));
+
+            if (!empty($ttdAsesor) && (empty($ak07->asesor_signature) || $ak07->asesor_signature !== $ttdAsesor)) {
+                $ak07->asesor_signature = $ttdAsesor;
                 $ak07->asesor_signed_at = $this->tanggal_ttd_asesor ?? now();
             }
 

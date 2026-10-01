@@ -530,7 +530,14 @@ class AsesorMapaWorkflowTest extends TestCase
             'status_ak01' => 'selesai'
         ]);
 
-        $response = $this->actingAs($this->asesi)->get(route('asesi.ujian', ['pendaftaran_id' => $this->pendaftaran->id]));
+        \App\Models\AssessmentAk07Adjustment::create([
+            'assessment_registration_id' => $this->pendaftaran->id,
+            'asesor_signature' => 'sig',
+            'asesi_signature' => 'sig',
+            'status' => 'confirmed',
+        ]);
+
+        $response = $this->actingAs($this->asesi)->get(route('asesi.tahapan', ['step' => 5, 'pendaftaran_id' => $this->pendaftaran->id]));
         $response->assertOk();
         $response->assertSee('Rencana asesmen (FR.MAPA.01 &amp; FR.MAPA.02) belum disahkan asesor', false);
 
@@ -573,7 +580,14 @@ class AsesorMapaWorkflowTest extends TestCase
             'status_ak01' => 'selesai'
         ]);
 
-        $response = $this->actingAs($this->asesi)->get(route('asesi.ujian', ['pendaftaran_id' => $this->pendaftaran->id]));
+        \App\Models\AssessmentAk07Adjustment::create([
+            'assessment_registration_id' => $this->pendaftaran->id,
+            'asesor_signature' => 'sig',
+            'asesi_signature' => 'sig',
+            'status' => 'confirmed',
+        ]);
+
+        $response = $this->actingAs($this->asesi)->get(route('asesi.tahapan', ['step' => 5, 'pendaftaran_id' => $this->pendaftaran->id]));
         $response->assertOk();
         $response->assertDontSee('Rencana asesmen (FR.MAPA.01 &amp; FR.MAPA.02) belum disahkan asesor', false);
 

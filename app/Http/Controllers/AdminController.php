@@ -199,7 +199,7 @@ class AdminController extends Controller
                 'status_pendaftaran' => 'ditolak',
                 'rekomendasi_admin_status' => 'tidak_diterima',
                 'status_apl02' => 'ditolak',
-                'status_ak01' => null,
+                'status_ak01' => 'draft',
                 'jadwal_id' => null,
                 'asesor_id' => null,
                 'tanda_tangan_asesor' => null,
@@ -804,13 +804,27 @@ class AdminController extends Controller
             'catatan' => $request->catatan_validasi ?: null,
         ];
 
-        // Pastikan nama dan MET penyusun terisi, jangan pernah membuat TTD SVG palsu
-        $asesorModel = $mapa01->asesor ?: Pengguna::where('peran', 'asesor')->where('skema_id', $mapa01->skema_id)->first();
-        if ($mapa01->tanda_tangan_asesor && str_contains($mapa01->tanda_tangan_asesor, 'svg')) {
-            $mapa01->tanda_tangan_asesor = null;
+        // Pastikan nama, MET, dan TTD penyusun (Asesor) terisi, jangan pernah membuat TTD SVG palsu
+        $asesorModel = $mapa01->asesor ?: ($mapa01->pendaftaran?->asesor ?: Pengguna::where('peran', 'asesor')->where('skema_id', $mapa01->skema_id)->first());
+        if (isset($existingTable['penyusun_1']['ttd'])) {
+            // keep it
         }
-        if (isset($existingTable['penyusun_1']['ttd']) && str_contains($existingTable['penyusun_1']['ttd'], 'svg')) {
-            $existingTable['penyusun_1']['ttd'] = null;
+
+        $asesorTtdValid = $mapa01->tanda_tangan_asesor 
+            ?: (isset($existingTable['penyusun_1']['ttd']) ? $existingTable['penyusun_1']['ttd'] : null);
+        if (empty($asesorTtdValid)) {
+            $asesorTtdValid = $mapa01->pendaftaran?->tanda_tangan_asesor 
+                ?: ($asesorModel?->tanda_tangan ?? null);
+        }
+
+        if (!empty($asesorTtdValid)) {
+            $mapa01->tanda_tangan_asesor = $asesorTtdValid;
+            $existingTable['penyusun_1']['ttd'] = $asesorTtdValid;
+            if (empty($existingTable['penyusun_1']['ttd_tanggal'])) {
+                $existingTable['penyusun_1']['ttd_tanggal'] = $mapa01->tanggal_ttd_asesor 
+                    ? \Carbon\Carbon::parse($mapa01->tanggal_ttd_asesor)->format('d/m/Y') 
+                    : now()->format('d/m/Y');
+            }
         }
 
         $existingTable['penyusun_1']['nama'] = $existingTable['penyusun_1']['nama'] ?? ($asesorModel?->nama_lengkap ?? 'Asesor Penguji');

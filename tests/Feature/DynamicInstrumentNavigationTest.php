@@ -125,6 +125,62 @@ class DynamicInstrumentNavigationTest extends TestCase
             'status' => 'confirmed',
             'asesi_signature' => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
             'asesi_signed_at' => now(),
+            'asesor_signature' => 'ttd',
+            'asesor_signed_at' => now(),
+        ]);
+
+        // Create Instruments for CBT, Esai, and Praktik
+        $instCbt = SchemeMasterInstrument::create([
+            'skema_id' => $this->skema->id,
+            'instrument_code' => 'ia_05',
+            'title' => 'Ujian Teori CBT',
+            'is_active' => true,
+        ]);
+        \App\Models\MasterQuestionBank::create([
+            'scheme_master_instrument_id' => $instCbt->id,
+            'kuk_id' => $elemen->kriteriaUnjukKerja->first()->id,
+            'question_type' => 'pg',
+            'question_text' => 'Soal Teori CBT PG Test',
+            'options' => ['A' => 'A', 'B' => 'B', 'C' => 'C', 'D' => 'D'],
+            'correct_answer' => 'A',
+            'points' => 10,
+            'order' => 1,
+        ]);
+
+        $instEsai = SchemeMasterInstrument::create([
+            'skema_id' => $this->skema->id,
+            'instrument_code' => 'ia_06',
+            'title' => 'Ujian Tertulis Esai',
+            'is_active' => true,
+        ]);
+        \App\Models\MasterQuestionBank::create([
+            'scheme_master_instrument_id' => $instEsai->id,
+            'kuk_id' => $elemen->kriteriaUnjukKerja->first()->id,
+            'question_type' => 'esai',
+            'question_text' => 'Soal Tertulis Esai Test',
+            'correct_answer' => 'Kunci Jawaban Esai',
+            'points' => 10,
+            'order' => 1,
+        ]);
+
+        $instPraktik = SchemeMasterInstrument::create([
+            'skema_id' => $this->skema->id,
+            'instrument_code' => 'ia_02',
+            'title' => 'Tugas Praktik Demonstrasi',
+            'is_active' => true,
+            'additional_metadata' => json_encode(['judul_tugas' => 'Tugas Praktik Test']),
+        ]);
+        SchemeMasterInstrument::create([
+            'skema_id' => $this->skema->id,
+            'instrument_code' => 'ia_01',
+            'title' => 'Ceklis Observasi',
+            'is_active' => true,
+        ]);
+        \App\Models\MasterProductSpecification::create([
+            'scheme_master_instrument_id' => $instPraktik->id,
+            'spec_name' => 'Tugas Praktik 1',
+            'standard_tolerance' => 'Sesuai Standar',
+            'order' => 1,
         ]);
     }
 
@@ -174,7 +230,6 @@ class DynamicInstrumentNavigationTest extends TestCase
         $response->assertStatus(200);
         $response->assertSee('FR.IA.01 (Ceklis Observasi)');
         $response->assertSee('FR.AK.02');
-        $response->assertSee('Gunakan TTD Profil');
     }
 
     public function test_asesor_can_save_penilaian_live_with_profile_signature()

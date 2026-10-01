@@ -357,7 +357,7 @@
                 </div>
             </div>
 
-            <form action="{{ route('admin.master-muk.soal.store') }}" method="POST" enctype="multipart/form-data" class="p-6">
+            <form id="form-tambah-soal-pg" action="{{ route('admin.master-muk.soal.store') }}" method="POST" enctype="multipart/form-data" class="p-6">
                 @csrf
                 <input type="hidden" name="scheme_master_instrument_id" value="{{ $instrument->id }}">
                 <input type="hidden" name="question_type" value="multiple_choice">
@@ -643,7 +643,7 @@
                 </div>
             </div>
 
-            <form action="{{ route('admin.master-muk.soal.store') }}" method="POST" class="p-6">
+            <form id="form-tambah-soal-esai" action="{{ route('admin.master-muk.soal.store') }}" method="POST" class="p-6">
                 @csrf
                 <input type="hidden" name="scheme_master_instrument_id" value="{{ $instrument->id }}">
                 <input type="hidden" name="question_type" value="essay">
@@ -1064,9 +1064,9 @@
                                 <td style="padding: 6px 8px; border: 1px solid #000000;"><strong>{{ $penyusunNama }}</strong></td>
                                 <td style="padding: 6px 8px; border: 1px solid #000000;">{{ $penyusunMet }}</td>
                                 <td style="text-align: center; padding: 4px; border: 1px solid #000000;">
-                                    @if(!empty($penyusunTtd))
-                                        <img src="{{ asset($penyusunTtd) }}" alt="TTD" style="max-height: 36px; margin: 0 auto; display: block;">
-                                    @endif
+                                    <input type="hidden" name="metadata_penyusun_validator[penyusun][ttd]" class="hidden-penyusun-ttd" value="{{ $penyusunTtd }}">
+                                    <img src="{{ !empty($penyusunTtd) ? asset($penyusunTtd) : '' }}" alt="TTD" class="preview-penyusun-ttd {{ empty($penyusunTtd) ? 'hidden' : '' }}" style="max-height: 36px; margin: 0 auto; display: block; cursor: pointer;" onclick="openSignaturePadPenyusun()">
+                                    @if(empty($penyusunTtd)) <button type="button" onclick="openSignaturePadPenyusun()" class="px-2 py-1 bg-slate-100 text-slate-600 rounded text-xs hover:bg-slate-200 mt-1"><i class="fa-solid fa-pen"></i> TTD</button> @endif
                                     <span style="font-size: 0.75rem; color: #475569;">{{ $penyusunTgl }}</span>
                                 </td>
                             </tr>
@@ -1758,9 +1758,9 @@
                                 <td style="padding: 6px 8px; border: 1px solid #000000;"><strong>{{ $penyusunNama }}</strong></td>
                                 <td style="padding: 6px 8px; border: 1px solid #000000;">{{ $penyusunMet }}</td>
                                 <td style="text-align: center; padding: 4px; border: 1px solid #000000;">
-                                    @if(!empty($penyusunTtd))
-                                        <img src="{{ asset($penyusunTtd) }}" alt="TTD" style="max-height: 36px; margin: 0 auto; display: block;">
-                                    @endif
+                                    <input type="hidden" name="metadata_penyusun_validator[penyusun][ttd]" class="hidden-penyusun-ttd" value="{{ $penyusunTtd }}">
+                                    <img src="{{ !empty($penyusunTtd) ? asset($penyusunTtd) : '' }}" alt="TTD" class="preview-penyusun-ttd {{ empty($penyusunTtd) ? 'hidden' : '' }}" style="max-height: 36px; margin: 0 auto; display: block; cursor: pointer;" onclick="openSignaturePadPenyusun()">
+                                    @if(empty($penyusunTtd)) <button type="button" onclick="openSignaturePadPenyusun()" class="px-2 py-1 bg-slate-100 text-slate-600 rounded text-xs hover:bg-slate-200 mt-1"><i class="fa-solid fa-pen"></i> TTD</button> @endif
                                     <span style="font-size: 0.75rem; color: #475569;">{{ $penyusunTgl }}</span>
                                 </td>
                             </tr>
@@ -1850,9 +1850,9 @@
 
                 <div class="mb-6">
                     <label class="block font-semibold text-xs text-slate-700 mb-1.5">
-                        Umpan balik untuk asesi <span class="text-rose-500">*</span>
+                        Umpan balik untuk asesi <span class="text-xs text-slate-400 font-normal italic">(Diisi oleh Asesor saat asesmen)</span>
                     </label>
-                    <textarea name="metadata_umpan_balik" rows="3" class="muk-input-field input-metadata-muk leading-relaxed font-sans text-xs sm:text-sm" placeholder="Tuliskan umpan balik atau arahan untuk asesi..." required>{{ old('metadata_umpan_balik', $umpanBalik) }}</textarea>
+                    <textarea readonly disabled class="muk-input-field input-metadata-muk leading-relaxed font-sans text-xs sm:text-sm bg-slate-100 text-slate-500 italic cursor-not-allowed select-none" rows="3" placeholder="Kolom umpan balik dinonaktifkan pada pembuatan form master (akan diisi oleh Asesor saat pelaksanaan asesmen)."></textarea>
                 </div>
 
                 <div class="flex items-center justify-end pt-2 border-t border-slate-100">
@@ -2679,9 +2679,9 @@
                                 <td style="padding: 6px 8px; border: 1px solid #000000;"><strong>{{ $penyusunNama }}</strong></td>
                                 <td style="padding: 6px 8px; border: 1px solid #000000;">{{ $penyusunMet }}</td>
                                 <td style="text-align: center; padding: 4px; border: 1px solid #000000;">
-                                    @if(!empty($penyusunTtd))
-                                        <img src="{{ asset($penyusunTtd) }}" alt="TTD" style="max-height: 36px; margin: 0 auto; display: block;">
-                                    @endif
+                                    <input type="hidden" name="metadata_penyusun_validator[penyusun][ttd]" class="hidden-penyusun-ttd" value="{{ $penyusunTtd }}">
+                                    <img src="{{ !empty($penyusunTtd) ? asset($penyusunTtd) : '' }}" alt="TTD" class="preview-penyusun-ttd {{ empty($penyusunTtd) ? 'hidden' : '' }}" style="max-height: 36px; margin: 0 auto; display: block; cursor: pointer;" onclick="openSignaturePadPenyusun()">
+                                    @if(empty($penyusunTtd)) <button type="button" onclick="openSignaturePadPenyusun()" class="px-2 py-1 bg-slate-100 text-slate-600 rounded text-xs hover:bg-slate-200 mt-1"><i class="fa-solid fa-pen"></i> TTD</button> @endif
                                     <span style="font-size: 0.75rem; color: #475569;">{{ $penyusunTgl }}</span>
                                 </td>
                             </tr>
@@ -2885,9 +2885,9 @@
                                 <td style="padding: 6px 8px; border: 1px solid #000000;"><strong>{{ $penyusunNama }}</strong></td>
                                 <td style="padding: 6px 8px; border: 1px solid #000000;">{{ $penyusunMet }}</td>
                                 <td style="text-align: center; padding: 4px; border: 1px solid #000000;">
-                                    @if(!empty($penyusunTtd))
-                                        <img src="{{ asset($penyusunTtd) }}" alt="TTD" style="max-height: 36px; margin: 0 auto; display: block;">
-                                    @endif
+                                    <input type="hidden" name="metadata_penyusun_validator[penyusun][ttd]" class="hidden-penyusun-ttd" value="{{ $penyusunTtd }}">
+                                    <img src="{{ !empty($penyusunTtd) ? asset($penyusunTtd) : '' }}" alt="TTD" class="preview-penyusun-ttd {{ empty($penyusunTtd) ? 'hidden' : '' }}" style="max-height: 36px; margin: 0 auto; display: block; cursor: pointer;" onclick="openSignaturePadPenyusun()">
+                                    @if(empty($penyusunTtd)) <button type="button" onclick="openSignaturePadPenyusun()" class="px-2 py-1 bg-slate-100 text-slate-600 rounded text-xs hover:bg-slate-200 mt-1"><i class="fa-solid fa-pen"></i> TTD</button> @endif
                                     <span style="font-size: 0.75rem; color: #475569;">{{ $penyusunTgl }}</span>
                                 </td>
                             </tr>
@@ -3164,9 +3164,9 @@
                                 <td style="padding: 6px 8px; border: 1px solid #000000;"><strong>{{ $penyusunNama }}</strong></td>
                                 <td style="padding: 6px 8px; border: 1px solid #000000;">{{ $penyusunMet }}</td>
                                 <td style="text-align: center; padding: 4px; border: 1px solid #000000;">
-                                    @if(!empty($penyusunTtd))
-                                        <img src="{{ asset($penyusunTtd) }}" alt="TTD" style="max-height: 36px; margin: 0 auto; display: block;">
-                                    @endif
+                                    <input type="hidden" name="metadata_penyusun_validator[penyusun][ttd]" class="hidden-penyusun-ttd" value="{{ $penyusunTtd }}">
+                                    <img src="{{ !empty($penyusunTtd) ? asset($penyusunTtd) : '' }}" alt="TTD" class="preview-penyusun-ttd {{ empty($penyusunTtd) ? 'hidden' : '' }}" style="max-height: 36px; margin: 0 auto; display: block; cursor: pointer;" onclick="openSignaturePadPenyusun()">
+                                    @if(empty($penyusunTtd)) <button type="button" onclick="openSignaturePadPenyusun()" class="px-2 py-1 bg-slate-100 text-slate-600 rounded text-xs hover:bg-slate-200 mt-1"><i class="fa-solid fa-pen"></i> TTD</button> @endif
                                     <span style="font-size: 0.75rem; color: #475569;">{{ $penyusunTgl }}</span>
                                 </td>
                             </tr>
@@ -3454,6 +3454,10 @@
 </form>
 
 @endsection
+
+@push('scripts')
+    @include('komponen.ajax-soal-builder')
+@endpush
 
 @push('js')
     <script>
@@ -3822,32 +3826,5 @@
             if (countEl) countEl.textContent = wadah.querySelectorAll('.item-soal-lisan').length;
         };
 
-        window.hapusBarisSoalLisan = function(btn) {
-            if (confirm('Hapus butir pertanyaan lisan ini?')) {
-                const item = btn.closest('.item-soal-lisan');
-                const wadah = document.getElementById('wadah-soal-lisan');
-                if (item) item.remove();
-                if (wadah) {
-                    const allItems = wadah.querySelectorAll('.item-soal-lisan');
-                    allItems.forEach((el, idx) => {
-                        const num = idx + 1;
-                        el.dataset.nomor = num;
-                        const badge = el.querySelector('.nomor-badge');
-                        if (badge) badge.textContent = num;
-                        const textareaTanya = el.querySelector('textarea[name*="[pertanyaan]"]');
-                        if (textareaTanya) textareaTanya.name = `metadata_pertanyaan_lisan[${num}][pertanyaan]`;
-                        const textareaKunci = el.querySelector('textarea[name*="[kunci]"]');
-                        if (textareaKunci) textareaKunci.name = `metadata_pertanyaan_lisan[${num}][kunci]`;
-                        const inputKuk = el.querySelector('input[name*="[kuk]"]');
-                        if (inputKuk) inputKuk.name = `metadata_pertanyaan_lisan[${num}][kuk]`;
-                        const inputKukId = el.querySelector('input[name*="[kuk_id]"]');
-                        if (inputKukId) inputKukId.name = `metadata_pertanyaan_lisan[${num}][kuk_id]`;
-                    });
-                    const countEl = document.getElementById('total-soal-count');
-                    if (countEl) countEl.textContent = allItems.length;
-                }
-            }
-        };
-
-    </script>
+    @include('komponen.signature-pad-penyusun')
 @endpush

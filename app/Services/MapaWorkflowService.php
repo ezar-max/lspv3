@@ -253,12 +253,19 @@ class MapaWorkflowService
         $defaultAdminNama = $adminDb?->nama_lengkap ?: 'Administrator LSP';
         $defaultAdminMet = $adminDb?->nomor_registrasi ?: 'REG.ADM.LSP.001';
 
+        $asesorTtdDefault = $master?->tanda_tangan_asesor 
+            ?: ($pendaftaran->tanda_tangan_asesor 
+            ?: ($pendaftaran->asesor?->tanda_tangan ?? null));
+        if (!empty($asesorTtdDefault) && str_contains($asesorTtdDefault, 'svg')) {
+            $asesorTtdDefault = null;
+        }
+
         $defaultPenyusunValidatorTabel = $master?->penyusun_validator_tabel ?: [
             'penyusun_1' => [
                 'nama' => $pendaftaran->asesor?->nama_lengkap ?: 'Asesor Penguji',
                 'nomor_met' => $pendaftaran->asesor?->nomor_registrasi ?: 'MET.000.001222 2026',
-                'ttd' => null,
-                'ttd_tanggal' => null,
+                'ttd' => $asesorTtdDefault,
+                'ttd_tanggal' => $asesorTtdDefault ? now()->format('d/m/Y') : null,
             ],
             'validator_1' => [
                 'nama' => $defaultAdminNama,
@@ -293,8 +300,8 @@ class MapaWorkflowService
             'konfirmasi_orang_relevan' => $master ? ($master->konfirmasi_orang_relevan ?: ['Manajer sertifikasi LSP']) : ['Manajer sertifikasi LSP'],
             'konfirmasi_pihak_relevan_tabel' => $master?->konfirmasi_pihak_relevan_tabel,
             'penyusun_validator_tabel' => $defaultPenyusunValidatorTabel,
-            'tanda_tangan_asesor' => $master?->tanda_tangan_asesor,
-            'tanggal_ttd_asesor' => $master?->tanggal_ttd_asesor,
+            'tanda_tangan_asesor' => $master?->tanda_tangan_asesor ?: $asesorTtdDefault,
+            'tanggal_ttd_asesor' => $master?->tanggal_ttd_asesor ?: ($asesorTtdDefault ? now() : null),
             'standar_industri' => $master ? ($master->standar_industri ?: ['Standar Kompetensi:']) : ['Standar Kompetensi:'],
             'rencana_unit_matriks' => $defaultMatriks,
             'karakteristik_kandidat_status' => $master?->karakteristik_kandidat_status ?: 'tidak_ada',
@@ -554,8 +561,10 @@ class MapaWorkflowService
             }
 
             $ttdPath = $this->saveSignatureFile($rawSignature, $pendaftaran->id, 'mapa01');
-            if (empty($ttdPath) && ($isConfirm || $isAdminUser)) {
-                $ttdPath = $pendaftaran->tanda_tangan_asesor;
+            if (empty($ttdPath)) {
+                $ttdPath = $pendaftaran->mapa01?->tanda_tangan_asesor 
+                    ?: ($pendaftaran->tanda_tangan_asesor 
+                    ?: ($pendaftaran->asesor?->tanda_tangan ?? null));
             }
             if ($ttdPath && (str_contains($ttdPath, 'svg') || str_contains($ttdPath, '<svg'))) {
                 $ttdPath = null;
@@ -573,8 +582,8 @@ class MapaWorkflowService
             if (!empty($penyusunValidator['penyusun_1']['ttd']) && (in_array($penyusunValidator['penyusun_1']['ttd'], $adminTtds, true) || str_contains($penyusunValidator['penyusun_1']['ttd'], 'svg'))) {
                 $penyusunValidator['penyusun_1']['ttd'] = $ttdPath ?: ($asesorModel?->tanda_tangan ?? null);
             }
-            if (empty($penyusunValidator['penyusun_1']['ttd']) && !empty($ttdPath)) {
-                $penyusunValidator['penyusun_1']['ttd'] = $ttdPath;
+            if (empty($penyusunValidator['penyusun_1']['ttd'])) {
+                $penyusunValidator['penyusun_1']['ttd'] = $ttdPath ?: ($pendaftaran->tanda_tangan_asesor ?: ($asesorModel?->tanda_tangan ?? null));
             }
             if (!empty($penyusunValidator['penyusun_1']['ttd']) && empty($penyusunValidator['penyusun_1']['ttd_tanggal'])) {
                 $penyusunValidator['penyusun_1']['ttd_tanggal'] = now()->format('d/m/Y');
@@ -894,11 +903,9 @@ class MapaWorkflowService
             // Simpan tanda tangan yang dikirimkan (profil atau canvas digital)
             $ttdPath = $this->saveSignatureFile($rawSignature, null, 'mapa02_master_' . $skema->id);
 
-            // Jika belum ada file tersimpan tapi dikonfirmasi:
-            if (empty($ttdPath) && $isConfirm) {
-                if ($isAdmin) {
-                    $ttdPath = $currentUser->tanda_tangan;
-                } elseif ($currentUser && $currentUser->peran === 'asesor') {
+            // Otomatis tempel TTD Asesor saat pembuatan / penyimpanan master
+            if (empty($ttdPath)) {
+                if ($currentUser && !empty($currentUser->tanda_tangan)) {
                     $ttdPath = $currentUser->tanda_tangan;
                 } else {
                     $signerUser = Pengguna::find($asesorId) ?: Pengguna::where('peran', 'asesor')->where('skema_id', $skema->id)->first();
@@ -920,7 +927,7 @@ class MapaWorkflowService
                     'matriks_peta' => $sanitizedMatrix,
                     'catatan_asesor' => $catatan,
                     'tanda_tangan_asesor' => $ttdPath,
-                    'tanggal_ttd_asesor' => $isConfirm ? now() : null,
+                    'tanggal_ttd_asesor' => $ttdPath ? now() : null,
                     'status_mapa' => $isConfirm ? 'selesai' : 'draft',
                 ]
             );

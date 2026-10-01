@@ -269,8 +269,8 @@ class AsesorAk01WorkflowTest extends TestCase
             'tanda_tangan_asesor_ak01' => null
         ]);
 
-        $response = $this->actingAs($this->asesi)->get(route('asesi.ujian', ['pendaftaran_id' => $this->pendaftaran->id]));
-        $response->assertRedirect(route('asesi.ak01', ['id' => $this->pendaftaran->id]));
+        $response = $this->actingAs($this->asesi)->get(route('asesi.tahapan', ['step' => 5, 'pendaftaran_id' => $this->pendaftaran->id]));
+        $response->assertRedirect(route('asesi.tahapan', ['pendaftaran_id' => $this->pendaftaran->id, 'step' => 4]));
         $response->assertSessionHas('warning');
 
         // Autosave blocked
@@ -314,7 +314,14 @@ class AsesorAk01WorkflowTest extends TestCase
             'tanggal_ttd_asesor_ak01' => now()
         ]);
 
-        $response = $this->actingAs($this->asesi)->get(route('asesi.ujian', ['pendaftaran_id' => $this->pendaftaran->id]));
+        \App\Models\AssessmentAk07Adjustment::create([
+            'assessment_registration_id' => $this->pendaftaran->id,
+            'asesor_signature' => 'sig_asesor',
+            'asesi_signature' => 'sig_asesi',
+            'status' => 'confirmed',
+        ]);
+
+        $response = $this->actingAs($this->asesi)->get(route('asesi.tahapan', ['step' => 5, 'pendaftaran_id' => $this->pendaftaran->id]));
         $response->assertOk();
 
         // Autosave succeeds

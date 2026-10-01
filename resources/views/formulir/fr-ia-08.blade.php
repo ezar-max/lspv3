@@ -150,11 +150,14 @@
                         }
                     }
 
-                    if (!empty($asesiDocs)) {
+                    if (empty($pendaftaran->id)) {
+                        // Master mode: never show portfolio docs
+                        $savedDocs = [];
+                    } elseif (!empty($asesiDocs)) {
+                        // Real assessment: show asesi uploaded docs
                         $savedDocs = array_values($asesiDocs);
-                    } elseif ($masterIa08 && !empty($masterIa08->additional_metadata['dokumen_portofolio'])) {
-                        $savedDocs = $masterIa08->additional_metadata['dokumen_portofolio'];
                     } elseif ($pendaftaran->skema && $pendaftaran->skema->unitKompetensi->isNotEmpty()) {
+                        // Real assessment but no docs uploaded: show default expected docs
                         $savedDocs[] = ['nama' => 'Foto Copy Ijazah / Rapor Terakhir', 'valid' => '', 'asli' => '', 'terkini' => '', 'memadai' => ''];
                         $savedDocs[] = ['nama' => 'Sertifikat PKL / Pelatihan ' . $pendaftaran->skema->nama_skema, 'valid' => '', 'asli' => '', 'terkini' => '', 'memadai' => ''];
                         foreach ($pendaftaran->skema->unitKompetensi as $u) {
@@ -260,7 +263,7 @@
                 @empty
                     <tr>
                         <td colspan="9" style="text-align: center; color: #64748b; font-style: italic; padding: 1rem;">
-                            Asesi belum mengunggah dokumen portofolio di sistem.
+                            {{ empty($pendaftaran->id) ? 'Data dokumen portofolio asesi akan otomatis ditampilkan saat pelaksanaan asesmen.' : 'Asesi belum mengunggah dokumen portofolio di sistem.' }}
                         </td>
                     </tr>
                 @endforelse

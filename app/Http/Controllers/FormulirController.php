@@ -463,7 +463,8 @@ class FormulirController extends Controller
             ->whereIn('instrument_code', \App\Models\SchemeMasterInstrument::getCodeAliases('ia_03'))
             ->first();
         $masterQuestions = $masterInst ? $masterInst->questionBanks : collect();
-        return view('formulir.fr-ia-03', compact('pendaftaran', 'iaRecord', 'masterInst', 'masterQuestions'));
+        $isMasterMode = empty($pendaftaran->id) || $pendaftaran->id == 0 || !$request->filled('pendaftaran_id');
+        return view('formulir.fr-ia-03', compact('pendaftaran', 'iaRecord', 'masterInst', 'masterQuestions', 'isMasterMode'));
     }
 
     /* =========================================================================
@@ -494,7 +495,8 @@ class FormulirController extends Controller
             'durasi_waktu' => $saved['durasi_waktu'] ?? ($meta['durasi_waktu'] ?? ($masterInst?->time_limit_minutes ? ($masterInst->time_limit_minutes . ' Menit') : '')),
             'peralatan_bahan' => $saved['peralatan_bahan'] ?? ($meta['tools_equipment'] ?? ($meta['peralatan_bahan'] ?? '')),
         ];
-        return view('formulir.fr-ia-04a', compact('pendaftaran', 'iaRecord', 'masterInst', 'dataProyek'));
+        $isMasterMode = empty($pendaftaran->id) || $pendaftaran->id == 0 || !$request->filled('pendaftaran_id');
+        return view('formulir.fr-ia-04a', compact('pendaftaran', 'iaRecord', 'masterInst', 'dataProyek', 'isMasterMode'));
     }
 
     public function ia04b(Request $request, $pendaftaranId = null)
@@ -561,35 +563,6 @@ class FormulirController extends Controller
                 }
             }
 
-            // FALLBACK DINAMIS: Jika belum ada soal kustom di MUK, ambil butir soal dari KUK Skema
-            $skema = SkemaSertifikasi::with('unitKompetensi.elemenKompetensi.kriteriaUnjukKerja')->find($skemaId);
-            if ($skema && $skema->unitKompetensi->count() > 0) {
-                $list = [];
-                $qNum = 1;
-                foreach ($skema->unitKompetensi as $u) {
-                    foreach ($u->elemenKompetensi as $e) {
-                        foreach ($e->kriteriaUnjukKerja as $k) {
-                            $list[$qNum] = [
-                                'no' => $qNum,
-                                'pertanyaan' => "Terkait standar kerja pada unit \"{$u->judul_unit}\", tindakan yang tepat dalam memenuhi kriteria: \"{$k->pernyataan_kuk}\" adalah...",
-                                'opsi' => [
-                                    'A' => "Melaksanakan prosedur kerja sesuai petunjuk teknis operasional dan standar K3 yang berlaku",
-                                    'B' => "Menunda pelaksanaan prosedur keselamatan kerja hingga pekerjaan selesai",
-                                    'C' => "Melakukan tindakan tanpa mengacu pada instruksi kerja yang sah",
-                                    'D' => "Mengabaikan spesifikasi teknis peralatan yang digunakan"
-                                ],
-                                'kunci' => 'A',
-                                'kuk' => "KUK {$k->nomor_kuk} - {$k->pernyataan_kuk} ({$u->kode_unit})",
-                                'pembahasan' => "Sesuai standar kompetensi kerja BNSP, langkah kerja pada KUK {$k->nomor_kuk} harus diterapkan secara cermat sesuai SOP kejuruan.",
-                                'gambar' => null,
-                            ];
-                            $qNum++;
-                            if ($qNum > 20) break 3;
-                        }
-                    }
-                }
-                if (!empty($list)) return $list;
-            }
         } else {
             $inst = $query->first();
             if ($inst && $inst->questionBanks->count() > 0) {
@@ -642,25 +615,6 @@ class FormulirController extends Controller
                 }
             }
 
-            // FALLBACK DINAMIS ESAI DARI ELEMEN SKEMA
-            $skema = SkemaSertifikasi::with('unitKompetensi.elemenKompetensi.kriteriaUnjukKerja')->find($skemaId);
-            if ($skema && $skema->unitKompetensi->count() > 0) {
-                $list = [];
-                $qNum = 1;
-                foreach ($skema->unitKompetensi as $u) {
-                    foreach ($u->elemenKompetensi as $e) {
-                        $list[$qNum] = [
-                            'no' => $qNum,
-                            'pertanyaan' => "Uraikan langkah kerja sistematis, peralatan kerja yang diperlukan, serta prosedur keselamatan kerja saat Anda melaksanakan: \"{$e->nama_elemen}\" pada unit \"{$u->judul_unit}\" ({$u->kode_unit})!",
-                            'kunci_referensi' => "Asesi wajib menguraikan: 1. Persiapan alat, bahan dan SOP; 2. Urutan pelaksanaan teknis; 3. Penerapan standar keselamatan kerja; 4. Verifikasi mutu hasil kerja.",
-                            'kuk' => "Elemen {$e->nomor_elemen}: {$e->nama_elemen} ({$u->kode_unit})",
-                        ];
-                        $qNum++;
-                        if ($qNum > 10) break 2;
-                    }
-                }
-                if (!empty($list)) return $list;
-            }
         } else {
             $inst = $query->first();
             if ($inst && $inst->questionBanks->count() > 0) {
@@ -710,27 +664,6 @@ class FormulirController extends Controller
                 }
             }
 
-            // FALLBACK DINAMIS PERTANYAAN LISAN DARI KUK SKEMA
-            $skema = SkemaSertifikasi::with('unitKompetensi.elemenKompetensi.kriteriaUnjukKerja')->find($skemaId);
-            if ($skema && $skema->unitKompetensi->count() > 0) {
-                $list = [];
-                $qNum = 1;
-                foreach ($skema->unitKompetensi as $u) {
-                    foreach ($u->elemenKompetensi as $e) {
-                        foreach ($e->kriteriaUnjukKerja as $k) {
-                            $list[$qNum] = [
-                                'no' => $qNum,
-                                'pertanyaan' => "Bagaimanakah Anda memastikan dan memverifikasi bahwa kriteria unjuk kerja: \"{$k->pernyataan_kuk}\" terpenuhi secara konsisten saat bekerja?",
-                                'kunci_rujukan' => "Asesi mampu menjelaskan parameter pengukuran, urutan verifikasi, serta penanganan kendala teknis sesuai SOP kejuruan.",
-                                'kuk' => "KUK {$k->nomor_kuk} - {$k->pernyataan_kuk} ({$u->kode_unit})",
-                            ];
-                            $qNum++;
-                            if ($qNum > 15) break 3;
-                        }
-                    }
-                }
-                if (!empty($list)) return $list;
-            }
         } else {
             $inst = $query->first();
             if ($inst && $inst->questionBanks->count() > 0) {

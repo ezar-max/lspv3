@@ -306,22 +306,26 @@ class AsesiUjianController extends Controller
                 'kode_formulir' => 'FR.IA.05',
             ]);
 
+            $daftarSoal = self::getDaftarSoalCbt($pendaftaran->skema);
+            $validKeys = array_keys($daftarSoal);
+            
             $payload = $record->data_jawaban ?? [
                 'jawaban_pg' => [],
-                'total_soal' => count(self::getDaftarSoalCbt($pendaftaran->skema)),
+                'total_soal' => count($daftarSoal),
             ];
 
             if ($request->has('jawaban_pg') && is_array($request->input('jawaban_pg'))) {
                 foreach ($request->input('jawaban_pg') as $k => $v) {
-                    if ($v !== null && $v !== '') {
-                        $payload['jawaban_pg'][$k] = $v;
+                    // Cek apakah key valid dan string jawaban dibatasi max 10 karakter (A, B, C, D)
+                    if (in_array($k, $validKeys) && $v !== null && $v !== '') {
+                        $payload['jawaban_pg'][$k] = \Illuminate\Support\Str::limit(strval($v), 10, '');
                     }
                 }
             } else {
                 $no = $request->input('no');
                 $jawaban = $request->input('jawaban');
-                if ($no !== null) {
-                    $payload['jawaban_pg'][$no] = $jawaban;
+                if ($no !== null && in_array($no, $validKeys)) {
+                    $payload['jawaban_pg'][$no] = \Illuminate\Support\Str::limit(strval($jawaban), 10, '');
                 }
             }
 
@@ -349,19 +353,24 @@ class AsesiUjianController extends Controller
                 'kode_formulir' => 'FR.IA.06',
             ]);
 
+            $daftarSoal = self::getDaftarSoalEsai($pendaftaran->skema);
+            $validKeys = array_keys($daftarSoal);
+            
             $payload = $record->data_jawaban ?? [
                 'jawaban_esai' => [],
             ];
 
             if ($request->has('jawaban_esai') && is_array($request->input('jawaban_esai'))) {
                 foreach ($request->input('jawaban_esai') as $k => $v) {
-                    $payload['jawaban_esai'][$k] = $v;
+                    if (in_array($k, $validKeys)) {
+                        $payload['jawaban_esai'][$k] = \Illuminate\Support\Str::limit(strval($v), 5000, '');
+                    }
                 }
             } else {
                 $no = $request->input('no');
                 $jawaban = $request->input('jawaban');
-                if ($no !== null) {
-                    $payload['jawaban_esai'][$no] = $jawaban;
+                if ($no !== null && in_array($no, $validKeys)) {
+                    $payload['jawaban_esai'][$no] = \Illuminate\Support\Str::limit(strval($jawaban), 5000, '');
                 }
             }
 
@@ -464,39 +473,74 @@ class AsesiUjianController extends Controller
 
         if ($request->hasFile('file_praktik')) {
             $file = $request->file('file_praktik');
-            $namaFile = 'Laporan_Praktik_IA02_' . $pendaftaran->id . '_' . time() . '.' . $file->getClientOriginalExtension();
-            $path = $file->storeAs('dokumen-asesi', $namaFile, 'public');
-            $filePath = '/storage/' . $path;
+            
+            $dokumenLama = DokumenAsesi::where('pendaftaran_id', $pendaftaran->id)
+                ->where('jenis_dokumen', 'Hasil Proyek / Laporan Praktik FR.IA.02')
+                ->first();
+                
+            $oldPath = null;
+            if ($dokumenLama && !empty($dokumenLama->file_path)) {
+                $oldPath = str_replace(['/storage/', 'storage/'], '', $dokumenLama->file_path);
+            }
 
-            DokumenAsesi::updateOrCreate(
-                [
-                    'pendaftaran_id' => $pendaftaran->id,
-                    'jenis_dokumen' => 'Hasil Proyek / Laporan Praktik FR.IA.02',
-                ],
-                [
-                    'nama_dokumen' => $file->getClientOriginalName(),
-                    'file_path' => $filePath,
-                    'ukuran_file' => $file->getSize(),
-                    'tipe_file' => $file->getClientMimeType(),
-                ]
-            );
+            $namaFile = 'Laporan_Praktik_IA02_' . $pendaftaran->id . '_' . time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+            
+            try {
+                // 1. Simpan file BARU terlebih dahulu
+                $newPath = $file->storeAs('dokumen-asesi', $namaFile, 'public');
 
-            $record = IaPenilaian::firstOrNew([
-                'pendaftaran_id' => $pendaftaran->id,
-                'kode_formulir' => 'FR.IA.02',
-            ]);
+                if (!$newPath || !\Illuminate\Support\Facades\Storage::disk('public')->exists($newPath)) {
+                    throw new \RuntimeException('File praktik gagal disimpan.');
+                }
+                
+                $filePath = '/storage/' . $newPath;
 
-            $payload = $record->data_jawaban ?? [];
-            $payload['file_laporan'] = $filePath;
-            $payload['nama_dokumen'] = $file->getClientOriginalName();
-            $payload['catatan_praktik'] = $request->input('catatan_praktik', $payload['catatan_praktik'] ?? '');
-            $payload['uploaded_at'] = now()->toDateTimeString();
+                // 2. Update database ke path baru
+                try {
+                    DokumenAsesi::updateOrCreate(
+                        [
+                            'pendaftaran_id' => $pendaftaran->id,
+                            'jenis_dokumen' => 'Hasil Proyek / Laporan Praktik FR.IA.02',
+                        ],
+                        [
+                            'nama_dokumen' => $file->getClientOriginalName(),
+                            'file_path' => $filePath,
+                            'ukuran_file' => $file->getSize(),
+                            'tipe_file' => $file->getClientMimeType(),
+                        ]
+                    );
 
-            $record->user_id = $user->id;
-            $record->role = 'asesi';
-            $record->data_jawaban = $payload;
-            $record->status = 'submitted';
-            $record->save();
+                    $record = IaPenilaian::firstOrNew([
+                        'pendaftaran_id' => $pendaftaran->id,
+                        'kode_formulir' => 'FR.IA.02',
+                    ]);
+
+                    $payload = $record->data_jawaban ?? [];
+                    $payload['file_laporan'] = $filePath;
+                    $payload['nama_dokumen'] = $file->getClientOriginalName();
+                    $payload['catatan_praktik'] = $request->input('catatan_praktik', $payload['catatan_praktik'] ?? '');
+                    $payload['uploaded_at'] = now()->toDateTimeString();
+
+                    $record->user_id = $user->id;
+                    $record->role = 'asesi';
+                    $record->data_jawaban = $payload;
+                    $record->status = 'submitted';
+                    $record->save();
+                    
+                } catch (\Throwable $e) {
+                    // DB gagal -> hapus file BARU
+                    \Illuminate\Support\Facades\Storage::disk('public')->delete($newPath);
+                    throw $e;
+                }
+
+                // 3. Setelah DB sukses -> hapus file lama
+                if ($oldPath && $oldPath !== $newPath && \Illuminate\Support\Facades\Storage::disk('public')->exists($oldPath)) {
+                    \Illuminate\Support\Facades\Storage::disk('public')->delete($oldPath);
+                }
+
+            } catch (\Throwable $e) {
+                return redirect()->back()->with('error', 'Gagal menyimpan file praktik: ' . $e->getMessage());
+            }
         }
 
         return redirect()->back()->with('sukses', 'Berkas laporan / dokumentasi praktik FR.IA.02 berhasil diunggah!');

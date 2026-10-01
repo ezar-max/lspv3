@@ -568,7 +568,13 @@ class MasterInstrumentController extends Controller
             $meta['umpan_balik'] = $request->input('metadata_umpan_balik');
         }
         if ($request->has('metadata_penyusun_validator')) {
-            $meta['penyusun_validator'] = $request->input('metadata_penyusun_validator');
+            $existingPv = $meta['penyusun_validator'] ?? [];
+            $newPv = $request->input('metadata_penyusun_validator');
+            if (is_array($newPv)) {
+                $meta['penyusun_validator'] = array_replace_recursive($existingPv, $newPv);
+            } else {
+                $meta['penyusun_validator'] = $newPv;
+            }
         }
         if ($request->has('metadata_kelompok_skenario')) {
             $kelompokSkenario = $request->input('metadata_kelompok_skenario');

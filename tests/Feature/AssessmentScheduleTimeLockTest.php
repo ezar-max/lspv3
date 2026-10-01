@@ -595,8 +595,8 @@ class AssessmentScheduleTimeLockTest extends TestCase
         // 2. KONDISI: Jadwal Telah Dimulai (Status 'berlangsung')
         $this->jadwalLas->update([
             'tanggal_uji' => now()->toDateString(),
-            'waktu_mulai' => '07:00',
-            'waktu_selesai' => '17:00',
+            'waktu_mulai' => now()->subHours(1)->format('H:i'),
+            'waktu_selesai' => now()->addHours(2)->format('H:i'),
             'status_jadwal' => 'berlangsung',
         ]);
 
@@ -621,6 +621,9 @@ class AssessmentScheduleTimeLockTest extends TestCase
             'no' => 1,
             'jawaban' => 'A'
         ]);
+        if ($postSudahMulai->status() !== 200) {
+            dd($postSudahMulai->json());
+        }
         $postSudahMulai->assertOk();
         $postSudahMulai->assertJsonFragment(['status' => 'success']);
     }

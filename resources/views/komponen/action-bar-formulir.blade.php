@@ -72,7 +72,7 @@
         @else
             @if($showSave)
                 @if($saveFormId)
-                    <button type="button" onclick="document.getElementById('{{ $saveFormId }}').submit()" class="tombol tombol-utama tombol-sm">
+                    <button type="button" onclick="submitFormulir('{{ $saveFormId }}')" class="tombol tombol-utama tombol-sm">
                         {{ $saveLabel }}
                     </button>
                 @elseif($saveAction)
@@ -86,3 +86,32 @@
         {{ $slot ?? '' }}
     </div>
 </div>
+
+<script>
+    function submitFormulir(formId) {
+        var isMasterMode = {{ empty($pendaftaranId) ? 'true' : 'false' }};
+        if (isMasterMode) {
+            var ttdInput = document.querySelector('.hidden-penyusun-ttd');
+            if (ttdInput && ttdInput.value.trim() === '') {
+                alert('Peringatan: Anda harus menandatangani formulir ini (sebagai Penyusun) menggunakan tombol "TTD" di bagian bawah halaman sebelum dapat menyimpannya.');
+                
+                var ttdImg = document.querySelector('.preview-penyusun-ttd');
+                if (ttdImg) {
+                    ttdImg.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    if (typeof openSignaturePadPenyusun === 'function') {
+                        setTimeout(openSignaturePadPenyusun, 800);
+                    }
+                }
+                return;
+            }
+        }
+        
+        var form = document.getElementById(formId);
+        if (form) {
+            if (typeof form.reportValidity === 'function' && !form.reportValidity()) {
+                return;
+            }
+            form.submit();
+        }
+    }
+</script>

@@ -600,8 +600,42 @@
         'keterangan' => $hasPihakRelevan ? 'Pihak relevan telah terkonfirmasi.' : 'Belum ada pihak relevan yang dikonfirmasi nama & tanggalnya.'
     ];
 
+    // Resolusi Asesor Penguji & TTD Asesor (Penyusun)
+    $resolvedAsesor = null;
+    if (auth()->check() && auth()->user()->peran === 'asesor') {
+        $resolvedAsesor = auth()->user();
+    } elseif (!empty($pendaftaran->asesor) && $pendaftaran->asesor->peran === 'asesor') {
+        $resolvedAsesor = $pendaftaran->asesor;
+    } elseif (!empty($mapa01->asesor) && $mapa01->asesor->peran === 'asesor') {
+        $resolvedAsesor = $mapa01->asesor;
+    } elseif (!empty($pendaftaran->jadwal?->asesor) && $pendaftaran->jadwal->asesor->peran === 'asesor') {
+        $resolvedAsesor = $pendaftaran->jadwal->asesor;
+    } else {
+        $targetSkemaId = $pendaftaran->skema_id ?? ($mapa01->skema_id ?? ($skema->id ?? null));
+        if ($targetSkemaId) {
+            $resolvedAsesor = \App\Models\Pengguna::where('peran', 'asesor')->where('skema_id', $targetSkemaId)->first();
+        }
+        if (!$resolvedAsesor) {
+            $resolvedAsesor = \App\Models\Pengguna::where('peran', 'asesor')->first();
+        }
+    }
+
+    $adminTtdList = \App\Models\Pengguna::whereIn('peran', ['admin', 'superadmin'])->pluck('tanda_tangan')->filter()->toArray();
+    if (!empty($adminTtd)) {
+        $adminTtdList[] = $adminTtd;
+    }
+
+    $candidateTtd = $mapa01?->tanda_tangan_asesor 
+        ?? ($penyusunTabelSaved['penyusun_1']['ttd'] 
+        ?? ($pendaftaran->tanda_tangan_asesor 
+        ?? ($resolvedAsesor?->tanda_tangan ?? null)));
+    if (!empty($candidateTtd) && in_array($candidateTtd, $adminTtdList, true)) {
+        $candidateTtd = null;
+    }
+    $asesorTtd = $candidateTtd;
+
     // 5. Tanda Tangan Asesor Penguji (Penyusun)
-    $hasTtdAsesor = !empty($mapa01?->tanda_tangan_asesor) || !empty($penyusunTabelSaved['penyusun_1']['ttd']);
+    $hasTtdAsesor = !empty($asesorTtd);
     $evaluasiMapa01[] = [
         'label' => 'Tanda Tangan Asesor Penguji (Penyusun)',
         'lengkap' => $hasTtdAsesor,
@@ -894,7 +928,10 @@
                 : ($resolvedAsesor?->nomor_registrasi ?? 'MET.000.001222 2026');
 
             // Resolusi TTD Asesor: Hanya gunakan gambar tanda tangan nyata dari Asesor (abaikan SVG teks otomatis)
-            $candidateTtd = $mapa01?->tanda_tangan_asesor ?? ($penyusunTabelSaved['penyusun_1']['ttd'] ?? null);
+            $candidateTtd = $asesorTtd ?: ($mapa01?->tanda_tangan_asesor 
+                ?? ($penyusunTabelSaved['penyusun_1']['ttd'] 
+                ?? ($pendaftaran->tanda_tangan_asesor 
+                ?? ($resolvedAsesor?->tanda_tangan ?? null))));
             if (!empty($candidateTtd) && (in_array($candidateTtd, $adminTtdList, true) || Str::contains($candidateTtd, 'svg'))) {
                 $candidateTtd = null;
             }

@@ -262,9 +262,18 @@
         <!-- ========================================================================= -->
         <div style="border: 1px solid #0f172a; padding: 0.85rem 1rem; margin-top: 1.5rem; margin-bottom: 1.5rem;">
             <div style="font-weight: 700; font-size: 0.92rem; margin-bottom: 0.45rem; color: #0f172a;">
-                Umpan Balik untuk asesi: <span style="color: #ef4444;">*</span>
+                Umpan Balik untuk asesi: 
+                @if(!$isMasterMode)
+                    <span style="color: #ef4444;">*</span>
+                @else
+                    <span style="font-size: 0.75rem; font-weight: normal; color: #64748b; font-style: italic;">(Diisi saat Asesmen)</span>
+                @endif
             </div>
-            <textarea name="umpan_balik" class="input-inline-bnsp" rows="3" style="width: 100%; border: 1px dashed #cbd5e1; padding: 0.5rem; font-size: 0.85rem; border-radius: 4px; box-sizing: border-box;" placeholder="Tuliskan umpan balik untuk asesi..." {{ $isAsesi ? 'readonly' : 'required' }}>{{ $iaRecord->catatan_asesor ?? ($savedData['umpan_balik'] ?? ($meta['umpan_balik'] ?? '')) }}</textarea>
+            @if($isMasterMode)
+                <textarea class="input-inline-bnsp" rows="3" style="width: 100%; border: 1px dashed #cbd5e1; padding: 0.5rem; font-size: 0.85rem; border-radius: 4px; box-sizing: border-box; background-color: #f8fafc; cursor: not-allowed; color: #64748b; font-style: italic;" placeholder="Catatan umpan balik untuk asesi akan diisi oleh Asesor saat pelaksanaan asesmen." disabled readonly></textarea>
+            @else
+                <textarea name="umpan_balik" class="input-inline-bnsp" rows="3" style="width: 100%; border: 1px dashed #cbd5e1; padding: 0.5rem; font-size: 0.85rem; border-radius: 4px; box-sizing: border-box;" placeholder="Tuliskan umpan balik untuk asesi..." {{ $isAsesi ? 'readonly' : 'required' }}>{{ $iaRecord->catatan_asesor ?? ($savedData['umpan_balik'] ?? ($meta['umpan_balik'] ?? '')) }}</textarea>
+            @endif
             
             <div style="margin-top: 0.85rem; padding: 0.75rem 1rem; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 4px;">
                 <div style="font-weight: 700; font-size: 0.88rem; color: #0f172a; margin-bottom: 0.35rem;">Rekomendasi Keputusan Asesor:</div>

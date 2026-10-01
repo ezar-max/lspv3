@@ -263,6 +263,7 @@
     
     @php
         $isAsesi = auth()->check() && auth()->user()->peran === 'asesi';
+        $isMasterMode = isset($isMasterMode) ? $isMasterMode : (empty($pendaftaran->id) || $pendaftaran->id == 0 || !request()->filled('pendaftaran_id'));
         $effectiveAsesor = $pendaftaran->asesor ?? ($pendaftaran->jadwal->asesor ?? null);
         $asesorNama = $effectiveAsesor->nama_lengkap ?? (auth()->check() && auth()->user()->peran === 'asesor' ? auth()->user()->nama_lengkap : 'Asesor LSP');
         $asesorMet = $effectiveAsesor->nomor_registrasi ?? (auth()->check() && auth()->user()->peran === 'asesor' ? auth()->user()->nomor_registrasi : 'MET.000.004455.2023');
@@ -489,16 +490,25 @@
                             <tr>
                                 <td style="border-top: none;"></td>
                                 <td style="vertical-align: top; border-top: none; padding-top: 0;">
-                                    <div style="font-weight: 700; font-size: 0.85rem; color: #000000; margin-bottom: 0.2rem;">
-                                        Tanggapan: <span style="color: #ef4444;">*</span>
+                                    <div style="font-weight: 700; font-size: 0.85rem; color: #000000; margin-bottom: 0.2rem; display: flex; align-items: center; justify-content: space-between;">
+                                        <span>Tanggapan:</span>
+                                        @if($isMasterMode)
+                                            <span style="font-size: 0.75rem; font-weight: normal; color: #64748b; font-style: italic;">(Diisi saat Asesmen)</span>
+                                        @else
+                                            <span style="color: #ef4444;">*</span>
+                                        @endif
                                     </div>
-                                    <textarea name="kelompok_soal[{{ $k }}][{{ $q }}][tanggapan]" class="input-tanggapan-ia03" rows="3" placeholder="{{ $isAsesi ? 'Tanggapan dicatat oleh Asesor...' : 'Tuliskan catatan respons/tanggapan asesi...' }}" {{ $isAsesi ? 'readonly' : 'required' }}>{{ $valTanggapan }}</textarea>
+                                    @if($isMasterMode)
+                                        <textarea class="input-tanggapan-ia03" rows="2" placeholder="Catatan respons/tanggapan asesi akan diisi oleh Asesor saat pelaksanaan asesmen." disabled readonly style="background-color: #f8fafc !important; cursor: not-allowed; color: #64748b; font-style: italic;"></textarea>
+                                    @else
+                                        <textarea name="kelompok_soal[{{ $k }}][{{ $q }}][tanggapan]" class="input-tanggapan-ia03" rows="3" placeholder="{{ $isAsesi ? 'Tanggapan dicatat oleh Asesor...' : 'Tuliskan catatan respons/tanggapan asesi...' }}" {{ $isAsesi ? 'readonly' : 'required' }}>{{ $valTanggapan }}</textarea>
+                                    @endif
                                 </td>
                                 <td style="text-align: center; vertical-align: middle; border-top: none;">
-                                    <input type="radio" name="kelompok_soal[{{ $k }}][{{ $q }}][pencapaian]" value="Ya" class="radio-bnsp" {{ $valPencapaian === 'Ya' ? 'checked' : '' }} {{ $isAsesi ? 'disabled' : '' }}>
+                                    <input type="radio" name="kelompok_soal[{{ $k }}][{{ $q }}][pencapaian]" value="Ya" class="radio-bnsp" {{ ($valPencapaian === 'Ya' || $isMasterMode) ? 'checked' : '' }} {{ ($isAsesi || $isMasterMode) ? 'disabled' : '' }}>
                                 </td>
                                 <td style="text-align: center; vertical-align: middle; border-top: none;">
-                                    <input type="radio" name="kelompok_soal[{{ $k }}][{{ $q }}][pencapaian]" value="Tdk" class="radio-bnsp" {{ $valPencapaian === 'Tdk' ? 'checked' : '' }} {{ $isAsesi ? 'disabled' : '' }}>
+                                    <input type="radio" name="kelompok_soal[{{ $k }}][{{ $q }}][pencapaian]" value="Tdk" class="radio-bnsp" {{ ($valPencapaian === 'Tdk' && !$isMasterMode) ? 'checked' : '' }} {{ ($isAsesi || $isMasterMode) ? 'disabled' : '' }}>
                                 </td>
                             </tr>
                         @endfor
@@ -508,8 +518,19 @@
 
             <!-- UMPAN BALIK UNTUK ASESI (PERSIS GAMBAR HALAMAN 3) -->
             <div class="kotak-umpan-balik-ia03">
-                <label class="label-umpan-balik">Umpan balik untuk asesi: <span style="color: #ef4444;">*</span></label>
-                <textarea name="umpan_balik" class="textarea-umpan-balik" rows="3" placeholder="Tuliskan catatan umpan balik dan evaluasi kualitatif untuk asesi..." {{ $isAsesi ? 'readonly' : 'required' }}>{{ $umpanBalikVal }}</textarea>
+                <label class="label-umpan-balik">
+                    Umpan balik untuk asesi: 
+                    @if(!$isMasterMode)
+                        <span style="color: #ef4444;">*</span>
+                    @else
+                        <span style="font-size: 0.75rem; font-weight: normal; color: #64748b; font-style: italic;">(Opsional / Diisi saat Asesmen)</span>
+                    @endif
+                </label>
+                @if($isMasterMode)
+                    <textarea class="textarea-umpan-balik" rows="3" style="background-color: #f8fafc !important; cursor: not-allowed; color: #64748b; font-style: italic;" placeholder="Catatan umpan balik untuk asesi akan diisi oleh Asesor saat pelaksanaan asesmen." disabled readonly></textarea>
+                @else
+                    <textarea name="umpan_balik" class="textarea-umpan-balik" rows="3" placeholder="Tuliskan catatan umpan balik dan evaluasi kualitatif untuk asesi..." {{ $isAsesi ? 'readonly' : 'required' }}>{{ $umpanBalikVal }}</textarea>
+                @endif
             </div>
 
             <!-- TABEL PENGESAHAN ASESI & ASESOR (PERSIS GAMBAR HALAMAN 3) -->

@@ -575,17 +575,6 @@ class AsesorController extends Controller
                     'tanggal_ttd_asesor' => now(),
                 ]);
 
-                RekomendasiAsesmen::updateOrCreate(
-                    ['pendaftaran_id' => $pendaftaran->id],
-                    [
-                        'asesor_id' => $asesorId,
-                        'keputusan' => 'belum_kompeten',
-                        'catatan_rekomendasi' => $request->catatan_rekomendasi,
-                        'tanggal_rekomendasi' => now(),
-                        'tanda_tangan_asesor' => $ttdAsesor,
-                    ]
-                );
-
                 LogAktivitas::catat('Penolakan FR.APL.02', 'Asesor menolak FR.APL.02 untuk peserta #' . $pendaftaran->nomor_pendaftaran);
             } elseif ($isMintaRevisi) {
                 // KONDISI: Asesor Meminta Revisi
@@ -597,17 +586,6 @@ class AsesorController extends Controller
                     'tanggal_ttd_asesor' => now(),
                 ]);
 
-                RekomendasiAsesmen::updateOrCreate(
-                    ['pendaftaran_id' => $pendaftaran->id],
-                    [
-                        'asesor_id' => $asesorId,
-                        'keputusan' => 'belum_kompeten',
-                        'catatan_rekomendasi' => $request->catatan_rekomendasi,
-                        'tanggal_rekomendasi' => now(),
-                        'tanda_tangan_asesor' => $ttdAsesor,
-                    ]
-                );
-
                 LogAktivitas::catat('Permintaan Revisi FR.APL.02', 'Asesor meminta revisi FR.APL.02 untuk peserta #' . $pendaftaran->nomor_pendaftaran);
             } else {
                 // KONDISI: Asesor Menyetujui FR.APL.02 (Approved) -> BUKA AK.01
@@ -618,17 +596,6 @@ class AsesorController extends Controller
                     'tanda_tangan_asesor' => $ttdAsesor,
                     'tanggal_ttd_asesor' => now(),
                 ]);
-
-                RekomendasiAsesmen::updateOrCreate(
-                    ['pendaftaran_id' => $pendaftaran->id],
-                    [
-                        'asesor_id' => $asesorId,
-                        'keputusan' => 'kompeten',
-                        'catatan_rekomendasi' => $request->catatan_rekomendasi,
-                        'tanggal_rekomendasi' => now(),
-                        'tanda_tangan_asesor' => $ttdAsesor,
-                    ]
-                );
 
                 LogAktivitas::catat('Persetujuan FR.APL.02', 'Asesor menyetujui FR.APL.02 untuk peserta #' . $pendaftaran->nomor_pendaftaran);
             }
@@ -746,6 +713,8 @@ class AsesorController extends Controller
             } catch (\Exception $e) {
                 // Fallback
             }
+        } elseif (!empty($rawSignature)) {
+            $signaturePath = $rawSignature;
         }
 
         if (empty($signaturePath)) {
@@ -1092,7 +1061,9 @@ class AsesorController extends Controller
 
         $existingMasterAk01 = MasterAk01::where('skema_id', $skema->id)->first();
         if (empty($signaturePath)) {
-            $signaturePath = $existingMasterAk01?->tanda_tangan_asesor;
+            $signaturePath = $existingMasterAk01?->tanda_tangan_asesor 
+                ?: ($user->tanda_tangan 
+                ?: (Pengguna::where('peran', 'asesor')->where('skema_id', $skema->id)->first()?->tanda_tangan ?? null));
         }
 
         $masterAk01 = MasterAk01::updateOrCreate(
@@ -1211,7 +1182,9 @@ class AsesorController extends Controller
         }
 
         if (empty($signaturePath)) {
-            $signaturePath = $existingMaster?->tanda_tangan_asesor;
+            $signaturePath = $existingMaster?->tanda_tangan_asesor 
+                ?: ($user->tanda_tangan 
+                ?: (Pengguna::where('peran', 'asesor')->where('skema_id', $skema->id)->first()?->tanda_tangan ?? null));
         }
 
         $masterAk07 = MasterAk07::updateOrCreate(

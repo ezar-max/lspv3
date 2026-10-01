@@ -104,7 +104,7 @@ class MasterAk01PerSkemaTest extends TestCase
             'bukti_dikumpulkan' => ['Observasi Praktik Demonstrasi', 'Uji Tertulis (CBT)'],
             'bukti_dikumpulkan_lainnya' => 'Logbook PKL Industri',
             'catatan_asesor' => 'Asesi wajib membawa laptop sendiri',
-            'tanda_tangan_asesor' => 'signatures/asesor_profil.png',
+            'tanda_tangan_asesor' => 'storage/signatures/asesor_profil.png',
         ];
 
         $response = $this->actingAs($this->asesor)->post(route('asesor.skema.ak-01.simpan', $this->skema->id), $postData);
@@ -164,7 +164,7 @@ class MasterAk01PerSkemaTest extends TestCase
             'tuk_type' => 'Tempat Kerja',
             'bukti_dikumpulkan' => ['Observasi Praktik Demonstrasi', 'Tanya Jawab Lisan'],
             'bukti_dikumpulkan_lainnya' => 'Portofolio Digital',
-            'tanda_tangan_asesor' => 'signatures/asesor_profil.png',
+            'tanda_tangan_asesor' => 'storage/signatures/asesor_profil.png',
         ]);
 
         // Refresh model pendaftaran dari DB
@@ -173,11 +173,11 @@ class MasterAk01PerSkemaTest extends TestCase
 
         $this->assertEquals('Tempat Kerja', $pendaftaran1->tuk_type);
         $this->assertEquals('Portofolio Digital', $pendaftaran1->bukti_dikumpulkan_lainnya);
-        $this->assertEquals('signatures/asesor_profil.png', $pendaftaran1->tanda_tangan_asesor_ak01);
+        $this->assertEquals('storage/signatures/asesor_profil.png', $pendaftaran1->tanda_tangan_asesor_ak01);
         $this->assertEquals('disetujui_asesor', $pendaftaran1->status_ak01);
 
         $this->assertEquals('Tempat Kerja', $pendaftaran2->tuk_type);
-        $this->assertEquals('signatures/asesor_profil.png', $pendaftaran2->tanda_tangan_asesor_ak01);
+        $this->assertEquals('storage/signatures/asesor_profil.png', $pendaftaran2->tanda_tangan_asesor_ak01);
         $this->assertEquals('disetujui_asesor', $pendaftaran2->status_ak01);
     }
 
@@ -191,7 +191,7 @@ class MasterAk01PerSkemaTest extends TestCase
             'tuk_type' => 'Mandiri',
             'bukti_dikumpulkan' => ['Observasi Praktik Demonstrasi', 'Uji Tertulis (CBT)'],
             'bukti_dikumpulkan_lainnya' => 'Sertifikat Pelatihan',
-            'tanda_tangan_asesor' => 'signatures/asesor_profil.png',
+            'tanda_tangan_asesor' => 'storage/signatures/asesor_profil.png',
             'tanggal_ttd_asesor' => now(),
             'status' => 'selesai',
         ]);
@@ -216,7 +216,7 @@ class MasterAk01PerSkemaTest extends TestCase
         // Pendaftaran otomatis sync
         $pendaftaran->refresh();
         $this->assertEquals('Mandiri', $pendaftaran->tuk_type);
-        $this->assertEquals('signatures/asesor_profil.png', $pendaftaran->tanda_tangan_asesor_ak01);
+        $this->assertEquals('storage/signatures/asesor_profil.png', $pendaftaran->tanda_tangan_asesor_ak01);
 
         // Asesi menandatangani formulir FR.AK.01
         $signResponse = $this->actingAs($this->asesi)->post(route('asesi.ak01.sign', ['id' => $pendaftaran->id]), [

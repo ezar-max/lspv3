@@ -11,6 +11,7 @@
     
     @php
         $isAsesi = auth()->check() && auth()->user()->peran === 'asesi';
+        $isMasterMode = isset($isMasterMode) ? $isMasterMode : (empty($pendaftaran->id) || $pendaftaran->id == 0 || !request()->filled('pendaftaran_id'));
         $asesorNama = $pendaftaran->asesor->nama_lengkap ?? (auth()->user()->peran === 'asesor' ? auth()->user()->nama_lengkap : 'Asesor LSP');
         $asesorMet = $pendaftaran->asesor->nomor_registrasi ?? 'MET.000.004455.2023';
         $asesiNama = $pendaftaran->asesi->nama_lengkap ?? 'Nama Asesi';
@@ -164,10 +165,19 @@
             </tr>
             <tr>
                 <td style="font-weight: 700; background: #f8fafc;">
-                    Umpan Balik Untuk Asesi: <span style="color: #ef4444;">*</span>
+                    Umpan Balik Untuk Asesi: 
+                    @if(!$isMasterMode)
+                        <span style="color: #ef4444;">*</span>
+                    @else
+                        <span style="font-size: 0.75rem; font-weight: normal; color: #64748b; font-style: italic;">(Diisi saat Asesmen)</span>
+                    @endif
                 </td>
                 <td>
-                    <textarea name="umpan_balik" class="input-inline-bnsp" rows="3" placeholder="Tuliskan catatan umpan balik pelaksanaan proyek singkat..." {{ $isAsesi ? 'readonly' : 'required' }}>{{ $umpanBalikVal }}</textarea>
+                    @if($isMasterMode)
+                        <textarea class="input-inline-bnsp" rows="3" placeholder="Catatan umpan balik pelaksanaan proyek singkat akan diisi oleh Asesor saat pelaksanaan asesmen." disabled readonly style="background-color: #f8fafc !important; cursor: not-allowed; color: #64748b; font-style: italic;"></textarea>
+                    @else
+                        <textarea name="umpan_balik" class="input-inline-bnsp" rows="3" placeholder="Tuliskan catatan umpan balik pelaksanaan proyek singkat..." {{ $isAsesi ? 'readonly' : 'required' }}>{{ $umpanBalikVal }}</textarea>
+                    @endif
                 </td>
             </tr>
         </table>

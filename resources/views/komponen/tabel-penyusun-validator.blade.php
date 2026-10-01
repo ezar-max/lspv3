@@ -146,9 +146,14 @@
                         @php
                             $penyusunTtdSrc = (str_starts_with($penyusunTtd, 'data:image') || str_starts_with($penyusunTtd, 'http://') || str_starts_with($penyusunTtd, 'https://')) ? $penyusunTtd : asset($penyusunTtd);
                         @endphp
-                        <img src="{{ $penyusunTtdSrc }}" alt="TTD Penyusun" style="max-height: 38px; margin: 0 auto; display: block;">
                     @endif
-                    <span style="font-size: 0.78rem; color: #64748b;">{{ $penyusunTgl }}</span>
+                    <input type="hidden" name="metadata_penyusun_validator[penyusun][ttd]" class="hidden-penyusun-ttd" value="{{ $penyusunTtd ?? '' }}">
+                    <img src="{{ !empty($penyusunTtd) ? $penyusunTtdSrc : '' }}" alt="TTD Penyusun" class="preview-penyusun-ttd {{ empty($penyusunTtd) ? 'hidden' : '' }}" style="max-height: 38px; margin: 0 auto; display: block; cursor: pointer;" onclick="if(typeof openSignaturePadPenyusun === 'function') openSignaturePadPenyusun()">
+                    
+                    @if(empty($penyusunTtd) && (isset($isMasterMode) && $isMasterMode))
+                        <button type="button" onclick="if(typeof openSignaturePadPenyusun === 'function') openSignaturePadPenyusun()" class="px-2 py-1 bg-slate-100 text-slate-600 rounded text-xs hover:bg-slate-200 mt-1"><i class="fa-solid fa-pen"></i> TTD</button>
+                    @endif
+                    <span style="font-size: 0.78rem; color: #64748b; display: block;">{{ $penyusunTgl }}</span>
                 </td>
             </tr>
             <tr>
@@ -169,3 +174,7 @@
         </tbody>
     </table>
 </div>
+
+@if(isset($isMasterMode) && $isMasterMode)
+    @include('komponen.signature-pad-penyusun')
+@endif

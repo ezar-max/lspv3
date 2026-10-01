@@ -651,18 +651,51 @@ class AsesiTahapanController extends Controller
             if ($request->hasFile($field)) {
                 $file = $request->file($field);
                 $ext = strtolower($file->getClientOriginalExtension());
-                $namaFile = \Illuminate\Support\Str::slug($jenisDokumen, '_') . '_' . $pengguna->id . '_' . time() . '.' . $ext;
-                $path = $file->storeAs('dokumen_asesi', $namaFile, 'public');
+                $namaFile = \Illuminate\Support\Str::slug($jenisDokumen, '_') . '_' . $pengguna->id . '_' . time() . '_' . uniqid() . '.' . $ext;
+                
+                $dokumenLama = DokumenAsesi::where('pendaftaran_id', $pendaftaran->id)
+                    ->where('jenis_dokumen', $jenisDokumen)
+                    ->first();
+                    
+                $oldPath = null;
+                if ($dokumenLama && !empty($dokumenLama->file_path)) {
+                    $oldPath = str_replace(['/storage/', 'storage/'], '', $dokumenLama->file_path);
+                }
 
-                DokumenAsesi::updateOrCreate(
-                    ['pendaftaran_id' => $pendaftaran->id, 'jenis_dokumen' => $jenisDokumen],
-                    [
-                        'nama_dokumen' => $file->getClientOriginalName(),
-                        'file_path' => 'storage/' . $path,
-                        'status_verifikasi' => 'menunggu',
-                        'catatan' => null,
-                    ]
-                );
+                try {
+                    // 1. Simpan file BARU terlebih dahulu
+                    $newPath = $file->storeAs('dokumen_asesi', $namaFile, 'public');
+
+                    if (!$newPath || !\Illuminate\Support\Facades\Storage::disk('public')->exists($newPath)) {
+                        throw new \RuntimeException("Gagal menyimpan file baru untuk {$jenisDokumen}");
+                    }
+
+                    // 2. Update database ke path baru
+                    try {
+                        DokumenAsesi::updateOrCreate(
+                            ['pendaftaran_id' => $pendaftaran->id, 'jenis_dokumen' => $jenisDokumen],
+                            [
+                                'nama_dokumen' => $file->getClientOriginalName(),
+                                'file_path' => 'storage/' . $newPath,
+                                'status_verifikasi' => 'menunggu',
+                                'catatan' => null,
+                            ]
+                        );
+                    } catch (\Throwable $e) {
+                        // DB gagal -> hapus file BARU
+                        \Illuminate\Support\Facades\Storage::disk('public')->delete($newPath);
+                        throw $e;
+                    }
+
+                    // 3. Setelah DB sukses -> hapus file lama
+                    if ($oldPath && $oldPath !== $newPath && \Illuminate\Support\Facades\Storage::disk('public')->exists($oldPath)) {
+                        \Illuminate\Support\Facades\Storage::disk('public')->delete($oldPath);
+                    }
+
+                } catch (\Throwable $e) {
+                    // Biarkan error melambung jika diinginkan, namun file lama tetap utuh
+                    throw $e;
+                }
             }
         }
 

@@ -588,8 +588,18 @@ class AsesorPenilaianController extends Controller
         $ttdAsesor = $user->tanda_tangan ?: null;
 
         foreach ($penilaianMassal as $pendaftaranId => $penilaianPerSoal) {
-            $pendaftaran = PendaftaranAsesi::find($pendaftaranId);
+            $pendaftaran = PendaftaranAsesi::with('jadwal')->find($pendaftaranId);
             if (!$pendaftaran) continue;
+
+            // Authorization Guard: Asesor hanya bisa mengoreksi pendaftarannya sendiri
+            if ($user->peran === 'asesor') {
+                $isAssigned = ($pendaftaran->asesor_id === $user->id) || 
+                              ($pendaftaran->jadwal && $pendaftaran->jadwal->asesor_id === $user->id);
+                
+                if (!$isAssigned) {
+                    continue; // Skip silently to not leak data existence
+                }
+            }
 
             $evaluations = is_array($penilaianPerSoal) ? $penilaianPerSoal : [];
             $catatan = $catatanMassal[$pendaftaranId] ?? 'Penilaian hasil ujian esai selesai diperiksa.';
