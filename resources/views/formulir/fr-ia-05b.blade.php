@@ -271,24 +271,15 @@
             </div>
 
             <!-- PENGESAHAN ASESOR -->
-            <div style="border: 1px solid #334155; padding: 1.25rem; border-radius: 4px; background: #f8fafc; display: flex; justify-content: space-between; align-items: center; margin-top: 1.5rem;">
-                <div>
-                    <strong style="display: block; font-size: 0.95rem; color: #0f172a;">Asesor Kompetensi:</strong>
-                    <div style="height: 50px; display: flex; align-items: center; margin-top: 0.25rem;">
-                        @if($asesorTtd)
-                            <img src="{{ $asesorTtd }}" alt="TTD Asesor" style="max-height: 40px;">
-                        @else
-                            <span style="font-style: italic; color: #64748b; font-size: 0.85rem;">(Tanda Tangan Digital Asesor)</span>
-                        @endif
-                    </div>
-                    <div style="font-weight: 700; color: #0f172a;">{{ $asesorNama }}</div>
-                    <div style="font-size: 0.78rem; color: #64748b;">No. Reg: {{ $asesorMet }}</div>
-                </div>
-                <div>
-                    <strong style="display: block; font-size: 0.95rem; color: #0f172a;">Tanggal Pengesahan:</strong>
-                    <div style="font-weight: 700; color: #0f172a; font-size: 1rem; margin-top: 0.5rem;">{{ date('d F Y') }}</div>
-                </div>
-            </div>
+            @include('komponen.pengesahan-asesi-asesor', [
+                'kodeForm' => 'FR.IA.05B',
+                'hideAsesi' => true,
+                'pendaftaran' => $pendaftaran ?? null,
+                'asesorNama' => $asesorNama ?? '-',
+                'asesorMet' => $asesorMet ?? '-',
+                'asesorTtd' => $asesorTtd ?? null,
+                'tglAsesmen' => $tglAsesmen ?? null
+            ])
 
             @include('komponen.navigasi-form-bawah', [
                 'prevUrl' => route('formulir.ia05a', $pendaftaran->id),

@@ -483,22 +483,26 @@ class AsesiTahapanController extends Controller
         $pengguna = auth()->user();
         $profil = ProfilAsesi::firstOrCreate(['pengguna_id' => $pengguna->id]);
 
-        $request->validate([
-            'nama_lengkap' => 'required|string|max:255',
-            'nik' => 'required|string|size:16|regex:/^[0-9]{16}$/',
-            'tempat_lahir' => 'required|string',
-            'tanggal_lahir' => 'required|date',
-            'jenis_kelamin' => 'required|in:Laki-laki,Perempuan',
-            'alamat' => 'required|string',
-            'nomor_telepon' => 'required|string',
-            'skema_id' => 'required|exists:skema_sertifikasi,id',
-            'tujuan_asesmen' => 'required|string',
+        $isDraft = $request->input('aksi') === 'draft';
+
+        $rules = [
+            'nama_lengkap' => $isDraft ? 'nullable|string|max:255' : 'required|string|max:255',
+            'nik' => $isDraft ? 'nullable|string|size:16|regex:/^[0-9]{16}$/' : 'required|string|size:16|regex:/^[0-9]{16}$/',
+            'tempat_lahir' => $isDraft ? 'nullable|string' : 'required|string',
+            'tanggal_lahir' => $isDraft ? 'nullable|date' : 'required|date',
+            'jenis_kelamin' => $isDraft ? 'nullable|in:Laki-laki,Perempuan' : 'required|in:Laki-laki,Perempuan',
+            'alamat' => $isDraft ? 'nullable|string' : 'required|string',
+            'nomor_telepon' => $isDraft ? 'nullable|string' : 'required|string',
+            'skema_id' => $isDraft ? 'nullable|exists:skema_sertifikasi,id' : 'required|exists:skema_sertifikasi,id',
+            'tujuan_asesmen' => $isDraft ? 'nullable|string' : 'required|string',
             'file_rapor' => 'nullable|file|mimes:pdf,jpg,jpeg,png,webp|max:5120',
             'file_pkl' => 'nullable|file|mimes:pdf,jpg,jpeg,png,webp|max:5120',
             'file_ktp' => 'nullable|file|mimes:pdf,jpg,jpeg,png,webp|max:5120',
             'file_foto' => 'nullable|file|mimes:jpg,jpeg,png,webp|max:5120',
             'tanda_tangan_asesi' => 'nullable|string',
-        ], [
+        ];
+
+        $request->validate($rules, [
             'skema_id.required' => 'Silakan pilih skema sertifikasi.',
             'file_rapor.max' => 'Ukuran file maksimal 5MB.',
             'file_pkl.max' => 'Ukuran file maksimal 5MB.',

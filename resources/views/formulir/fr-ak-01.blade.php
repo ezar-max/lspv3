@@ -268,59 +268,18 @@
             </div>
 
             <!-- TANDA TANGAN BERDAMPINGAN -->
-            <table class="tabel-bnsp">
-                <thead>
-                    <tr>
-                        <th style="width: 50%; text-align: center; background-color: #f8fafc; padding: 0.75rem;">
-                            Asesor Kompetensi
-                        </th>
-                        <th style="width: 50%; text-align: center; background-color: #f8fafc; padding: 0.75rem;">
-                            Peserta Uji (Asesi)
-                        </th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <!-- KOLOM ASESOR -->
-                        <td style="padding: 1.25rem; vertical-align: top; text-align: center;">
-                            <div style="font-weight: 700; color: #0f172a; margin-bottom: 0.5rem; text-align: left;">Tanda Tangan Asesor :</div>
-                            <div style="min-height: 90px; display: flex; align-items: center; justify-content: center; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 6px; margin-bottom: 0.75rem;">
-                                @if($asesorTtd)
-                                    @php
-                                        $srcAsesorTtd = \Illuminate\Support\Str::startsWith($asesorTtd, ['data:image', 'http://', 'https://']) ? $asesorTtd : asset($asesorTtd);
-                                    @endphp
-                                    <img src="{{ $srcAsesorTtd }}" alt="TTD Asesor" style="max-height: 75px;">
-                                @else
-                                    <span style="font-size: 0.8rem; color: #94a3b8; font-style: italic;">(Belum Ditandatangani)</span>
-                                @endif
-                            </div>
-                            <div style="font-size: 0.88rem; text-align: left;">
-                                Nama : <strong>{{ $asesorNama }}</strong><br>
-                                Tanggal : <strong>{{ $tglTtdAsesor ?? ($pendaftaran->tanggal_daftar ? \Carbon\Carbon::parse($pendaftaran->tanggal_daftar)->isoFormat('D MMMM YYYY') : date('d-m-Y')) }}</strong>
-                            </div>
-                        </td>
-
-                        <!-- KOLOM ASESI -->
-                        <td style="padding: 1.25rem; vertical-align: top; text-align: center;">
-                            <div style="font-weight: 700; color: #0f172a; margin-bottom: 0.5rem; text-align: left;">Tanda Tangan Asesi :</div>
-                            <div style="min-height: 90px; display: flex; align-items: center; justify-content: center; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 6px; margin-bottom: 0.75rem;">
-                                @if($asesiTtd)
-                                    @php
-                                        $srcAsesiTtd = \Illuminate\Support\Str::startsWith($asesiTtd, ['data:image', 'http://', 'https://']) ? $asesiTtd : asset($asesiTtd);
-                                    @endphp
-                                    <img src="{{ $srcAsesiTtd }}" alt="TTD Asesi" style="max-height: 75px;">
-                                @else
-                                    <span style="font-size: 0.8rem; color: #94a3b8; font-style: italic;">(Belum Ditandatangani)</span>
-                                @endif
-                            </div>
-                            <div style="font-size: 0.88rem; text-align: left;">
-                                Nama : <strong>{{ $asesiNama }}</strong><br>
-                                Tanggal : <strong>{{ $tglTtdAsesi ?? ($pendaftaran->tanggal_daftar ? \Carbon\Carbon::parse($pendaftaran->tanggal_daftar)->isoFormat('D MMMM YYYY') : date('d-m-Y')) }}</strong>
-                            </div>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
+            @include('komponen.pengesahan-asesi-asesor', [
+                'kodeForm' => 'FR.AK.01',
+                'isAsesi' => $isAsesi ?? false,
+                'pendaftaran' => $pendaftaran ?? null,
+                'asesiNama' => $asesiNama ?? '-',
+                'asesiTtd' => $asesiTtd ?? null,
+                'tglTtdAsesi' => $tglTtdAsesi ?? null,
+                'asesorNama' => $asesorNama ?? '-',
+                'asesorMet' => $asesorMet ?? '-',
+                'asesorTtd' => $asesorTtd ?? null,
+                'tglAsesmen' => $tglTtdAsesor ?? null
+            ])
 
         </div>
     </form>

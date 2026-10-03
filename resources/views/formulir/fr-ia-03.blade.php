@@ -534,67 +534,18 @@
             </div>
 
             <!-- TABEL PENGESAHAN ASESI & ASESOR (PERSIS GAMBAR HALAMAN 3) -->
-            <table class="tabel-ttd-ia03">
-                <tr>
-                    <td colspan="3" style="font-weight: 700; background-color: #ffffff;">Asesi :</td>
-                </tr>
-                <tr>
-                    <td style="width: 25%; font-weight: 600;">Nama</td>
-                    <td style="width: 2%; text-align: center;">:</td>
-                    <td style="font-weight: 700;">{{ $asesiNama }}</td>
-                </tr>
-                <tr>
-                    <td style="font-weight: 600; vertical-align: top;">Tanda tangan dan Tanggal</td>
-                    <td style="text-align: center; vertical-align: top;">:</td>
-                    <td style="min-height: 55px; vertical-align: middle;">
-                        @if($asesiTtd)
-                            <div style="display: flex; align-items: center; gap: 1rem;">
-                                <img src="{{ $asesiTtd }}" alt="TTD Asesi" style="max-height: 45px;">
-                                <span style="font-size: 0.82rem; color: #16a34a; font-weight: 700;">
-                                    Terverifikasi ({{ $tglTtdAsesi ?? date('d-m-Y') }})
-                                </span>
-                            </div>
-                        @else
-                            @if($isAsesi)
-                                <button type="submit" form="form-ttd-asesi-ia03" class="tombol tombol-utama tombol-sm no-print" style="background: #2563eb; border-color: #2563eb; font-size: 0.82rem;">
-                                    Tanda Tangani Hasil Asesmen
-                                </button>
-                            @else
-                                <span style="font-style: italic; color: #64748b; font-size: 0.82rem;">(Belum Ditandatangani Asesi)</span>
-                            @endif
-                        @endif
-                    </td>
-                </tr>
-                <tr>
-                    <td colspan="3" style="font-weight: 700; background-color: #ffffff;">Asesor :</td>
-                </tr>
-                <tr>
-                    <td style="font-weight: 600;">Nama</td>
-                    <td style="text-align: center;">:</td>
-                    <td style="font-weight: 700;">{{ $asesorNama }}</td>
-                </tr>
-                <tr>
-                    <td style="font-weight: 600;">No. Reg</td>
-                    <td style="text-align: center;">:</td>
-                    <td>{{ $asesorMet }}</td>
-                </tr>
-                <tr>
-                    <td style="font-weight: 600; vertical-align: top;">Tanda tangan dan Tanggal</td>
-                    <td style="text-align: center; vertical-align: top;">:</td>
-                    <td style="min-height: 55px; vertical-align: middle;">
-                        @if($asesorTtd)
-                            <div style="display: flex; align-items: center; gap: 1rem;">
-                                <img src="{{ $asesorTtd }}" alt="TTD Asesor" style="max-height: 45px;">
-                                <span style="font-size: 0.82rem; color: #475569;">
-                                    {{ $tglAsesmen }}
-                                </span>
-                            </div>
-                        @else
-                            <span style="font-style: italic; color: #64748b; font-size: 0.82rem;">(Tanda Tangan Digital Asesor) - {{ $tglAsesmen }}</span>
-                        @endif
-                    </td>
-                </tr>
-            </table>
+            @include('komponen.pengesahan-asesi-asesor', [
+                'kodeForm' => 'FR.IA.03',
+                'isAsesi' => $isAsesi ?? false,
+                'pendaftaran' => $pendaftaran ?? null,
+                'asesiNama' => $asesiNama ?? '-',
+                'asesiTtd' => $asesiTtd ?? null,
+                'tglTtdAsesi' => $tglTtdAsesi ?? null,
+                'asesorNama' => $asesorNama ?? '-',
+                'asesorMet' => $asesorMet ?? '-',
+                'asesorTtd' => $asesorTtd ?? null,
+                'tglAsesmen' => $tglAsesmen ?? null
+            ])
 
             <!-- FOOTER RESMI BNSP PERSIS GAMBAR -->
             <div style="font-size: 0.72rem; color: #333333; margin-top: 0.5rem; font-style: italic; line-height: 1.4;">
@@ -602,12 +553,6 @@
             </div>
 
         </form>
-
-        @if($isAsesi)
-            <form id="form-ttd-asesi-ia03" action="{{ route('formulir.ia.simpan-ttd-asesi', ['kodeForm' => 'FR.IA.03', 'pendaftaranId' => $pendaftaran->id]) }}" method="POST" style="display: none;">
-                @csrf
-            </form>
-        @endif
 
     </div>
 

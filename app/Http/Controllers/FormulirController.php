@@ -416,7 +416,8 @@ class FormulirController extends Controller
         $masterInst = \App\Models\SchemeMasterInstrument::where('skema_id', $pendaftaran->skema_id)
             ->whereIn('instrument_code', \App\Models\SchemeMasterInstrument::getCodeAliases('ia_01'))
             ->first();
-        return view('formulir.fr-ia-01', compact('pendaftaran', 'iaRecord', 'savedData', 'masterInst'));
+        $isMasterMode = empty($pendaftaran->id) || $pendaftaran->id == 0 || !$request->filled('pendaftaran_id');
+        return view('formulir.fr-ia-01', compact('pendaftaran', 'iaRecord', 'savedData', 'masterInst', 'isMasterMode'));
     }
 
     public function ia02(Request $request, $pendaftaranId = null)
@@ -448,7 +449,8 @@ class FormulirController extends Controller
             'catatan' => $saved['catatan'] ?? ($iaRecord->catatan_asesor ?? ''),
         ];
 
-        return view('formulir.fr-ia-02', compact('pendaftaran', 'iaRecord', 'masterInst', 'dataPraktik'));
+        $isMasterMode = empty($pendaftaran->id) || $pendaftaran->id == 0 || !$request->filled('pendaftaran_id');
+        return view('formulir.fr-ia-02', compact('pendaftaran', 'iaRecord', 'masterInst', 'dataPraktik', 'isMasterMode'));
     }
 
     public function ia03(Request $request, $pendaftaranId = null)
@@ -511,8 +513,8 @@ class FormulirController extends Controller
             ->whereIn('instrument_code', \App\Models\SchemeMasterInstrument::getCodeAliases('ia_04b'))
             ->first();
         $masterSpecs = $masterInst ? $masterInst->productSpecifications : collect();
-        $savedData = $iaRecord ? ($iaRecord->data_jawaban ?? []) : [];
-        return view('formulir.fr-ia-04b', compact('pendaftaran', 'iaRecord', 'masterInst', 'masterSpecs', 'savedData'));
+        $isMasterMode = empty($pendaftaran->id) || $pendaftaran->id == 0 || !$request->filled('pendaftaran_id');
+        return view('formulir.fr-ia-04b', compact('pendaftaran', 'iaRecord', 'masterInst', 'masterSpecs', 'savedData', 'isMasterMode'));
     }
 
     public function ia11(Request $request, $pendaftaranId = null)
@@ -522,8 +524,8 @@ class FormulirController extends Controller
             return $this->redirectFallback('Silakan pilih atau daftarkan skema sertifikasi terlebih dahulu.');
         }
         $iaRecord = $pendaftaran->id ? IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.11')->first() : null;
-        $savedData = $iaRecord ? ($iaRecord->data_jawaban ?? []) : [];
-        return view('formulir.fr-ia-11', compact('pendaftaran', 'iaRecord', 'savedData'));
+        $isMasterMode = empty($pendaftaran->id) || $pendaftaran->id == 0 || !$request->filled('pendaftaran_id');
+        return view('formulir.fr-ia-11', compact('pendaftaran', 'iaRecord', 'savedData', 'isMasterMode'));
     }
 
     /* =========================================================================
@@ -690,8 +692,29 @@ class FormulirController extends Controller
         if (!$pendaftaran) {
             return $this->redirectFallback('Silakan pilih atau daftarkan skema sertifikasi terlebih dahulu.');
         }
-        $soalList = self::getSoalIa05($pendaftaran->skema_id);
-        return view('formulir.fr-ia-05a', compact('pendaftaran', 'soalList'));
+        
+        $iaRecord = \App\Models\IaPenilaian::where('pendaftaran_id', $pendaftaran->id)
+            ->where('kode_formulir', 'FR.IA.05A')
+            ->first();
+            
+        if ($iaRecord && !empty($iaRecord->data_jawaban)) {
+            $soalList = $iaRecord->data_jawaban;
+        } else {
+            $soalList = self::getSoalIa05($pendaftaran->skema_id);
+            if (empty($soalList)) {
+                $soalList = [
+                    1 => [
+                        'no' => 1,
+                        'pertanyaan' => '',
+                        'opsi' => ['A' => '', 'B' => '', 'C' => '', 'D' => ''],
+                        'kunci' => ''
+                    ]
+                ];
+            }
+        }
+        
+        $isMasterMode = empty($pendaftaran->id) || $pendaftaran->id == 0 || !$request->filled('pendaftaran_id');
+        return view('formulir.fr-ia-05a', compact('pendaftaran', 'soalList', 'iaRecord', 'isMasterMode'));
     }
 
     public function ia05b(Request $request, $pendaftaranId = null)
@@ -705,11 +728,19 @@ class FormulirController extends Controller
         if (!$pendaftaran) {
             return $this->redirectFallback('Silakan pilih atau daftarkan skema sertifikasi terlebih dahulu.');
         }
-        $soalList = self::getSoalIa05($pendaftaran->skema_id);
+        
+        $iaRecord05a = \App\Models\IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.05A')->first();
+        if ($iaRecord05a && !empty($iaRecord05a->data_jawaban)) {
+            $soalList = $iaRecord05a->data_jawaban;
+        } else {
+            $soalList = self::getSoalIa05($pendaftaran->skema_id);
+        }
+
         $iaRecord05c = IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.05C')->first();
         $iaRecord05b = IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.05B')->first();
         
-        return view('formulir.fr-ia-05b', compact('pendaftaran', 'soalList', 'iaRecord05c', 'iaRecord05b'));
+        $isMasterMode = empty($pendaftaran->id) || $pendaftaran->id == 0 || !$request->filled('pendaftaran_id');
+        return view('formulir.fr-ia-05b', compact('pendaftaran', 'soalList', 'iaRecord05c', 'iaRecord05b', 'isMasterMode'));
     }
 
     public function ia05c(Request $request, $pendaftaranId = null)
@@ -719,9 +750,17 @@ class FormulirController extends Controller
         if (!$pendaftaran) {
             return $this->redirectFallback('Silakan pilih atau daftarkan skema sertifikasi terlebih dahulu.');
         }
-        $soalList = self::getSoalIa05($pendaftaran->skema_id);
+        
+        $iaRecord05a = \App\Models\IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.05A')->first();
+        if ($iaRecord05a && !empty($iaRecord05a->data_jawaban)) {
+            $soalList = $iaRecord05a->data_jawaban;
+        } else {
+            $soalList = self::getSoalIa05($pendaftaran->skema_id);
+        }
+
         $iaRecord = IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.05C')->first();
-        return view('formulir.fr-ia-05c', compact('pendaftaran', 'soalList', 'iaRecord'));
+        $isMasterMode = empty($pendaftaran->id) || $pendaftaran->id == 0 || !$request->filled('pendaftaran_id');
+        return view('formulir.fr-ia-05c', compact('pendaftaran', 'soalList', 'iaRecord', 'isMasterMode'));
     }
 
     public function ia06a(Request $request, $pendaftaranId = null)
@@ -730,8 +769,29 @@ class FormulirController extends Controller
         if (!$pendaftaran) {
             return $this->redirectFallback('Silakan pilih atau daftarkan skema sertifikasi terlebih dahulu.');
         }
-        $soalList = self::getSoalIa06($pendaftaran->skema_id);
-        return view('formulir.fr-ia-06a', compact('pendaftaran', 'soalList'));
+        
+        $iaRecord = \App\Models\IaPenilaian::where('pendaftaran_id', $pendaftaran->id)
+            ->where('kode_formulir', 'FR.IA.06A')
+            ->first();
+            
+        if ($iaRecord && !empty($iaRecord->data_jawaban)) {
+            $soalList = $iaRecord->data_jawaban;
+        } else {
+            $soalList = self::getSoalIa06($pendaftaran->skema_id);
+            if (empty($soalList)) {
+                $soalList = [
+                    1 => [
+                        'no' => 1,
+                        'pertanyaan' => '',
+                        'kunci' => '',
+                        'kuk' => ''
+                    ]
+                ];
+            }
+        }
+        
+        $isMasterMode = empty($pendaftaran->id) || $pendaftaran->id == 0 || !$request->filled('pendaftaran_id');
+        return view('formulir.fr-ia-06a', compact('pendaftaran', 'soalList', 'iaRecord', 'isMasterMode'));
     }
 
     public function ia06b(Request $request, $pendaftaranId = null)
@@ -745,11 +805,19 @@ class FormulirController extends Controller
         if (!$pendaftaran) {
             return $this->redirectFallback('Silakan pilih atau daftarkan skema sertifikasi terlebih dahulu.');
         }
-        $soalList = self::getSoalIa06($pendaftaran->skema_id);
+        
+        $iaRecord06a = \App\Models\IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.06A')->first();
+        if ($iaRecord06a && !empty($iaRecord06a->data_jawaban)) {
+            $soalList = $iaRecord06a->data_jawaban;
+        } else {
+            $soalList = self::getSoalIa06($pendaftaran->skema_id);
+        }
+
         $iaRecord06c = IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.06C')->first();
         $iaRecord06b = IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.06B')->first();
         
-        return view('formulir.fr-ia-06b', compact('pendaftaran', 'soalList', 'iaRecord06c', 'iaRecord06b'));
+        $isMasterMode = empty($pendaftaran->id) || $pendaftaran->id == 0 || !$request->filled('pendaftaran_id');
+        return view('formulir.fr-ia-06b', compact('pendaftaran', 'soalList', 'iaRecord06c', 'iaRecord06b', 'isMasterMode'));
     }
 
     public function ia06c(Request $request, $pendaftaranId = null)
@@ -759,9 +827,47 @@ class FormulirController extends Controller
         if (!$pendaftaran) {
             return $this->redirectFallback('Silakan pilih atau daftarkan skema sertifikasi terlebih dahulu.');
         }
-        $soalList = self::getSoalIa06($pendaftaran->skema_id);
+        
+        $iaRecord06a = \App\Models\IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.06A')->first();
+        if ($iaRecord06a && !empty($iaRecord06a->data_jawaban)) {
+            $soalList = $iaRecord06a->data_jawaban;
+        } else {
+            $soalList = self::getSoalIa06($pendaftaran->skema_id);
+        }
+
         $iaRecord = IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.06C')->first();
-        return view('formulir.fr-ia-06c', compact('pendaftaran', 'soalList', 'iaRecord'));
+        $isMasterMode = empty($pendaftaran->id) || $pendaftaran->id == 0 || !$request->filled('pendaftaran_id');
+        return view('formulir.fr-ia-06c', compact('pendaftaran', 'soalList', 'iaRecord', 'isMasterMode'));
+    }
+
+    public function ia07a(Request $request, $pendaftaranId = null)
+    {
+        $pendaftaran = $this->dapatkanPendaftaran($pendaftaranId ?: $request->get('pendaftaran_id'));
+        if (!$pendaftaran) {
+            return $this->redirectFallback('Silakan pilih atau daftarkan skema sertifikasi terlebih dahulu.');
+        }
+        
+        $iaRecord = \App\Models\IaPenilaian::where('pendaftaran_id', $pendaftaran->id)
+            ->where('kode_formulir', 'FR.IA.07A')
+            ->first();
+            
+        if ($iaRecord && !empty($iaRecord->data_jawaban)) {
+            $soalList = $iaRecord->data_jawaban;
+        } else {
+            $soalList = self::getSoalIa07($pendaftaran->skema_id);
+            if (empty($soalList)) {
+                $soalList = [
+                    1 => [
+                        'no' => 1,
+                        'pertanyaan' => '',
+                        'kunci' => ''
+                    ]
+                ];
+            }
+        }
+        
+        $isMasterMode = empty($pendaftaran->id) || $pendaftaran->id == 0 || !$request->filled('pendaftaran_id');
+        return view('formulir.fr-ia-07a', compact('pendaftaran', 'soalList', 'iaRecord', 'isMasterMode'));
     }
 
     public function ia07(Request $request, $pendaftaranId = null)
@@ -770,9 +876,17 @@ class FormulirController extends Controller
         if (!$pendaftaran) {
             return $this->redirectFallback('Silakan pilih atau daftarkan skema sertifikasi terlebih dahulu.');
         }
-        $soalList = self::getSoalIa07($pendaftaran->skema_id);
+        
+        $iaRecord07a = \App\Models\IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.07A')->first();
+        if ($iaRecord07a && !empty($iaRecord07a->data_jawaban)) {
+            $soalList = $iaRecord07a->data_jawaban;
+        } else {
+            $soalList = self::getSoalIa07($pendaftaran->skema_id);
+        }
+        
         $iaRecord = IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.07')->first();
-        return view('formulir.fr-ia-07', compact('pendaftaran', 'soalList', 'iaRecord'));
+        $isMasterMode = empty($pendaftaran->id) || $pendaftaran->id == 0 || !$request->filled('pendaftaran_id');
+        return view('formulir.fr-ia-07', compact('pendaftaran', 'soalList', 'iaRecord', 'isMasterMode'));
     }
 
     /* =========================================================================
@@ -787,7 +901,8 @@ class FormulirController extends Controller
         }
         $iaRecord = IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.08')->first();
         $savedData = $iaRecord ? ($iaRecord->data_jawaban ?? []) : [];
-        return view('formulir.fr-ia-08', compact('pendaftaran', 'iaRecord', 'savedData'));
+        $isMasterMode = empty($pendaftaran->id) || $pendaftaran->id == 0 || !$request->filled('pendaftaran_id');
+        return view('formulir.fr-ia-08', compact('pendaftaran', 'iaRecord', 'savedData', 'isMasterMode'));
     }
 
     public function ia09(Request $request, $pendaftaranId = null)
@@ -798,7 +913,8 @@ class FormulirController extends Controller
         }
         $iaRecord = IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.09')->first();
         $savedData = $iaRecord ? ($iaRecord->data_jawaban ?? []) : [];
-        return view('formulir.fr-ia-09', compact('pendaftaran', 'iaRecord', 'savedData'));
+        $isMasterMode = empty($pendaftaran->id) || $pendaftaran->id == 0 || !$request->filled('pendaftaran_id');
+        return view('formulir.fr-ia-09', compact('pendaftaran', 'iaRecord', 'savedData', 'isMasterMode'));
     }
 
     public function ia10(Request $request, $pendaftaranId = null)
@@ -836,7 +952,8 @@ class FormulirController extends Controller
         }
 
         $magicLink = route('formulir.ia10.guest', $iaRecord->token_akses);
-        return view('formulir.fr-ia-10', compact('pendaftaran', 'iaRecord', 'savedData', 'magicLink'));
+        $isMasterMode = empty($pendaftaran->id) || $pendaftaran->id == 0 || !$request->filled('pendaftaran_id');
+        return view('formulir.fr-ia-10', compact('pendaftaran', 'iaRecord', 'savedData', 'magicLink', 'isMasterMode'));
     }
 
     /**
@@ -955,7 +1072,7 @@ class FormulirController extends Controller
 
         $dataPayload = $request->except(['_token', 'tanda_tangan']);
         $tandaTangan = $request->tanda_tangan ?? ($user->tanda_tangan ?? null);
-        $status = 'completed';
+        $status = $request->has('simpan_draft') ? 'draft' : 'completed';
         $suksesMsg = 'Data ' . $kodeForm . ' berhasil disimpan ke sistem.';
 
         /* ---------------------------------------------------------------------
@@ -1128,10 +1245,27 @@ class FormulirController extends Controller
         }
 
         /* ---------------------------------------------------------------------
+           4.5. SIMPAN SOAL CUSTOM (FR.IA.05A & FR.IA.06A)
+           --------------------------------------------------------------------- */
+        elseif ($kodeForm === 'FR.IA.05A' || $kodeForm === 'FR.IA.06A') {
+            $status = $request->has('simpan_draft') ? 'draft' : 'completed';
+            $rekomendasi = $request->input('rekomendasi', 'K');
+            $catatan = $request->input('catatan', '');
+            $dataPayload = $request->input('data_jawaban', []);
+            $suksesMsg = 'Daftar Pertanyaan ('.$kodeForm.') berhasil disimpan.';
+        }
+
+        /* ---------------------------------------------------------------------
            5. AUTO-GRADING UNTUK UJIAN PILIHAN GANDA (FR.IA.05C) & KUNCI ASESOR (FR.IA.05B / FR.IA.05A)
            --------------------------------------------------------------------- */
         elseif ($kodeForm === 'FR.IA.05C') {
-            $masterSoal = self::getSoalIa05($pendaftaran->skema_id);
+            $iaRecord05a = \App\Models\IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.05A')->first();
+            if ($iaRecord05a && !empty($iaRecord05a->data_jawaban)) {
+                $masterSoal = $iaRecord05a->data_jawaban;
+            } else {
+                $masterSoal = self::getSoalIa05($pendaftaran->skema_id);
+            }
+            
             $jawabanAsesi = $request->input('jawaban', []);
             $totalSoal = count($masterSoal);
 
@@ -1140,7 +1274,7 @@ class FormulirController extends Controller
             }
 
             // Validasi: Seluruh butir soal PG wajib dijawab
-            if ($role === 'asesi') {
+            if ($role === 'asesi' && !$request->has('simpan_draft')) {
                 $terjawabCount = 0;
                 foreach ($masterSoal as $no => $item) {
                     if (!empty($jawabanAsesi[$no])) {
@@ -1172,7 +1306,7 @@ class FormulirController extends Controller
                     'kunci' => $kunci,
                     'pilihan_asesi' => $pilihan,
                     'is_benar' => $isBenar,
-                    'kuk' => $item['kuk'],
+                    'kuk' => $item['kuk'] ?? '',
                     'pembahasan' => $item['pembahasan'] ?? ''
                 ];
             }
@@ -1191,22 +1325,26 @@ class FormulirController extends Controller
                 'waktu_selesai' => now()->toDateTimeString()
             ];
 
-            // Simpan juga ke IA.05B untuk referensi pengesahan asesor
-            IaPenilaian::updateOrCreate(
-                ['pendaftaran_id' => $pendaftaran->id, 'kode_formulir' => 'FR.IA.05B'],
-                [
-                    'user_id' => $pendaftaran->asesor_id ?? ($user ? $user->id : null),
-                    'role' => 'asesor',
-                    'data_jawaban' => $dataPayload,
-                    'rekomendasi' => $rekomendasi,
-                    'catatan_asesor' => $catatan,
-                    'status' => 'completed',
-                    'tanda_tangan' => $pendaftaran->tanda_tangan_asesor ?? null,
-                    'tanggal_tanda_tangan' => now(),
-                ]
-            );
-
-            $suksesMsg = 'Ujian Pilihan Ganda (FR.IA.05C) berhasil dikumpulkan! Nilai Skor Anda: ' . $skor . '/100 (' . ($rekomendasi === 'K' ? 'Kompeten' : 'Belum Kompeten') . '). Jawaban telah dikunci.';
+            if ($request->has('simpan_draft')) {
+                $status = 'draft';
+                $suksesMsg = 'Draft ujian pilihan ganda berhasil disimpan.';
+            } else {
+                // Simpan juga ke IA.05B untuk referensi pengesahan asesor
+                IaPenilaian::updateOrCreate(
+                    ['pendaftaran_id' => $pendaftaran->id, 'kode_formulir' => 'FR.IA.05B'],
+                    [
+                        'user_id' => $pendaftaran->asesor_id ?? ($user ? $user->id : null),
+                        'role' => 'asesor',
+                        'data_jawaban' => $dataPayload,
+                        'rekomendasi' => $rekomendasi,
+                        'catatan_asesor' => $catatan,
+                        'status' => 'completed',
+                        'tanda_tangan' => $pendaftaran->tanda_tangan_asesor ?? null,
+                        'tanggal_tanda_tangan' => now(),
+                    ]
+                );
+                $suksesMsg = 'Ujian Pilihan Ganda (FR.IA.05C) berhasil dikumpulkan! Nilai Skor Anda: ' . $skor . '/100 (' . ($rekomendasi === 'K' ? 'Kompeten' : 'Belum Kompeten') . '). Jawaban telah dikunci.';
+            }
         }
 
         /* ---------------------------------------------------------------------
@@ -1216,7 +1354,13 @@ class FormulirController extends Controller
             $existingRecord = IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.06C')->first();
             
             if ($role === 'asesi') {
-                $masterSoal = self::getSoalIa06($pendaftaran->skema_id);
+                $iaRecord06a = \App\Models\IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.06A')->first();
+                if ($iaRecord06a && !empty($iaRecord06a->data_jawaban)) {
+                    $masterSoal = $iaRecord06a->data_jawaban;
+                } else {
+                    $masterSoal = self::getSoalIa06($pendaftaran->skema_id);
+                }
+                
                 $jawabanEsai = $request->input('jawaban_esai', []);
                 $totalSoal = count($masterSoal);
 
@@ -1225,13 +1369,15 @@ class FormulirController extends Controller
                 }
 
                 // Validasi: Seluruh butir soal esai wajib dijawab
-                foreach ($masterSoal as $no => $item) {
-                    if (!isset($jawabanEsai[$no]) || trim((string)$jawabanEsai[$no]) === '') {
-                        return back()->withInput()->with('error', 'Gagal mengirim: Soal Esai No. ' . $no . ' belum Anda jawab. Seluruh butir soal esai wajib diisi sebelum mengumpulkan.');
+                if (!$request->has('simpan_draft')) {
+                    foreach ($masterSoal as $no => $item) {
+                        if (!isset($jawabanEsai[$no]) || trim((string)$jawabanEsai[$no]) === '') {
+                            return back()->withInput()->with('error', 'Gagal mengirim: Soal Esai No. ' . $no . ' belum Anda jawab. Seluruh butir soal esai wajib diisi sebelum mengumpulkan.');
+                        }
                     }
                 }
 
-                $status = 'submitted';
+                $status = $request->has('simpan_draft') ? 'draft' : 'submitted';
                 $rekomendasi = 'Menunggu Evaluasi';
                 $catatan = 'Lembar jawaban esai telah dikirimkan oleh asesi pada ' . now()->format('d-m-Y H:i') . ' dan siap dievaluasi oleh asesor.';
                 $dataPayload = [
@@ -1240,9 +1386,9 @@ class FormulirController extends Controller
                     'ttd_asesi' => $user->tanda_tangan ?? ($pendaftaran->tanda_tangan_asesi ?? null),
                     'tgl_ttd_asesi' => now()->format('d-m-Y H:i')
                 ];
-                $suksesMsg = 'Jawaban Ujian Esai (FR.IA.06C) berhasil dikumpulkan dan dikunci! Status: Menunggu Koreksi oleh Asesor.';
+                $suksesMsg = $request->has('simpan_draft') ? 'Draft ujian esai berhasil disimpan.' : 'Jawaban Ujian Esai (FR.IA.06C) berhasil dikumpulkan dan dikunci! Status: Menunggu Koreksi oleh Asesor.';
             } else {
-                $status = 'completed';
+                $status = $request->has('simpan_draft') ? 'draft' : 'completed';
                 $rekomendasi = $request->input('rekomendasi', 'K');
                 $catatan = $request->input('catatan', 'Seluruh butir soal esai telah dinilai dan memenuhi kriteria unjuk kerja.');
                 
@@ -1266,7 +1412,7 @@ class FormulirController extends Controller
            7. WORKFLOW PERTANYAAN LISAN / DPL (FR.IA.07)
            --------------------------------------------------------------------- */
         elseif ($kodeForm === 'FR.IA.07') {
-            $status = 'completed';
+            $status = $request->has('simpan_draft') ? 'draft' : 'completed';
             $rekomendasi = $request->input('rekomendasi', 'K');
             $catatan = $request->input('catatan', 'Asesi telah menyelesaikan sesi tanya jawab lisan dengan respons yang memuaskan.');
             $dataPayload = [
@@ -1282,20 +1428,22 @@ class FormulirController extends Controller
            8. CEKLIS VERIFIKASI PORTOFOLIO (FR.IA.08)
            --------------------------------------------------------------------- */
         elseif ($kodeForm === 'FR.IA.08') {
-            $request->validate([
-                'dokumen_portofolio' => 'required|array|min:1',
-                'dokumen_portofolio.*.valid' => 'required|in:ya,tidak',
-                'dokumen_portofolio.*.asli' => 'required|in:ya,tidak',
-                'dokumen_portofolio.*.terkini' => 'required|in:ya,tidak',
-                'dokumen_portofolio.*.memadai' => 'required|in:ya,tidak',
-            ], [
-                'dokumen_portofolio.required' => 'Daftar dokumen bukti portofolio wajib dinilai.',
-                'dokumen_portofolio.*.valid.required' => 'Aturan bukti Valid (Ya/Tidak) wajib dipilih untuk setiap portofolio.',
-                'dokumen_portofolio.*.asli.required' => 'Aturan bukti Asli (Ya/Tidak) wajib dipilih untuk setiap portofolio.',
-                'dokumen_portofolio.*.terkini.required' => 'Aturan bukti Terkini (Ya/Tidak) wajib dipilih untuk setiap portofolio.',
-                'dokumen_portofolio.*.memadai.required' => 'Aturan bukti Memadai (Ya/Tidak) wajib dipilih untuk setiap portofolio.',
-            ]);
-            $status = 'completed';
+            if (!$request->has('simpan_draft')) {
+                $request->validate([
+                    'dokumen_portofolio' => 'required|array|min:1',
+                    'dokumen_portofolio.*.valid' => 'required|in:ya,tidak',
+                    'dokumen_portofolio.*.asli' => 'required|in:ya,tidak',
+                    'dokumen_portofolio.*.terkini' => 'required|in:ya,tidak',
+                    'dokumen_portofolio.*.memadai' => 'required|in:ya,tidak',
+                ], [
+                    'dokumen_portofolio.required' => 'Daftar dokumen bukti portofolio wajib dinilai.',
+                    'dokumen_portofolio.*.valid.required' => 'Aturan bukti Valid (Ya/Tidak) wajib dipilih untuk setiap portofolio.',
+                    'dokumen_portofolio.*.asli.required' => 'Aturan bukti Asli (Ya/Tidak) wajib dipilih untuk setiap portofolio.',
+                    'dokumen_portofolio.*.terkini.required' => 'Aturan bukti Terkini (Ya/Tidak) wajib dipilih untuk setiap portofolio.',
+                    'dokumen_portofolio.*.memadai.required' => 'Aturan bukti Memadai (Ya/Tidak) wajib dipilih untuk setiap portofolio.',
+                ]);
+            }
+            $status = $request->has('simpan_draft') ? 'draft' : 'completed';
             $rekomendasi = $request->input('rekomendasi', 'K');
             $catatan = $request->input('catatan', $request->input('bukti_tambahan', ''));
             $dataPayload = [
@@ -1313,7 +1461,7 @@ class FormulirController extends Controller
            9. PERTANYAAN WAWANCARA (FR.IA.09)
            --------------------------------------------------------------------- */
         elseif ($kodeForm === 'FR.IA.09') {
-            $status = 'completed';
+            $status = $request->has('simpan_draft') ? 'draft' : 'completed';
             $rekomendasi = $request->input('rekomendasi', 'K');
             $catatan = $request->input('catatan', $request->input('kesimpulan', ''));
             $dataPayload = [
@@ -1330,7 +1478,7 @@ class FormulirController extends Controller
            10. VERIFIKASI PIHAK KETIGA (FR.IA.10)
            --------------------------------------------------------------------- */
         elseif ($kodeForm === 'FR.IA.10') {
-            $status = 'completed';
+            $status = $request->has('simpan_draft') ? 'draft' : 'completed';
             $rekomendasi = $request->input('rekomendasi', 'K');
             $catatan = $request->input('catatan', '');
             $dataPayload = [
@@ -1369,7 +1517,7 @@ class FormulirController extends Controller
            11. CEKLIS MENINJAU ASESMEN / REVIU PRODUK (FR.IA.11)
            --------------------------------------------------------------------- */
         elseif ($kodeForm === 'FR.IA.11') {
-            $status = 'completed';
+            $status = $request->has('simpan_draft') ? 'draft' : 'completed';
             $rekomendasi = $request->input('rekomendasi', 'K');
             $rekomendasi = $request->input('rekomendasi', $request->input('rekomendasi_crp', 'kompeten'));
             $catatan = $request->input('catatan', '');

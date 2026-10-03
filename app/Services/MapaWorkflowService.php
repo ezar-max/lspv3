@@ -743,9 +743,12 @@ class MapaWorkflowService
             }
 
             $ttdPath = $this->saveSignatureFile($rawSignature, null, 'mapa01_master_' . $skema->id);
-            if (empty($ttdPath) && ($isConfirm || $isAdminUser)) {
+            if (empty($ttdPath)) {
                 $existingMaster = Mapa01::where('skema_id', $skema->id)->whereNull('pendaftaran_id')->first();
                 $ttdPath = $existingMaster?->tanda_tangan_asesor;
+                if (empty($ttdPath) && $rawSignature && Str::startsWith($rawSignature, 'storage/')) {
+                    $ttdPath = $rawSignature;
+                }
             }
             if ($ttdPath && (str_contains($ttdPath, 'svg') || str_contains($ttdPath, '<svg'))) {
                 $ttdPath = null;
@@ -905,11 +908,20 @@ class MapaWorkflowService
 
             // Otomatis tempel TTD Asesor saat pembuatan / penyimpanan master
             if (empty($ttdPath)) {
-                if ($currentUser && !empty($currentUser->tanda_tangan)) {
-                    $ttdPath = $currentUser->tanda_tangan;
-                } else {
-                    $signerUser = Pengguna::find($asesorId) ?: Pengguna::where('peran', 'asesor')->where('skema_id', $skema->id)->first();
-                    $ttdPath = $signerUser?->tanda_tangan;
+                $existingMaster = Mapa02::where('skema_id', $skema->id)->whereNull('pendaftaran_id')->first();
+                $ttdPath = $existingMaster?->tanda_tangan_asesor;
+                
+                if (empty($ttdPath) && $rawSignature && Str::startsWith($rawSignature, 'storage/')) {
+                    $ttdPath = $rawSignature;
+                }
+                
+                if (empty($ttdPath)) {
+                    if ($currentUser && !empty($currentUser->tanda_tangan)) {
+                        $ttdPath = $currentUser->tanda_tangan;
+                    } else {
+                        $signerUser = Pengguna::find($asesorId) ?: Pengguna::where('peran', 'asesor')->where('skema_id', $skema->id)->first();
+                        $ttdPath = $signerUser?->tanda_tangan;
+                    }
                 }
             }
 

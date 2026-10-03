@@ -764,7 +764,7 @@
                     </div>
                 @else
                     <div class="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
-                        <button type="submit" name="aksi" value="draft" 
+                        <button type="submit" name="aksi" value="draft" formnovalidate
                                 class="w-full sm:w-auto px-6 py-2.5 rounded-xl border border-slate-300 text-slate-700 bg-white hover:bg-slate-50 font-semibold text-sm transition-all duration-150 flex items-center justify-center">
                             Simpan Draf
                         </button>

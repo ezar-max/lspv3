@@ -231,6 +231,9 @@
                     <div class="timer-box" style="display: inline-flex; align-items: center; padding: 0.35rem 0.75rem; background: #fee2e2; color: #b91c1c; border-radius: 6px; font-weight: 800;">
                         Waktu: <span id="cbt-timer" style="margin-left: 0.35rem;">60:00</span>
                     </div>
+                    <button type="submit" name="simpan_draft" value="1" formnovalidate onclick="submitDraft(event)" class="tombol tombol-sekunder tombol-sm">
+                        Simpan Draft
+                    </button>
                     <button type="button" onclick="konfirmasiSelesaiUjian()" class="tombol tombol-utama tombol-sm" style="background: #16a34a; border-color: #16a34a; font-weight: 700;">
                         Selesai & Kumpulkan Ujian
                     </button>
@@ -675,6 +678,11 @@
                 saved[no] = val;
                 localStorage.setItem(storageKey, JSON.stringify(saved));
             } catch(e) {}
+        }
+
+        function submitDraft(e) {
+            isSubmitting = true;
+            // The form submission will continue normally but with the simpan_draft button's name/value
         }
 
         function pulihkanDraftLocal() {

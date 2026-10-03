@@ -567,8 +567,13 @@
                 <!-- Mode Canvas Signature (Compact Box) -->
                 <div class="space-y-1.5">
                     @if($displayTtd)
-                        <div x-show="!isEditMode" class="h-24 max-w-[280px] bg-slate-50 rounded-lg border border-slate-200 flex items-center justify-center p-1.5">
-                            <img src="{{ Str::startsWith($displayTtd, 'data:') ? $displayTtd : asset($displayTtd) }}" alt="TTD {{ ($isMasterMode && $isSignedByAdmin) ? 'Admin' : 'Asesor' }}" class="max-h-20 object-contain">
+                        <div x-show="!isEditMode" class="mb-3">
+                            @include('komponen.signature-display', [
+                                'role' => ($isMasterMode && $isSignedByAdmin) ? 'Administrator LSP' : 'Asesor Penguji',
+                                'metadata' => ($isMasterMode && $isSignedByAdmin) ? 'LSP Administrator' : 'No. Reg: ' . $asesorMet,
+                                'signature' => $displayTtd,
+                                'date' => 'Disahkan pada: ' . ($pendaftaran->updated_at ? \Carbon\Carbon::parse($pendaftaran->updated_at)->format('d F Y') : date('d F Y'))
+                            ])
                         </div>
                     @endif
 
@@ -836,6 +841,19 @@
                 }
             },
 
+            validateSignature() {
+                const hiddenInput = document.getElementById('inputTtdAsesor');
+                if (!hiddenInput || !hiddenInput.value || hiddenInput.value.trim() === '') {
+                    alert('Silakan berikan tanda tangan Anda terlebih dahulu pada bagian "Penyusun dan Validator" sebelum menyimpan formulir.');
+                    const canvasEl = document.getElementById('canvasMapa02Asesor');
+                    if (canvasEl) {
+                        canvasEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                    return false;
+                }
+                return true;
+            },
+
             submitAsDraft() {
                 this.prepareSignature();
                 document.getElementById('inputAksi').value = 'draft';
@@ -845,12 +863,14 @@
 
             openConfirmModal() {
                 this.prepareSignature();
+                if (!this.validateSignature()) return;
                 this.showConfirmModal = true;
             },
 
             submitAsConfirmed() {
                 this.showConfirmModal = false;
                 this.prepareSignature();
+                if (!this.validateSignature()) return;
                 document.getElementById('inputAksi').value = 'konfirmasi';
                 this.isSubmitting = true;
                 document.getElementById('formMapa02').submit();

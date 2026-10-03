@@ -273,33 +273,37 @@
         </div>
 
         <!-- 4. PENGESAHAN TANDA TANGAN ASESOR -->
-        <div class="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-4 sm:p-5 space-y-4">
+        <div class="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-4 sm:p-5 space-y-4" x-data="{ showCanvas: {{ $currentSignature ? 'false' : 'true' }} }">
             <h2 class="font-bold text-xs sm:text-sm text-slate-800 border-b border-slate-100 pb-2">
                 4. Pengesahan & Tanda Tangan Asesor Penguji
             </h2>
 
             <div class="space-y-3 text-xs">
                 @if($currentSignature)
-                    <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl mb-3 flex items-center gap-3">
-                        <span class="font-bold text-slate-700">Tanda Tangan Asesor Aktif:</span>
-                        <img src="{{ Str::startsWith($currentSignature, 'data:') ? $currentSignature : asset($currentSignature) }}" alt="TTD Master" class="max-h-12 object-contain bg-white p-1 border rounded">
+                    <div class="flex items-start gap-4 mb-3">
+                        @include('komponen.signature-display', [
+                            'role' => 'Asesor Penguji',
+                            'metadata' => 'No. MET: ' . (auth()->user()->nomor_registrasi ?? '-'),
+                            'signature' => $currentSignature,
+                            'date' => 'Disahkan pada: ' . ($masterAk01->updated_at ? \Carbon\Carbon::parse($masterAk01->updated_at)->format('d F Y, H:i') . ' WIB' : date('d F Y, H:i') . ' WIB')
+                        ])
+                    </div>
+                @else
+                    <!-- Canvas Tanda Tangan -->
+                    <div class="space-y-2">
+                        <span class="font-bold text-slate-700 block">Bubuhkan Tanda Tangan Digital (Canvas):</span>
+                        <div class="border border-slate-300 rounded-xl bg-white relative overflow-hidden">
+                            <canvas id="canvasMasterAk01" width="800" height="240" class="w-full h-36 bg-white cursor-crosshair block touch-none" style="touch-action: none;"></canvas>
+                            <input type="hidden" name="tanda_tangan_asesor" id="inputSignatureMasterAk01" x-ref="signatureInput" value="">
+                        </div>
+                        <div class="flex items-center justify-between text-[11px]">
+                            <span class="text-slate-400">Tanda tangan di area putih di atas.</span>
+                            <button type="button" @click="clearSignature()" class="text-rose-600 hover:text-rose-800 font-semibold cursor-pointer">
+                                [ Hapus / Ulangi ]
+                            </button>
+                        </div>
                     </div>
                 @endif
-
-                <!-- Canvas Tanda Tangan -->
-                <div class="space-y-2">
-                    <span class="font-bold text-slate-700 block">Bubuhkan Tanda Tangan Digital Baru (Canvas):</span>
-                    <div class="border border-slate-300 rounded-xl bg-white relative overflow-hidden">
-                        <canvas id="canvasMasterAk01" width="800" height="240" class="w-full h-36 bg-white cursor-crosshair block touch-none" style="touch-action: none;"></canvas>
-                        <input type="hidden" name="tanda_tangan_asesor" id="inputSignatureMasterAk01" x-ref="signatureInput" value="{{ $currentSignature ?? '' }}">
-                    </div>
-                    <div class="flex items-center justify-between text-[11px]">
-                        <span class="text-slate-400">Tanda tangan di area putih di atas.</span>
-                        <button type="button" @click="clearSignature()" class="text-rose-600 hover:text-rose-800 font-semibold cursor-pointer">
-                            [ Hapus / Ulangi ]
-                        </button>
-                    </div>
-                </div>
             </div>
         </div>
         </fieldset>

@@ -1049,7 +1049,7 @@
                 <!-- AKSI FORM APL-01 (HANYA UNTUK ASESI YANG BELUM DIAJUKAN/ACC) -->
                 @if(auth()->check() && auth()->user()->peran === 'asesi' && !$isDiajukan && !$isAccAdmin)
                     <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 2rem; border-top: 1px solid #e2e8f0; padding-top: 1.5rem;">
-                        <button type="submit" name="aksi" value="draft" class="tombol tombol-sekunder">
+                        <button type="submit" name="aksi" value="draft" formnovalidate class="tombol tombol-sekunder">
                             Simpan Draft
                         </button>
                         <button type="submit" name="aksi" value="ajukan" class="tombol tombol-utama" onclick="return validasiSebelumSubmitApl01()">

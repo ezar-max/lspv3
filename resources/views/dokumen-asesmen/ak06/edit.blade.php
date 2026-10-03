@@ -491,13 +491,27 @@ function ak06EditApp() {
         },
 
         submitSave(isFinalize) {
-            document.getElementById('input-finalize').value = isFinalize ? '1' : '0';
+            const form = document.getElementById('form-ak06');
+            if (form) {
+                document.getElementById('input-finalize').value = isFinalize ? '1' : '0';
 
-            if (this.padReviewer && !this.padReviewer.isEmpty()) {
-                document.getElementById('input-signature').value = this.padReviewer.toDataURL('image/png');
+                if (this.padReviewer && !this.padReviewer.isEmpty()) {
+                    document.getElementById('input-signature').value = this.padReviewer.toDataURL('image/png');
+                }
+
+                if (!isFinalize) {
+                    var input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'simpan_draft';
+                    input.value = '1';
+                    form.appendChild(input);
+                    form.noValidate = true;
+                    var requiredElements = form.querySelectorAll('[required]');
+                    requiredElements.forEach(function(el) { el.removeAttribute('required'); });
+                }
+
+                form.submit();
             }
-
-            document.getElementById('form-ak06').submit();
         }
     };
 }

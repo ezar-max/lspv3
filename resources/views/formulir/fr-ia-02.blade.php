@@ -407,72 +407,18 @@
             <div class="page-break-divider"></div>
 
             <!-- TABEL PENGESAHAN ASESI & ASESOR (FORMAT VERTIKAL PERSIS GAMBAR HALAMAN 3) -->
-            <table class="tabel-ia02" style="margin-bottom: 2rem;">
-                <!-- SEKSI ASESI -->
-                <tr>
-                    <th colspan="3" style="text-align: left; font-weight: 800; padding: 6px 10px; font-size: 0.9rem; background: #ffffff; border: 1px solid #000000;">
-                        ASESI :
-                    </th>
-                </tr>
-                <tr>
-                    <td style="width: 26%; font-weight: 600; padding: 6px 10px; border: 1px solid #000000;">Nama</td>
-                    <td style="width: 3%; text-align: center; border: 1px solid #000000;">:</td>
-                    <td style="padding: 6px 10px; border: 1px solid #000000;">
-                        <strong>{{ $asesiNama }}</strong>
-                    </td>
-                </tr>
-                <tr>
-                    <td style="font-weight: 600; padding: 6px 10px; vertical-align: top; border: 1px solid #000000;">
-                        Tanda tangan dan Tanggal
-                    </td>
-                    <td style="text-align: center; vertical-align: top; padding-top: 10px; border: 1px solid #000000;">:</td>
-                    <td style="padding: 8px 10px; height: 80px; vertical-align: middle; border: 1px solid #000000;">
-                        @if(!empty($asesiTtd))
-                            <img src="{{ asset($asesiTtd) }}" alt="Tanda Tangan Asesi" style="max-height: 48px; display: block; margin-bottom: 4px;">
-                            <span style="font-size: 0.72rem; color: #059669; font-weight: 700;">✓ Terverifikasi Digital</span>
-                        @else
-                            <span style="color: #94a3b8; font-style: italic; font-size: 0.82rem;">(Tanda Tangan Asesi)</span>
-                        @endif
-                        <div style="font-size: 0.78rem; color: #475569; margin-top: 2px;">{{ date('d-m-Y') }}</div>
-                    </td>
-                </tr>
-
-                <!-- SEKSI ASESOR -->
-                <tr>
-                    <th colspan="3" style="text-align: left; font-weight: 800; padding: 6px 10px; font-size: 0.9rem; background: #ffffff; border: 1px solid #000000;">
-                        ASESOR :
-                    </th>
-                </tr>
-                <tr>
-                    <td style="font-weight: 600; padding: 6px 10px; border: 1px solid #000000;">Nama</td>
-                    <td style="text-align: center; border: 1px solid #000000;">:</td>
-                    <td style="padding: 6px 10px; border: 1px solid #000000;">
-                        <strong>{{ $asesorNama }}</strong>
-                    </td>
-                </tr>
-                <tr>
-                    <td style="font-weight: 600; padding: 6px 10px; border: 1px solid #000000;">No. Reg</td>
-                    <td style="text-align: center; border: 1px solid #000000;">:</td>
-                    <td style="padding: 6px 10px; border: 1px solid #000000;">
-                        <strong>{{ $asesorMet }}</strong>
-                    </td>
-                </tr>
-                <tr>
-                    <td style="font-weight: 600; padding: 6px 10px; vertical-align: top; border: 1px solid #000000;">
-                        Tanda tangan dan Tanggal
-                    </td>
-                    <td style="text-align: center; vertical-align: top; padding-top: 10px; border: 1px solid #000000;">:</td>
-                    <td style="padding: 8px 10px; height: 80px; vertical-align: middle; border: 1px solid #000000;">
-                        @if(!empty($asesorTtd))
-                            <img src="{{ asset($asesorTtd) }}" alt="Tanda Tangan Asesor" style="max-height: 48px; display: block; margin-bottom: 4px;">
-                            <span style="font-size: 0.72rem; color: #059669; font-weight: 700;">✓ Terverifikasi Asesor</span>
-                        @else
-                            <span style="color: #94a3b8; font-style: italic; font-size: 0.82rem;">(Tanda Tangan Asesor)</span>
-                        @endif
-                        <div style="font-size: 0.78rem; color: #475569; margin-top: 2px;">{{ date('d-m-Y') }}</div>
-                    </td>
-                </tr>
-            </table>
+            @include('komponen.pengesahan-asesi-asesor', [
+                'kodeForm' => 'FR.IA.02',
+                'isAsesi' => $isAsesi ?? false,
+                'pendaftaran' => $pendaftaran ?? null,
+                'asesiNama' => $asesiNama ?? '-',
+                'asesiTtd' => $asesiTtd ?? null,
+                'tglTtdAsesi' => $tglTtdAsesi ?? null,
+                'asesorNama' => $asesorNama ?? '-',
+                'asesorMet' => $asesorMet ?? '-',
+                'asesorTtd' => $asesorTtd ?? null,
+                'tglAsesmen' => $tglAsesmen ?? null
+            ])
 
             <!-- TABEL PENYUSUN DAN VALIDATOR (PERSIS GAMBAR HALAMAN 3) -->
             @include('komponen.tabel-penyusun-validator', [

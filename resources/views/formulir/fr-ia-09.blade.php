@@ -234,43 +234,18 @@
                 </tr>
             </table>
 
-            <!-- TANDA TANGAN DIGITAL ASESOR & ASESI -->
-            <table class="tabel-bnsp" style="margin-top: 1.5rem; text-align: center;">
-                <thead>
-                    <tr>
-                        <th style="width: 50%; padding: 0.6rem;">Asesi</th>
-                        <th style="width: 50%; padding: 0.6rem;">Asesor</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td style="height: 110px; vertical-align: middle; padding: 0.5rem;">
-                            @if(!empty($asesiTtd))
-                                <div style="display: inline-block;">
-                                    <img src="{{ asset($asesiTtd) }}" alt="Tanda Tangan Asesi" style="max-height: 65px; max-width: 170px; object-fit: contain; display: block; margin: 0 auto;">
-                                    <span style="font-size: 0.72rem; color: #059669; font-weight: 700;">✓ Terverifikasi Digital</span>
-                                </div>
-                            @else
-                                <div style="color: #94a3b8; font-style: italic; font-size: 0.82rem;">(Belum Ditandatangani Asesi)</div>
-                            @endif
-                        </td>
-                        <td style="height: 110px; vertical-align: middle; padding: 0.5rem;">
-                            @if(!empty($asesorTtd))
-                                <div style="display: inline-block;">
-                                    <img src="{{ asset($asesorTtd) }}" alt="Tanda Tangan Asesor" style="max-height: 65px; max-width: 170px; object-fit: contain; display: block; margin: 0 auto;">
-                                    <span style="font-size: 0.72rem; color: #059669; font-weight: 700;">✓ Terverifikasi Asesor</span>
-                                </div>
-                            @else
-                                <div style="color: #94a3b8; font-style: italic; font-size: 0.82rem;">(Tanda Tangan Asesor)</div>
-                            @endif
-                        </td>
-                    </tr>
-                    <tr style="background: #f8fafc; font-weight: 700;">
-                        <td>{{ $asesiNama }}</td>
-                        <td>{{ $asesorNama }}</td>
-                    </tr>
-                </tbody>
-            </table>
+            @include('komponen.pengesahan-asesi-asesor', [
+                'kodeForm' => 'FR.IA.09',
+                'isAsesi' => $isAsesi ?? false,
+                'pendaftaran' => $pendaftaran ?? null,
+                'asesiNama' => $asesiNama ?? '-',
+                'asesiTtd' => $asesiTtd ?? null,
+                'tglTtdAsesi' => $tglTtdAsesi ?? null,
+                'asesorNama' => $asesorNama ?? '-',
+                'asesorMet' => $asesorMet ?? '-',
+                'asesorTtd' => $asesorTtd ?? null,
+                'tglAsesmen' => $tglAsesmen ?? null
+            ])
 
         </form>
 

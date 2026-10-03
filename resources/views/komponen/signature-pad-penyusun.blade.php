@@ -69,7 +69,17 @@
 
             closeSignaturePadPenyusun();
         } else {
-            alert('Silakan gambar tanda tangan Anda terlebih dahulu.');
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Canvas Kosong',
+                    text: 'Silakan gambar tanda tangan Anda terlebih dahulu.',
+                    confirmButtonText: 'Mengerti',
+                    confirmButtonColor: '#059669'
+                });
+            } else {
+                alert('Silakan gambar tanda tangan Anda terlebih dahulu.');
+            }
         }
     };
 </script>

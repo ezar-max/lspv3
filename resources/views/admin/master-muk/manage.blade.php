@@ -3826,5 +3826,34 @@
             if (countEl) countEl.textContent = wadah.querySelectorAll('.item-soal-lisan').length;
         };
 
+        window.hapusBarisSoalLisan = function(btn) {
+            const item = btn.closest('.item-soal-lisan');
+            if (item) {
+                item.remove();
+                
+                const wadah = document.getElementById('wadah-soal-lisan');
+                const items = wadah.querySelectorAll('.item-soal-lisan');
+                
+                items.forEach((el, index) => {
+                    const newNo = index + 1;
+                    el.dataset.nomor = newNo;
+                    
+                    const badge = el.querySelector('.nomor-badge');
+                    if(badge) badge.textContent = newNo;
+                    
+                    const inputs = el.querySelectorAll('input, textarea');
+                    inputs.forEach(input => {
+                        const name = input.getAttribute('name');
+                        if (name) {
+                            input.setAttribute('name', name.replace(/metadata_pertanyaan_lisan\[\d+\]/, \`metadata_pertanyaan_lisan[\${newNo}]\`));
+                        }
+                    });
+                });
+
+                const countEl = document.getElementById('total-soal-count');
+                if (countEl) countEl.textContent = items.length;
+            }
+        };
+
     @include('komponen.signature-pad-penyusun')
 @endpush

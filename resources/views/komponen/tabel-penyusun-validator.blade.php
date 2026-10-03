@@ -125,54 +125,46 @@
     <div style="font-weight: 800; font-size: 0.95rem; margin-bottom: 0.6rem; color: #0f172a; text-transform: uppercase;">
         PENYUSUN DAN VALIDATOR
     </div>
-    <table class="{{ $tableClass }}" style="width: 100%; border-collapse: collapse;">
-        <thead>
-            <tr>
-                <th style="width: 18%; text-align: center;">STATUS</th>
-                <th style="width: 6%; text-align: center;">NO</th>
-                <th style="width: 32%;">NAMA</th>
-                <th style="width: 22%;">NOMOR MET</th>
-                <th style="width: 22%; text-align: center;">TANDA TANGAN DAN TANGGAL</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <td style="font-weight: 800; vertical-align: middle; text-align: center; background-color: #f8fafc;">PENYUSUN</td>
-                <td style="text-align: center; font-weight: 700;">1</td>
-                <td><strong>{{ $penyusunNama }}</strong></td>
-                <td>{{ $penyusunMet }}</td>
-                <td style="text-align: center;">
-                    @if($penyusunTtd)
-                        @php
-                            $penyusunTtdSrc = (str_starts_with($penyusunTtd, 'data:image') || str_starts_with($penyusunTtd, 'http://') || str_starts_with($penyusunTtd, 'https://')) ? $penyusunTtd : asset($penyusunTtd);
-                        @endphp
-                    @endif
-                    <input type="hidden" name="metadata_penyusun_validator[penyusun][ttd]" class="hidden-penyusun-ttd" value="{{ $penyusunTtd ?? '' }}">
-                    <img src="{{ !empty($penyusunTtd) ? $penyusunTtdSrc : '' }}" alt="TTD Penyusun" class="preview-penyusun-ttd {{ empty($penyusunTtd) ? 'hidden' : '' }}" style="max-height: 38px; margin: 0 auto; display: block; cursor: pointer;" onclick="if(typeof openSignaturePadPenyusun === 'function') openSignaturePadPenyusun()">
-                    
-                    @if(empty($penyusunTtd) && (isset($isMasterMode) && $isMasterMode))
-                        <button type="button" onclick="if(typeof openSignaturePadPenyusun === 'function') openSignaturePadPenyusun()" class="px-2 py-1 bg-slate-100 text-slate-600 rounded text-xs hover:bg-slate-200 mt-1"><i class="fa-solid fa-pen"></i> TTD</button>
-                    @endif
-                    <span style="font-size: 0.78rem; color: #64748b; display: block;">{{ $penyusunTgl }}</span>
-                </td>
-            </tr>
-            <tr>
-                <td style="font-weight: 800; vertical-align: middle; text-align: center; background-color: #f8fafc;">VALIDATOR</td>
-                <td style="text-align: center; font-weight: 700;">1</td>
-                <td><strong>{{ $validatorNama }}</strong></td>
-                <td>{{ $validatorMet }}</td>
-                <td style="text-align: center;">
-                    @if($validatorTtd)
-                        @php
-                            $validatorTtdSrc = (str_starts_with($validatorTtd, 'data:image') || str_starts_with($validatorTtd, 'http://') || str_starts_with($validatorTtd, 'https://')) ? $validatorTtd : asset($validatorTtd);
-                        @endphp
-                        <img src="{{ $validatorTtdSrc }}" alt="TTD Validator" style="max-height: 38px; margin: 0 auto; display: block;">
-                    @endif
-                    <span style="font-size: 0.78rem; color: #64748b;">{{ $validatorTgl }}</span>
-                </td>
-            </tr>
-        </tbody>
-    </table>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- Penyusun (Asesor) Card -->
+        <div class="relative">
+            @include('komponen.signature-display', [
+                'role' => 'Penyusun (Asesor Penguji)',
+                'metadata' => 'No. MET: ' . $penyusunMet . ' | ' . $penyusunNama,
+                'signature' => $penyusunTtd,
+                'date' => 'Disahkan pada: ' . $penyusunTgl
+            ])
+            
+            <!-- Elemen Interaktif untuk Form -->
+            <input type="hidden" name="metadata_penyusun_validator[penyusun][ttd]" class="hidden-penyusun-ttd" value="{{ $penyusunTtd ?? '' }}">
+            
+            <!-- Overlay transparan di atas area TTD agar bisa diklik -->
+            @if(isset($isMasterMode) && $isMasterMode)
+                <div class="absolute inset-0 bg-transparent cursor-pointer" style="top: 60px;" onclick="if(typeof openSignaturePadPenyusun === 'function') openSignaturePadPenyusun()"></div>
+                
+                @if(empty($penyusunTtd))
+                    <div class="absolute bottom-6 left-1/2 -translate-x-1/2">
+                        <button type="button" onclick="if(typeof openSignaturePadPenyusun === 'function') openSignaturePadPenyusun()" class="px-3 py-1.5 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-lg text-xs font-bold hover:bg-indigo-100 shadow-sm flex items-center gap-2 transition-colors">
+                            <i class="fa-solid fa-pen"></i> Bubuhkan TTD
+                        </button>
+                    </div>
+                @endif
+                
+                <!-- Gambar preview tersembunyi untuk signature pad JS -->
+                <img src="" class="preview-penyusun-ttd hidden absolute bottom-10 left-1/2 -translate-x-1/2 max-h-20 object-contain z-10" style="pointer-events: none;">
+            @endif
+        </div>
+
+        <!-- Validator (Admin) Card -->
+        <div>
+            @include('komponen.signature-display', [
+                'role' => 'Validator (Admin LSP)',
+                'metadata' => 'No. MET: ' . $validatorMet . ' | ' . $validatorNama,
+                'signature' => $validatorTtd,
+                'date' => 'Divalidasi pada: ' . $validatorTgl
+            ])
+        </div>
+    </div>
 </div>
 
 @if(isset($isMasterMode) && $isMasterMode)

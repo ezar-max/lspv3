@@ -371,8 +371,21 @@
             },
 
             submitSave(isFinalize) {
-                document.getElementById('finalizeInput').value = isFinalize ? '1' : '0';
-                document.getElementById('ak05Form').submit();
+                const form = document.getElementById('ak05Form');
+                if (form) {
+                    document.getElementById('finalizeInput').value = isFinalize ? '1' : '0';
+                    if (!isFinalize) {
+                        var input = document.createElement('input');
+                        input.type = 'hidden';
+                        input.name = 'simpan_draft';
+                        input.value = '1';
+                        form.appendChild(input);
+                        form.noValidate = true;
+                        var requiredElements = form.querySelectorAll('[required]');
+                        requiredElements.forEach(function(el) { el.removeAttribute('required'); });
+                    }
+                    form.submit();
+                }
             },
 
             openFinalizeModal() {

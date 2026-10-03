@@ -184,39 +184,19 @@
         </form></table>
 
         <!-- TANDA TANGAN PENGESAHAN -->
-        <table class="tabel-bnsp" style="margin-bottom: 1.5rem;">
-            <thead>
-                <tr>
-                    <th style="width: 33%; text-align: center;">Tanda Tangan Asesi</th>
-                    <th style="width: 33%; text-align: center;">Tanda Tangan Asesor</th>
-                    <th style="width: 34%; text-align: center;">Nama & Tanda Tangan Supervisor (Jika ada)</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td style="text-align: center; vertical-align: middle; height: 90px;">
-                        @if($asesiTtd)
-                            <img src="{{ $asesiTtd }}" alt="TTD Asesi" style="max-height: 45px; display: block; margin: 0 auto;">
-                        @else
-                            <span style="font-style: italic; color: #94a3b8; font-size: 0.8rem;">(TTD Asesi)</span>
-                        @endif
-                        <div style="font-weight: 700; margin-top: 0.5rem; color: #0f172a;">{{ $asesiNama }}</div>
-                    </td>
-                    <td style="text-align: center; vertical-align: middle;">
-                        @if($asesorTtd)
-                            <img src="{{ $asesorTtd }}" alt="TTD Asesor" style="max-height: 45px; display: block; margin: 0 auto;">
-                        @else
-                            <span style="font-style: italic; color: #94a3b8; font-size: 0.8rem;">(TTD Asesor)</span>
-                        @endif
-                        <div style="font-weight: 700; margin-top: 0.5rem; color: #0f172a;">{{ $asesorNama }}</div>
-                    </td>
-                    <td style="text-align: center; vertical-align: middle;">
-                        <span style="font-style: italic; color: #94a3b8; font-size: 0.8rem;">(TTD Supervisor)</span>
-                        <div style="font-weight: 600; margin-top: 0.5rem; color: #64748b;">Supervisor Tempat Kerja / TUK</div>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
+        @include('komponen.pengesahan-asesi-asesor', [
+            'kodeForm' => 'FR.IA.04A',
+            'isAsesi' => $isAsesi ?? false,
+            'pendaftaran' => $pendaftaran ?? null,
+            'asesiNama' => $asesiNama ?? '-',
+            'asesiTtd' => $asesiTtd ?? null,
+            'tglTtdAsesi' => $tglTtdAsesi ?? null,
+            'asesorNama' => $asesorNama ?? '-',
+            'asesorMet' => $asesorMet ?? '-',
+            'asesorTtd' => $asesorTtd ?? null,
+            'tglAsesmen' => $tglAsesmen ?? null,
+            'showSupervisor' => true
+        ])
         <div style="font-size: 0.78rem; font-style: italic; color: #475569; margin-bottom: 1.5rem;">
             *) Apabila asesi pada Level 4 ke atas, berikan tugas proyek yang meliputi tentang pemecahan masalah dan analisa
         </div>

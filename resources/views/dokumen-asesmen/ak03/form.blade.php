@@ -287,8 +287,14 @@
             signaturePad: null,
 
             saveDraftOnly() {
-                document.getElementById('submitAction').value = '0';
-                document.getElementById('ak03Form').submit();
+                const form = document.getElementById('ak03Form');
+                if (form) {
+                    document.getElementById('submitAction').value = '0';
+                    form.noValidate = true;
+                    var requiredElements = form.querySelectorAll('[required]');
+                    requiredElements.forEach(function(el) { el.removeAttribute('required'); });
+                    form.submit();
+                }
             },
 
             openSignPadModal() {

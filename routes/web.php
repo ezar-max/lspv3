@@ -322,6 +322,7 @@ Route::middleware(['auth'])->prefix('formulir')->as('formulir.')->group(function
     Route::get('/ia-06b/{pendaftaranId?}', [FormulirController::class, 'ia06b'])->name('ia06b');
     Route::get('/ia-06c/{pendaftaranId?}', [FormulirController::class, 'ia06c'])->name('ia06c');
     Route::get('/ia-07/{pendaftaranId?}', [FormulirController::class, 'ia07'])->name('ia07');
+    Route::get('/ia-07a/{pendaftaranId?}', [FormulirController::class, 'ia07a'])->name('ia07a');
     Route::get('/ia-08/{pendaftaranId?}', [FormulirController::class, 'ia08'])->name('ia08');
     Route::get('/ia-09/{pendaftaranId?}', [FormulirController::class, 'ia09'])->name('ia09');
     Route::get('/ia-10/{pendaftaranId?}', [FormulirController::class, 'ia10'])->name('ia10');
@@ -342,6 +343,7 @@ Route::middleware(['auth'])->prefix('formulir')->as('formulir.')->group(function
             'FR.IA.06B' => 'formulir.ia06b',
             'FR.IA.06C' => 'formulir.ia06c',
             'FR.IA.07' => 'formulir.ia07',
+            'FR.IA.07A' => 'formulir.ia07a',
             'FR.IA.08' => 'formulir.ia08',
             'FR.IA.09' => 'formulir.ia09',
             'FR.IA.10' => 'formulir.ia10',

@@ -4,8 +4,10 @@
     $tipeForm = $tipeForm ?? null;
     $isAsesi = $isAsesi ?? (auth()->check() && auth()->user()->peran === 'asesi');
     $showSave = $showSave ?? !$isAsesi;
+    $showDraft = $showDraft ?? $showSave; // Secara default, jika bisa simpan, bisa simpan draft
     $showPrint = $showPrint ?? true;
     $saveLabel = $saveLabel ?? 'Simpan Formulir';
+    $draftLabel = $draftLabel ?? 'Simpan Draft';
     $saveAction = $saveAction ?? "document.querySelector('form').submit()";
     $saveFormId = $saveFormId ?? null;
     $signed = $signed ?? false;
@@ -61,6 +63,11 @@
                     </button>
                 </form>
             @elseif($saveFormId)
+                @if($showDraft)
+                    <button type="button" onclick="submitDraft('{{ $saveFormId }}')" class="tombol tombol-sekunder tombol-sm">
+                        {{ $draftLabel }}
+                    </button>
+                @endif
                 <button type="button" onclick="document.getElementById('{{ $saveFormId }}').submit()" class="tombol tombol-utama tombol-sm">
                     {{ $signLabel }}
                 </button>
@@ -72,6 +79,11 @@
         @else
             @if($showSave)
                 @if($saveFormId)
+                    @if($showDraft)
+                        <button type="button" onclick="submitDraft('{{ $saveFormId }}')" class="tombol tombol-sekunder tombol-sm">
+                            {{ $draftLabel }}
+                        </button>
+                    @endif
                     <button type="button" onclick="submitFormulir('{{ $saveFormId }}')" class="tombol tombol-utama tombol-sm">
                         {{ $saveLabel }}
                     </button>
@@ -93,13 +105,31 @@
         if (isMasterMode) {
             var ttdInput = document.querySelector('.hidden-penyusun-ttd');
             if (ttdInput && ttdInput.value.trim() === '') {
-                alert('Peringatan: Anda harus menandatangani formulir ini (sebagai Penyusun) menggunakan tombol "TTD" di bagian bawah halaman sebelum dapat menyimpannya.');
-                
-                var ttdImg = document.querySelector('.preview-penyusun-ttd');
-                if (ttdImg) {
-                    ttdImg.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    if (typeof openSignaturePadPenyusun === 'function') {
-                        setTimeout(openSignaturePadPenyusun, 800);
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Tanda Tangan Diperlukan',
+                        text: 'Anda harus menandatangani formulir ini (sebagai Penyusun) menggunakan tombol "TTD" di bagian bawah halaman sebelum dapat menyimpannya.',
+                        confirmButtonText: 'Tanda Tangani Sekarang',
+                        confirmButtonColor: '#059669'
+                    }).then(() => {
+                        var ttdImg = document.querySelector('.preview-penyusun-ttd');
+                        if (ttdImg) {
+                            ttdImg.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            if (typeof openSignaturePadPenyusun === 'function') {
+                                setTimeout(openSignaturePadPenyusun, 400);
+                            }
+                        }
+                    });
+                } else {
+                    alert('Peringatan: Anda harus menandatangani formulir ini (sebagai Penyusun) menggunakan tombol "TTD" di bagian bawah halaman sebelum dapat menyimpannya.');
+                    
+                    var ttdImg = document.querySelector('.preview-penyusun-ttd');
+                    if (ttdImg) {
+                        ttdImg.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        if (typeof openSignaturePadPenyusun === 'function') {
+                            setTimeout(openSignaturePadPenyusun, 800);
+                        }
                     }
                 }
                 return;
@@ -111,6 +141,28 @@
             if (typeof form.reportValidity === 'function' && !form.reportValidity()) {
                 return;
             }
+            form.submit();
+        }
+    }
+
+    function submitDraft(formId) {
+        var form = document.getElementById(formId);
+        if (form) {
+            // Hapus required attribute dari semua input yang visible dan required
+            var requiredElements = form.querySelectorAll('[required]');
+            requiredElements.forEach(function(el) {
+                el.removeAttribute('required');
+            });
+
+            // Tambahkan hidden input simpan_draft
+            var input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'simpan_draft';
+            input.value = '1';
+            form.appendChild(input);
+
+            // Bypass validasi HTML5
+            form.noValidate = true;
             form.submit();
         }
     }

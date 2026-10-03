@@ -240,39 +240,18 @@
         </form>
 
         <!-- PENGESAHAN ASESI & ASESOR -->
-        <table class="tabel-bnsp" style="margin-bottom: 2rem;">
-            <tr>
-                <td style="width: 50%; font-weight: 700; background: #f8fafc;">Asesi :</td>
-                <td style="width: 50%; font-weight: 700; background: #f8fafc;">Asesor :</td>
-            </tr>
-            <tr>
-                <td>
-                    <div style="margin-bottom: 0.4rem;">Nama : <strong>{{ $asesiNama }}</strong></div>
-                    <div style="margin-top: 1.25rem; border-top: 1px dashed #cbd5e1; padding-top: 0.4rem;">
-                        Tanda tangan/Tanggal :<br>
-                        @if($asesiTtd)
-                            <img src="{{ $asesiTtd }}" alt="TTD Asesi" style="max-height: 45px; margin-top: 0.25rem;">
-                        @else
-                            <span style="font-style: italic; color: #64748b;">(Tanda Tangan Digital Asesi)</span>
-                        @endif
-                        <div style="font-size: 0.78rem; color: #64748b; margin-top: 0.25rem;">{{ date('d-m-Y') }}</div>
-                    </div>
-                </td>
-                <td>
-                    <div style="margin-bottom: 0.2rem;">Nama : <strong>{{ $asesorNama }}</strong></div>
-                    <div style="margin-bottom: 0.4rem;">No. Reg : <strong>{{ $asesorMet }}</strong></div>
-                    <div style="margin-top: 0.75rem; border-top: 1px dashed #cbd5e1; padding-top: 0.4rem;">
-                        Tanda tangan/Tanggal :<br>
-                        @if($asesorTtd)
-                            <img src="{{ $asesorTtd }}" alt="TTD Asesor" style="max-height: 45px; margin-top: 0.25rem;">
-                        @else
-                            <span style="font-style: italic; color: #64748b;">(Tanda Tangan Digital Asesor)</span>
-                        @endif
-                        <div style="font-size: 0.78rem; color: #64748b; margin-top: 0.25rem;">{{ date('d-m-Y') }}</div>
-                    </div>
-                </td>
-            </tr>
-        </table>
+        @include('komponen.pengesahan-asesi-asesor', [
+            'kodeForm' => 'FR.IA.04B',
+            'isAsesi' => $isAsesi ?? false,
+            'pendaftaran' => $pendaftaran ?? null,
+            'asesiNama' => $asesiNama ?? '-',
+            'asesiTtd' => $asesiTtd ?? null,
+            'tglTtdAsesi' => $tglTtdAsesi ?? null,
+            'asesorNama' => $asesorNama ?? '-',
+            'asesorMet' => $asesorMet ?? '-',
+            'asesorTtd' => $asesorTtd ?? null,
+            'tglAsesmen' => $tglAsesmen ?? null
+        ])
 
         <!-- TABEL PENYUSUN DAN VALIDATOR -->
         @include('komponen.tabel-penyusun-validator', [

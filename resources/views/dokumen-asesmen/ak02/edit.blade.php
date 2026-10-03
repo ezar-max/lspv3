@@ -599,7 +599,20 @@
             },
 
             manualSaveDraft() {
-                document.getElementById('ak02Form').submit();
+                const form = document.getElementById('ak02Form');
+                if (form) {
+                    var input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'simpan_draft';
+                    input.value = '1';
+                    form.appendChild(input);
+                    form.noValidate = true;
+                    
+                    var requiredElements = form.querySelectorAll('[required]');
+                    requiredElements.forEach(function(el) { el.removeAttribute('required'); });
+
+                    form.submit();
+                }
             },
 
             openSignModal(role) {

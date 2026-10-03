@@ -508,7 +508,7 @@
                         'kode_resmi' => 'FR.IA.07',
                         'judul' => 'Daftar Pertanyaan Lisan',
                         'deskripsi' => 'Bank butir pertanyaan lisan mendalam untuk menguji pemahaman KUK dan dimensi kompetensi asesi.',
-                        'route_view' => 'ia07',
+                        'route_view' => 'ia07a',
                     ],
                 ]
             ],

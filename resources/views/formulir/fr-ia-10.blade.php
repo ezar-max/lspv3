@@ -287,24 +287,15 @@
             </table>
 
             <!-- PENGESAHAN ASESOR -->
-            <div style="border: 1px solid #334155; padding: 1.25rem; border-radius: 4px; background: #f8fafc; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
-                <div>
-                    <strong style="display: block; font-size: 0.95rem; color: #0f172a;">Tanda tangan Asesor:</strong>
-                    <div style="height: 55px; display: flex; align-items: center; margin-top: 0.25rem;">
-                        @if($asesorTtd)
-                            <img src="{{ asset($asesorTtd) }}" alt="TTD Asesor" style="max-height: 45px;">
-                        @else
-                            <span style="font-style: italic; color: #64748b; font-size: 0.85rem;">(Tanda Tangan Digital Asesor)</span>
-                        @endif
-                    </div>
-                    <div style="font-weight: 700; color: #0f172a; margin-top: 0.25rem;">{{ $asesorNama }}</div>
-                    <div style="font-size: 0.78rem; color: #64748b;">No. Reg: {{ $asesorMet }}</div>
-                </div>
-                <div>
-                    <strong style="display: block; font-size: 0.95rem; color: #0f172a;">Tanggal:</strong>
-                    <div style="font-weight: 700; color: #0f172a; font-size: 1.1rem; margin-top: 0.5rem;">{{ date('d F Y') }}</div>
-                </div>
-            </div>
+            @include('komponen.pengesahan-asesi-asesor', [
+                'kodeForm' => 'FR.IA.10',
+                'hideAsesi' => true,
+                'pendaftaran' => $pendaftaran ?? null,
+                'asesorNama' => $asesorNama ?? '-',
+                'asesorMet' => $asesorMet ?? '-',
+                'asesorTtd' => $asesorTtd ?? null,
+                'tglAsesmen' => $tglAsesmen ?? null
+            ])
 
             <div style="font-size: 0.75rem; font-style: italic; color: #64748b; margin-top: 1rem; border-top: 1px solid #e2e8f0; padding-top: 0.5rem;">
                 Diadopsi dari templat yang disediakan di Departemen Pendidikan dan Pelatihan, Australia. Merancang alat asesmen untuk hasil yang berkualitas di VET. 2008

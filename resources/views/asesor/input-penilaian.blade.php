@@ -980,7 +980,11 @@
                 const ttdVal = inputTtd ? inputTtd.value.trim() : '';
 
                 if (!ttdVal) {
-                    alert('PERINGATAN: Tanda Tangan Asesor Penguji wajib dibubuhkan/digambar terlebih dahulu!');
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({ icon: 'warning', title: 'Peringatan', text: 'Tanda Tangan Asesor Penguji wajib dibubuhkan/digambar terlebih dahulu!', confirmButtonColor: '#059669' });
+                    } else {
+                        alert('PERINGATAN: Tanda Tangan Asesor Penguji wajib dibubuhkan/digambar terlebih dahulu!');
+                    }
                     const containerTtd = document.getElementById('container-box-ttd-asesor');
                     if (containerTtd) {
                         containerTtd.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -996,7 +1000,11 @@
             handleClickMainButton(event) {
                 if (this.unverifiedCount > 0) {
                     event.preventDefault();
-                    alert('PERINGATAN: Masih terdapat ' + this.unverifiedCount + ' butir KUK yang belum diverifikasi! Silakan tentukan keputusan K atau BK untuk seluruh butir KUK terlebih dahulu.');
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({ icon: 'warning', title: 'Belum Selesai', text: 'Masih terdapat ' + this.unverifiedCount + ' butir KUK yang belum diverifikasi! Silakan tentukan keputusan K atau BK untuk seluruh butir KUK terlebih dahulu.', confirmButtonColor: '#059669' });
+                    } else {
+                        alert('PERINGATAN: Masih terdapat ' + this.unverifiedCount + ' butir KUK yang belum diverifikasi! Silakan tentukan keputusan K atau BK untuk seluruh butir KUK terlebih dahulu.');
+                    }
                     return false;
                 }
                 if (this.allVerified) {
@@ -1013,7 +1021,11 @@
 
             submitMintaRevisiModal() {
                 if (!this.modalCatatanRevisi || !this.modalCatatanRevisi.trim()) {
-                    alert('Catatan/arahan revisi wajib diisi agar asesi mengetahui bagian yang perlu diperbaiki!');
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({ icon: 'warning', title: 'Catatan Wajib Diisi', text: 'Catatan/arahan revisi wajib diisi agar asesi mengetahui bagian yang perlu diperbaiki!', confirmButtonColor: '#059669' });
+                    } else {
+                        alert('Catatan/arahan revisi wajib diisi agar asesi mengetahui bagian yang perlu diperbaiki!');
+                    }
                     return;
                 }
 
@@ -1038,7 +1050,11 @@
 
             submitTolakModal() {
                 if (!this.modalCatatanTolak || !this.modalCatatanTolak.trim()) {
-                    alert('Alasan/catatan penolakan wajib diisi!');
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({ icon: 'warning', title: 'Catatan Wajib Diisi', text: 'Alasan/catatan penolakan wajib diisi!', confirmButtonColor: '#059669' });
+                    } else {
+                        alert('Alasan/catatan penolakan wajib diisi!');
+                    }
                     return;
                 }
 
@@ -1046,22 +1062,40 @@
                     return;
                 }
 
-                if (!confirm('Apakah Anda yakin ingin MENOLAK permohonan FR.APL.02 asesi ini? Tindakan ini tidak dapat dibatalkan.')) {
-                    return;
-                }
+                const processTolak = () => {
+                    this.recommendation = 'ditolak';
+                    this.catatanRekomendasi = this.modalCatatanTolak.trim();
 
-                this.recommendation = 'ditolak';
-                this.catatanRekomendasi = this.modalCatatanTolak.trim();
+                    const inputAction = document.getElementById('input-action-type');
+                    if (inputAction) inputAction.value = 'reject';
 
-                const inputAction = document.getElementById('input-action-type');
-                if (inputAction) inputAction.value = 'reject';
+                    this.tutupModalTolak();
 
-                this.tutupModalTolak();
+                    const form = document.getElementById('form-penilaian-asesor');
+                    if (form) {
+                        this.saving = true;
+                        form.submit();
+                    }
+                };
 
-                const form = document.getElementById('form-penilaian-asesor');
-                if (form) {
-                    this.saving = true;
-                    form.submit();
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Tolak Permohonan?',
+                        text: 'Apakah Anda yakin ingin MENOLAK permohonan FR.APL.02 asesi ini? Tindakan ini tidak dapat dibatalkan.',
+                        showCancelButton: true,
+                        confirmButtonText: 'Ya, Tolak',
+                        cancelButtonText: 'Batal',
+                        confirmButtonColor: '#e11d48'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            processTolak();
+                        }
+                    });
+                } else {
+                    if (confirm('Apakah Anda yakin ingin MENOLAK permohonan FR.APL.02 asesi ini? Tindakan ini tidak dapat dibatalkan.')) {
+                        processTolak();
+                    }
                 }
             },
 
@@ -1100,7 +1134,11 @@
 
             simpanCanvasTtd() {
                 if (this.signaturePad && this.signaturePad.isEmpty()) {
-                    alert('Silakan bubuhkan tanda tangan Anda terlebih dahulu!');
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({ icon: 'warning', title: 'Tanda Tangan Kosong', text: 'Silakan bubuhkan tanda tangan Anda terlebih dahulu!', confirmButtonColor: '#059669' });
+                    } else {
+                        alert('Silakan bubuhkan tanda tangan Anda terlebih dahulu!');
+                    }
                     return;
                 }
 
@@ -1128,7 +1166,11 @@
                 // 0. Validasi kelengkapan butir KUK
                 if (this.unverifiedCount > 0 && this.recommendation !== 'ditolak') {
                     e.preventDefault();
-                    alert('PERINGATAN: Masih terdapat ' + this.unverifiedCount + ' butir KUK yang belum diverifikasi (K/BK)! Silakan lengkapi penilaian seluruh KUK terlebih dahulu.');
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({ icon: 'warning', title: 'Belum Selesai', text: 'Masih terdapat ' + this.unverifiedCount + ' butir KUK yang belum diverifikasi (K/BK)! Silakan lengkapi penilaian seluruh KUK terlebih dahulu.', confirmButtonColor: '#059669' });
+                    } else {
+                        alert('PERINGATAN: Masih terdapat ' + this.unverifiedCount + ' butir KUK yang belum diverifikasi (K/BK)! Silakan lengkapi penilaian seluruh KUK terlebih dahulu.');
+                    }
                     return false;
                 }
 
@@ -1136,7 +1178,11 @@
                 for (let unitId in this.unitDecisions) {
                     if (!this.unitDecisions[unitId] || (this.unitDecisions[unitId] !== 'K' && this.unitDecisions[unitId] !== 'BK')) {
                         e.preventDefault();
-                        alert('PERINGATAN: Masih ada Unit Kompetensi yang belum ditentukan keputusannya! Silakan lengkapi penilaian seluruh KUK.');
+                        if (typeof Swal !== 'undefined') {
+                            Swal.fire({ icon: 'warning', title: 'Belum Selesai', text: 'Masih ada Unit Kompetensi yang belum ditentukan keputusannya! Silakan lengkapi penilaian seluruh KUK.', confirmButtonColor: '#059669' });
+                        } else {
+                            alert('PERINGATAN: Masih ada Unit Kompetensi yang belum ditentukan keputusannya! Silakan lengkapi penilaian seluruh KUK.');
+                        }
                         return false;
                     }
                 }
@@ -1146,35 +1192,80 @@
                     if (!this.allVerified) {
                         e.preventDefault();
                         if (this.unverifiedCount > 0) {
-                            alert('PERINGATAN: Formulir FR.APL.02 tidak dapat disetujui (ACC) karena masih terdapat ' + this.unverifiedCount + ' butir KUK yang belum diverifikasi.');
+                            if (typeof Swal !== 'undefined') {
+                                Swal.fire({ icon: 'error', title: 'Gagal', text: 'Formulir FR.APL.02 tidak dapat disetujui (ACC) karena masih terdapat ' + this.unverifiedCount + ' butir KUK yang belum diverifikasi.', confirmButtonColor: '#ef4444' });
+                            } else {
+                                alert('PERINGATAN: Formulir FR.APL.02 tidak dapat disetujui (ACC) karena masih terdapat ' + this.unverifiedCount + ' butir KUK yang belum diverifikasi.');
+                            }
                         } else {
-                            alert('PERINGATAN: Formulir FR.APL.02 tidak dapat disetujui (ACC) karena masih terdapat butir KUK yang dinilai Belum Kompeten (BK). Silakan gunakan tombol Revisi.');
+                            if (typeof Swal !== 'undefined') {
+                                Swal.fire({ icon: 'error', title: 'Gagal', text: 'Formulir FR.APL.02 tidak dapat disetujui (ACC) karena masih terdapat butir KUK yang dinilai Belum Kompeten (BK). Silakan gunakan tombol Revisi.', confirmButtonColor: '#ef4444' });
+                            } else {
+                                alert('PERINGATAN: Formulir FR.APL.02 tidak dapat disetujui (ACC) karena masih terdapat butir KUK yang dinilai Belum Kompeten (BK). Silakan gunakan tombol Revisi.');
+                            }
                         }
                         return false;
                     }
 
                     const confirmMsg = 'Konfirmasi: Apakah Anda yakin ingin MENYETUJUI (ACC) Formulir FR.APL.02 asesi ini?\nSeluruh KUK dinilai Kompeten (K) (Portofolio Memenuhi Syarat).\nFormulir FR.AK.01 akan terbuka untuk asesi.';
-                    if (!confirm(confirmMsg)) {
-                        e.preventDefault();
-                        return false;
+                    
+                    e.preventDefault(); // Pause form submission for async confirm
+                    
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            icon: 'question',
+                            title: 'Persetujuan FR.APL.02',
+                            text: confirmMsg,
+                            showCancelButton: true,
+                            confirmButtonText: 'Ya, Setujui',
+                            cancelButtonText: 'Batal',
+                            confirmButtonColor: '#059669'
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                this.saving = true;
+                                e.target.submit();
+                            }
+                        });
+                    } else {
+                        if (confirm(confirmMsg)) {
+                            this.saving = true;
+                            e.target.submit();
+                        }
                     }
+                    return false;
                 }
 
                 // 3. Validasi Rekomendasi Revisi
                 if (this.recommendation === 'tidak_dapat_dilanjutkan' && (!this.catatanRekomendasi || !this.catatanRekomendasi.trim())) {
                     e.preventDefault();
-                    alert('PERINGATAN: Catatan/arahan revisi wajib diisi ketika meminta Revisi!');
-                    const textarea = document.getElementById('textarea-catatan-rekomendasi');
-                    if (textarea) textarea.focus();
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({ icon: 'warning', title: 'Peringatan', text: 'Catatan/arahan revisi wajib diisi ketika meminta Revisi!', confirmButtonColor: '#059669' })
+                        .then(() => {
+                            const textarea = document.getElementById('textarea-catatan-rekomendasi');
+                            if (textarea) textarea.focus();
+                        });
+                    } else {
+                        alert('PERINGATAN: Catatan/arahan revisi wajib diisi ketika meminta Revisi!');
+                        const textarea = document.getElementById('textarea-catatan-rekomendasi');
+                        if (textarea) textarea.focus();
+                    }
                     return false;
                 }
 
                 // 4. Validasi Rekomendasi Tolak
                 if (this.recommendation === 'ditolak' && (!this.catatanRekomendasi || !this.catatanRekomendasi.trim())) {
                     e.preventDefault();
-                    alert('PERINGATAN: Alasan/catatan penolakan wajib diisi ketika menolak permohonan!');
-                    const textarea = document.getElementById('textarea-catatan-rekomendasi');
-                    if (textarea) textarea.focus();
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({ icon: 'warning', title: 'Peringatan', text: 'Alasan/catatan penolakan wajib diisi ketika menolak permohonan!', confirmButtonColor: '#059669' })
+                        .then(() => {
+                            const textarea = document.getElementById('textarea-catatan-rekomendasi');
+                            if (textarea) textarea.focus();
+                        });
+                    } else {
+                        alert('PERINGATAN: Alasan/catatan penolakan wajib diisi ketika menolak permohonan!');
+                        const textarea = document.getElementById('textarea-catatan-rekomendasi');
+                        if (textarea) textarea.focus();
+                    }
                     return false;
                 }
 

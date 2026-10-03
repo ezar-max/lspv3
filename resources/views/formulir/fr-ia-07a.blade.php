@@ -1,6 +1,6 @@
 @extends('tata-letak.dasbor')
 
-@section('judul', 'FR.IA.06A - Daftar Pertanyaan Tertulis Esai')
+@section('judul', 'FR.IA.07A - Daftar Pertanyaan Lisan')
 
 @push('css')
     <link rel="stylesheet" href="{{ asset('css/formulir/formulir-bnsp.css') }}">
@@ -19,32 +19,32 @@
 
     <!-- ACTION BAR ATAS -->
     @include('komponen.action-bar-formulir', [
-        'kodeForm' => 'FR.IA.06A',
-        'namaForm' => 'Pertanyaan Tertulis Esai',
+        'kodeForm' => 'FR.IA.07A',
+        'namaForm' => 'Daftar Pertanyaan Lisan',
         'pendaftaranId' => $pendaftaran->id,
         'isAsesi' => $isAsesi,
         'saveLabel' => 'Simpan Formulir',
-        'saveFormId' => 'form-ia06a'
+        'saveFormId' => 'form-ia07a'
     ])
 
     @if($isAsesi)
         @include('komponen.banner-readonly-asesi', [
-            'judul' => 'Daftar Pertanyaan Tertulis Esai (Hanya Baca)',
-            'keterangan' => 'Untuk mengerjakan ujian esai interaktif, silakan buka menu FR.IA.06C (Lembar Ujian Esai).',
+            'judul' => 'Daftar Pertanyaan Lisan (Hanya Baca)',
+            'keterangan' => 'Pertanyaan lisan akan diberikan secara langsung oleh asesor pada saat sesi uji lisan.',
             'status' => 'Hanya Baca',
             'tipe' => 'info'
         ])
     @endif
 
-    <form id="form-ia06a" action="{{ route('formulir.ia.simpan', ['kodeForm' => 'FR.IA.06A', 'pendaftaranId' => $pendaftaran->id]) }}" method="POST">
+    <form id="form-ia07a" action="{{ route('formulir.ia.simpan', ['kodeForm' => 'FR.IA.07A', 'pendaftaranId' => $pendaftaran->id]) }}" method="POST">
         @csrf
         <div class="dokumen-kertas">
             
             <!-- KOP RESMI DOKUMEN STANDAR BNSP -->
             @include('komponen.kop-formulir-bnsp', [
-                'kodeForm' => 'FR.IA.06A',
-                'judulForm' => 'DPT – DAFTAR PERTANYAAN TERTULIS ESAI',
-                'tipeDokumen' => 'Soal Tertulis Esai'
+                'kodeForm' => 'FR.IA.07A',
+                'judulForm' => 'DPL – DAFTAR PERTANYAAN LISAN',
+                'tipeDokumen' => 'Soal Uji Lisan'
             ])
 
             <!-- IDENTITAS DOKUMEN -->
@@ -119,7 +119,7 @@
                 </tbody>
             </table>
 
-            <!-- DAFTAR SOAL ESAI -->
+            <!-- DAFTAR SOAL LISAN -->
             <div style="margin-bottom: 1.5rem;" x-data="{
                 soalList: {{ json_encode(array_values($soalList ?? [])) }},
                 tambahSoal() {
@@ -136,7 +136,7 @@
                 }
             }">
                 <div style="font-weight: 800; font-size: 0.95rem; color: #0f172a; margin-bottom: 0.75rem;">
-                    Jawablah semua pertanyaan di bawah ini:
+                    Daftar Pertanyaan Lisan:
                 </div>
 
                 <table class="tabel-bnsp">
@@ -150,7 +150,7 @@
                                         <span style="font-size: 0.75rem; color: #0284c7; font-weight: 700;" x-text="item.kuk"></span>
                                     @else
                                         <div style="margin-bottom: 0.5rem;">
-                                            <textarea x-model="item.pertanyaan" :name="'data_jawaban[' + (index+1) + '][pertanyaan]'" style="width: 100%; padding: 0.5rem; border: 1px solid #cbd5e1; border-radius: 4px; resize: vertical;" rows="2" placeholder="Tulis pertanyaan esai..." required></textarea>
+                                            <textarea x-model="item.pertanyaan" :name="'data_jawaban[' + (index+1) + '][pertanyaan]'" style="width: 100%; padding: 0.5rem; border: 1px solid #cbd5e1; border-radius: 4px; resize: vertical;" rows="2" placeholder="Tulis pertanyaan lisan..." required></textarea>
                                         </div>
                                         <div style="margin-bottom: 0.5rem;">
                                             <textarea x-model="item.kunci" :name="'data_jawaban[' + (index+1) + '][kunci]'" style="width: 100%; padding: 0.5rem; border: 1px solid #10b981; border-radius: 4px; resize: vertical;" rows="2" placeholder="Kunci jawaban atau pedoman penilaian..." required></textarea>
@@ -170,7 +170,7 @@
                 @if(!$isAsesi)
                 <div style="margin-top: 1rem; text-align: center;">
                     <button type="button" @click="tambahSoal" class="tombol tombol-sekunder" style="border: 2px dashed #cbd5e1; background: #f8fafc; color: #475569; width: 100%; padding: 0.75rem; border-radius: 8px;">
-                        + Tambah Soal Esai
+                        + Tambah Soal Lisan
                     </button>
                 </div>
                 @endif
@@ -179,13 +179,13 @@
         <!-- TABEL PENYUSUN DAN VALIDATOR -->
         @include('komponen.tabel-penyusun-validator', [
             'pendaftaran' => $pendaftaran,
-            'kodeForm' => 'FR.IA.06A',
+            'kodeForm' => 'FR.IA.07A',
             'tableClass' => 'tabel-bnsp'
         ])
 
         @include('komponen.navigasi-form-bawah', [
-            'nextUrl' => $isAsesi ? route('formulir.ia06c', $pendaftaran->id) : route('formulir.ia06b', $pendaftaran->id),
-            'nextLabel' => $isAsesi ? 'FR.IA.06C (Ujian Esai)' : 'FR.IA.06B (Kunci Jawaban)'
+            'nextUrl' => route('formulir.ia07', $pendaftaran->id),
+            'nextLabel' => 'FR.IA.07 (Uji Lisan & Pencatatan)'
         ])
 
     </div>

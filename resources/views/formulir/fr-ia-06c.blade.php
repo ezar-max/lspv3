@@ -130,6 +130,9 @@
             @if($isAsesi)
                 @if(!$isSubmitted)
                     @if(count($soalList) > 0)
+                        <button type="submit" name="simpan_draft" value="1" formnovalidate onclick="submitDraft(event)" class="tombol tombol-sekunder tombol-sm">
+                            Simpan Draft
+                        </button>
                         <button type="button" onclick="konfirmasiKirimEsai()" class="tombol tombol-utama tombol-sm" style="background: #16a34a; border-color: #16a34a; font-weight: 700;">
                             Kirim Jawaban Esai
                         </button>
@@ -390,44 +393,18 @@
             @endif
 
             <!-- PENGESAHAN ASESI & ASESOR -->
-            <table class="tabel-bnsp">
-                <tr>
-                    <td style="width: 50%; font-weight: 700; background: #f8fafc;">ASESI :</td>
-                    <td style="width: 50%; font-weight: 700; background: #f8fafc;">ASESOR :</td>
-                </tr>
-                <tr>
-                    <td>
-                        <div style="margin-bottom: 0.4rem;">Nama : <strong>{{ $asesiNama }}</strong></div>
-                        <div style="margin-top: 1rem; border-top: 1px dashed #cbd5e1; padding-top: 0.4rem;">
-                            Tanda tangan dan Tanggal :<br>
-                            @if($asesiTtd)
-                                <div style="margin-top: 0.35rem;">
-                                    <img src="{{ $asesiTtd }}" alt="TTD Asesi" style="max-height: 45px;">
-                                    <div style="font-size: 0.78rem; color: #16a34a; font-weight: 700; margin-top: 0.25rem;">
-                                        Diserahkan oleh Asesi ({{ $tglTtdAsesi ?? date('d-m-Y H:i') }})
-                                    </div>
-                                </div>
-                            @else
-                                <span style="font-style: italic; color: #64748b;">(Tanda Tangan Digital Akun Asesi)</span>
-                                <div style="font-size: 0.78rem; color: #64748b; margin-top: 0.25rem;">{{ date('d-m-Y') }}</div>
-                            @endif
-                        </div>
-                    </td>
-                    <td>
-                        <div style="margin-bottom: 0.2rem;">Nama : <strong>{{ $asesorNama }}</strong></div>
-                        <div style="margin-bottom: 0.4rem;">No. Reg : <strong>{{ $asesorMet }}</strong></div>
-                        <div style="margin-top: 0.75rem; border-top: 1px dashed #cbd5e1; padding-top: 0.4rem;">
-                            Tanda tangan dan Tanggal :<br>
-                            @if($asesorTtd)
-                                <img src="{{ $asesorTtd }}" alt="TTD Asesor" style="max-height: 45px; margin-top: 0.25rem;">
-                            @else
-                                <span style="font-style: italic; color: #64748b;">(Tanda Tangan Digital Asesor)</span>
-                            @endif
-                            <div style="font-size: 0.78rem; color: #64748b; margin-top: 0.25rem;">{{ date('d-m-Y') }}</div>
-                        </div>
-                    </td>
-                </tr>
-            </table>
+            @include('komponen.pengesahan-asesi-asesor', [
+                'kodeForm' => 'FR.IA.06C',
+                'isAsesi' => $isAsesi ?? false,
+                'pendaftaran' => $pendaftaran ?? null,
+                'asesiNama' => $asesiNama ?? '-',
+                'asesiTtd' => $asesiTtd ?? null,
+                'tglTtdAsesi' => $tglTtdAsesi ?? null,
+                'asesorNama' => $asesorNama ?? '-',
+                'asesorMet' => $asesorMet ?? '-',
+                'asesorTtd' => $asesorTtd ?? null,
+                'tglAsesmen' => $tglAsesmen ?? null
+            ])
 
             @include('komponen.navigasi-form-bawah', [
                 'pendaftaranId' => $pendaftaran->id,
@@ -565,6 +542,11 @@
                     document.getElementById('form-ia-06c').submit();
                 }
             }
+        }
+
+        function submitDraft(e) {
+            isSubmitting = true;
+            // The form submission will continue normally but with the simpan_draft button's name/value
         }
 
         // =====================================================================
