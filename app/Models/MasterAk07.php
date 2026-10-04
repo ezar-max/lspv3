@@ -70,20 +70,11 @@ class MasterAk07 extends Model
                 $ak07->catatan_asesor = $this->catatan_asesor;
             }
 
-            // Tanda tangan asesor diselaraskan dari master
-            $ttdAsesor = $this->tanda_tangan_asesor 
-                ?: ($this->asesor?->tanda_tangan 
-                ?: ($p->asesor?->tanda_tangan ?? null));
-
-            if (!empty($ttdAsesor) && (empty($ak07->asesor_signature) || $ak07->asesor_signature !== $ttdAsesor)) {
-                $ak07->asesor_signature = $ttdAsesor;
-                $ak07->asesor_signed_at = $this->tanggal_ttd_asesor ?? now();
-            }
-
-            // Tentukan status akhir
-            if (!empty($ak07->asesi_signature) && !empty($ak07->asesor_signature)) {
-                $ak07->status = 'confirmed';
-            } else {
+            $ak07->asesor_signature = null;
+            $ak07->asesor_signed_at = null;
+            $ak07->asesi_signature = null;
+            $ak07->asesi_signed_at = null;
+            if ($ak07->status !== 'confirmed') {
                 $ak07->status = 'draft';
             }
 

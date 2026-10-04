@@ -15,6 +15,16 @@ use Illuminate\Http\Request;
 
 class AsesiController extends Controller
 {
+    public function requestPerbaikan($id)
+    {
+        $pendaftaran = PendaftaranAsesi::where('asesi_id', auth()->id())->findOrFail($id);
+        if ($pendaftaran->request_perbaikan != 1) {
+            $pendaftaran->update(['request_perbaikan' => 1]);
+            LogAktivitas::catat('request_perbaikan', 'Asesi '.auth()->user()->nama_lengkap.' meminta izin untuk mengubah data pendaftaran skema.', $pendaftaran->id);
+        }
+        return redirect()->back()->with('success', 'Permintaan izin ubah data telah dikirim ke Admin.');
+    }
+
     public function dashboard(Request $request)
     {
         JadwalAsesmen::syncAllStatuses();
@@ -1333,6 +1343,21 @@ class AsesiController extends Controller
                     ->withInput()
                     ->with('error', 'Masih ada data yang wajib diisi. Silakan lengkapi penilaian seluruh butir KUK terlebih dahulu.');
             }
+
+            // Memastikan bahwa setiap 'K' memiliki bukti pendukung
+            foreach ($request->penilaian as $elemenId => $nilai) {
+                if ($nilai === 'K') {
+                    $hasBukti = \App\Models\BuktiApl02::where('pendaftaran_id', $pendaftaran->id)
+                        ->where('elemen_id', $elemenId)
+                        ->exists() || $request->hasFile("bukti_foto.{$elemenId}") || $request->has("bukti_relevan.{$elemenId}");
+                    
+                    if (!$hasBukti) {
+                        return redirect()->route('asesi.formulir', ['pendaftaran_id' => $pendaftaran->id, 'tab' => 'apl02'])
+                            ->withInput()
+                            ->with('error', 'Anda menyatakan Kompeten (K) pada elemen tertentu, namun belum melampirkan Bukti. Harap lengkapi bukti untuk seluruh elemen yang Anda nyatakan Kompeten.');
+                    }
+                }
+            }
         }
 
         $ttdAsesi = $request->tanda_tangan_asesi ?: ($pendaftaran->tanda_tangan_asesi ?: $pengguna->tanda_tangan);
@@ -1425,12 +1450,12 @@ class AsesiController extends Controller
 
         // Auto-ACC jika asesi sudah menandatangani FR.AK.01 namun status masih menunggu asesor
         if ($pendaftaran->status_ak01 === 'disetujui_asesi' || (!empty($pendaftaran->tanda_tangan_asesi_ak01) && $pendaftaran->status_ak01 !== 'selesai')) {
-            $asesor = $pendaftaran->asesor ?: $pendaftaran->jadwal?->asesor;
-            $asesorTtd = $pendaftaran->tanda_tangan_asesor_ak01 ?: ($asesor?->tanda_tangan ?: 'signatures/verified_asesor_auto.png');
             $pendaftaran->update([
                 'status_ak01' => 'selesai',
-                'tanda_tangan_asesor_ak01' => $asesorTtd,
-                'tanggal_ttd_asesor_ak01' => $pendaftaran->tanggal_ttd_asesor_ak01 ?: now(),
+                'tanda_tangan_asesi_ak01' => null,
+                'tanggal_ttd_asesi_ak01' => null,
+                'tanda_tangan_asesor_ak01' => null,
+                'tanggal_ttd_asesor_ak01' => null,
             ]);
             $pendaftaran->refresh();
         }
@@ -1484,77 +1509,41 @@ class AsesiController extends Controller
             'tuk_type' => 'nullable|string|in:Sewaktu,Tempat Kerja,Mandiri',
             'bukti_dikumpulkan' => 'nullable|array',
             'bukti_dikumpulkan_lainnya' => 'nullable|string',
-            'tanda_tangan_asesi_ak01' => 'nullable|string',
         ]);
-
-        $rawTtd = $request->tanda_tangan_asesi_ak01 ?: ($pendaftaran->tanda_tangan_asesi_ak01 ?: ($pendaftaran->tanda_tangan_asesi ?: $pengguna->tanda_tangan));
-
-        if (empty($rawTtd)) {
-            return back()->withInput()->with('error', 'Silakan bubuhkan tanda tangan digital Anda terlebih dahulu.');
-        }
-
-        $ttdPath = $rawTtd;
-
-        // Simpan Signature Base64 ke Storage jika berupa DataURL
-        if (is_string($rawTtd) && \Illuminate\Support\Str::startsWith($rawTtd, 'data:image')) {
-            try {
-                $imageParts = explode(';base64,', $rawTtd);
-                if (count($imageParts) === 2) {
-                    $imageTypeAux = explode('image/', $imageParts[0]);
-                    $imageType = $imageTypeAux[1] ?? 'png';
-                    $imageBase64 = base64_decode($imageParts[1]);
-
-                    $fileName = 'signatures/ak01_asesi_' . $pendaftaran->id . '_' . time() . '_' . \Illuminate\Support\Str::random(6) . '.' . $imageType;
-                    \Illuminate\Support\Facades\Storage::disk('public')->put($fileName, $imageBase64);
-                    $ttdPath = 'storage/' . $fileName;
-
-                    $pengguna->update(['tanda_tangan' => $ttdPath]);
-                }
-            } catch (\Exception $e) {
-                \Log::warning('Gagal simpan signature file: ' . $e->getMessage());
-            }
-        }
 
         $oldAk01Status = $pendaftaran->status_ak01;
 
-        \Illuminate\Support\Facades\DB::transaction(function () use ($pendaftaran, $request, $ttdPath) {
-            $asesor = $pendaftaran->asesor ?: $pendaftaran->jadwal?->asesor;
-            $asesorTtd = $pendaftaran->tanda_tangan_asesor_ak01 ?: ($asesor?->tanda_tangan ?: 'signatures/verified_asesor_auto.png');
-
+        \Illuminate\Support\Facades\DB::transaction(function () use ($pendaftaran, $request) {
             $pendaftaran->update([
                 'tuk_type' => $request->has('tuk_type') ? $request->tuk_type : $pendaftaran->tuk_type,
                 'bukti_dikumpulkan' => $request->has('bukti_dikumpulkan') ? $request->bukti_dikumpulkan : $pendaftaran->bukti_dikumpulkan,
                 'bukti_dikumpulkan_lainnya' => $request->has('bukti_dikumpulkan_lainnya') ? $request->bukti_dikumpulkan_lainnya : $pendaftaran->bukti_dikumpulkan_lainnya,
-                'tanda_tangan_asesi_ak01' => $ttdPath,
-                'tanggal_ttd_asesi_ak01' => now(),
+                'tanda_tangan_asesi_ak01' => null,
+                'tanggal_ttd_asesi_ak01' => null,
                 'status_ak01' => 'selesai',
-                'tanda_tangan_asesor_ak01' => $asesorTtd,
-                'tanggal_ttd_asesor_ak01' => $pendaftaran->tanggal_ttd_asesor_ak01 ?: now(),
+                'tanda_tangan_asesor_ak01' => null,
+                'tanggal_ttd_asesor_ak01' => null,
             ]);
 
-            LogAktivitas::catat('Pengisian FR.AK.01', 'Asesi menyetujui dan menandatangani Persetujuan Asesmen FR.AK.01 #' . $pendaftaran->nomor_pendaftaran . ' (ACC Otomatis)');
+            LogAktivitas::catat('Pengisian FR.AK.01', 'Asesi mengirim persetujuan FR.AK.01 #' . $pendaftaran->nomor_pendaftaran);
         });
 
         // Trigger Notification ke Asesi (Hanya saat pertama kali / cegah duplikasi)
         if ($oldAk01Status !== 'selesai') {
             $pendaftaran->asesi?->notify(new \App\Notifications\AK01Approved($pendaftaran->id));
-            $asesorUser = $pendaftaran->asesor ?: $pendaftaran->jadwal?->asesor;
-            if ($asesorUser) {
-                $asesorUser->notify(new \App\Notifications\AK01ReadyForSignature($pendaftaran->id, $pendaftaran->asesi?->nama_lengkap ?? 'Asesi'));
-            }
         }
 
         if ($request->wantsJson() || $request->ajax()) {
             return response()->json([
                 'success' => true,
-                'message' => 'Persetujuan Asesmen (FR.AK.01) telah berhasil ditandatangani. Silakan menunggu sesi asesmen Anda dimulai sesuai jadwal.',
+                'message' => 'Persetujuan Asesmen (FR.AK.01) berhasil dikirim. Silakan menunggu sesi asesmen Anda dimulai sesuai jadwal.',
                 'redirect_url' => route('asesi.dashboard', ['pendaftaran_id' => $pendaftaran->id]),
             ]);
         }
 
         return redirect()->route('asesi.dashboard', ['pendaftaran_id' => $pendaftaran->id])
             ->with('notif_ak01_selesai', true)
-            ->with('sukses', 'Formulir FR.AK.01 Persetujuan Asesmen & Kerahasiaan telah berhasil ditandatangani. Silakan menunggu sesi asesmen Anda dimulai sesuai jadwal.');
+            ->with('sukses', 'Formulir FR.AK.01 Persetujuan Asesmen & Kerahasiaan berhasil dikirim. Silakan menunggu sesi asesmen Anda dimulai sesuai jadwal.');
     }
 
     /**

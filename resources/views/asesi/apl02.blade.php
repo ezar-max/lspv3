@@ -393,85 +393,51 @@
                             </td>
 
                             <!-- KANAN: ASESI & ASESOR -->
-                            <td style="width: 52%; padding: 0; vertical-align: top;">
-                                <table style="width: 100%; border-collapse: collapse;">
-                                    <!-- BLOCK ASESI -->
-                                    <tr>
-                                        <th colspan="2" style="text-align: left; background: #f1f5f9; padding: 0.75rem 1rem; border-bottom: 1px solid #e2e8f0; color: #0f172a; font-weight: 700; font-size: 0.92rem;">
-                                            Asesi :
-                                        </th>
-                                    </tr>
-                                    <tr>
-                                        <td style="width: 140px; padding: 0.75rem 1rem; border-bottom: 1px solid #e2e8f0; font-weight: 600; color: #475569;">Nama</td>
-                                        <td style="padding: 0.75rem 1rem; border-bottom: 1px solid #e2e8f0; font-weight: 700; color: #0f172a;">
-                                            {{ $pendaftaran->asesi->nama_lengkap }}
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td style="padding: 0.75rem 1rem; border-bottom: 1px solid #e2e8f0; font-weight: 600; color: #475569;">Tanda tangan / Tanggal</td>
-                                        <td style="padding: 0.75rem 1rem; border-bottom: 1px solid #e2e8f0;">
-                                            @php
-                                                $ttdAsesiApl02 = $pendaftaran->tanda_tangan_asesi ?? $pendaftaran->asesi->tanda_tangan;
-                                                $srcAsesiApl02 = $ttdAsesiApl02 ? (\Illuminate\Support\Str::startsWith($ttdAsesiApl02, ['data:image', 'http://', 'https://']) ? $ttdAsesiApl02 : asset($ttdAsesiApl02)) : '';
-                                            @endphp
-                                            <!-- INPUT HIDDEN BASE64 TTD -->
-                                            <input type="hidden" name="tanda_tangan_asesi" id="input-ttd-asesi-base64" value="{{ old('tanda_tangan_asesi', $ttdAsesiApl02) }}">
+                            <td style="width: 52%; padding: 1.5rem; vertical-align: top;">
+                                <!-- BLOCK ASESI -->
+                                @php
+                                    $ttdAsesiApl02 = $pendaftaran->tanda_tangan_asesi ?? $pendaftaran->asesi->tanda_tangan;
+                                    $srcAsesiApl02 = $ttdAsesiApl02 ? (\Illuminate\Support\Str::startsWith($ttdAsesiApl02, ['data:image', 'http://', 'https://']) ? $ttdAsesiApl02 : asset($ttdAsesiApl02)) : '';
+                                @endphp
+                                <input type="hidden" name="tanda_tangan_asesi" id="input-ttd-asesi-base64" value="{{ old('tanda_tangan_asesi', $ttdAsesiApl02) }}">
+                                <div class="border border-slate-200 rounded-xl bg-slate-50/70 p-4 flex flex-col sm:flex-row items-center justify-between gap-4 mb-4" style="background: rgba(248, 250, 252, 0.7); border: 1px solid #e2e8f0; border-radius: 0.75rem; padding: 1rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem;">
+                                    <div class="space-y-1 text-center sm:text-left" style="line-height: 1.4;">
+                                        <span class="block" style="font-size: 9px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em;">Asesi Pemohon:</span>
+                                        <span class="block" style="font-size: 0.85rem; font-weight: 700; color: #1e293b;">{{ $pendaftaran->asesi->nama_lengkap }}</span>
+                                        <span class="block" style="font-size: 0.75rem; color: #64748b; font-family: monospace;">NIK: {{ $pendaftaran->asesi->nik ?? '-' }}</span>
+                                        <span class="block" style="font-size: 0.7rem; color: #94a3b8; font-weight: 500; margin-top: 0.25rem;">Ditandatangani: {{ $pendaftaran->tanggal_ttd_asesi ? $pendaftaran->tanggal_ttd_asesi->format('d M Y') : date('d M Y') }}</span>
+                                        
+                                        @if(!$isFormDisabled)
+                                            <button type="button" class="tombol tombol-utama tombol-sm mt-2" onclick="bukaModal('modalCanvasTtd')" style="font-size: 0.7rem; padding: 0.35rem 0.6rem; border-radius: 6px;">
+                                                {{ $srcAsesiApl02 ? 'Ubah TTD Canvas' : 'Gambar TTD Digital' }}
+                                            </button>
+                                        @endif
+                                    </div>
+                                    <div style="padding: 0.5rem; background: #ffffff; border-radius: 0.5rem; border: 1px solid #e2e8f0; box-shadow: 0 1px 2px rgba(0,0,0,0.05);" id="box-preview-ttd-asesi" class="{{ $srcAsesiApl02 ? '' : 'hidden' }}">
+                                        <img id="preview-ttd-asesi-img" src="{{ $srcAsesiApl02 }}" alt="TTD Asesi" style="max-height: 60px; max-width: 150px; object-fit: contain;">
+                                    </div>
+                                </div>
 
-                                            <!-- PREVIEW TTD CANVAS -->
-                                            <div id="box-preview-ttd-asesi" style="margin: 0.25rem 0; {{ $srcAsesiApl02 ? '' : 'display: none;' }}">
-                                                <img id="preview-ttd-asesi-img" src="{{ $srcAsesiApl02 }}" alt="TTD Asesi" style="max-height: 60px; border: 1px solid #cbd5e1; padding: 0.2rem; background: #ffffff; border-radius: 6px;">
-                                            </div>
-
-                                            @if(!$isFormDisabled)
-                                                <button type="button" class="tombol tombol-utama tombol-sm" onclick="bukaModal('modalCanvasTtd')" style="margin-top: 0.35rem; font-size: 0.8rem;">
-                                                    {{ $srcAsesiApl02 ? 'Ubah Tanda Tangan Canvas' : 'Gambar Tanda Tangan Digital' }}
-                                                </button>
-                                            @endif
-
-                                            <div style="font-size: 0.8rem; color: #64748b; margin-top: 0.35rem;">
-                                                Tanggal: {{ $pendaftaran->tanggal_ttd_asesi ? $pendaftaran->tanggal_ttd_asesi->format('d/m/Y') : date('d/m/Y') }}
-                                            </div>
-                                        </td>
-                                    </tr>
-
-                                    <!-- BLOCK ASESOR -->
-                                    <tr>
-                                        <th colspan="2" style="text-align: left; background: #f1f5f9; padding: 0.75rem 1rem; border-bottom: 1px solid #e2e8f0; color: #0f172a; font-weight: 700; font-size: 0.92rem;">
-                                            Ditinjau Oleh Asesor :
-                                        </th>
-                                    </tr>
-                                    <tr>
-                                        <td style="padding: 0.75rem 1rem; border-bottom: 1px solid #e2e8f0; font-weight: 600; color: #475569;">Nama :</td>
-                                        <td style="padding: 0.75rem 1rem; border-bottom: 1px solid #e2e8f0; font-weight: 700; color: #0f172a;">
-                                            {{ $pendaftaran->asesor->nama_lengkap ?? 'Belum Ditentukan' }}
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td style="padding: 0.75rem 1rem; border-bottom: 1px solid #e2e8f0; font-weight: 600; color: #475569;">No. Reg:</td>
-                                        <td style="padding: 0.75rem 1rem; border-bottom: 1px solid #e2e8f0; font-weight: 700; color: #2563eb;">
-                                            {{ $pendaftaran->asesor->nomor_registrasi ?? ('MET.000.00' . ($pendaftaran->asesor_id ?? '00') . ' 2026') }}
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td style="padding: 0.75rem 1rem; font-weight: 600; color: #475569;">Tanda tangan / Tanggal</td>
-                                        <td style="padding: 0.75rem 1rem;">
-                                            @php
-                                                $ttdAsesorApl02 = $pendaftaran->tanda_tangan_asesor ?? ($pendaftaran->asesor->tanda_tangan ?? null);
-                                                $srcAsesorApl02 = $ttdAsesorApl02 ? (\Illuminate\Support\Str::startsWith($ttdAsesorApl02, ['data:image', 'http://', 'https://']) ? $ttdAsesorApl02 : asset($ttdAsesorApl02)) : null;
-                                            @endphp
-                                            @if($srcAsesorApl02)
-                                                <img src="{{ $srcAsesorApl02 }}" alt="TTD Asesor" style="max-height: 55px; display: block; margin-bottom: 0.25rem;">
-                                            @else
-                                                <span style="color: #64748b; font-style: italic; font-size: 0.82rem;">(Disahkan oleh Asesor di halaman peninjauan Asesor)</span>
-                                            @endif
-                                            @if($pendaftaran->tanggal_ttd_asesor)
-                                                <div style="font-size: 0.8rem; color: #64748b; margin-top: 0.2rem;">
-                                                    Tanggal: {{ $pendaftaran->tanggal_ttd_asesor->format('d/m/Y') }}
-                                                </div>
-                                            @endif
-                                        </td>
-                                    </tr>
-                                </table>
+                                <!-- BLOCK ASESOR -->
+                                @php
+                                    $ttdAsesorApl02 = $pendaftaran->tanda_tangan_asesor ?? ($pendaftaran->asesor->tanda_tangan ?? null);
+                                    $srcAsesorApl02 = $ttdAsesorApl02 ? (\Illuminate\Support\Str::startsWith($ttdAsesorApl02, ['data:image', 'http://', 'https://']) ? $ttdAsesorApl02 : asset($ttdAsesorApl02)) : null;
+                                @endphp
+                                <div class="border border-slate-200 rounded-xl bg-slate-50/70 p-4 flex flex-col sm:flex-row items-center justify-between gap-4" style="background: rgba(248, 250, 252, 0.7); border: 1px solid #e2e8f0; border-radius: 0.75rem; padding: 1rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem;">
+                                    <div class="space-y-1 text-center sm:text-left" style="line-height: 1.4;">
+                                        <span class="block" style="font-size: 9px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em;">Ditinjau Oleh Asesor:</span>
+                                        <span class="block" style="font-size: 0.85rem; font-weight: 700; color: #1e293b;">{{ $pendaftaran->asesor->nama_lengkap ?? 'Belum Ditentukan' }}</span>
+                                        <span class="block" style="font-size: 0.75rem; color: #2563eb; font-family: monospace;">No. Reg: {{ $pendaftaran->asesor->nomor_registrasi ?? ('MET.000.00' . ($pendaftaran->asesor_id ?? '00') . ' 2026') }}</span>
+                                        <span class="block" style="font-size: 0.7rem; color: #94a3b8; font-weight: 500; margin-top: 0.25rem;">Ditandatangani: {{ $pendaftaran->tanggal_ttd_asesor ? $pendaftaran->tanggal_ttd_asesor->format('d M Y') : '-' }}</span>
+                                    </div>
+                                    <div style="padding: 0.5rem; background: #ffffff; border-radius: 0.5rem; border: 1px solid #e2e8f0; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                                        @if($srcAsesorApl02)
+                                            <img src="{{ $srcAsesorApl02 }}" alt="TTD Asesor" style="max-height: 60px; max-width: 150px; object-fit: contain;">
+                                        @else
+                                            <span style="font-size: 9px; color: #94a3b8; font-style: italic;">Belum ada TTD</span>
+                                        @endif
+                                    </div>
+                                </div>
                             </td>
                         </tr>
                     </table>
@@ -501,7 +467,7 @@
                             Formulir Telah Dikirim & Terkunci
                         </span>
                     @else
-                        <button type="submit" class="tombol tombol-utama" style="padding: 0.85rem 2.5rem; font-size: 1.05rem; border-radius: 8px;">
+                        <button type="submit" onclick="return validasiFormAsesiApl02(event);" class="tombol tombol-utama" style="padding: 0.85rem 2.5rem; font-size: 1.05rem; border-radius: 8px;">
                             Simpan FR.APL.02 Asesmen Mandiri
                         </button>
                     @endif
@@ -542,4 +508,85 @@
 
 @push('js')
     <script src="{{ asset('js/asesi/pendaftaran-bagian32.js') }}"></script>
+    <script>
+        function validasiFormAsesiApl02(e) {
+            // Cek semua elemen yang ada (radio K/BK)
+            const radioK = document.querySelectorAll('input[type="radio"][value="K"]');
+            let adaYangBelumDiisi = false;
+            let adaBuktiBelumDiisi = false;
+            let elemenBelumDiisiNama = "";
+            let elemenBuktiKosongNama = "";
+
+            // Loop setiap elemen
+            for (let i = 0; i < radioK.length; i++) {
+                const radio = radioK[i];
+                const elemenId = radio.name.match(/\[(.*?)\]/)[1];
+                const radioBk = document.querySelector('input[type="radio"][value="BK"][name="penilaian[' + elemenId + ']"]');
+                
+                if (!radio.checked && (!radioBk || !radioBk.checked)) {
+                    adaYangBelumDiisi = true;
+                    elemenBelumDiisiNama = "Elemen kompetensi ke-" + (i + 1);
+                    break;
+                }
+
+                if (radio.checked) {
+                    const fileInput = document.querySelector('input[type="file"][name="bukti_foto[' + elemenId + ']"]');
+                    const hasExistingPreview = fileInput && fileInput.parentElement.querySelector('.preview-bukti-foto');
+                    
+                    if (fileInput && !fileInput.value && !hasExistingPreview) {
+                        adaBuktiBelumDiisi = true;
+                        elemenBuktiKosongNama = "Elemen kompetensi ke-" + (i + 1);
+                        break;
+                    }
+                }
+            }
+
+            if (adaYangBelumDiisi) {
+                e.preventDefault();
+                if(typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Data Belum Lengkap',
+                        text: 'Anda wajib mengisi seluruh pilihan Kompeten (K) atau Belum Kompeten (BK). ' + elemenBelumDiisiNama + ' belum dipilih.',
+                        confirmButtonColor: '#2563eb'
+                    });
+                } else {
+                    alert('Anda wajib mengisi seluruh pilihan Kompeten (K) atau Belum Kompeten (BK). ' + elemenBelumDiisiNama + ' belum dipilih.');
+                }
+                return false;
+            }
+
+            if (adaBuktiBelumDiisi) {
+                e.preventDefault();
+                if(typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Bukti Belum Lengkap',
+                        text: 'Anda memilih Kompeten (K) pada ' + elemenBuktiKosongNama + ', namun belum mengunggah foto/file bukti. Harap unggah bukti pendukung.',
+                        confirmButtonColor: '#2563eb'
+                    });
+                } else {
+                    alert('Harap unggah bukti pendukung untuk elemen yang dinyatakan Kompeten (K).');
+                }
+                return false;
+            }
+
+            const ttdInput = document.getElementById('input-ttd-asesi-base64');
+            if (!ttdInput || !ttdInput.value) {
+                e.preventDefault();
+                if(typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Tanda Tangan Belum Ada',
+                        text: 'Harap bubuhkan tanda tangan digital Anda sebelum mengirim formulir APL.02.',
+                        confirmButtonColor: '#2563eb'
+                    });
+                } else {
+                    alert('Tanda tangan wajib diisi sebelum menyimpan.');
+                }
+                return false;
+            }
+            return true;
+        }
+    </script>
 @endpush

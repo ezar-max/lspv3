@@ -16,6 +16,7 @@ use App\Models\PenilaianAsesmen;
 use App\Models\SkemaSertifikasi;
 use App\Notifications\SystemAlert;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -159,6 +160,11 @@ class AssessmentDocumentService
 
     public function signAsesorAk02(AssessmentAk02 $ak02, string $signature, Pengguna $user): AssessmentAk02
     {
+        $signature = $this->storeSignature($signature, 'ak02_asesor_' . $ak02->pendaftaran_id);
+        if (!$signature) {
+            throw ValidationException::withMessages(['signature' => 'Tanda tangan Asesor tidak valid.']);
+        }
+
         return DB::transaction(function () use ($ak02, $signature, $user) {
             $prevStatus = $ak02->status;
 
@@ -252,6 +258,11 @@ class AssessmentDocumentService
 
     public function signAsesiAk02(AssessmentAk02 $ak02, string $signature, Pengguna $user): AssessmentAk02
     {
+        $signature = $this->storeSignature($signature, 'ak02_asesi_' . $ak02->pendaftaran_id);
+        if (!$signature) {
+            throw ValidationException::withMessages(['signature' => 'Tanda tangan Asesi tidak valid.']);
+        }
+
         return DB::transaction(function () use ($ak02, $signature, $user) {
             $prevStatus = $ak02->status;
 
@@ -360,6 +371,11 @@ class AssessmentDocumentService
         bool $submit,
         Pengguna $user
     ): AssessmentAk03 {
+        $signature = $this->storeSignature($signature, 'ak03_asesi_' . $ak03->pendaftaran_id);
+        if ($submit && !$signature) {
+            throw ValidationException::withMessages(['signature' => 'Tanda tangan Asesi wajib dan harus berupa gambar yang valid.']);
+        }
+
         // Validasi aturan: tidak boleh diisi sebelum AK.02 memiliki keputusan asesmen
         if (!$ak03->pendaftaran->isAk03Unlocked()) {
             throw ValidationException::withMessages([
@@ -549,6 +565,11 @@ class AssessmentDocumentService
         ?string $signature,
         Pengguna $user
     ): AssessmentAk05 {
+        $signature = $this->storeSignature($signature, 'ak05_asesor_' . $ak05->id);
+        if ($finalize && !$signature) {
+            throw ValidationException::withMessages(['signature' => 'Tanda tangan Asesor wajib dan harus berupa gambar yang valid.']);
+        }
+
         if ($ak05->isFinalized() && !in_array($user->peran, ['admin', 'superadmin'])) {
             throw ValidationException::withMessages([
                 'status' => 'Laporan FR.AK.05 telah difinalisasi dan berstatus read-only.',
@@ -621,6 +642,11 @@ class AssessmentDocumentService
         ?int $pendaftaranId,
         Pengguna $user
     ): AssessmentAk06 {
+        $signature = $this->storeSignature($signature, 'ak06_reviewer_' . $ak06->id);
+        if ($finalize && !$signature) {
+            throw ValidationException::withMessages(['signature' => 'Tanda tangan Reviewer wajib dan harus berupa gambar yang valid.']);
+        }
+
         $existing = AssessmentAk06::where('skema_id', $skemaId)
             ->where('scope_type', $scopeType)
             ->when($jadwalId, fn ($q) => $q->where('jadwal_id', $jadwalId))
@@ -934,6 +960,11 @@ class AssessmentDocumentService
         ?string $signature,
         Pengguna $user
     ): AssessmentVa {
+        $signature = $this->storeSignature($signature, 'va_lead_' . $va->id);
+        if ($finalize && !$signature) {
+            throw ValidationException::withMessages(['signature' => 'Tanda tangan Lead Asesor wajib dan harus berupa gambar yang valid.']);
+        }
+
         if ($va->isFinalized() && !in_array($user->peran, ['admin', 'superadmin'])) {
             throw ValidationException::withMessages([
                 'status' => 'Kegiatan validasi FR.VA telah difinalisasi dan berstatus read-only.',
@@ -984,6 +1015,39 @@ class AssessmentDocumentService
 
             return $va;
         });
+    }
+
+    /**
+     * Normalisasi TTD dari kanvas/profil menjadi path storage yang aman.
+     * Path yang sudah tersimpan tetap dipakai, sedangkan Data URL tidak pernah
+     * dibiarkan memenuhi kolom database.
+     */
+    private function storeSignature(?string $signature, string $prefix): ?string
+    {
+        if (empty($signature)) {
+            return null;
+        }
+
+        if (!Str::startsWith($signature, 'data:image/')) {
+            return str_contains($signature, '<svg') || str_contains($signature, 'data:image/svg')
+                ? null
+                : $signature;
+        }
+
+        if (!preg_match('#^data:image/(png|jpeg|jpg|webp);base64,(.+)$#s', $signature, $matches)) {
+            return null;
+        }
+
+        $binary = base64_decode($matches[2], true);
+        if ($binary === false || strlen($binary) === 0 || strlen($binary) > 5 * 1024 * 1024) {
+            return null;
+        }
+
+        $extension = $matches[1] === 'jpg' ? 'jpeg' : $matches[1];
+        $filename = 'signatures/' . $prefix . '_' . now()->format('YmdHis') . '_' . Str::random(8) . '.' . $extension;
+        Storage::disk('public')->put($filename, $binary);
+
+        return 'storage/' . $filename;
     }
 
     /**
@@ -1108,4 +1172,3 @@ class AssessmentDocumentService
         });
     }
 }
-

@@ -517,48 +517,36 @@
                         </div>
 
                         <!-- Asesor Signature Box -->
-                        <div class="bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-2.5" id="container-box-ttd-asesor">
-                            <div class="flex items-center justify-between">
-                                <div class="space-y-0.5">
-                                    <span class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Ditinjau Oleh Asesor:</span>
-                                    <div class="font-bold text-slate-900 text-xs sm:text-sm">{{ auth()->user()->nama_lengkap }}</div>
-                                    <div class="text-[10px] text-blue-600 font-mono font-semibold">
-                                        No. Reg: {{ auth()->user()->nomor_registrasi ?? ('MET.000.00' . auth()->id() . ' 2026') }}
-                                    </div>
+                        @php
+                            $ttdAsesorApl02 = $pendaftaran->tanda_tangan_asesor;
+                            $srcAsesorApl02 = $ttdAsesorApl02 ? (\Illuminate\Support\Str::startsWith($ttdAsesorApl02, ['data:image', 'http://', 'https://']) ? $ttdAsesorApl02 : asset($ttdAsesorApl02)) : '';
+                        @endphp
+                        <div class="border border-slate-200 rounded-xl bg-slate-50/70 p-4 flex flex-col sm:flex-row items-center justify-between gap-4 mt-4" id="container-box-ttd-asesor">
+                            <div class="space-y-1 text-center sm:text-left">
+                                <span class="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Ditinjau Oleh Asesor:</span>
+                                <span class="text-xs font-bold text-slate-800 block">{{ auth()->user()->nama_lengkap }}</span>
+                                <span class="text-xs text-blue-600 block font-mono">No. Reg: {{ auth()->user()->nomor_registrasi ?? ('MET.000.00' . auth()->id() . ' 2026') }}</span>
+                                <span class="text-[11px] text-slate-400 block font-medium">Tanggal: {{ $pendaftaran->tanggal_ttd_asesor ? $pendaftaran->tanggal_ttd_asesor->format('d M Y') : date('d M Y') }}</span>
+                                
+                                <div id="pesan-ttd-asesor-kosong" class="text-[11px] text-rose-600 italic mt-2 font-bold" style="{{ $srcAsesorApl02 ? 'display: none;' : 'display: block;' }}">
+                                    Tanda Tangan Asesor belum dibubuhkan.
                                 </div>
-                                <div class="text-[10px] text-slate-400">
-                                    Tanggal: {{ $pendaftaran->tanggal_ttd_asesor ? $pendaftaran->tanggal_ttd_asesor->format('d/m/Y') : date('d/m/Y') }}
-                                </div>
-                            </div>
-
-                            @php
-                                $ttdAsesorApl02 = $pendaftaran->tanda_tangan_asesor;
-                                $srcAsesorApl02 = $ttdAsesorApl02 ? (\Illuminate\Support\Str::startsWith($ttdAsesorApl02, ['data:image', 'http://', 'https://']) ? $ttdAsesorApl02 : asset($ttdAsesorApl02)) : '';
-                            @endphp
-
-                            <!-- Hidden Base64 Input -->
-                            <input type="hidden" name="tanda_tangan_asesor" id="input-ttd-asesi-base64" value="{{ old('tanda_tangan_asesor', $ttdAsesorApl02) }}">
-
-                            <!-- Preview & Button -->
-                            <div class="flex items-center gap-3">
-                                <div id="box-preview-ttd-asesi" class="h-12 w-28 bg-white rounded border border-slate-200 flex items-center justify-center p-1 shrink-0" style="{{ $srcAsesorApl02 ? '' : 'display: none;' }}">
-                                    <img id="preview-ttd-asesi-img" src="{{ $srcAsesorApl02 }}" alt="TTD Asesor" class="max-h-full object-contain">
-                                </div>
-
-                                <div class="flex-1">
-                                    <div id="pesan-ttd-asesor-kosong" class="text-[11px] text-rose-600 italic mb-1" style="{{ $srcAsesorApl02 ? 'display: none;' : 'display: block;' }}">
-                                        Tanda Tangan Asesor belum dibubuhkan.
-                                    </div>
-
-                                    @if(!$isLocked)
+                                @if(!$isLocked)
+                                    <div class="pt-2">
                                         <button type="button" 
                                                 id="btn-modal-ttd-asesor" 
                                                 @click="bukaModalTtdAsesor()"
-                                                class="px-2.5 py-1.5 rounded-lg {{ $srcAsesorApl02 ? 'bg-white border-slate-300 text-slate-700 hover:bg-slate-50' : 'bg-blue-600 text-white hover:bg-blue-700 shadow-2xs' }} border font-semibold text-xs transition-colors inline-flex items-center gap-1 cursor-pointer">
+                                                class="px-3 py-1.5 rounded-lg {{ $srcAsesorApl02 ? 'bg-white border border-slate-300 text-slate-700 hover:bg-slate-50' : 'bg-blue-600 border border-blue-600 text-white hover:bg-blue-700 shadow-sm' }} font-semibold text-[11px] transition-colors inline-flex items-center gap-1 cursor-pointer">
                                             <span>{{ $pendaftaran->tanda_tangan_asesor ? 'Ubah Tanda Tangan Canvas' : 'Gambar TTD Digital (Wajib)' }}</span>
                                         </button>
-                                    @endif
-                                </div>
+                                    </div>
+                                @endif
+                            </div>
+                            
+                            <input type="hidden" name="tanda_tangan_asesor" id="input-ttd-asesi-base64" value="{{ old('tanda_tangan_asesor', $ttdAsesorApl02) }}">
+
+                            <div class="p-2 bg-white rounded-lg border border-slate-200 shadow-2xs" id="box-preview-ttd-asesi" style="{{ $srcAsesorApl02 ? '' : 'display: none;' }}">
+                                <img id="preview-ttd-asesi-img" src="{{ $srcAsesorApl02 }}" alt="TTD Asesor" class="max-h-24 max-w-xs object-contain">
                             </div>
                         </div>
                     </div>
@@ -621,88 +609,96 @@
     </div>
 
     <!-- =========================================================================
-         MODAL POPUP MINTA REVISI
+         MODAL POPUP MINTA REVISI (PREMIUM)
          ========================================================================= -->
-    <div id="modalMintaRevisi" class="fixed inset-0 items-center justify-center bg-slate-950/70 backdrop-blur-xs p-4 z-[99999] hidden" style="display: none; z-index: 99999;">
-        <div class="bg-white rounded-xl border border-slate-200 shadow-2xl max-w-lg w-full p-5 space-y-3.5 relative">
-            <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
-                <div class="flex items-center gap-2.5">
-                    <div class="w-8 h-8 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-xs shrink-0">
-                        REV
+    <div id="modalMintaRevisi" class="fixed inset-0 items-center justify-center bg-slate-900/60 backdrop-blur-md p-4 z-[99999] hidden transition-opacity duration-300" style="display: none; z-index: 99999;">
+        <div class="bg-white/95 backdrop-blur-xl rounded-3xl border border-white/20 shadow-2xl max-w-lg w-full p-8 space-y-5 relative transform transition-all scale-95 opacity-0 data-[show=true]:scale-100 data-[show=true]:opacity-100" id="modalMintaRevisiContent" @click.stop>
+            <!-- Header Modal -->
+            <div class="flex items-center justify-between pb-3 border-b border-slate-100/60">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-100 to-amber-200/50 text-amber-600 flex items-center justify-center font-bold text-xl shrink-0 shadow-inner border border-amber-200/50">
+                        <i class="fas fa-edit"></i>
                     </div>
                     <div>
-                        <h3 class="font-bold text-slate-800 text-sm">Minta Revisi FR.APL.02</h3>
-                        <p class="text-[11px] text-slate-500">Kembalikan formulir ke asesi untuk diperbaiki</p>
+                        <h3 class="font-bold text-slate-800 text-lg tracking-tight">Revisi FR.APL.02</h3>
+                        <p class="text-xs text-slate-500 font-medium">Kembalikan formulir ke asesi</p>
                     </div>
                 </div>
-                <button type="button" @click="tutupModalMintaRevisi()" class="text-slate-400 hover:text-slate-600 text-lg font-bold px-1.5 cursor-pointer">&times;</button>
+                <button type="button" @click="tutupModalMintaRevisi()" class="text-slate-400 hover:text-slate-700 bg-slate-50 hover:bg-slate-100 rounded-full w-9 h-9 flex items-center justify-center transition-all cursor-pointer shadow-sm border border-slate-100">&times;</button>
             </div>
 
-            <p class="text-xs text-slate-600 leading-relaxed bg-amber-50/70 p-2.5 rounded-lg border border-amber-200/80">
-                Formulir FR.APL.02 akan dikembalikan ke Asesi dengan status <strong>Perlu Revisi</strong>. Asesi akan menerima catatan perbaikan dan dapat memperbaiki isian serta berkas bukti pendukung.
-            </p>
+            <!-- Body Modal -->
+            <div class="text-sm text-amber-800 leading-relaxed bg-gradient-to-r from-amber-50 to-amber-50/50 p-4 rounded-2xl border border-amber-100">
+                Formulir FR.APL.02 akan dikembalikan ke Asesi dengan status <span class="font-bold px-1.5 py-0.5 bg-amber-100 rounded-md">Perlu Revisi</span>. Asesi dapat membaca instruksi Anda dan memperbaiki isian form mereka.
+            </div>
 
-            <div class="space-y-1">
-                <label class="block text-xs font-bold text-slate-700">
-                    Catatan Umum Revisi untuk Asesi: <span class="text-amber-600">* (Wajib Diisi)</span>
+            <div class="space-y-2">
+                <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-widest pl-1">
+                    Instruksi Perbaikan / Revisi <span class="text-rose-500">*</span>
                 </label>
                 <textarea id="modal-catatan-revisi-input" 
                           rows="4" 
                           x-model="modalCatatanRevisi"
-                          placeholder="Tuliskan butir KUK atau bukti apa saja yang perlu diperbaiki oleh asesi..." 
-                          class="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-xs text-slate-800 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-hidden leading-relaxed"></textarea>
+                          placeholder="Jelaskan secara detail bagian mana saja yang perlu diperbaiki oleh asesi..." 
+                          class="w-full bg-slate-50/50 border border-slate-200 focus:border-amber-400 rounded-2xl p-4 text-sm text-slate-700 focus:ring-4 focus:ring-amber-400/10 outline-none leading-relaxed transition-all shadow-inner resize-none"></textarea>
             </div>
 
-            <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
-                <button type="button" @click="tutupModalMintaRevisi()" class="px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600 font-semibold text-xs cursor-pointer">
+            <!-- Footer Modal -->
+            <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-100 mt-2">
+                <button type="button" @click="tutupModalMintaRevisi()" class="px-5 py-2.5 rounded-xl text-slate-600 font-semibold text-sm hover:bg-slate-100 transition-colors cursor-pointer">
                     Batal
                 </button>
-                <button type="button" @click="submitMintaRevisiModal()" class="px-4 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-xs flex items-center gap-1.5 cursor-pointer">
-                    <span>Kirim Catatan Revisi</span>
+                <button type="button" @click="submitMintaRevisiModal()" class="px-6 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold text-sm shadow-lg shadow-amber-500/30 transition-all flex items-center gap-2 cursor-pointer transform hover:-translate-y-0.5">
+                    Kirim Instruksi Revisi
+                    <i class="fas fa-paper-plane text-xs"></i>
                 </button>
             </div>
         </div>
     </div>
 
     <!-- =========================================================================
-         MODAL POPUP TOLAK PERMOHONAN FR.APL.02
+         MODAL POPUP TOLAK PERMOHONAN FR.APL.02 (PREMIUM)
          ========================================================================= -->
-    <div id="modalTolak" class="fixed inset-0 items-center justify-center bg-slate-950/70 backdrop-blur-xs p-4 z-[99999] hidden" style="display: none; z-index: 99999;">
-        <div class="bg-white rounded-xl border border-slate-200 shadow-2xl max-w-lg w-full p-5 space-y-3.5 relative">
-            <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
-                <div class="flex items-center gap-2.5">
-                    <div class="w-8 h-8 rounded-lg bg-rose-100 text-rose-600 flex items-center justify-center font-bold text-xs shrink-0">
-                        TOLAK
+    <div id="modalTolak" class="fixed inset-0 items-center justify-center bg-slate-900/60 backdrop-blur-md p-4 z-[99999] hidden transition-opacity duration-300" style="display: none; z-index: 99999;">
+        <div class="bg-white/95 backdrop-blur-xl rounded-3xl border border-white/20 shadow-2xl max-w-lg w-full p-8 space-y-5 relative transform transition-all scale-95 opacity-0 data-[show=true]:scale-100 data-[show=true]:opacity-100" id="modalTolakContent" @click.stop>
+            <!-- Header Modal -->
+            <div class="flex items-center justify-between pb-3 border-b border-slate-100/60">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-rose-100 to-rose-200/50 text-rose-600 flex items-center justify-center font-bold text-xl shrink-0 shadow-inner border border-rose-200/50">
+                        <i class="fas fa-times-circle"></i>
                     </div>
                     <div>
-                        <h3 class="font-bold text-slate-800 text-sm">Tolak Permohonan FR.APL.02</h3>
-                        <p class="text-[11px] text-slate-500">Asesi tidak memenuhi kriteria persyaratan asesmen</p>
+                        <h3 class="font-bold text-slate-800 text-lg tracking-tight">Tolak Permohonan</h3>
+                        <p class="text-xs text-slate-500 font-medium">Hentikan proses asesmen</p>
                     </div>
                 </div>
-                <button type="button" @click="tutupModalTolak()" class="text-slate-400 hover:text-slate-600 text-lg font-bold px-1.5 cursor-pointer">&times;</button>
+                <button type="button" @click="tutupModalTolak()" class="text-slate-400 hover:text-slate-700 bg-slate-50 hover:bg-slate-100 rounded-full w-9 h-9 flex items-center justify-center transition-all cursor-pointer shadow-sm border border-slate-100">&times;</button>
             </div>
 
-            <p class="text-xs text-rose-700 leading-relaxed bg-rose-50 p-2.5 rounded-lg border border-rose-200">
-                <strong>Perhatian:</strong> Permohonan FR.APL.02 asesi akan dinyatakan <strong>Ditolak</strong>. Asesi tidak dapat melanjutkan asesmen mandiri pada skema ini.
-            </p>
+            <!-- Body Modal -->
+            <div class="text-sm text-rose-800 leading-relaxed bg-gradient-to-r from-rose-50 to-rose-50/50 p-4 rounded-2xl border border-rose-100">
+                <strong class="text-rose-900">Perhatian:</strong> Permohonan FR.APL.02 asesi akan dinyatakan <span class="font-bold px-1.5 py-0.5 bg-rose-100 rounded-md">Ditolak Secara Permanen</span>. Asesi tidak akan bisa melanjutkan proses ini.
+            </div>
 
-            <div class="space-y-1">
-                <label class="block text-xs font-bold text-slate-700">
-                    Alasan / Catatan Penolakan Asesor: <span class="text-rose-500">* (Wajib Diisi)</span>
+            <div class="space-y-2">
+                <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-widest pl-1">
+                    Alasan Penolakan <span class="text-rose-500">*</span>
                 </label>
                 <textarea id="modal-catatan-tolak-input" 
                           rows="4" 
                           x-model="modalCatatanTolak"
-                          placeholder="Tuliskan alasan penolakan permohonan asesmen..." 
-                          class="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-xs text-slate-800 focus:ring-2 focus:ring-rose-500 focus:border-rose-500 outline-hidden leading-relaxed"></textarea>
+                          placeholder="Jelaskan alasan kuat mengapa permohonan asesi ini ditolak..." 
+                          class="w-full bg-slate-50/50 border border-slate-200 focus:border-rose-400 rounded-2xl p-4 text-sm text-slate-700 focus:ring-4 focus:ring-rose-400/10 outline-none leading-relaxed transition-all shadow-inner resize-none"></textarea>
             </div>
 
-            <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
-                <button type="button" @click="tutupModalTolak()" class="px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600 font-semibold text-xs cursor-pointer">
+            <!-- Footer Modal -->
+            <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-100 mt-2">
+                <button type="button" @click="tutupModalTolak()" class="px-5 py-2.5 rounded-xl text-slate-600 font-semibold text-sm hover:bg-slate-100 transition-colors cursor-pointer">
                     Batal
                 </button>
-                <button type="button" @click="submitTolakModal()" class="px-4 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-xs flex items-center gap-1.5 cursor-pointer">
-                    <span>Konfirmasi Tolak Permohonan</span>
+                <button type="button" @click="submitTolakModal()" class="px-6 py-2.5 rounded-xl bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-700 hover:to-rose-800 text-white font-bold text-sm shadow-lg shadow-rose-600/30 transition-all flex items-center gap-2 cursor-pointer transform hover:-translate-y-0.5">
+                    Tolak Sekarang
+                    <i class="fas fa-times text-xs"></i>
                 </button>
             </div>
         </div>
@@ -711,31 +707,27 @@
     <!-- =========================================================================
          MODAL POPUP CANVAS SIGNATURE PAD
          ========================================================================= -->
-    <div id="modalCanvasTtd" class="fixed inset-0 items-center justify-center bg-slate-950/70 backdrop-blur-xs p-4 z-[99999] hidden" style="display: none; z-index: 99999;">
-        <div class="bg-white rounded-xl border border-slate-200 shadow-2xl max-w-md w-full p-5 space-y-3 relative">
-            <div class="flex items-center justify-between border-b border-slate-100 pb-2">
-                <div class="flex items-center gap-2">
-                    <h3 class="font-bold text-slate-800 text-sm">Gambar Tanda Tangan Asesor</h3>
-                </div>
-                <button type="button" @click="tutupModalTtdAsesor()" class="text-slate-400 hover:text-slate-600 text-lg font-bold px-1.5 cursor-pointer">&times;</button>
+    <!-- MODAL POPUP CANVAS SIGNATURE PAD -->
+    <div class="modal-overlay" id="modalCanvasTtd" style="display:none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 99999; justify-content: center; align-items: center;">
+        <div class="modal-konten" style="background: white; border-radius: 12px; padding: 1.75rem; width: 100%; max-width: 500px; text-align: center; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h3 style="color: #0f172a; margin: 0; font-weight: 800; font-size: 1.15rem;">Tanda Tangan Digital</h3>
+                <button type="button" onclick="document.getElementById('modalCanvasTtd').style.display = 'none'" style="background: none; border: none; font-size: 1.4rem; cursor: pointer; color: #64748b; line-height: 1;">&times;</button>
             </div>
 
-            <div class="bg-slate-50 p-2 rounded-lg border border-slate-200 flex justify-center">
-                <canvas id="canvas-ttd-asesor" width="380" height="150" class="bg-white rounded border border-dashed border-blue-200 cursor-crosshair touch-none"></canvas>
-            </div>
+            <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 1rem; text-align: left;">
+                Gunakan kursor atau layar sentuh untuk menggambar tanda tangan Anda secara presisi pada bidang di bawah:
+            </p>
 
-            <div class="flex items-center justify-between gap-2 pt-2 border-t border-slate-100">
-                <button type="button" @click="bersihkanCanvasTtd()" class="px-2.5 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600 font-semibold text-xs inline-flex items-center gap-1 cursor-pointer">
-                    <span>Bersihkan</span>
+            <canvas id="canvas-ttd-modal" width="440" height="180" class="canvas-signature-pad" style="border: 2px dashed #94a3b8; border-radius: 8px; background: #ffffff; cursor: crosshair; touch-action: none; display: block; margin: 0 auto; width: 100%; max-width: 440px;"></canvas>
+
+            <div style="margin-top: 1.25rem; display: flex; gap: 0.75rem; justify-content: center;">
+                <button type="button" class="tombol tombol-sekunder tombol-sm px-4 py-2 bg-slate-100 text-slate-700 font-semibold rounded border border-slate-200 shadow-sm" onclick="if(window.signaturePadModal) window.signaturePadModal.clear();">
+                    Bersihkan
                 </button>
-                <div class="flex items-center gap-2">
-                    <button type="button" @click="tutupModalTtdAsesor()" class="px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600 font-semibold text-xs cursor-pointer">
-                        Batal
-                    </button>
-                    <button type="button" @click="simpanCanvasTtd()" class="px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs inline-flex items-center gap-1 cursor-pointer">
-                        <span>Gunakan TTD</span>
-                    </button>
-                </div>
+                <button type="button" class="tombol tombol-utama tombol-sm px-4 py-2 text-white font-semibold rounded shadow-sm" style="background: #059669; border: 1px solid #059669;" onclick="window.saveTtdAsesor()">
+                    Gunakan Tanda Tangan
+                </button>
             </div>
         </div>
     </div>
@@ -944,34 +936,50 @@
             bukaModalMintaRevisi() {
                 this.modalCatatanRevisi = this.catatanRekomendasi;
                 const modal = document.getElementById('modalMintaRevisi');
-                if (modal) {
+                const content = document.getElementById('modalMintaRevisiContent');
+                if (modal && content) {
                     modal.classList.remove('hidden');
                     modal.style.display = 'flex';
+                    setTimeout(() => {
+                        content.dataset.show = 'true';
+                    }, 10);
                 }
             },
 
             tutupModalMintaRevisi() {
                 const modal = document.getElementById('modalMintaRevisi');
-                if (modal) {
-                    modal.classList.add('hidden');
-                    modal.style.display = 'none';
+                const content = document.getElementById('modalMintaRevisiContent');
+                if (modal && content) {
+                    content.dataset.show = 'false';
+                    setTimeout(() => {
+                        modal.classList.add('hidden');
+                        modal.style.display = 'none';
+                    }, 300);
                 }
             },
 
             bukaModalTolak() {
                 this.modalCatatanTolak = this.catatanRekomendasi;
                 const modal = document.getElementById('modalTolak');
-                if (modal) {
+                const content = document.getElementById('modalTolakContent');
+                if (modal && content) {
                     modal.classList.remove('hidden');
                     modal.style.display = 'flex';
+                    setTimeout(() => {
+                        content.dataset.show = 'true';
+                    }, 10);
                 }
             },
 
             tutupModalTolak() {
                 const modal = document.getElementById('modalTolak');
-                if (modal) {
-                    modal.classList.add('hidden');
-                    modal.style.display = 'none';
+                const content = document.getElementById('modalTolakContent');
+                if (modal && content) {
+                    content.dataset.show = 'false';
+                    setTimeout(() => {
+                        modal.classList.add('hidden');
+                        modal.style.display = 'none';
+                    }, 300);
                 }
             },
 
@@ -1100,67 +1108,12 @@
             },
 
             bukaModalTtdAsesor() {
-                const modal = document.getElementById('modalCanvasTtd');
-                if (modal) {
-                    modal.classList.remove('hidden');
-                    modal.style.display = 'flex';
-                    setTimeout(() => {
-                        const canvas = document.getElementById('canvas-ttd-asesor');
-                        if (canvas && !this.signaturePad) {
-                            this.signaturePad = new SignaturePad(canvas, {
-                                backgroundColor: 'rgb(255, 255, 255)',
-                                penColor: 'rgb(0, 0, 0)'
-                            });
-                        } else if (this.signaturePad) {
-                            this.signaturePad.clear();
-                        }
-                    }, 100);
+                if (typeof window.bukaModalTtd === 'function') {
+                    window.bukaModalTtd();
                 }
             },
-
-            tutupModalTtdAsesor() {
-                const modal = document.getElementById('modalCanvasTtd');
-                if (modal) {
-                    modal.classList.add('hidden');
-                    modal.style.display = 'none';
-                }
-            },
-
-            bersihkanCanvasTtd() {
-                if (this.signaturePad) {
-                    this.signaturePad.clear();
-                }
-            },
-
-            simpanCanvasTtd() {
-                if (this.signaturePad && this.signaturePad.isEmpty()) {
-                    if (typeof Swal !== 'undefined') {
-                        Swal.fire({ icon: 'warning', title: 'Tanda Tangan Kosong', text: 'Silakan bubuhkan tanda tangan Anda terlebih dahulu!', confirmButtonColor: '#059669' });
-                    } else {
-                        alert('Silakan bubuhkan tanda tangan Anda terlebih dahulu!');
-                    }
-                    return;
-                }
-
-                const dataUrl = this.signaturePad.toDataURL('image/png');
-                const inputHidden = document.getElementById('input-ttd-asesi-base64');
-                const previewBox = document.getElementById('box-preview-ttd-asesi');
-                const previewImg = document.getElementById('preview-ttd-asesi-img');
-                const pesanKosong = document.getElementById('pesan-ttd-asesor-kosong');
-                const btnModal = document.getElementById('btn-modal-ttd-asesor');
-
-                if (inputHidden) inputHidden.value = dataUrl;
-                if (previewImg) previewImg.src = dataUrl;
-                if (previewBox) previewBox.style.display = 'flex';
-                if (pesanKosong) pesanKosong.style.display = 'none';
-                if (btnModal) {
-                    btnModal.innerHTML = '<span>Ubah Tanda Tangan Canvas</span>';
-                    btnModal.classList.remove('bg-blue-600', 'text-white');
-                    btnModal.classList.add('bg-white', 'text-slate-700', 'border-slate-300');
-                }
-
-                this.tutupModalTtdAsesor();
-            },
+            
+            // simpanCanvasTtd & tutupModalTtdAsesor ditangani oleh global window.saveTtdAsesor dan modal close button,
 
             handleSubmit(e) {
                 // 0. Validasi kelengkapan butir KUK
@@ -1280,5 +1233,73 @@
             }
         };
     }
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
+<script>
+    window.signaturePadModal = null;
+
+    window.bukaModalTtd = function() {
+        const modal = document.getElementById('modalCanvasTtd');
+        if (modal) {
+            modal.style.display = 'flex';
+            
+            if (!window.signaturePadModal) {
+                const canvas = document.getElementById('canvas-ttd-modal');
+                if (canvas && window.SignaturePad) {
+                    window.signaturePadModal = new SignaturePad(canvas, {
+                        backgroundColor: 'rgb(255, 255, 255)'
+                    });
+                    
+                    const ratio = Math.max(window.devicePixelRatio || 1, 1);
+                    canvas.width = canvas.offsetWidth * ratio;
+                    canvas.height = canvas.offsetHeight * ratio;
+                    canvas.getContext("2d").scale(ratio, ratio);
+                    window.signaturePadModal.clear();
+                }
+            } else {
+                window.signaturePadModal.clear();
+            }
+        }
+    };
+
+    window.saveTtdAsesor = function() {
+        if (window.signaturePadModal && !window.signaturePadModal.isEmpty()) {
+            const dataUrl = window.signaturePadModal.toDataURL('image/png');
+            
+            // For input-penilaian.blade.php
+            const inputHidden = document.getElementById('input-ttd-asesi-base64');
+            if(inputHidden) inputHidden.value = dataUrl;
+            
+            const previewBox = document.getElementById('box-preview-ttd-asesi');
+            const previewImg = document.getElementById('preview-ttd-asesi-img');
+            const pesanKosong = document.getElementById('pesan-ttd-asesor-kosong');
+            const btnModal = document.getElementById('btn-modal-ttd-asesor');
+
+            if (inputHidden) inputHidden.value = dataUrl;
+            if (previewImg) previewImg.src = dataUrl;
+            if (previewBox) previewBox.style.display = 'flex';
+            if (pesanKosong) pesanKosong.style.display = 'none';
+            if (btnModal) {
+                btnModal.innerHTML = '<span>Ubah Tanda Tangan Canvas</span>';
+                btnModal.classList.remove('bg-blue-600', 'text-white');
+                btnModal.classList.add('bg-white', 'text-slate-700', 'border-slate-300');
+            }
+
+            document.getElementById('modalCanvasTtd').style.display = 'none';
+        } else {
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Canvas Kosong',
+                    text: 'Silakan gambar tanda tangan Anda terlebih dahulu.',
+                    confirmButtonText: 'Mengerti',
+                    confirmButtonColor: '#059669'
+                });
+            } else {
+                alert('Silakan gambar tanda tangan Anda terlebih dahulu.');
+            }
+        }
+    };
 </script>
 @endpush

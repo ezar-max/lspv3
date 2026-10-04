@@ -3855,5 +3855,140 @@
             }
         };
 
-    @include('komponen.signature-pad-penyusun')
+    @if(false)
+    <!-- MODAL POPUP CANVAS SIGNATURE PAD -->
+    <div class="modal-overlay" id="modalCanvasTtd" style="display:none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 99999; justify-content: center; align-items: center;">
+        <div class="modal-konten" style="background: white; border-radius: 12px; padding: 1.75rem; width: 100%; max-width: 500px; text-align: center; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h3 style="color: #0f172a; margin: 0; font-weight: 800; font-size: 1.15rem;">Tanda Tangan Digital</h3>
+                <button type="button" onclick="document.getElementById('modalCanvasTtd').style.display = 'none'" style="background: none; border: none; font-size: 1.4rem; cursor: pointer; color: #64748b; line-height: 1;">&times;</button>
+            </div>
+
+            <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 1rem; text-align: left;">
+                Gunakan kursor atau layar sentuh untuk menggambar tanda tangan Anda secara presisi pada bidang di bawah:
+            </p>
+
+            <canvas id="canvas-ttd-master" width="440" height="180" class="canvas-signature-pad" style="border: 2px dashed #94a3b8; border-radius: 8px; background: #ffffff; cursor: crosshair; touch-action: none; display: block; margin: 0 auto; width: 100%; max-width: 440px;"></canvas>
+
+            <div style="margin-top: 1.25rem; display: flex; gap: 0.75rem; justify-content: center;">
+                <button type="button" class="tombol tombol-sekunder tombol-sm px-4 py-2 bg-slate-100 text-slate-700 font-semibold rounded border border-slate-200 shadow-sm" onclick="if(window.signaturePadMaster) window.signaturePadMaster.clear();">
+                    Bersihkan
+                </button>
+                <button type="button" class="tombol tombol-utama tombol-sm px-4 py-2 text-white font-semibold rounded shadow-sm" style="background: #059669; border: 1px solid #059669;" onclick="window.saveTtdMaster()">
+                    Gunakan Tanda Tangan
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
+    <script>
+        window.signaturePadMaster = null;
+
+        window.openSignaturePadPenyusun = function() {
+            const modal = document.getElementById('modalCanvasTtd');
+            if (modal) {
+                modal.style.display = 'flex';
+                
+                if (!window.signaturePadMaster) {
+                    const canvas = document.getElementById('canvas-ttd-master');
+                    if (canvas && window.SignaturePad) {
+                        window.signaturePadMaster = new SignaturePad(canvas, {
+                            backgroundColor: 'rgb(255, 255, 255)'
+                        });
+                        
+                        const ratio = Math.max(window.devicePixelRatio || 1, 1);
+                        canvas.width = canvas.offsetWidth * ratio;
+                        canvas.height = canvas.offsetHeight * ratio;
+                        canvas.getContext("2d").scale(ratio, ratio);
+                        window.signaturePadMaster.clear();
+                    }
+                } else {
+                    window.signaturePadMaster.clear();
+                }
+            }
+        };
+
+        window.saveTtdMaster = function() {
+            if (window.signaturePadMaster && !window.signaturePadMaster.isEmpty()) {
+                const dataUrl = window.signaturePadMaster.toDataURL('image/png');
+                
+                const hiddenInputs = document.querySelectorAll('.hidden-penyusun-ttd');
+                hiddenInputs.forEach(input => {
+                    input.value = dataUrl;
+                });
+
+                const previewImgs = document.querySelectorAll('.preview-penyusun-ttd');
+                previewImgs.forEach(img => {
+                    img.src = dataUrl;
+                    img.classList.remove('hidden');
+                    
+                    const parent = img.closest('td');
+                    if (parent) {
+                        const noTtd = parent.querySelector('span.text-slate-400');
+                        if (noTtd) noTtd.style.display = 'none';
+                        const checkmark = parent.querySelector('span.text-emerald-600');
+                        if (!checkmark) {
+                            const successMsg = document.createElement('span');
+                            successMsg.className = 'text-emerald-600 text-[10px] font-bold block mt-1';
+                            successMsg.innerHTML = '✓ Siap Disimpan';
+                            img.parentNode.insertBefore(successMsg, img.nextSibling);
+                        }
+                    }
+                });
+                
+                const buttons = document.querySelectorAll('button[onclick="openSignaturePadPenyusun()"]');
+                buttons.forEach(button => {
+                    button.classList.add('hidden');
+                });
+
+                document.getElementById('modalCanvasTtd').style.display = 'none';
+            } else {
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Canvas Kosong',
+                        text: 'Silakan gambar tanda tangan Anda terlebih dahulu.',
+                        confirmButtonText: 'Mengerti',
+                        confirmButtonColor: '#059669'
+                    });
+                } else {
+                    alert('Silakan gambar tanda tangan Anda terlebih dahulu.');
+                }
+            }
+        };
+    </script>
+    @endif
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            document.querySelectorAll('table').forEach(function (table) {
+                const rows = Array.from(table.rows);
+                const headerRow = rows.find(function (row) {
+                    return Array.from(row.cells).some(function (cell) {
+                        return cell.textContent.trim().toUpperCase().includes('TANDA TANGAN DAN TANGGAL');
+                    });
+                });
+
+                if (!headerRow) return;
+
+                const columnIndex = Array.from(headerRow.cells).findIndex(function (cell) {
+                    return cell.textContent.trim().toUpperCase().includes('TANDA TANGAN DAN TANGGAL');
+                });
+
+                rows.forEach(function (row) {
+                    row.cells[columnIndex]?.remove();
+                });
+            });
+
+            document.querySelectorAll('tr').forEach(function (row) {
+                if (/^tanda tangan dan tanggal/i.test(row.textContent.trim())) {
+                    row.remove();
+                }
+            });
+
+            document.querySelectorAll('.hidden-penyusun-ttd, .preview-penyusun-ttd, input[name*="[ttd]"], button[onclick*="openSignaturePadPenyusun"], img[alt*="TTD"], img[alt*="Tanda Tangan"], canvas[id*="ttd"]').forEach(function (element) {
+                element.remove();
+            });
+        });
+    </script>
 @endpush

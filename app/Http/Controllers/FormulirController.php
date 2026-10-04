@@ -998,8 +998,8 @@ class FormulirController extends Controller
         $iaRecord->update([
             'data_jawaban' => $dataPayload,
             'status' => 'submitted',
-            'tanda_tangan' => $request->tanda_tangan_supervisor,
-            'tanggal_tanda_tangan' => now(),
+            'tanda_tangan' => null,
+            'tanggal_tanda_tangan' => null,
         ]);
 
         return back()->with('sukses', 'Konfirmasi dan verifikasi kinerja asesi telah berhasil dikirimkan ke Asesor Penguji.');
@@ -1383,8 +1383,6 @@ class FormulirController extends Controller
                 $dataPayload = [
                     'jawaban_esai' => $jawabanEsai,
                     'submitted_at' => now()->toDateTimeString(),
-                    'ttd_asesi' => $user->tanda_tangan ?? ($pendaftaran->tanda_tangan_asesi ?? null),
-                    'tgl_ttd_asesi' => now()->format('d-m-Y H:i')
                 ];
                 $suksesMsg = $request->has('simpan_draft') ? 'Draft ujian esai berhasil disimpan.' : 'Jawaban Ujian Esai (FR.IA.06C) berhasil dikumpulkan dan dikunci! Status: Menunggu Koreksi oleh Asesor.';
             } else {
@@ -1400,8 +1398,6 @@ class FormulirController extends Controller
                     'jawaban_esai' => $finalJawaban,
                     'pencapaian' => $request->input('pencapaian', []),
                     'catatan_per_soal' => $request->input('catatan_per_soal', []),
-                    'ttd_asesi' => $existingRecord->data_jawaban['ttd_asesi'] ?? ($pendaftaran->tanda_tangan_asesi ?? null),
-                    'tgl_ttd_asesi' => $existingRecord->data_jawaban['tgl_ttd_asesi'] ?? null,
                     'evaluated_at' => now()->toDateTimeString()
                 ];
                 $suksesMsg = 'Penilaian Lembar Ujian Esai (FR.IA.06C) berhasil disimpan!';
@@ -1614,40 +1610,7 @@ class FormulirController extends Controller
 
     public function simpanTtdAsesiIa(Request $request, $kodeForm, $pendaftaranId)
     {
-        $user = auth()->user();
-        if (!$user || $user->peran !== 'asesi') {
-            abort(403, 'Akses Ditolak: Hanya asesi yang dapat menandatangani verifikasi hasil ini.');
-        }
-
-        $pendaftaran = PendaftaranAsesi::where('id', $pendaftaranId)->where('asesi_id', $user->id)->firstOrFail();
-        $kodeForm = strtoupper(trim($kodeForm));
-        abort_unless($pendaftaran->isInstrumenAktif($kodeForm), 422,
-            'Instrumen ini tidak aktif pada MAPA.02 untuk pendaftaran tersebut.');
-
-        if ($pendaftaran->hasMapa02Config()) {
-            abort_unless($pendaftaran->isInstrumenAktif($kodeForm), 422,
-                'Instrumen ini tidak aktif pada MAPA.02 untuk pendaftaran tersebut.');
-        }
-
-        $tandaTangan = $request->tanda_tangan ?? ($user->tanda_tangan ?? ($pendaftaran->tanda_tangan_asesi ?? null));
-
-        $iaRecord = IaPenilaian::firstOrNew([
-            'pendaftaran_id' => $pendaftaran->id,
-            'kode_formulir' => $kodeForm,
-        ]);
-
-        $jawaban = $iaRecord->data_jawaban ?? [];
-        $jawaban['ttd_asesi'] = $tandaTangan;
-        $jawaban['tgl_ttd_asesi'] = now()->format('d-m-Y H:i');
-
-        $iaRecord->data_jawaban = $jawaban;
-        $iaRecord->save();
-
-        if (empty($pendaftaran->tanda_tangan_asesi)) {
-            $pendaftaran->update(['tanda_tangan_asesi' => $tandaTangan]);
-        }
-
-        return back()->with('sukses', 'Formulir ' . $kodeForm . ' berhasil diverifikasi dan ditandatangani secara digital.');
+        abort(410, 'Tanda tangan pada instrumen FR.IA telah dinonaktifkan.');
     }
 
     /**
@@ -1748,38 +1711,15 @@ class FormulirController extends Controller
         $pendaftaran->bukti_dikumpulkan_lainnya = $request->input('bukti_dikumpulkan_lainnya');
 
         if ($user && ($user->peran === 'asesor' || in_array($user->peran, ['admin', 'superadmin']))) {
-            $rawTtd = $request->tanda_tangan_asesor_ak01 ?: ($user->tanda_tangan ?? $pendaftaran->tanda_tangan_asesor_ak01);
-            $pendaftaran->tanda_tangan_asesor_ak01 = $rawTtd;
-            $pendaftaran->tanggal_ttd_asesor_ak01 = now();
-            $pendaftaran->status_ak01 = !empty($pendaftaran->tanda_tangan_asesi_ak01) ? 'selesai' : 'disetujui_asesor';
+            $pendaftaran->tanda_tangan_asesor_ak01 = null;
+            $pendaftaran->tanggal_ttd_asesor_ak01 = null;
+            $pendaftaran->status_ak01 = $pendaftaran->status_ak01 === 'selesai' ? 'selesai' : 'disetujui_asesor';
         } elseif ($user && $user->peran === 'asesi') {
-            $rawTtd = $request->tanda_tangan_asesi_ak01 ?: ($pendaftaran->tanda_tangan_asesi_ak01 ?: ($user->tanda_tangan ?? $pendaftaran->tanda_tangan_asesi));
-            if (!empty($rawTtd) && \Illuminate\Support\Str::startsWith($rawTtd, 'data:image') && !\Illuminate\Support\Str::startsWith($rawTtd, 'data:image/svg+xml')) {
-                try {
-                    $imageParts = explode(';base64,', $rawTtd);
-                    if (count($imageParts) === 2) {
-                        $imageTypeAux = explode('image/', $imageParts[0]);
-                        $imageType = $imageTypeAux[1] ?? 'png';
-                        $imageBase64 = base64_decode($imageParts[1]);
-                        $fileName = 'signatures/ak01_asesi_' . $pendaftaran->id . '_' . time() . '_' . \Illuminate\Support\Str::random(6) . '.' . $imageType;
-                        \Illuminate\Support\Facades\Storage::disk('public')->put($fileName, $imageBase64);
-                        $rawTtd = 'storage/' . $fileName;
-                        $user->update(['tanda_tangan' => $rawTtd]);
-                    }
-                } catch (\Exception $e) {
-                    \Log::warning('Gagal simpan signature: ' . $e->getMessage());
-                }
-            }
-            $asesor = $pendaftaran->asesor ?: $pendaftaran->jadwal?->asesor;
-            $asesorTtd = $pendaftaran->tanda_tangan_asesor_ak01 ?: ($asesor?->tanda_tangan ?: 'signatures/verified_asesor_auto.png');
-
-            $pendaftaran->tanda_tangan_asesi_ak01 = $rawTtd;
-            $pendaftaran->tanggal_ttd_asesi_ak01 = now();
+            $pendaftaran->tanda_tangan_asesi_ak01 = null;
+            $pendaftaran->tanggal_ttd_asesi_ak01 = null;
             $pendaftaran->status_ak01 = 'selesai';
-            if (empty($pendaftaran->tanda_tangan_asesor_ak01)) {
-                $pendaftaran->tanda_tangan_asesor_ak01 = $asesorTtd;
-                $pendaftaran->tanggal_ttd_asesor_ak01 = now();
-            }
+            $pendaftaran->tanda_tangan_asesor_ak01 = null;
+            $pendaftaran->tanggal_ttd_asesor_ak01 = null;
         }
 
         $pendaftaran->save();

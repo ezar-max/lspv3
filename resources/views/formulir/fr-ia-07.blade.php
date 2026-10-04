@@ -118,7 +118,7 @@
                 <div>
                     <strong style="display: block; font-size: 0.95rem; color: #14532d; margin-bottom: 0.25rem;">Sesi Uji Lisan Telah Selesai Dinilai oleh Asesor</strong>
                     <span style="font-size: 0.85rem; color: #15803d;">
-                        Silakan periksa catatan respons lisan dan status pencapaian di bawah ini, kemudian lakukan tanda tangan verifikasi melalui tombol aksi di atas.
+                        Silakan periksa catatan respons lisan dan status pencapaian di bawah ini.
                     </span>
                 </div>
             </div>

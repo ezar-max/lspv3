@@ -148,7 +148,6 @@ class AsesiTahapanController extends Controller
 
                 $ak07 = $pendaftaran->ak07Adjustment;
                 $defaultChecklist = \App\Models\AssessmentAk07Adjustment::defaultChecklistItems();
-                $asesorSig = $pendaftaran->tanda_tangan_asesor_ak01 ?? $pendaftaran->asesor?->tanda_tangan;
                 $namaSkema = $pendaftaran->skema->nama_skema ?? 'Skema Sertifikasi';
 
                 if (!$ak07) {
@@ -170,8 +169,8 @@ class AsesiTahapanController extends Controller
                         'metode_disepakati' => 'Observasi Demonstrasi & Wawancara',
                         'instrumen_disepakati' => 'FR.IA.01, FR.IA.03',
                         'catatan_asesor' => 'Seluruh proses asesmen disepakati dapat dilaksanakan dengan penyesuaian yang wajar sesuai kesepakatan bersama.',
-                        'asesor_signature' => $asesorSig,
-                        'asesor_signed_at' => $asesorSig ? now() : null,
+                        'asesor_signature' => null,
+                        'asesor_signed_at' => null,
                     ]);
                 } elseif (empty($ak07->items_checklist)) {
                     $ak07->update([
@@ -189,7 +188,7 @@ class AsesiTahapanController extends Controller
             }
 
             if ($ak07) {
-                $isAk07Selesai = !empty($ak07->asesi_signature);
+                $isAk07Selesai = $ak07->isConfirmed();
             }
         }
 
@@ -798,6 +797,21 @@ class AsesiTahapanController extends Controller
                     ->withInput()
                     ->with('error', 'Masih ada data yang wajib diisi. Silakan lengkapi penilaian seluruh butir KUK terlebih dahulu.');
             }
+
+            // Memastikan bahwa setiap 'K' memiliki bukti pendukung
+            foreach ($request->penilaian as $elemenId => $nilai) {
+                if ($nilai === 'K') {
+                    $hasBukti = \App\Models\BuktiApl02::where('pendaftaran_id', $pendaftaran->id)
+                        ->where('elemen_id', $elemenId)
+                        ->exists() || $request->hasFile("bukti_foto.{$elemenId}") || $request->has("bukti_relevan.{$elemenId}");
+                    
+                    if (!$hasBukti) {
+                        return redirect()->route('asesi.tahapan', ['step' => 2, 'pendaftaran_id' => $pendaftaran->id])
+                            ->withInput()
+                            ->with('error', 'Anda menyatakan Kompeten (K) pada elemen tertentu, namun belum melampirkan Bukti. Harap lengkapi bukti untuk seluruh elemen yang Anda nyatakan Kompeten.');
+                    }
+                }
+            }
         }
 
         $isWasRevision = $pendaftaran->isApl02Revision();
@@ -1109,44 +1123,11 @@ class AsesiTahapanController extends Controller
             'tuk_type' => 'nullable|string|in:Sewaktu,Tempat Kerja,Mandiri',
             'bukti_dikumpulkan' => 'nullable|array',
             'bukti_dikumpulkan_lainnya' => 'nullable|string',
-            'tanda_tangan_asesi_ak01' => 'nullable|string',
         ]);
-
-        $rawTtd = $request->tanda_tangan_asesi_ak01 ?: ($pendaftaran->tanda_tangan_asesi_ak01 ?: ($pendaftaran->tanda_tangan_asesi ?: $pengguna->tanda_tangan));
-
-        if (empty($rawTtd)) {
-            return back()->withInput()->with('error', 'Silakan bubuhkan tanda tangan digital Anda terlebih dahulu sebelum mengirim formulir.');
-        }
-
-        $ttdPath = $rawTtd;
-
-        // Validasi & Simpan Signature Base64 ke Storage Fisik jika berupa DataURL
-        if (is_string($rawTtd) && \Illuminate\Support\Str::startsWith($rawTtd, 'data:image')) {
-            try {
-                $imageParts = explode(';base64,', $rawTtd);
-                if (count($imageParts) === 2) {
-                    $imageTypeAux = explode('image/', $imageParts[0]);
-                    $imageType = $imageTypeAux[1] ?? 'png';
-                    $imageBase64 = base64_decode($imageParts[1]);
-
-                    $fileName = 'signatures/ak01_asesi_' . $pendaftaran->id . '_' . time() . '_' . \Illuminate\Support\Str::random(6) . '.' . $imageType;
-                    Storage::disk('public')->put($fileName, $imageBase64);
-                    $ttdPath = 'storage/' . $fileName;
-
-                    // Sync ke tanda tangan profil asesi
-                    $pengguna->update(['tanda_tangan' => $ttdPath]);
-                }
-            } catch (\Exception $e) {
-                \Log::warning('Gagal menyimpan signature ke file, fallback ke string: ' . $e->getMessage());
-            }
-        }
 
         $oldAk01Status = $pendaftaran->status_ak01;
 
-        \Illuminate\Support\Facades\DB::transaction(function () use ($pendaftaran, $request, $ttdPath) {
-            $asesor = $pendaftaran->asesor ?: $pendaftaran->jadwal?->asesor;
-            $asesorTtd = $pendaftaran->tanda_tangan_asesor_ak01 ?: ($asesor?->tanda_tangan ?: 'signatures/verified_asesor_auto.png');
-
+        \Illuminate\Support\Facades\DB::transaction(function () use ($pendaftaran, $request) {
             $tukType = $request->input('tuk_type') ?: ($pendaftaran->tuk_type ?: ($pendaftaran->skema?->masterAk01?->tuk_type ?: 'Sewaktu'));
             $buktiDikumpulkan = $request->input('bukti_dikumpulkan');
             if (empty($buktiDikumpulkan)) {
@@ -1160,49 +1141,45 @@ class AsesiTahapanController extends Controller
                 'tuk_type' => $tukType,
                 'bukti_dikumpulkan' => $buktiDikumpulkan,
                 'bukti_dikumpulkan_lainnya' => $buktiLainnya,
-                'tanda_tangan_asesi_ak01' => $ttdPath,
-                'tanggal_ttd_asesi_ak01' => now(),
+                'tanda_tangan_asesi_ak01' => null,
+                'tanggal_ttd_asesi_ak01' => null,
                 'status_ak01' => 'selesai',
-                'tanda_tangan_asesor_ak01' => $asesorTtd,
-                'tanggal_ttd_asesor_ak01' => $pendaftaran->tanggal_ttd_asesor_ak01 ?: now(),
+                'tanda_tangan_asesor_ak01' => null,
+                'tanggal_ttd_asesor_ak01' => null,
             ]);
 
-            LogAktivitas::catat('Pengisian FR.AK.01', 'Asesi menandatangani Persetujuan Asesmen #' . $pendaftaran->nomor_pendaftaran . ' (ACC Otomatis)');
+            LogAktivitas::catat('Pengisian FR.AK.01', 'Asesi mengirim persetujuan FR.AK.01 #' . $pendaftaran->nomor_pendaftaran);
         });
 
         // Trigger Notification ke Asesi & Asesor
         if ($oldAk01Status !== 'selesai') {
             $pendaftaran->asesi?->notify(new \App\Notifications\AK01Approved($pendaftaran->id));
-            $asesorUser = $pendaftaran->asesor ?: $pendaftaran->jadwal?->asesor;
-            if ($asesorUser) {
-                $asesorUser->notify(new \App\Notifications\AK01ReadyForSignature($pendaftaran->id, $pendaftaran->asesi?->nama_lengkap ?? 'Asesi'));
-            }
         }
 
         if ($request->routeIs('asesi.ak01.sign')) {
             if ($request->wantsJson() || $request->ajax()) {
                 return response()->json([
                     'success' => true,
-                    'message' => 'Persetujuan Asesmen (FR.AK.01) telah berhasil ditandatangani. Silakan menunggu sesi asesmen Anda dimulai sesuai jadwal.',
+                    'message' => 'Persetujuan Asesmen (FR.AK.01) berhasil dikirim. Silakan menunggu sesi asesmen Anda dimulai sesuai jadwal.',
                     'redirect_url' => route('asesi.dashboard', ['pendaftaran_id' => $pendaftaran->id]),
                 ]);
             }
 
             return redirect()->route('asesi.dashboard', ['pendaftaran_id' => $pendaftaran->id])
                 ->with('notif_ak01_selesai', true)
-                ->with('sukses', 'Formulir FR.AK.01 Persetujuan Asesmen & Kerahasiaan telah berhasil ditandatangani. Silakan menunggu sesi asesmen Anda dimulai sesuai jadwal.');
+                ->with('sukses', 'Formulir FR.AK.01 Persetujuan Asesmen & Kerahasiaan berhasil dikirim. Silakan menunggu sesi asesmen Anda dimulai sesuai jadwal.');
         }
 
         if ($request->wantsJson() || $request->ajax()) {
             return response()->json([
                 'success' => true,
-                'message' => 'Persetujuan Asesmen (FR.AK.01) telah berhasil ditandatangani. Formulir otomatis beralih ke Formulir FR.AK.07 (Penyesuaian Asesmen).',
+                'message' => 'Persetujuan Asesmen (FR.AK.01) berhasil dikirim. Formulir otomatis beralih ke Formulir FR.AK.07 (Penyesuaian Asesmen).',
                 'redirect_url' => route('asesi.tahapan', ['step' => 4, 'pendaftaran_id' => $pendaftaran->id]),
             ]);
         }
 
         return redirect()->route('asesi.tahapan', ['step' => 4, 'pendaftaran_id' => $pendaftaran->id])
             ->with('notif_ak01_selesai', true)
-            ->with('sukses', 'Formulir FR.AK.01 Persetujuan Asesmen & Kerahasiaan telah berhasil ditandatangani. Formulir langsung beralih ke FR.AK.07 (Penyesuaian Asesmen).');
+            ->with('sukses', 'Formulir FR.AK.01 Persetujuan Asesmen & Kerahasiaan berhasil dikirim. Formulir langsung beralih ke FR.AK.07 (Penyesuaian Asesmen).');
     }
 }

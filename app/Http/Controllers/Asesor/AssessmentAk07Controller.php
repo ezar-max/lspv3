@@ -156,28 +156,17 @@ class AssessmentAk07Controller extends Controller
         $ak07->instrumen_disepakati = $request->input('instrumen_disepakati');
         $ak07->catatan_asesor = $request->input('catatan_asesor');
 
-        // Tanda tangan Asesor
-        $rawSignature = $request->input('tanda_tangan_asesor');
-        if (!empty($rawSignature)) {
-            $savedSignaturePath = $this->processSignatureImage($rawSignature, 'asesor', $pendaftaran->id);
-            if ($savedSignaturePath) {
-                $ak07->asesor_signature = $savedSignaturePath;
-                $ak07->asesor_signed_at = now();
-            }
-        }
-
-        // STATE MACHINE & RE-CONFIRMATION RULE:
-        // Jika sebelumnya sudah confirmed lalu asesor mengubah data (bukan konfirmasi ulang eksplisit),
-        // reset status kembali ke draft & batalkan pengesahan untuk penandatanganan ulang.
+        // Perubahan data yang telah dikonfirmasi kembali menjadi draft.
         if ($isPreviouslyConfirmed && !$isConfirmAction) {
             $ak07->status = 'draft';
-            $ak07->asesor_signature = null;
-            $ak07->asesor_signed_at = null;
-            $ak07->asesi_signature = null;
-            $ak07->asesi_signed_at = null;
         } elseif ($isConfirmAction) {
             $ak07->status = 'confirmed';
         }
+
+        $ak07->asesor_signature = null;
+        $ak07->asesor_signed_at = null;
+        $ak07->asesi_signature = null;
+        $ak07->asesi_signed_at = null;
 
         $ak07->save();
 
@@ -194,8 +183,8 @@ class AssessmentAk07Controller extends Controller
                     'metode_disepakati' => $ak07->metode_disepakati,
                     'instrumen_disepakati' => $ak07->instrumen_disepakati,
                     'catatan_asesor' => $ak07->catatan_asesor,
-                    'tanda_tangan_asesor' => $ak07->asesor_signature,
-                    'tanggal_ttd_asesor' => $ak07->asesor_signed_at,
+                    'tanda_tangan_asesor' => null,
+                    'tanggal_ttd_asesor' => null,
                     'status' => $ak07->status,
                 ]
             );
@@ -218,48 +207,9 @@ class AssessmentAk07Controller extends Controller
     }
 
     /**
-     * Tanda tangan digital Asesor untuk FR.AK.07
-     */
-    public function signAsesor(Request $request, $pendaftaranId)
-    {
-        $pendaftaran = PendaftaranAsesi::with('ak07Adjustment')->findOrFail($pendaftaranId);
-        $this->authorizeAsesor($pendaftaran);
-
-        $ak07 = $pendaftaran->ak07Adjustment;
-        if (!$ak07) {
-            return back()->with('error', 'Formulir FR.AK.07 belum diisi.');
-        }
-
-        $rawSignature = $request->input('tanda_tangan_asesor');
-        $signaturePath = $this->processSignatureImage($rawSignature, 'asesor', $pendaftaran->id);
-
-        if (!$signaturePath) {
-            return back()->with('error', 'Tanda tangan asesor tidak valid atau belum tersedia.');
-        }
-
-        $ak07->asesor_signature = $signaturePath;
-        $ak07->asesor_signed_at = now();
-
-        if (!empty($ak07->asesi_signature)) {
-            $ak07->status = 'confirmed';
-        }
-
-        $ak07->save();
-
-        LogAktivitas::create([
-            'pengguna_id' => auth()->id(),
-            'aktivitas' => 'Menandatangani Formulir FR.AK.07 untuk Peserta #' . $pendaftaran->nomor_pendaftaran,
-            'ip_address' => $request->ip(),
-            'user_agent' => $request->userAgent(),
-        ]);
-
-        return back()->with('sukses', 'Tanda tangan Asesor pada FR.AK.07 berhasil disimpan.');
-    }
-
-    /**
      * Tanda tangan digital Asesi untuk FR.AK.07
      */
-    public function signAsesi(Request $request, $pendaftaranId)
+    public function confirmAsesi(Request $request, $pendaftaranId)
     {
         $pendaftaran = PendaftaranAsesi::with('ak07Adjustment')->findOrFail($pendaftaranId);
         $this->authorizeAsesi($pendaftaran);
@@ -267,7 +217,6 @@ class AssessmentAk07Controller extends Controller
         $ak07 = $pendaftaran->ak07Adjustment;
         if (!$ak07) {
             $defaultChecklist = AssessmentAk07Adjustment::defaultChecklistItems();
-            $asesorSig = $pendaftaran->tanda_tangan_asesor_ak01 ?? $pendaftaran->asesor?->tanda_tangan;
             $namaSkema = $pendaftaran->skema->nama_skema ?? 'Skema Sertifikasi';
             $defaultPotensi = $this->resolveDefaultPotensi($pendaftaran);
 
@@ -281,40 +230,27 @@ class AssessmentAk07Controller extends Controller
                 'metode_disepakati' => 'Observasi Demonstrasi & Wawancara',
                 'instrumen_disepakati' => 'FR.IA.01, FR.IA.03',
                 'catatan_asesor' => 'Seluruh proses asesmen disepakati dapat dilaksanakan dengan penyesuaian yang wajar sesuai kesepakatan bersama.',
-                'asesor_signature' => $asesorSig,
-                'asesor_signed_at' => $asesorSig ? now() : null,
+                'asesor_signature' => null,
+                'asesor_signed_at' => null,
             ]);
         }
 
-        $rawSignature = $request->input('tanda_tangan_asesi');
-        $signaturePath = $this->processSignatureImage($rawSignature, 'asesi', $pendaftaran->id);
-
-        if (!$signaturePath && !empty(auth()->user()->tanda_tangan)) {
-            $signaturePath = auth()->user()->tanda_tangan;
-        }
-
-        if (!$signaturePath) {
-            return back()->with('error', 'Tanda tangan asesi tidak valid.');
-        }
-
-        $ak07->asesi_signature = $signaturePath;
-        $ak07->asesi_signed_at = now();
-
-        if (!empty($ak07->asesor_signature)) {
-            $ak07->status = 'confirmed';
-        }
-
+        $ak07->asesor_signature = null;
+        $ak07->asesor_signed_at = null;
+        $ak07->asesi_signature = null;
+        $ak07->asesi_signed_at = null;
+        $ak07->status = 'confirmed';
         $ak07->save();
 
         LogAktivitas::create([
             'pengguna_id' => auth()->id(),
-            'aktivitas' => 'Asesi menandatangani Kesepakatan Penyesuaian FR.AK.07 #' . $pendaftaran->nomor_pendaftaran,
+            'aktivitas' => 'Asesi mengonfirmasi Kesepakatan Penyesuaian FR.AK.07 #' . $pendaftaran->nomor_pendaftaran,
             'ip_address' => $request->ip(),
             'user_agent' => $request->userAgent(),
         ]);
 
         return redirect()->route('asesi.tahapan', ['pendaftaran_id' => $pendaftaran->id, 'step' => 5])
-            ->with('sukses', 'Tanda tangan Anda pada Kesepakatan FR.AK.07 berhasil disimpan. Silakan lanjutkan ke pelaksanaan ujian/tes online.');
+            ->with('sukses', 'Kesepakatan FR.AK.07 berhasil dikonfirmasi. Silakan lanjutkan ke pelaksanaan ujian/tes online.');
     }
 
     /**
@@ -353,7 +289,6 @@ class AssessmentAk07Controller extends Controller
 
         $ak07 = $pendaftaran->ak07Adjustment;
         $defaultChecklist = AssessmentAk07Adjustment::defaultChecklistItems();
-        $asesorSig = $pendaftaran->tanda_tangan_asesor_ak01 ?? $pendaftaran->asesor?->tanda_tangan;
         $namaSkema = $pendaftaran->skema->nama_skema ?? 'Skema Sertifikasi';
 
         if (!$ak07) {
@@ -368,8 +303,8 @@ class AssessmentAk07Controller extends Controller
                 'metode_disepakati' => 'Observasi Demonstrasi & Wawancara',
                 'instrumen_disepakati' => 'FR.IA.01, FR.IA.03',
                 'catatan_asesor' => 'Seluruh proses asesmen disepakati dapat dilaksanakan dengan penyesuaian yang wajar sesuai kesepakatan bersama.',
-                'asesor_signature' => $asesorSig,
-                'asesor_signed_at' => $asesorSig ? now() : null,
+                'asesor_signature' => null,
+                'asesor_signed_at' => null,
             ]);
         } elseif (empty($ak07->items_checklist)) {
             $ak07->update([
@@ -378,8 +313,8 @@ class AssessmentAk07Controller extends Controller
                 'metode_disepakati' => $ak07->metode_disepakati ?? 'Observasi Demonstrasi & Wawancara',
                 'instrumen_disepakati' => $ak07->instrumen_disepakati ?? 'FR.IA.01, FR.IA.03',
                 'catatan_asesor' => $ak07->catatan_asesor ?? 'Seluruh proses asesmen disepakati dapat dilaksanakan dengan penyesuaian yang wajar sesuai kesepakatan bersama.',
-                'asesor_signature' => $ak07->asesor_signature ?? $asesorSig,
-                'asesor_signed_at' => $ak07->asesor_signed_at ?? ($asesorSig ? now() : null),
+                'asesor_signature' => null,
+                'asesor_signed_at' => null,
             ]);
         }
 

@@ -19,6 +19,8 @@ use App\Models\JadwalAsesmen;
 use App\Http\Requests\StoreMasterInstrumentRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class MasterInstrumentController extends Controller
 {
@@ -571,6 +573,10 @@ class MasterInstrumentController extends Controller
             $existingPv = $meta['penyusun_validator'] ?? [];
             $newPv = $request->input('metadata_penyusun_validator');
             if (is_array($newPv)) {
+                foreach (['penyusun', 'validator'] as $role) {
+                    $newPv[$role]['ttd'] = null;
+                    $newPv[$role]['ttd_tanggal'] = null;
+                }
                 $meta['penyusun_validator'] = array_replace_recursive($existingPv, $newPv);
             } else {
                 $meta['penyusun_validator'] = $newPv;
@@ -597,6 +603,10 @@ class MasterInstrumentController extends Controller
         }
         if (empty($instrument->created_by) && auth()->check()) {
             $instrument->created_by = auth()->id();
+        }
+        foreach (['penyusun', 'validator'] as $role) {
+            $meta['penyusun_validator'][$role]['ttd'] = null;
+            $meta['penyusun_validator'][$role]['ttd_tanggal'] = null;
         }
         $meta['is_saved'] = true;
         $meta['saved_at'] = now()->toDateTimeString();

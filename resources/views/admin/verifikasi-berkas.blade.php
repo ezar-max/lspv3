@@ -57,6 +57,11 @@
                                 @else
                                     <span class="lencana lencana-merah">Ditolak</span>
                                 @endif
+                                @if($p->request_perbaikan == 1)
+                                    <div style="margin-top: 0.25rem;">
+                                        <span class="lencana lencana-amber" style="background: #fef08a; color: #b45309; border-color: #fde047;"><i class="fa-solid fa-unlock text-xs"></i> Izin Ubah Data</span>
+                                    </div>
+                                @endif
                             </td>
                             <td>
                                 <a href="{{ route('admin.detail-verifikasi', $p->id) }}" class="tombol tombol-utama tombol-sm">

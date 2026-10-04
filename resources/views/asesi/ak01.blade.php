@@ -3,8 +3,6 @@
 @section('judul', 'FR.AK.01 - Persetujuan Asesmen & Kerahasiaan')
 
 @push('css')
-    <!-- Signature Pad CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
     <style>
         .custom-scrollbar::-webkit-scrollbar {
             width: 4px;
@@ -23,8 +21,8 @@
 @section('konten')
 @php
     $pengguna = auth()->user();
-    $isSignedByAsesi = !empty($pendaftaran->tanda_tangan_asesi_ak01) || in_array($pendaftaran->status_ak01, ['disetujui_asesi', 'selesai']);
-    $isSignedByAsesor = !empty($pendaftaran->tanda_tangan_asesor_ak01) || in_array($pendaftaran->status_ak01, ['disetujui_asesor', 'selesai']);
+    $isSignedByAsesi = $pendaftaran->status_ak01 === 'selesai';
+    $isSignedByAsesor = in_array($pendaftaran->status_ak01, ['disetujui_asesor', 'selesai']);
     $isLocked = true; // Formulir kesepakatan selalu read-only untuk Asesi
     $savedBukti = (array) ($pendaftaran->bukti_dikumpulkan ?? []);
     if (empty($savedBukti)) {
@@ -35,9 +33,7 @@
     // 1. TTD AK.01 jika sudah ada
     // 2. TTD pendaftaran (APL.01 / APL.02)
     // 3. TTD profil akun asesi
-    $existingTtd = $pendaftaran->tanda_tangan_asesi_ak01 
-        ?: ($pendaftaran->tanda_tangan_asesi 
-        ?: ($pendaftaran->asesi->tanda_tangan ?? $pengguna->tanda_tangan ?? null));
+    $existingTtd = null;
 
     $hasExistingTtd = !empty($existingTtd);
     $existingTtdUrl = null;
@@ -106,7 +102,7 @@
                 @elseif($isSignedByAsesor)
                     <span class="px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs font-bold flex items-center gap-1.5">
                         <span class="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span>
-                        Ditetapkan Asesor &bull; Menunggu Tanda Tangan Asesi
+                        Ditetapkan Asesor &bull; Menunggu Persetujuan Asesi
                     </span>
                 @elseif($isSignedByAsesi)
                     <span class="px-3 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-xs font-bold flex items-center gap-1.5">
@@ -116,7 +112,7 @@
                 @else
                     <span class="px-3 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200 text-xs font-bold flex items-center gap-1.5">
                         <span class="w-2 h-2 rounded-full bg-slate-400"></span>
-                        Menunggu Tanda Tangan
+                        Menunggu Persetujuan
                     </span>
                 @endif
             </div>
@@ -173,7 +169,7 @@
                         <span class="px-2 py-0.5 rounded-md bg-white/20 text-[10px] font-bold uppercase">Disetujui Otomatis</span>
                     </div>
                     <p class="text-xs text-blue-100 mt-0.5">
-                        Rencana pelaksanaan asesmen (TUK dan metode bukti) telah ditetapkan oleh Asesor / LSP. Silakan periksa rincian kesepakatan dan setujui dengan membubuhkan tanda tangan digital Anda di bawah. Formulir langsung disahkan secara otomatis tanpa perlu menunggu verifikasi asesor.
+                        Rencana pelaksanaan asesmen (TUK dan metode bukti) telah ditetapkan oleh Asesor / LSP. Silakan periksa rincian kesepakatan dan kirim persetujuan Anda di bawah.
                     </p>
                 </div>
             </div>
@@ -190,7 +186,7 @@
                         <span class="px-2 py-0.5 rounded-md bg-white/20 text-[10px] font-bold uppercase">Siap Disetujui</span>
                     </div>
                     <p class="text-xs text-blue-100 mt-0.5">
-                        Asesor Penguji ({{ $pendaftaran->asesor->nama_lengkap ?? 'Asesor' }}) telah menetapkan dan mengesahkan formulir FR.AK.01 ini. Silakan periksa kesepakatan dan bubuhkan/konfirmasi tanda tangan digital Anda untuk menyetujui.
+                        Asesor Penguji ({{ $pendaftaran->asesor->nama_lengkap ?? 'Asesor' }}) telah menetapkan formulir FR.AK.01 ini. Silakan periksa kesepakatan dan kirim persetujuan Anda.
                     </p>
                 </div>
             </div>
@@ -442,6 +438,7 @@
             @endif
         </div>
 
+        @if(false)
         <!-- 4. SECTION TANDA TANGAN DIGITAL (2 PIHAK) -->
         <div class="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-4 sm:p-5 space-y-4">
             <h2 class="font-bold text-xs sm:text-sm text-slate-800 border-b border-slate-100 pb-2">
@@ -574,6 +571,8 @@
             </div>
         </div>
 
+        @endif
+
         <!-- ACTION BAR / SUBMIT -->
         <div class="bg-white rounded-2xl border border-slate-200/90 p-4 shadow-2xs flex flex-col sm:flex-row items-center justify-between gap-3">
             <a href="{{ route('asesi.tahapan', ['step' => 2, 'pendaftaran_id' => $pendaftaran->id]) }}" 
@@ -606,18 +605,18 @@
                     </button>
                 </div>
 
-                <!-- Tampilan status biasa jika tidak sedang mode edit -->
+                <!-- Status setelah persetujuan dikirim -->
                 <div x-show="!isEditingSignature" class="w-full sm:w-auto flex flex-col sm:flex-row items-center gap-2.5">
                     @if(!$isSignedByAsesor)
                         <div class="text-xs text-amber-700 font-semibold bg-amber-50 border border-amber-200/80 px-3 py-2 rounded-xl">
-                            FR.AK.01 Menunggu Pengesahan & Tanda Tangan Asesor Penguji
+                            FR.AK.01 Menunggu penetapan Asesor Penguji
                         </div>
                         <a href="{{ route('asesi.tahapan', ['pendaftaran_id' => $pendaftaran->id]) }}" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors">
                             Lihat Tahapan Asesmen
                         </a>
                     @else
                         <span class="text-xs text-emerald-700 font-semibold">
-                            FR.AK.01 Telah Ditandatangani
+                            FR.AK.01 Telah Disetujui
                         </span>
                         <a href="{{ route('asesi.dashboard', ['pendaftaran_id' => $pendaftaran->id]) }}" class="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs transition-colors">
                             Kembali ke Dashboard &rarr;
@@ -708,50 +707,6 @@
                         confirmButtonColor: '#2563eb'
                     });
                     return;
-                }
-
-                const sigInput = document.getElementById('inputSignatureAk01') || (this.$refs && this.$refs.signatureInput);
-
-                // Cek tanda tangan
-                if (this.isEditingSignature) {
-                    if (this.engine && this.engine.isEmpty()) {
-                        Swal.fire({
-                            icon: 'warning',
-                            title: 'Tanda Tangan Kosong',
-                            text: this.hasSavedSignature 
-                                ? 'Silakan bubuhkan tanda tangan baru pada canvas, atau klik Batal Ubah untuk memakai tanda tangan tersimpan.'
-                                : 'Silakan bubuhkan tanda tangan digital Anda pada canvas terlebih dahulu.',
-                            confirmButtonColor: '#2563eb'
-                        });
-                        return;
-                    }
-                    if (this.engine && !this.engine.isEmpty()) {
-                        const dataUrl = this.engine.toDataURL();
-                        if (sigInput) sigInput.value = dataUrl;
-                        if (this.$refs && this.$refs.signatureInput) {
-                            this.$refs.signatureInput.value = dataUrl;
-                        }
-                    }
-                } else {
-                    // Mode tanda tangan otomatis tersimpan
-                    const val = (sigInput && sigInput.value) 
-                        ? sigInput.value 
-                        : ((this.$refs && this.$refs.signatureInput && this.$refs.signatureInput.value) 
-                            ? this.$refs.signatureInput.value 
-                            : this.savedSignature);
-                    if (!val) {
-                        Swal.fire({
-                            icon: 'warning',
-                            title: 'Tanda Tangan Kosong',
-                            text: 'Silakan bubuhkan tanda tangan digital Anda terlebih dahulu.',
-                            confirmButtonColor: '#2563eb'
-                        });
-                        return;
-                    }
-                    if (sigInput) sigInput.value = val;
-                    if (this.$refs && this.$refs.signatureInput) {
-                        this.$refs.signatureInput.value = val;
-                    }
                 }
 
                 this.isSubmitting = true;

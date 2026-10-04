@@ -3,8 +3,6 @@
 @section('judul', 'Pengesahan FR.AK.01 - ' . ($pendaftaran->asesi->nama_lengkap ?? 'Asesi'))
 
 @push('css')
-    <!-- Signature Pad CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
     <style>
         .custom-scrollbar::-webkit-scrollbar {
             width: 4px;
@@ -22,8 +20,8 @@
 
 @section('konten')
 @php
-    $isSignedByAsesi = !empty($pendaftaran->tanda_tangan_asesi_ak01) || in_array($pendaftaran->status_ak01, ['disetujui_asesi', 'selesai']);
-    $isSignedByAsesor = !empty($pendaftaran->tanda_tangan_asesor_ak01) || in_array($pendaftaran->status_ak01, ['disetujui_asesor', 'selesai']);
+    $isSignedByAsesi = in_array($pendaftaran->status_ak01, ['disetujui_asesi', 'selesai']);
+    $isSignedByAsesor = in_array($pendaftaran->status_ak01, ['disetujui_asesor', 'selesai']);
     $savedBukti = (array) ($pendaftaran->bukti_dikumpulkan ?? []);
 @endphp
 
@@ -367,6 +365,7 @@
             @endif
         </div>
 
+        @if(false)
         <!-- 4. TANDA TANGAN 2 PIHAK -->
         <div class="bg-white rounded-3xl border border-slate-200/90 shadow-2xs p-5 space-y-4">
             <h3 class="font-bold text-xs sm:text-sm text-slate-800 border-b border-slate-100 pb-2">
@@ -439,17 +438,15 @@
                             Waktu Pengesahan: <strong>{{ $pendaftaran->tanggal_ttd_asesor_ak01 ? date('d/m/Y H:i', strtotime($pendaftaran->tanggal_ttd_asesor_ak01)) : 'Tercatat' }}</strong>
                         </div>
                     @else
-                        <!-- TANDA TANGAN ASESOR (CANVAS) -->
+                        <!-- TANDA TANGAN ASESOR (CANVAS MODAL) -->
                         <div class="space-y-2.5">
-                            <div class="space-y-1.5">
-                                <div class="border border-slate-300 rounded-xl bg-white relative overflow-hidden">
-                                    <canvas id="canvasAk01Asesor" width="800" height="240" class="w-full h-32 bg-white cursor-crosshair block touch-none" style="touch-action: none; -ms-touch-action: none;"></canvas>
-                                </div>
-                                <div class="flex items-center justify-between text-[11px]">
-                                    <span class="text-slate-400">Tanda tangani menggunakan mouse atau layar sentuh.</span>
-                                    <button type="button" @click="clearSignature()" class="text-rose-600 hover:text-rose-800 font-semibold cursor-pointer">
-                                        [ Hapus / Ulangi ]
+                            <div id="container-ttd-asesor-preview" class="mb-2">
+                                <div class="flex flex-col items-start gap-1">
+                                    <img src="" id="preview-ttd-asesor" alt="TTD Asesor" class="hidden h-14 w-32 rounded-lg border border-slate-200 bg-slate-50/80 p-1 shadow-2xs max-h-12 max-w-full object-contain mb-1">
+                                    <button type="button" id="btn-trigger-modal" onclick="bukaModalTtd()" class="px-3 py-1.5 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-lg text-xs font-bold hover:bg-indigo-100 shadow-sm flex items-center gap-2 transition-colors">
+                                        <i class="fa-solid fa-pen"></i> Bubuhkan TTD
                                     </button>
+                                    <button type="button" onclick="bukaModalTtd()" id="btn-ubah-ttd" class="hidden text-[10px] text-indigo-600 hover:underline mt-0.5 font-semibold">Ubah Tanda Tangan</button>
                                 </div>
                             </div>
 
@@ -461,12 +458,14 @@
             </div>
         </div>
 
+        @endif
+
         @if(!$isSignedByAsesi)
             <div class="p-3.5 rounded-2xl bg-indigo-50 border border-indigo-200/90 text-indigo-900 text-xs flex items-start gap-3 shadow-2xs">
                 <div class="space-y-0.5">
                     <h4 class="font-bold text-indigo-950 text-xs">Alur Pengisian & Pengesahan</h4>
                     <p class="text-indigo-800 leading-relaxed">
-                        Sebagai Asesor, Anda menetapkan jenis TUK, metode pengumpulan bukti, serta menandatangani formulir ini terlebih dahulu. Setelah Anda sahkan, formulir akan diteruskan ke Asesi ({{ $pendaftaran->asesi->nama_lengkap ?? 'Asesi' }}) untuk ditandatangani.
+                        Sebagai Asesor, Anda menetapkan jenis TUK dan metode pengumpulan bukti. Setelah disimpan, Asesi ({{ $pendaftaran->asesi->nama_lengkap ?? 'Asesi' }}) dapat meninjau dan menyetujui isi formulir.
                     </p>
                 </div>
             </div>
@@ -798,4 +797,100 @@
         };
     }
 </script>
+
+@if(false)
+<!-- MODAL POPUP CANVAS SIGNATURE PAD -->
+<div class="modal-overlay" id="modalCanvasTtd" style="display:none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 99999; justify-content: center; align-items: center;">
+    <div class="modal-konten" style="background: white; border-radius: 12px; padding: 1.75rem; width: 100%; max-width: 500px; text-align: center; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <h3 style="color: #0f172a; margin: 0; font-weight: 800; font-size: 1.15rem;">Tanda Tangan Digital</h3>
+            <button type="button" onclick="document.getElementById('modalCanvasTtd').style.display = 'none'" style="background: none; border: none; font-size: 1.4rem; cursor: pointer; color: #64748b; line-height: 1;">&times;</button>
+        </div>
+
+        <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 1rem; text-align: left;">
+            Gunakan kursor atau layar sentuh untuk menggambar tanda tangan Anda secara presisi pada bidang di bawah:
+        </p>
+
+        <canvas id="canvas-ttd-modal" width="440" height="180" class="canvas-signature-pad" style="border: 2px dashed #94a3b8; border-radius: 8px; background: #ffffff; cursor: crosshair; touch-action: none; display: block; margin: 0 auto; width: 100%; max-width: 440px;"></canvas>
+
+        <div style="margin-top: 1.25rem; display: flex; gap: 0.75rem; justify-content: center;">
+            <button type="button" class="tombol tombol-sekunder tombol-sm px-4 py-2 bg-slate-100 text-slate-700 font-semibold rounded border border-slate-200 shadow-sm" onclick="if(window.signaturePadModal) window.signaturePadModal.clear();">
+                Bersihkan
+            </button>
+            <button type="button" class="tombol tombol-utama tombol-sm px-4 py-2 text-white font-semibold rounded shadow-sm" style="background: #059669; border: 1px solid #059669;" onclick="window.saveTtdAsesor()">
+                Gunakan Tanda Tangan
+            </button>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
+<script>
+    window.signaturePadModal = null;
+
+    window.bukaModalTtd = function() {
+        const modal = document.getElementById('modalCanvasTtd');
+        if (modal) {
+            modal.style.display = 'flex';
+            
+            if (!window.signaturePadModal) {
+                const canvas = document.getElementById('canvas-ttd-modal');
+                if (canvas && window.SignaturePad) {
+                    window.signaturePadModal = new SignaturePad(canvas, {
+                        backgroundColor: 'rgb(255, 255, 255)'
+                    });
+                    
+                    const ratio = Math.max(window.devicePixelRatio || 1, 1);
+                    canvas.width = canvas.offsetWidth * ratio;
+                    canvas.height = canvas.offsetHeight * ratio;
+                    canvas.getContext("2d").scale(ratio, ratio);
+                    window.signaturePadModal.clear();
+                }
+            } else {
+                window.signaturePadModal.clear();
+            }
+        }
+    };
+
+    window.saveTtdAsesor = function() {
+        if (window.signaturePadModal && !window.signaturePadModal.isEmpty()) {
+            const dataUrl = window.signaturePadModal.toDataURL('image/png');
+            
+            // For ak01-detail.blade.php
+            const hiddenInput = document.getElementById('inputSignatureAk01Asesor');
+            if(hiddenInput) hiddenInput.value = dataUrl;
+            
+            const previewImg = document.getElementById('preview-ttd-asesor');
+            if(previewImg) {
+                previewImg.src = dataUrl;
+                previewImg.classList.remove('hidden');
+            }
+            
+            const btnTrigger = document.getElementById('btn-trigger-modal');
+            if(btnTrigger) {
+                btnTrigger.classList.add('hidden');
+            }
+            
+            const btnUbah = document.getElementById('btn-ubah-ttd');
+            if(btnUbah) {
+                btnUbah.classList.remove('hidden');
+            }
+
+            document.getElementById('modalCanvasTtd').style.display = 'none';
+        } else {
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Canvas Kosong',
+                    text: 'Silakan gambar tanda tangan Anda terlebih dahulu.',
+                    confirmButtonText: 'Mengerti',
+                    confirmButtonColor: '#059669'
+                });
+            } else {
+                alert('Silakan gambar tanda tangan Anda terlebih dahulu.');
+            }
+        }
+    };
+</script>
+@endif
 @endsection

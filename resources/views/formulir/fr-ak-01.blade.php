@@ -25,7 +25,7 @@
 @endpush
 
 @section('konten')
-<div class="wadah-formulir-bnsp animasi-slide {{ (auth()->check() && auth()->user()->peran === 'asesi' && !empty($pendaftaran->tanda_tangan_asesi_ak01)) ? 'mode-read-only-asesi' : '' }}">
+<div class="wadah-formulir-bnsp animasi-slide">
     
     @php
         $isAsesi = auth()->check() && auth()->user()->peran === 'asesi';
@@ -33,11 +33,10 @@
         $asesorMet = $pendaftaran->asesor->nomor_registrasi ?? 'MET.000.004455.2023';
         $asesiNama = $pendaftaran->asesi->nama_lengkap ?? 'Nama Asesi';
         
-        $asesorTtd = $pendaftaran->tanda_tangan_asesor_ak01 ?? ($pendaftaran->tanda_tangan_asesor ?? null);
-        $asesiTtd = $pendaftaran->tanda_tangan_asesi_ak01 ?? ($pendaftaran->tanda_tangan_asesi ?? ($pendaftaran->asesi->tanda_tangan ?? (auth()->user()->peran === 'asesi' ? auth()->user()->tanda_tangan : null)));
-        
-        $tglTtdAsesor = $pendaftaran->tanggal_ttd_asesor_ak01 ? \Carbon\Carbon::parse($pendaftaran->tanggal_ttd_asesor_ak01)->isoFormat('D MMMM YYYY') : ($pendaftaran->tanggal_ttd_asesor ? \Carbon\Carbon::parse($pendaftaran->tanggal_ttd_asesor)->isoFormat('D MMMM YYYY') : null);
-        $tglTtdAsesi = $pendaftaran->tanggal_ttd_asesi_ak01 ? \Carbon\Carbon::parse($pendaftaran->tanggal_ttd_asesi_ak01)->isoFormat('D MMMM YYYY') : ($pendaftaran->tanggal_ttd_asesi ? \Carbon\Carbon::parse($pendaftaran->tanggal_ttd_asesi)->isoFormat('D MMMM YYYY') : null);
+        $asesorTtd = null;
+        $asesiTtd = null;
+        $tglTtdAsesor = null;
+        $tglTtdAsesi = null;
 
         $buktiSelected = $pendaftaran->bukti_dikumpulkan ?? null;
         if (!is_array($buktiSelected)) $buktiSelected = [];
@@ -53,23 +52,22 @@
         'isAsesi' => $isAsesi,
         'saveLabel' => 'Simpan Persetujuan',
         'saveFormId' => 'form-ak01-bnsp',
-        'signed' => (bool)$asesiTtd,
-        'signedLabel' => 'Telah Disetujui & Ditandatangani',
-        'signLabel' => 'Setujui & Tanda Tangani FR.AK.01'
+        'signed' => false,
+        'saveLabel' => 'Simpan Persetujuan'
     ])
 
     @if($isAsesi)
         @if(!$asesiTtd)
             @include('komponen.banner-readonly-asesi', [
                 'judul' => 'Persetujuan Rencana Asesmen & Kerahasiaan (FR.AK.01)',
-                'keterangan' => 'Silakan tentukan jenis TUK dan metode pengumpulan bukti yang disepakati, lalu klik Setujui & Tanda Tangani FR.AK.01.',
+                'keterangan' => 'Silakan tinjau jenis TUK dan metode pengumpulan bukti yang disepakati.',
                 'status' => 'Menunggu Persetujuan',
                 'tipe' => 'info'
             ])
         @else
             @include('komponen.banner-readonly-asesi', [
                 'judul' => 'Persetujuan Rencana Asesmen & Kerahasiaan Selesai',
-                'keterangan' => 'Seluruh rincian pelaksanaan, bukti yang dikumpulkan, dan komitmen kerahasiaan telah Anda setujui dan tanda tangani.',
+                'keterangan' => 'Seluruh rincian pelaksanaan, bukti yang dikumpulkan, dan komitmen kerahasiaan telah Anda tinjau.',
                 'status' => 'Disetujui Asesi',
                 'tipe' => 'sukses'
             ])
@@ -267,7 +265,7 @@
                 </div>
             </div>
 
-            <!-- TANDA TANGAN BERDAMPINGAN -->
+            <!-- IDENTITAS ASESI DAN ASESOR -->
             @include('komponen.pengesahan-asesi-asesor', [
                 'kodeForm' => 'FR.AK.01',
                 'isAsesi' => $isAsesi ?? false,

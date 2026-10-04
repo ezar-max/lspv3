@@ -51,29 +51,18 @@
         @endif
 
         @if($isAsesi)
-            @if($signed)
-                <span class="lencana lencana-hijau">
-                    {{ $signedLabel }}
-                </span>
-            @elseif($signRoute)
-                <form action="{{ $signRoute }}" method="POST" style="display: inline-block;">
-                    @csrf
-                    <button type="submit" class="tombol tombol-utama tombol-sm">
-                        {{ $signLabel }}
-                    </button>
-                </form>
-            @elseif($saveFormId)
+            @if($saveFormId)
                 @if($showDraft)
                     <button type="button" onclick="submitDraft('{{ $saveFormId }}')" class="tombol tombol-sekunder tombol-sm">
                         {{ $draftLabel }}
                     </button>
                 @endif
-                <button type="button" onclick="document.getElementById('{{ $saveFormId }}').submit()" class="tombol tombol-utama tombol-sm">
-                    {{ $signLabel }}
+                <button type="button" onclick="submitFormulir('{{ $saveFormId }}')" class="tombol tombol-utama tombol-sm">
+                    {{ $saveLabel }}
                 </button>
-            @elseif($signAction)
-                <button type="button" onclick="{!! $signAction !!}" class="tombol tombol-utama tombol-sm">
-                    {{ $signLabel }}
+            @elseif($showSave && $saveAction)
+                <button type="button" onclick="{!! $saveAction !!}" class="tombol tombol-utama tombol-sm">
+                    {{ $saveLabel }}
                 </button>
             @endif
         @else
@@ -101,41 +90,6 @@
 
 <script>
     function submitFormulir(formId) {
-        var isMasterMode = {{ empty($pendaftaranId) ? 'true' : 'false' }};
-        if (isMasterMode) {
-            var ttdInput = document.querySelector('.hidden-penyusun-ttd');
-            if (ttdInput && ttdInput.value.trim() === '') {
-                if (typeof Swal !== 'undefined') {
-                    Swal.fire({
-                        icon: 'warning',
-                        title: 'Tanda Tangan Diperlukan',
-                        text: 'Anda harus menandatangani formulir ini (sebagai Penyusun) menggunakan tombol "TTD" di bagian bawah halaman sebelum dapat menyimpannya.',
-                        confirmButtonText: 'Tanda Tangani Sekarang',
-                        confirmButtonColor: '#059669'
-                    }).then(() => {
-                        var ttdImg = document.querySelector('.preview-penyusun-ttd');
-                        if (ttdImg) {
-                            ttdImg.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                            if (typeof openSignaturePadPenyusun === 'function') {
-                                setTimeout(openSignaturePadPenyusun, 400);
-                            }
-                        }
-                    });
-                } else {
-                    alert('Peringatan: Anda harus menandatangani formulir ini (sebagai Penyusun) menggunakan tombol "TTD" di bagian bawah halaman sebelum dapat menyimpannya.');
-                    
-                    var ttdImg = document.querySelector('.preview-penyusun-ttd');
-                    if (ttdImg) {
-                        ttdImg.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        if (typeof openSignaturePadPenyusun === 'function') {
-                            setTimeout(openSignaturePadPenyusun, 800);
-                        }
-                    }
-                }
-                return;
-            }
-        }
-        
         var form = document.getElementById(formId);
         if (form) {
             if (typeof form.reportValidity === 'function' && !form.reportValidity()) {

@@ -423,8 +423,8 @@ class AsesorController extends Controller
         $isMintaRevisi = !$isDitolak && ($actionType === 'revision' || $rekomendasiStatus === 'tidak_dapat_dilanjutkan');
 
         $rules = [
-            'nilai' => 'required|array',
-            'nilai.*' => 'required|in:K,BK',
+            'nilai' => ($isMintaRevisi || $isDitolak) ? 'nullable|array' : 'required|array',
+            'nilai.*' => ($isMintaRevisi || $isDitolak) ? 'nullable|in:K,BK' : 'required|in:K,BK',
             'verifikasi_kuk' => 'nullable|array',
             'catatan_kuk' => 'nullable|array',
             'rekomendasi_asesor_status' => 'required|in:dapat_dilanjutkan,tidak_dapat_dilanjutkan,ditolak',
@@ -446,12 +446,14 @@ class AsesorController extends Controller
             'catatan_rekomendasi.required' => $isDitolak ? 'Alasan/catatan penolakan wajib diisi.' : 'Catatan revisi wajib diisi agar asesi mengetahui bagian yang perlu diperbaiki.',
         ]);
 
-        // VALIDASI KELENGKAPAN KEPUTUSAN SELURUH UNIT
-        if ($pendaftaran->skema && $pendaftaran->skema->unitKompetensi) {
-            foreach ($pendaftaran->skema->unitKompetensi as $idxUnit => $unit) {
-                $valUnit = $request->input("nilai.{$unit->id}");
-                if (empty($valUnit) || !in_array($valUnit, ['K', 'BK'])) {
-                    return back()->withInput()->with('error', "Keputusan untuk Unit " . ($idxUnit + 1) . " ({$unit->kode_unit}) belum dipilih. Silakan tentukan keputusan Kompeten (K) atau Belum Kompeten (BK).");
+        // VALIDASI KELENGKAPAN KEPUTUSAN SELURUH UNIT (Hanya jika disetujui)
+        if (!$isDitolak && !$isMintaRevisi) {
+            if ($pendaftaran->skema && $pendaftaran->skema->unitKompetensi) {
+                foreach ($pendaftaran->skema->unitKompetensi as $idxUnit => $unit) {
+                    $valUnit = $request->input("nilai.{$unit->id}");
+                    if (empty($valUnit) || !in_array($valUnit, ['K', 'BK'])) {
+                        return back()->withInput()->with('error', "Keputusan untuk Unit " . ($idxUnit + 1) . " ({$unit->kode_unit}) belum dipilih. Silakan tentukan keputusan Kompeten (K) atau Belum Kompeten (BK).");
+                    }
                 }
             }
         }
@@ -505,6 +507,9 @@ class AsesorController extends Controller
                     if (!in_array((string) $unitId, $unitIdsSkema, true)) {
                         continue;
                     }
+                    if ($nilaiKompetensi === null) {
+                        continue; // Skip null values if Asesor has not verified
+                    }
                     PenilaianAsesmen::updateOrCreate(
                         [
                             'pendaftaran_id' => $pendaftaran->id,
@@ -540,6 +545,10 @@ class AsesorController extends Controller
                                 $isVerified = false;
                             } else {
                                 $isVerified = null;
+                            }
+                            
+                            if ($isVerified === null) {
+                                continue; // Skip saving unverified KUK
                             }
                             $catatanKuk = $catatanKukInput[$kuk->id] ?? null;
 
@@ -692,47 +701,16 @@ class AsesorController extends Controller
             'tuk_type' => 'nullable|string|in:Sewaktu,Tempat Kerja,Mandiri',
             'bukti_dikumpulkan' => 'nullable|array',
             'bukti_dikumpulkan_lainnya' => 'nullable|string',
-            'tanda_tangan_asesor_ak01' => 'nullable|string',
         ]);
 
-        $rawSignature = $request->tanda_tangan_asesor_ak01 ?: $request->tanda_tangan_asesor;
-        $signaturePath = null;
-
-        if (!empty($rawSignature) && \Illuminate\Support\Str::startsWith($rawSignature, 'data:image')) {
-            try {
-                $imageParts = explode(';base64,', $rawSignature);
-                $imageTypeAux = explode('image/', $imageParts[0]);
-                $imageType = $imageTypeAux[1] ?? 'png';
-                $imageBase64 = base64_decode($imageParts[1] ?? '');
-
-                if (!empty($imageBase64)) {
-                    $filename = 'sig_asesor_ak01_' . $pendaftaran->id . '_' . \Illuminate\Support\Str::random(10) . '.' . $imageType;
-                    \Illuminate\Support\Facades\Storage::disk('public')->put('signatures/' . $filename, $imageBase64);
-                    $signaturePath = 'storage/signatures/' . $filename;
-                }
-            } catch (\Exception $e) {
-                // Fallback
-            }
-        } elseif (!empty($rawSignature)) {
-            $signaturePath = $rawSignature;
-        }
-
-        if (empty($signaturePath)) {
-            $signaturePath = $pendaftaran->tanda_tangan_asesor_ak01;
-        }
-
-        if (empty($signaturePath)) {
-            return back()->with('error', 'Tanda tangan digital Asesor penguji wajib dibubuhkan pada formulir ini.');
-        }
-
         $oldStatusAk01 = $pendaftaran->status_ak01;
-        $isBothSigned = !empty($pendaftaran->tanda_tangan_asesi_ak01);
+        $isAsesiApproved = in_array($oldStatusAk01, ['disetujui_asesi', 'selesai']);
 
-        \DB::transaction(function() use ($pendaftaran, $request, $signaturePath, $isBothSigned) {
+        \DB::transaction(function() use ($pendaftaran, $request, $isAsesiApproved) {
             $updateData = [
-                'tanda_tangan_asesor_ak01' => $signaturePath,
-                'tanggal_ttd_asesor_ak01' => now(),
-                'status_ak01' => $isBothSigned ? 'selesai' : 'disetujui_asesor',
+                'tanda_tangan_asesor_ak01' => null,
+                'tanggal_ttd_asesor_ak01' => null,
+                'status_ak01' => $isAsesiApproved ? 'selesai' : 'disetujui_asesor',
             ];
 
             if ($request->has('tuk_type')) {
@@ -748,16 +726,14 @@ class AsesorController extends Controller
             $pendaftaran->update($updateData);
         });
 
-        LogAktivitas::catat('Pengisian & Pengesahan FR.AK.01', 'Asesor mengisi rencana asesmen dan menandatangani FR.AK.01 untuk peserta #' . $pendaftaran->nomor_pendaftaran);
+        LogAktivitas::catat('Pengisian FR.AK.01', 'Asesor menetapkan rencana asesmen untuk peserta #' . $pendaftaran->nomor_pendaftaran);
 
         // Notifikasi ke Asesi bahwa AK.01 telah diisi & disahkan Asesor
         if ($oldStatusAk01 !== 'selesai') {
             $pendaftaran->asesi?->notify(new \App\Notifications\AK01Approved($pendaftaran->id));
         }
 
-        $pesanSukses = $isBothSigned
-            ? 'Formulir FR.AK.01 Persetujuan Asesmen & Kerahasiaan berhasil disahkan oleh kedua belah pihak.'
-            : 'Formulir FR.AK.01 Persetujuan Asesmen & Kerahasiaan berhasil diisi dan disahkan. Menunggu tanda tangan Asesi.';
+        $pesanSukses = 'Formulir FR.AK.01 Persetujuan Asesmen & Kerahasiaan berhasil disimpan.';
 
         return redirect()->route('asesor.dashboard')
             ->with('sukses', $pesanSukses);
@@ -1033,38 +1009,7 @@ class AsesorController extends Controller
             'bukti_dikumpulkan' => 'nullable|array',
             'bukti_dikumpulkan_lainnya' => 'nullable|string|max:500',
             'catatan_asesor' => 'nullable|string|max:1000',
-            'tanda_tangan_asesor' => 'nullable|string',
-            'sign_mode' => 'nullable|string',
         ]);
-
-        $rawSignature = $request->input('tanda_tangan_asesor');
-        $signaturePath = null;
-
-        if (!empty($rawSignature) && \Illuminate\Support\Str::startsWith($rawSignature, 'data:image')) {
-            try {
-                $imageParts = explode(';base64,', $rawSignature);
-                $imageTypeAux = explode('image/', $imageParts[0]);
-                $imageType = $imageTypeAux[1] ?? 'png';
-                $imageBase64 = base64_decode($imageParts[1] ?? '');
-
-                if (!empty($imageBase64)) {
-                    $filename = 'sig_master_ak01_' . $skema->id . '_' . \Illuminate\Support\Str::random(10) . '.' . $imageType;
-                    \Illuminate\Support\Facades\Storage::disk('public')->put('signatures/' . $filename, $imageBase64);
-                    $signaturePath = 'storage/signatures/' . $filename;
-                }
-            } catch (\Exception $e) {
-                // Fallback
-            }
-        } elseif (!empty($rawSignature) && (\Illuminate\Support\Str::startsWith($rawSignature, 'storage/') || \Illuminate\Support\Str::startsWith($rawSignature, 'images/'))) {
-            $signaturePath = $rawSignature;
-        }
-
-        $existingMasterAk01 = MasterAk01::where('skema_id', $skema->id)->first();
-        if (empty($signaturePath)) {
-            $signaturePath = $existingMasterAk01?->tanda_tangan_asesor 
-                ?: ($user->tanda_tangan 
-                ?: (Pengguna::where('peran', 'asesor')->where('skema_id', $skema->id)->first()?->tanda_tangan ?? null));
-        }
 
         $masterAk01 = MasterAk01::updateOrCreate(
             ['skema_id' => $skema->id],
@@ -1074,8 +1019,8 @@ class AsesorController extends Controller
                 'bukti_dikumpulkan' => $request->input('bukti_dikumpulkan', ['Observasi Praktik Demonstrasi', 'Uji Tertulis (CBT)', 'Tanya Jawab Lisan']),
                 'bukti_dikumpulkan_lainnya' => $request->input('bukti_dikumpulkan_lainnya'),
                 'catatan_asesor' => $request->input('catatan_asesor'),
-                'tanda_tangan_asesor' => $signaturePath,
-                'tanggal_ttd_asesor' => now(),
+                'tanda_tangan_asesor' => null,
+                'tanggal_ttd_asesor' => null,
                 'status' => 'selesai',
             ]
         );
@@ -1130,7 +1075,6 @@ class AsesorController extends Controller
             'metode_disepakati' => 'nullable|string|max:1000',
             'instrumen_disepakati' => 'nullable|string|max:1000',
             'catatan_asesor' => 'nullable|string|max:1000',
-            'tanda_tangan_asesor' => 'nullable|string',
         ]);
 
         $rawChecklist = $request->input('items_checklist', []);
@@ -1158,35 +1102,6 @@ class AsesorController extends Controller
             ];
         }
 
-        $existingMaster = MasterAk07::where('skema_id', $skema->id)->first();
-        $rawSignature = $request->input('tanda_tangan_asesor');
-        $signaturePath = null;
-
-        if (!empty($rawSignature) && \Illuminate\Support\Str::startsWith($rawSignature, 'data:image')) {
-            try {
-                $imageParts = explode(';base64,', $rawSignature);
-                $imageTypeAux = explode('image/', $imageParts[0]);
-                $imageType = $imageTypeAux[1] ?? 'png';
-                $imageBase64 = base64_decode($imageParts[1] ?? '');
-
-                if (!empty($imageBase64)) {
-                    $filename = 'sig_master_ak07_' . $skema->id . '_' . \Illuminate\Support\Str::random(10) . '.' . $imageType;
-                    \Illuminate\Support\Facades\Storage::disk('public')->put('signatures/' . $filename, $imageBase64);
-                    $signaturePath = 'storage/signatures/' . $filename;
-                }
-            } catch (\Exception $e) {
-                // Fallback
-            }
-        } elseif (!empty($rawSignature) && (\Illuminate\Support\Str::startsWith($rawSignature, 'storage/') || \Illuminate\Support\Str::startsWith($rawSignature, 'images/'))) {
-            $signaturePath = $rawSignature;
-        }
-
-        if (empty($signaturePath)) {
-            $signaturePath = $existingMaster?->tanda_tangan_asesor 
-                ?: ($user->tanda_tangan 
-                ?: (Pengguna::where('peran', 'asesor')->where('skema_id', $skema->id)->first()?->tanda_tangan ?? null));
-        }
-
         $masterAk07 = MasterAk07::updateOrCreate(
             ['skema_id' => $skema->id],
             [
@@ -1198,8 +1113,8 @@ class AsesorController extends Controller
                 'metode_disepakati' => $request->input('metode_disepakati'),
                 'instrumen_disepakati' => $request->input('instrumen_disepakati'),
                 'catatan_asesor' => $request->input('catatan_asesor'),
-                'tanda_tangan_asesor' => $signaturePath,
-                'tanggal_ttd_asesor' => now(),
+                'tanda_tangan_asesor' => null,
+                'tanggal_ttd_asesor' => null,
                 'status' => 'selesai',
             ]
         );

@@ -79,6 +79,7 @@ Route::middleware(['auth', 'peran:asesi'])->prefix('asesi')->as('asesi.')->group
     
     Route::get('/jadwal', [AsesiController::class, 'jadwal'])->name('jadwal');
     Route::post('/pilih-asesor/{id}', [AsesiController::class, 'pilihAsesor'])->name('pilih-asesor');
+    Route::post('/request-perbaikan/{id}', [AsesiController::class, 'requestPerbaikan'])->name('request-perbaikan');
     Route::get('/apl-02', [AsesiController::class, 'apl02'])->name('apl02');
     Route::post('/apl-02', [AsesiController::class, 'simpanApl02'])->name('apl02.simpan');
     Route::get('/ak-01/{id?}', [AsesiController::class, 'ak01Detail'])->name('ak01');
@@ -87,7 +88,7 @@ Route::middleware(['auth', 'peran:asesi'])->prefix('asesi')->as('asesi.')->group
     
     // FR.AK.07 (Penyesuaian yang Wajar) untuk Asesi
     Route::get('/ak-07/{pendaftaranId?}', [\App\Http\Controllers\Asesor\AssessmentAk07Controller::class, 'asesiDetail'])->name('ak07');
-    Route::post('/ak-07/{pendaftaranId}/sign-asesi', [\App\Http\Controllers\Asesor\AssessmentAk07Controller::class, 'signAsesi'])->name('ak07.sign-asesi');
+    Route::post('/ak-07/{pendaftaranId}/confirm', [\App\Http\Controllers\Asesor\AssessmentAk07Controller::class, 'confirmAsesi'])->name('ak07.confirm');
     
     // RUANG UJIAN ONLINE HARI H (FR.IA)
     Route::get('/ujian/status-live', [\App\Http\Controllers\AsesiUjianController::class, 'statusSesiLive'])->name('ujian.status-live');
@@ -145,7 +146,6 @@ Route::middleware(['auth', 'peran:asesor'])->prefix('asesor')->as('asesor.')->gr
     // FR.AK.07: Ceklis Penyesuaian yang Wajar dan Beralasan
     Route::get('/pendaftaran/{pendaftaranId}/ak-07', [\App\Http\Controllers\Asesor\AssessmentAk07Controller::class, 'edit'])->name('pendaftaran.ak07.edit');
     Route::post('/pendaftaran/{pendaftaranId}/ak-07', [\App\Http\Controllers\Asesor\AssessmentAk07Controller::class, 'update'])->name('pendaftaran.ak07.update');
-    Route::post('/pendaftaran/{pendaftaranId}/ak-07/sign-asesor', [\App\Http\Controllers\Asesor\AssessmentAk07Controller::class, 'signAsesor'])->name('pendaftaran.ak07.sign-asesor');
     Route::get('/pendaftaran/{pendaftaranId}/ak-07/cetak', [\App\Http\Controllers\Asesor\AssessmentAk07Controller::class, 'cetak'])->name('pendaftaran.ak07.cetak');
     
     Route::get('/berita-acara', [AsesorController::class, 'beritaAcara'])->name('berita-acara');

@@ -4,7 +4,6 @@
 
 @push('css')
     <!-- Signature Pad CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
     <style>
         @media print {
             .no-print, .sidebar-dasbor, .header-dasbor, .modal-overlay, nav, footer, header { display: none !important; }
@@ -551,6 +550,7 @@
                 </div>
             </div>
 
+            @if(false)
             <!-- KOLOM 2: PENGESAHAN TANDA TANGAN ASESOR / ADMIN -->
             <div class="bg-white rounded-xl border border-slate-200/90 shadow-2xs p-3.5 sm:p-4 space-y-2.5">
                 <div class="flex items-center justify-between border-b border-slate-100 pb-1.5">
@@ -578,16 +578,24 @@
                     @endif
 
                     <div x-show="isEditMode" class="space-y-1">
-                        <div class="w-full max-w-[280px] border border-slate-300 rounded-lg bg-white relative overflow-hidden shadow-2xs">
-                            <canvas id="canvasMapa02Asesor" class="w-full bg-white cursor-crosshair block" style="touch-action: none; height: 90px; width: 100%; display: block;"></canvas>
+                        <div id="container-ttd-asesor-preview" class="mb-2">
+                            @if(!empty($displayTtd))
+                                <div class="flex flex-col items-start gap-1">
+                                    <div class="h-14 w-32 rounded-lg border border-slate-200 bg-slate-50/80 p-1 flex items-center justify-center shadow-2xs">
+                                        <img src="{{ asset($displayTtd) }}" id="preview-ttd-asesor" alt="TTD Asesor" class="max-h-12 max-w-full object-contain">
+                                    </div>
+                                    <button type="button" onclick="bukaModalTtd()" class="text-[10px] text-indigo-600 hover:underline mt-0.5 font-semibold">Ubah Tanda Tangan</button>
+                                </div>
+                            @else
+                                <div class="flex flex-col items-start gap-1">
+                                    <img src="" id="preview-ttd-asesor" alt="TTD Asesor" class="hidden h-14 w-32 rounded-lg border border-slate-200 bg-slate-50/80 p-1 shadow-2xs max-h-12 max-w-full object-contain mb-1">
+                                    <button type="button" id="btn-trigger-modal" onclick="bukaModalTtd()" class="px-3 py-1.5 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-lg text-xs font-bold hover:bg-indigo-100 shadow-sm flex items-center gap-2 transition-colors">
+                                        <i class="fa-solid fa-pen"></i> Bubuhkan TTD
+                                    </button>
+                                </div>
+                            @endif
                         </div>
                         <input type="hidden" name="tanda_tangan_asesor" id="inputTtdAsesor" value="{{ $displayTtd ?? '' }}">
-                        <div class="w-full max-w-[280px] flex items-center justify-between text-[10px] text-slate-400">
-                            <span>Gunakan mouse / sentuh</span>
-                            <button type="button" @click="clearCanvas()" class="text-rose-600 hover:text-rose-800 font-semibold cursor-pointer">
-                                [ Bersihkan ]
-                            </button>
-                        </div>
                     </div>
                 </div>
 
@@ -599,6 +607,7 @@
                     @endif
                 </div>
             </div>
+            @endif
         </div>
         </fieldset>
 
@@ -881,5 +890,93 @@
             }
         };
     }
+</script>
+
+<!-- MODAL POPUP CANVAS SIGNATURE PAD -->
+<div class="modal-overlay" id="modalCanvasTtd" style="display:none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 99999; justify-content: center; align-items: center;">
+    <div class="modal-konten" style="background: white; border-radius: 12px; padding: 1.75rem; width: 100%; max-width: 500px; text-align: center; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <h3 style="color: #0f172a; margin: 0; font-weight: 800; font-size: 1.15rem;">Tanda Tangan Digital</h3>
+            <button type="button" onclick="document.getElementById('modalCanvasTtd').style.display = 'none'" style="background: none; border: none; font-size: 1.4rem; cursor: pointer; color: #64748b; line-height: 1;">&times;</button>
+        </div>
+
+        <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 1rem; text-align: left;">
+            Gunakan kursor atau layar sentuh untuk menggambar tanda tangan Anda secara presisi pada bidang di bawah:
+        </p>
+
+        <canvas id="canvas-ttd-modal" width="440" height="180" class="canvas-signature-pad" style="border: 2px dashed #94a3b8; border-radius: 8px; background: #ffffff; cursor: crosshair; touch-action: none; display: block; margin: 0 auto; width: 100%; max-width: 440px;"></canvas>
+
+        <div style="margin-top: 1.25rem; display: flex; gap: 0.75rem; justify-content: center;">
+            <button type="button" class="tombol tombol-sekunder tombol-sm px-4 py-2 bg-slate-100 text-slate-700 font-semibold rounded border border-slate-200 shadow-sm" onclick="if(window.signaturePadModal) window.signaturePadModal.clear();">
+                Bersihkan
+            </button>
+            <button type="button" class="tombol tombol-utama tombol-sm px-4 py-2 text-white font-semibold rounded shadow-sm" style="background: #059669; border: 1px solid #059669;" onclick="window.saveTtdAsesor()">
+                Gunakan Tanda Tangan
+            </button>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
+<script>
+    window.signaturePadModal = null;
+
+    window.bukaModalTtd = function() {
+        const modal = document.getElementById('modalCanvasTtd');
+        if (modal) {
+            modal.style.display = 'flex';
+            
+            if (!window.signaturePadModal) {
+                const canvas = document.getElementById('canvas-ttd-modal');
+                if (canvas && window.SignaturePad) {
+                    window.signaturePadModal = new SignaturePad(canvas, {
+                        backgroundColor: 'rgb(255, 255, 255)'
+                    });
+                    
+                    const ratio = Math.max(window.devicePixelRatio || 1, 1);
+                    canvas.width = canvas.offsetWidth * ratio;
+                    canvas.height = canvas.offsetHeight * ratio;
+                    canvas.getContext("2d").scale(ratio, ratio);
+                    window.signaturePadModal.clear();
+                }
+            } else {
+                window.signaturePadModal.clear();
+            }
+        }
+    };
+
+    window.saveTtdAsesor = function() {
+        if (window.signaturePadModal && !window.signaturePadModal.isEmpty()) {
+            const dataUrl = window.signaturePadModal.toDataURL('image/png');
+            
+            const hiddenInput = document.getElementById('inputTtdAsesor');
+            if(hiddenInput) hiddenInput.value = dataUrl;
+            
+            const previewImg = document.getElementById('preview-ttd-asesor');
+            if(previewImg) {
+                previewImg.src = dataUrl;
+                previewImg.classList.remove('hidden');
+            }
+            
+            const btnTrigger = document.getElementById('btn-trigger-modal');
+            if(btnTrigger) {
+                btnTrigger.classList.add('hidden');
+            }
+
+            document.getElementById('modalCanvasTtd').style.display = 'none';
+        } else {
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Canvas Kosong',
+                    text: 'Silakan gambar tanda tangan Anda terlebih dahulu.',
+                    confirmButtonText: 'Mengerti',
+                    confirmButtonColor: '#059669'
+                });
+            } else {
+                alert('Silakan gambar tanda tangan Anda terlebih dahulu.');
+            }
+        }
+    };
 </script>
 @endsection

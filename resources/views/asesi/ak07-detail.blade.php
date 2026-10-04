@@ -3,16 +3,14 @@
 @section('judul', 'FR.AK.07 - Kesepakatan Penyesuaian yang Wajar')
 
 @push('css')
-    <!-- Signature Pad CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
 @endpush
 
 @section('konten')
 @php
     $asesorNama = $pendaftaran->asesor->nama_lengkap ?? $pendaftaran->jadwal?->asesor?->nama_lengkap ?? 'Asesor LSP';
     $asesorMet = $pendaftaran->asesor->nomor_registrasi ?? $pendaftaran->jadwal?->asesor?->nomor_registrasi ?? 'MET.000.004455';
-    $profileTtd = auth()->user()->tanda_tangan;
-    $isSignedByAsesi = $ak07 ? !empty($ak07->asesi_signature) : false;
+    $profileTtd = null;
+    $isSignedByAsesi = $ak07 ? $ak07->isConfirmed() : false;
     $isConfirmed = $ak07 ? $ak07->isConfirmed() : false;
     $savedChecklist = (array) ($ak07->items_checklist ?? []);
     if (empty($savedChecklist)) {
@@ -20,7 +18,7 @@
     }
     $selectedPotensi = (int) ($ak07->potensi_asesi ?? 1);
     $selectedFase = $ak07->fase_penggunaan ?? 'saat_pra_asesmen';
-    $asesorSigToShow = ($ak07 && $ak07->asesor_signature) ? $ak07->asesor_signature : ($pendaftaran->tanda_tangan_asesor_ak01 ?? $pendaftaran->asesor?->tanda_tangan);
+    $asesorSigToShow = null;
 
     $faseList = [
         'pra_asesmen' => ['title' => 'Pra Asesmen', 'desc' => 'Diterapkan sebelum tahapan asesmen dimulai (misal: verifikasi berkas & konsultasi pra-uji)'],
@@ -77,7 +75,7 @@
                 @else
                     <span class="px-3 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-xs font-bold flex items-center gap-1.5 shadow-2xs">
                         <span class="w-2 h-2 rounded-full bg-amber-500"></span>
-                        {{ $isSignedByAsesi ? 'Menunggu Asesor' : 'Perlu Tanda Tangan Asesi' }}
+                        {{ $isSignedByAsesi ? 'Kesepakatan Dikonfirmasi' : 'Perlu Konfirmasi Asesi' }}
                     </span>
                 @endif
             </div>
@@ -332,6 +330,7 @@
         </div>
     </div>
 
+    @if(false)
     <!-- 5. BAGIAN PENGESAHAN TANDA TANGAN DIGITAL & STATUS KESEPAKATAN -->
     <div class="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-4 sm:p-5 space-y-4" x-data="asesiAk07App()">
         <div class="flex items-center gap-2 text-sm font-bold text-slate-900 border-b border-slate-100 pb-2.5">
@@ -441,6 +440,22 @@
             </div>
 
         </div>
+    </div>
+    @endif
+
+    <div class="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-4 sm:p-5 space-y-3">
+        <h2 class="text-sm font-bold text-slate-900">Konfirmasi Kesepakatan</h2>
+        <p class="text-xs text-slate-600">Pastikan penyesuaian yang tercantum sudah sesuai dengan kebutuhan Anda sebelum melanjutkan.</p>
+        @if($isConfirmed)
+            <div class="text-xs font-semibold text-emerald-700">Kesepakatan FR.AK.07 telah dikonfirmasi.</div>
+        @else
+            <form action="{{ route('asesi.ak07.confirm', $pendaftaran->id) }}" method="POST">
+                @csrf
+                <button type="submit" class="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs transition">
+                    Konfirmasi &amp; Lanjutkan
+                </button>
+            </form>
+        @endif
     </div>
 
 </div>

@@ -239,20 +239,21 @@
                 </tr>
             </table>
 
+            @if(false)
             <!-- TANDA TANGAN DIGITAL SUPERVISOR -->
             <div style="border: 1px solid #334155; padding: 1.5rem; border-radius: 8px; background: #f8fafc; margin-bottom: 2rem;">
                 <label style="font-weight: 800; font-size: 0.95rem; display: block; margin-bottom: 0.5rem; color: #0f172a;">
                     Tanda Tangan Digital Supervisor:
                 </label>
-                <canvas id="sig-canvas" class="canvas-sig-box"></canvas>
                 <input type="hidden" name="tanda_tangan_supervisor" id="sig-data" required>
-                <div style="margin-top: 0.5rem; display: flex; justify-content: space-between; align-items: center;">
-                    <button type="button" onclick="clearSignature()" style="background: #e2e8f0; border: 1px solid #cbd5e1; padding: 0.35rem 0.85rem; border-radius: 6px; font-size: 0.85rem; cursor: pointer;">
-                        Bersihkan Tanda Tangan
-                    </button>
-                    <span style="font-size: 0.8rem; color: #64748b;">Tanda tangani menggunakan sentuhan layar atau mouse</span>
-                </div>
+                
+                <img id="preview-ttd-supervisor" src="" style="display: none; max-height: 120px; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff; padding: 4px; margin-bottom: 1rem;">
+                
+                <button type="button" onclick="bukaModalTtdGuest()" id="btn-trigger-modal" style="background: #0284c7; color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                    <i class="fa-solid fa-pen-nib"></i> Gambar Tanda Tangan
+                </button>
             </div>
+            @endif
 
             <div style="text-align: center;">
                 <button type="submit" class="tombol-guest">
@@ -264,73 +265,92 @@
     </div>
 </div>
 
+@if(false)
+<!-- MODAL POPUP CANVAS SIGNATURE PAD -->
+<div id="modalCanvasTtd" style="display:none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 99999; justify-content: center; align-items: center;">
+    <div style="background: white; border-radius: 12px; padding: 1.75rem; width: 100%; max-width: 500px; text-align: center; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <h3 style="color: #0f172a; margin: 0; font-weight: 800; font-size: 1.15rem;">Tanda Tangan Digital</h3>
+            <button type="button" onclick="document.getElementById('modalCanvasTtd').style.display = 'none'" style="background: none; border: none; font-size: 1.4rem; cursor: pointer; color: #64748b; line-height: 1;">&times;</button>
+        </div>
+
+        <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 1rem; text-align: left;">
+            Gunakan kursor atau layar sentuh untuk menggambar tanda tangan Anda secara presisi pada bidang di bawah:
+        </p>
+
+        <canvas id="canvas-ttd-modal" width="440" height="180" style="border: 2px dashed #94a3b8; border-radius: 8px; background: #ffffff; cursor: crosshair; touch-action: none; display: block; margin: 0 auto; width: 100%; max-width: 440px;"></canvas>
+
+        <div style="margin-top: 1.25rem; display: flex; gap: 0.75rem; justify-content: center;">
+            <button type="button" onclick="if(window.signaturePadModal) window.signaturePadModal.clear();" style="padding: 0.5rem 1rem; background: #f1f5f9; color: #334155; font-weight: 600; border: 1px solid #cbd5e1; border-radius: 6px; cursor: pointer;">
+                Bersihkan
+            </button>
+            <button type="button" onclick="window.saveTtdGuest()" style="padding: 0.5rem 1rem; background: #059669; color: white; font-weight: 600; border: none; border-radius: 6px; cursor: pointer;">
+                Gunakan Tanda Tangan
+            </button>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
 <script>
-    // Inisialisasi Canvas Tanda Tangan
-    const canvas = document.getElementById('sig-canvas');
-    const ctx = canvas.getContext('2d');
-    let isDrawing = false;
+    window.signaturePadModal = null;
 
-    function resizeCanvas() {
-        const rect = canvas.getBoundingClientRect();
-        canvas.width = rect.width;
-        canvas.height = rect.height;
-        ctx.strokeStyle = '#0f172a';
-        ctx.lineWidth = 2.5;
-        ctx.lineCap = 'round';
-    }
-    window.addEventListener('resize', resizeCanvas);
-    setTimeout(resizeCanvas, 100);
-
-    function getCoords(e) {
-        const rect = canvas.getBoundingClientRect();
-        if (e.touches && e.touches[0]) {
-            return { x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top };
+    window.bukaModalTtdGuest = function() {
+        const modal = document.getElementById('modalCanvasTtd');
+        if (modal) {
+            modal.style.display = 'flex';
+            
+            if (!window.signaturePadModal) {
+                const canvas = document.getElementById('canvas-ttd-modal');
+                if (canvas && window.SignaturePad) {
+                    window.signaturePadModal = new SignaturePad(canvas, {
+                        backgroundColor: 'rgb(255, 255, 255)'
+                    });
+                    
+                    const ratio = Math.max(window.devicePixelRatio || 1, 1);
+                    canvas.width = canvas.offsetWidth * ratio;
+                    canvas.height = canvas.offsetHeight * ratio;
+                    canvas.getContext("2d").scale(ratio, ratio);
+                    window.signaturePadModal.clear();
+                }
+            } else {
+                window.signaturePadModal.clear();
+            }
         }
-        return { x: e.clientX - rect.left, y: e.clientY - rect.top };
-    }
+    };
 
-    function startDrawing(e) {
-        e.preventDefault();
-        isDrawing = true;
-        const coords = getCoords(e);
-        ctx.beginPath();
-        ctx.moveTo(coords.x, coords.y);
-    }
+    window.saveTtdGuest = function() {
+        if (window.signaturePadModal && !window.signaturePadModal.isEmpty()) {
+            const dataUrl = window.signaturePadModal.toDataURL('image/png');
+            
+            const hiddenInput = document.getElementById('sig-data');
+            if(hiddenInput) hiddenInput.value = dataUrl;
+            
+            const previewImg = document.getElementById('preview-ttd-supervisor');
+            if(previewImg) {
+                previewImg.src = dataUrl;
+                previewImg.style.display = 'block';
+            }
+            
+            const btnTrigger = document.getElementById('btn-trigger-modal');
+            if(btnTrigger) {
+                btnTrigger.style.display = 'none';
+            }
 
-    function draw(e) {
-        if (!isDrawing) return;
-        e.preventDefault();
-        const coords = getCoords(e);
-        ctx.lineTo(coords.x, coords.y);
-        ctx.stroke();
-        document.getElementById('sig-data').value = canvas.toDataURL();
-    }
-
-    function stopDrawing() {
-        isDrawing = false;
-    }
-
-    canvas.addEventListener('mousedown', startDrawing);
-    canvas.addEventListener('mousemove', draw);
-    canvas.addEventListener('mouseup', stopDrawing);
-    canvas.addEventListener('mouseleave', stopDrawing);
-
-    canvas.addEventListener('touchstart', startDrawing);
-    canvas.addEventListener('touchmove', draw);
-    canvas.addEventListener('touchend', stopDrawing);
-
-    function clearSignature() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        document.getElementById('sig-data').value = '';
-    }
+            document.getElementById('modalCanvasTtd').style.display = 'none';
+        } else {
+            alert('Silakan gambar tanda tangan Anda terlebih dahulu.');
+        }
+    };
 
     document.getElementById('form-vpk-guest').addEventListener('submit', function(e) {
         if (!document.getElementById('sig-data').value) {
             e.preventDefault();
-            alert('Mohon bubuhkan tanda tangan digital Anda pada kotak yang disediakan.');
+            alert('Mohon bubuhkan tanda tangan digital Anda terlebih dahulu dengan mengklik tombol "Gambar Tanda Tangan".');
         }
     });
 </script>
+@endif
 
 </body>
 </html>

@@ -506,7 +506,7 @@
         ? \App\Models\Mapa01::where('skema_id', $pendaftaran->skema_id)->whereNull('pendaftaran_id')->first() 
         : null;
     $masterValidatorData = $masterMapa01?->penyusun_validator_tabel['validator_1'] ?? [];
-    $isMasterSchemeValidated = !empty($masterValidatorData['ttd']) || (($masterValidatorData['status_validasi'] ?? '') === 'tervalidasi');
+    $isMasterSchemeValidated = ($masterValidatorData['status_validasi'] ?? '') === 'tervalidasi';
 
     if (!$isMasterMode && $isMasterSchemeValidated) {
         $adminValidatorData = !empty($adminValidatorData['ttd']) ? $adminValidatorData : $masterValidatorData;
@@ -524,7 +524,7 @@
     $adminTtd = $adminValidatorData['ttd'] ?? ($pendaftaran->tanda_tangan_admin ?? null);
     $adminTtdTgl = $adminValidatorData['ttd_tanggal'] ?? ($pendaftaran->tanggal_ttd_admin ? \Carbon\Carbon::parse($pendaftaran->tanggal_ttd_admin)->format('d/m/Y') : '');
     $adminStatusValidasi = $adminValidatorData['status_validasi'] ?? null;
-    $isValidatedAdmin = !empty($adminValidatorData['ttd']) || $adminStatusValidasi === 'tervalidasi' || (!empty($pendaftaran->tanda_tangan_admin) && !empty($pendaftaran->tanggal_ttd_admin)) || (!$isMasterMode && $isMasterSchemeValidated);
+    $isValidatedAdmin = $adminStatusValidasi === 'tervalidasi' || (!$isMasterMode && $isMasterSchemeValidated);
     $catatanValidasi = $adminValidatorData['catatan'] ?? null;
 
     $targetValidasiId = !empty($mapa01->id) ? $mapa01->id : (!empty($pendaftaran->id) ? $pendaftaran->id : ($pendaftaran->skema_id ?? 0));
@@ -633,14 +633,6 @@
         $candidateTtd = null;
     }
     $asesorTtd = $candidateTtd;
-
-    // 5. Tanda Tangan Asesor Penguji (Penyusun)
-    $hasTtdAsesor = !empty($asesorTtd);
-    $evaluasiMapa01[] = [
-        'label' => 'Tanda Tangan Asesor Penguji (Penyusun)',
-        'lengkap' => $hasTtdAsesor,
-        'keterangan' => $hasTtdAsesor ? 'Tanda tangan Asesor Penguji telah tersedia.' : 'Asesor Penguji (Penyusun) belum membubuhkan tanda tangan.'
-    ];
 
     $totalKurang = collect($evaluasiMapa01)->where('lengkap', false)->count();
     $semuaLengkapKecualiAdmin = ($totalKurang === 0);
@@ -1465,9 +1457,11 @@
                             <th class="th-slate" style="width: 32%; text-align: left; padding: 0.55rem 0.75rem;">
                                 Nama Pejabat / Petugas
                             </th>
+                            @if(false)
                             <th class="th-slate" style="width: 24%; text-align: left; padding: 0.55rem 0.75rem;">
                                 Tanda Tangan & Tanggal
                             </th>
+                            @endif
                         </tr>
                     </thead>
                     <tbody>
@@ -1555,6 +1549,7 @@
                                     @endif
                                 </td>
 
+                                @if(false)
                                 <!-- Kolom 3: Tanda Tangan & Tanggal -->
                                 <td style="padding: 0.6rem 0.75rem; vertical-align: top;">
                                     <div class="flex flex-col gap-1.5">
@@ -1596,6 +1591,7 @@
                                         </div>
                                     </div>
                                 </td>
+                                @endif
                             </tr>
                         @endforeach
                     </tbody>
@@ -1604,7 +1600,7 @@
 
             <!-- TABEL PENYUSUN DAN VALIDATOR -->
             <div style="font-weight: 800; font-size: 0.95rem; margin-top: 1.5rem; margin-bottom: 0.6rem; color: #0f172a;">
-                Penyusun dan Validator:
+                Data Penyusun dan Validator:
             </div>
 
             @php
@@ -1624,6 +1620,7 @@
                 }
             @endphp
 
+            @if(false)
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                 <!-- 1. PENYUSUN (ASESOR PENGUJI) -->
                 <div class="relative">
@@ -1687,6 +1684,7 @@
                     @endif
                 </div>
             </div>
+            @endif
 
             <!-- TOMBOL AKSI & NAVIGASI DI BAWAH -->
             @php
@@ -1757,30 +1755,32 @@
     </form>
 </div>
 
+@if(false)
 <!-- MODAL POPUP CANVAS SIGNATURE PAD -->
-<div class="modal-overlay" id="modalCanvasTtd">
-    <div class="modal-konten" style="max-width: 500px; text-align: center; border-radius: 12px; padding: 1.75rem;">
+<div class="modal-overlay" id="modalCanvasTtd" style="display:none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 99999; justify-content: center; align-items: center;">
+    <div class="modal-konten" style="background: white; border-radius: 12px; padding: 1.75rem; width: 100%; max-width: 500px; text-align: center; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-            <h3 style="color: #0f172a; margin: 0; font-weight: 800;">Tanda Tangan Digital Asesor</h3>
-            <button type="button" onclick="tutupModal('modalCanvasTtd')" style="background: none; border: none; font-size: 1.4rem; cursor: pointer; color: #64748b;">&times;</button>
+            <h3 style="color: #0f172a; margin: 0; font-weight: 800; font-size: 1.15rem;">Tanda Tangan Digital</h3>
+            <button type="button" onclick="document.getElementById('modalCanvasTtd').style.display = 'none'" style="background: none; border: none; font-size: 1.4rem; cursor: pointer; color: #64748b; line-height: 1;">&times;</button>
         </div>
 
-        <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 1rem;">
-            Gunakan mouse atau layar sentuh untuk menggambar tanda tangan Anda secara presisi pada bidang di bawah:
+        <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 1rem; text-align: left;">
+            Gunakan kursor atau layar sentuh untuk menggambar tanda tangan Anda secara presisi pada bidang di bawah:
         </p>
 
-        <canvas id="canvas-ttd-asesi" width="440" height="180" class="canvas-signature-pad" style="border: 2px dashed #94a3b8; border-radius: 8px; background: #ffffff; cursor: crosshair; touch-action: none; display: block; margin: 0 auto;"></canvas>
+        <canvas id="canvas-ttd-modal" width="440" height="180" class="canvas-signature-pad" style="border: 2px dashed #94a3b8; border-radius: 8px; background: #ffffff; cursor: crosshair; touch-action: none; display: block; margin: 0 auto; width: 100%; max-width: 440px;"></canvas>
 
         <div style="margin-top: 1.25rem; display: flex; gap: 0.75rem; justify-content: center;">
-            <button type="button" class="tombol tombol-sekunder tombol-sm" id="btn-clear-canvas">
+            <button type="button" class="tombol tombol-sekunder tombol-sm px-4 py-2 bg-slate-100 text-slate-700 font-semibold rounded border border-slate-200 shadow-sm" onclick="if(window.signaturePadModal) window.signaturePadModal.clear();">
                 Bersihkan
             </button>
-            <button type="button" class="tombol tombol-utama tombol-sm" id="btn-simpan-canvas" style="background: #059669; border-color: #059669; font-weight: 700;">
+            <button type="button" class="tombol tombol-utama tombol-sm px-4 py-2 text-white font-semibold rounded shadow-sm" style="background: #059669; border: 1px solid #059669;" onclick="window.saveTtdAsesor()">
                 Gunakan Tanda Tangan
             </button>
         </div>
     </div>
 </div>
+@endif
 
 <!-- MODAL POPUP VALIDASI ADMIN LSP MAPA 01 -->
 <div class="modal-overlay" id="modalValidasiAdminMapa01">
@@ -1800,7 +1800,6 @@
             <input type="hidden" name="skema_id" value="{{ $pendaftaran->skema_id ?? $skemaId ?? 0 }}">
             <input type="hidden" name="pendaftaran_id" value="{{ $pendaftaran->id ?? '' }}">
             <input type="hidden" name="is_master_mode" value="{{ !empty($isMasterMode) ? '1' : '0' }}">
-            <input type="hidden" name="tanda_tangan_admin_base64" id="input-ttd-validator-modal-base64" value="{{ $adminTtd }}">
 
             @if($adaDataKurang)
                 <div style="margin-bottom: 1.15rem; background: #fffbeb; border: 1.5px solid #fde68a; border-radius: 10px; padding: 0.85rem 1rem; font-size: 0.8rem; color: #92400e;">
@@ -1855,6 +1854,27 @@
                           style="width: 100%; padding: 0.55rem 0.75rem; font-size: 0.82rem; border: 1.2px solid #cbd5e1; border-radius: 8px; outline: none; box-sizing: border-box; resize: vertical;"
                           placeholder="Catatan hasil verifikasi kelayakan rencana asesmen...">{{ $catatanValidasi }}</textarea>
             </div>
+
+            @if(false)
+            <div style="margin-bottom: 1rem; border: 1px solid #cbd5e1; border-radius: 10px; overflow: hidden;">
+                <div style="padding: 0.7rem 0.9rem; background: #f8fafc; display: flex; justify-content: space-between; align-items: center; gap: .75rem;">
+                    <div>
+                        <div style="font-size: .78rem; font-weight: 800; color: #334155;">Tanda tangan Validator</div>
+                        <div style="font-size: .72rem; color: #64748b; margin-top: .1rem;">Gambar ulang untuk mengganti TTD profil.</div>
+                    </div>
+                    <button type="button" id="btn-clear-canvas-validator" class="tombol tombol-sekunder tombol-sm">Bersihkan</button>
+                </div>
+                <div style="padding: .75rem; background: #fff;">
+                    <canvas id="canvas-ttd-validator" width="480" height="150" class="canvas-signature-pad" style="width: 100%; height: 150px; border: 1.5px dashed #94a3b8; border-radius: 8px; background: #fff; cursor: crosshair; touch-action: none; display: block;"></canvas>
+                    <p id="validator-signature-hint" style="font-size: .72rem; color: #64748b; margin: .45rem 0 0;">{{ auth()->user()?->tanda_tangan ? 'TTD profil akan digunakan bila bidang ini dikosongkan.' : 'TTD wajib digambar karena profil Anda belum memiliki TTD.' }}</p>
+                </div>
+            </div>
+            @endif
+
+            <label style="display: flex; align-items: flex-start; gap: .6rem; margin-bottom: 1rem; padding: .75rem; border-radius: 9px; background: #f0fdf4; color: #166534; cursor: pointer; font-size: .78rem; line-height: 1.45;">
+                <input type="checkbox" id="check-review-mapa01" required style="margin-top: .18rem; accent-color: #059669;">
+                <span>Saya telah memeriksa isi formulir dan menyatakan data ini layak untuk disahkan.</span>
+            </label>
 
 
             <div style="display: flex; gap: 0.75rem; justify-content: flex-end; border-top: 1px solid #f1f5f9; padding-top: 1rem;">
@@ -2160,36 +2180,6 @@
                 }
             }
 
-            // Validasi: Pastikan asesor sudah tanda tangan
-            const inputTtdAsesor = document.getElementById('input-ttd-asesor-base64');
-            const inputPenyusunTtd = document.getElementById('input-penyusun-ttd');
-            const hasTtd = (inputTtdAsesor && inputTtdAsesor.value && inputTtdAsesor.value.trim() !== '') ||
-                           (inputPenyusunTtd && inputPenyusunTtd.value && inputPenyusunTtd.value.trim() !== '');
-
-            if (!hasTtd) {
-                if (typeof Swal !== 'undefined') {
-                    Swal.fire({
-                        icon: 'warning',
-                        title: 'Tanda Tangan Diperlukan',
-                        text: 'Silakan berikan tanda tangan Anda terlebih dahulu pada bagian "Penyusun dan Validator" sebelum menyimpan formulir.',
-                        confirmButtonText: 'OK',
-                        confirmButtonColor: '#059669'
-                    }).then(() => {
-                        const section = document.getElementById('container-ttd-asesor-preview') || document.getElementById('input-ttd-asesor-base64');
-                        if (section) {
-                            section.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        }
-                    });
-                } else {
-                    alert('Silakan berikan tanda tangan Anda terlebih dahulu pada bagian "Penyusun dan Validator" sebelum menyimpan formulir.');
-                    const section = document.getElementById('container-ttd-asesor-preview') || document.getElementById('input-ttd-asesor-base64');
-                    if (section) {
-                        section.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    }
-                }
-                return;
-            }
-
             // Pastikan input nama dan tanggal pada tabel konfirmasi di-enable agar terkirim ke backend
             form.querySelectorAll('.input-nama-relevan, .input-tgl-relevan').forEach(el => {
                 el.disabled = false;
@@ -2215,111 +2205,152 @@
             }
         }
 
-        document.addEventListener('DOMContentLoaded', function() {
-            const formVal = document.getElementById('form-validasi-admin-mapa01');
-            if (formVal) {
-                formVal.addEventListener('submit', function(e) {
-                    const inputNama = formVal.querySelector('input[name="validator_nama"]');
-                    const inputMet = formVal.querySelector('input[name="validator_nomor_met"]');
-
-                    if (!inputNama || !inputNama.value.trim()) {
-                        e.preventDefault();
-                        if (typeof Swal !== 'undefined') {
-                            Swal.fire({
-                                icon: 'warning',
-                                title: 'Nama Validator Belum Diisi',
-                                text: 'Harap masukkan nama lengkap validator sebelum melakukan pengesahan dokumen.',
-                                confirmButtonColor: '#059669'
-                            });
-                        } else {
-                            alert('Nama Validator (Admin LSP) wajib diisi.');
-                        }
-                        inputNama.focus();
-                        return;
-                    }
-
-                    if (!inputMet || !inputMet.value.trim()) {
-                        e.preventDefault();
-                        if (typeof Swal !== 'undefined') {
-                            Swal.fire({
-                                icon: 'warning',
-                                title: 'Nomor Registrasi/NIP Belum Diisi',
-                                text: 'Harap masukkan Nomor Registrasi / NIP validator.',
-                                confirmButtonColor: '#059669'
-                            });
-                        } else {
-                            alert('Nomor Registrasi / NIP Validator wajib diisi.');
-                        }
-                        inputMet.focus();
-                        return;
-                    }
-                });
-            }
-        });
-
-        function initAsesorCanvas() {
-            const canvas = document.getElementById('canvas-ttd-asesi');
+        function initValidatorCanvas() {
+            const canvas = document.getElementById('canvas-ttd-validator');
             if (!canvas) return;
-            const ctx = canvas.getContext('2d');
-            let isDrawing = false;
-            ctx.lineWidth = 2.5;
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
-            ctx.strokeStyle = '#1e3a8a';
 
-            function getPos(e) {
-                const rect = canvas.getBoundingClientRect();
-                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-                const scaleX = canvas.width / rect.width;
-                const scaleY = canvas.height / rect.height;
-                return {
-                    x: (clientX - rect.left) * scaleX,
-                    y: (clientY - rect.top) * scaleY
-                };
+            let validatorPad;
+            if (window.SignaturePad) {
+                validatorPad = new SignaturePad(canvas, { backgroundColor: 'rgb(255, 255, 255)' });
+                const ratio = Math.max(window.devicePixelRatio || 1, 1);
+                canvas.width = canvas.offsetWidth * ratio;
+                canvas.height = canvas.offsetHeight * ratio;
+                canvas.getContext("2d").scale(ratio, ratio);
+                validatorPad.clear();
             }
 
-            function start(e) {
-                isDrawing = true;
-                const pos = getPos(e);
-                ctx.beginPath();
-                ctx.moveTo(pos.x, pos.y);
-                if (e.cancelable) e.preventDefault();
-            }
+            document.getElementById('btn-clear-canvas-validator')?.addEventListener('click', () => {
+                if (validatorPad) validatorPad.clear();
+                const input = document.getElementById('input-ttd-validator-modal-base64');
+                if (input) input.value = '';
+            });
 
-            function draw(e) {
-                if (!isDrawing) return;
-                const pos = getPos(e);
-                ctx.lineTo(pos.x, pos.y);
-                ctx.stroke();
-                if (e.cancelable) e.preventDefault();
-            }
-
-            function stop() {
-                if (!isDrawing) return;
-                isDrawing = false;
-                ctx.closePath();
-            }
-
-            canvas.addEventListener('mousedown', start);
-            canvas.addEventListener('mousemove', draw);
-            window.addEventListener('mouseup', stop);
-
-            canvas.addEventListener('touchstart', start, { passive: false });
-            canvas.addEventListener('touchmove', draw, { passive: false });
-            window.addEventListener('touchend', stop);
-
-            const btnClear = document.getElementById('btn-clear-canvas');
-            if (btnClear) {
-                btnClear.addEventListener('click', function() {
-                    ctx.clearRect(0, 0, canvas.width, canvas.height);
-                });
-            }
+            document.getElementById('form-validasi-admin-mapa01')?.addEventListener('submit', (event) => {
+                const reviewed = document.getElementById('check-review-mapa01');
+                if (!reviewed?.checked) {
+                    event.preventDefault();
+                    reviewed?.focus();
+                    return;
+                }
+                if (validatorPad && !validatorPad.isEmpty()) {
+                    const input = document.getElementById('input-ttd-validator-modal-base64');
+                    if (input) input.value = validatorPad.toDataURL('image/png');
+                }
+            });
         }
+
+        window.signaturePadModal = null;
+
+        window.bukaModalTtd = function() {
+            const modal = document.getElementById('modalCanvasTtd');
+            if (modal) {
+                modal.style.display = 'flex';
+                if (!window.signaturePadModal) {
+                    const canvas = document.getElementById('canvas-ttd-modal');
+                    if (canvas && window.SignaturePad) {
+                        window.signaturePadModal = new SignaturePad(canvas, { backgroundColor: 'rgb(255, 255, 255)' });
+                        const ratio = Math.max(window.devicePixelRatio || 1, 1);
+                        canvas.width = canvas.offsetWidth * ratio;
+                        canvas.height = canvas.offsetHeight * ratio;
+                        canvas.getContext("2d").scale(ratio, ratio);
+                        window.signaturePadModal.clear();
+                    }
+                } else {
+                    window.signaturePadModal.clear();
+                }
+            }
+        };
+
+        window.saveTtdAsesor = function() {
+            if (window.signaturePadModal && !window.signaturePadModal.isEmpty()) {
+                const dataUrl = window.signaturePadModal.toDataURL('image/png');
+                
+                let hiddenInput = document.getElementById('input-ttd-asesor-base64');
+                if (!hiddenInput) {
+                    hiddenInput = document.createElement('input');
+                    hiddenInput.type = 'hidden';
+                    hiddenInput.name = 'tanda_tangan_asesor';
+                    hiddenInput.id = 'input-ttd-asesor-base64';
+                    const f = document.getElementById('form-mapa01') || document.body;
+                    f.appendChild(hiddenInput);
+                }
+                hiddenInput.value = dataUrl;
+
+                let hiddenPenyusun = document.getElementById('input-penyusun-ttd');
+                if (!hiddenPenyusun) {
+                    hiddenPenyusun = document.createElement('input');
+                    hiddenPenyusun.type = 'hidden';
+                    hiddenPenyusun.name = 'penyusun_validator_tabel[penyusun_1][ttd]';
+                    hiddenPenyusun.id = 'input-penyusun-ttd';
+                    const f = document.getElementById('form-mapa01') || document.body;
+                    f.appendChild(hiddenPenyusun);
+                }
+                hiddenPenyusun.value = dataUrl;
+
+                const todayFormatted = (() => {
+                    const now = new Date();
+                    const d = String(now.getDate()).padStart(2, '0');
+                    const m = String(now.getMonth() + 1).padStart(2, '0');
+                    const y = now.getFullYear();
+                    return `${d}/${m}/${y}`;
+                })();
+
+                let hiddenTgl = document.getElementById('input-penyusun-ttd-tgl');
+                if (!hiddenTgl) {
+                    hiddenTgl = document.createElement('input');
+                    hiddenTgl.type = 'hidden';
+                    hiddenTgl.name = 'penyusun_validator_tabel[penyusun_1][ttd_tanggal]';
+                    hiddenTgl.id = 'input-penyusun-ttd-tgl';
+                    const f = document.getElementById('form-mapa01') || document.body;
+                    f.appendChild(hiddenTgl);
+                }
+                hiddenTgl.value = todayFormatted;
+
+                const container = document.getElementById('container-ttd-asesor-preview');
+                if (container) {
+                    container.innerHTML = `
+                        <div class="flex flex-col items-center gap-1">
+                            <div class="h-11 w-28 rounded-lg border border-slate-200 bg-slate-50/80 p-1 flex items-center justify-center shadow-2xs">
+                                <img src="${dataUrl}" alt="TTD Asesor" class="max-h-9 max-w-full object-contain">
+                            </div>
+                            <span class="text-[11px] font-semibold text-slate-500">${todayFormatted}</span>
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1"></span> Siap Disimpan
+                            </span>
+                            <button type="button" onclick="bukaModalTtd()" class="text-[10px] text-indigo-600 hover:underline mt-0.5">Ubah</button>
+                        </div>
+                    `;
+                }
+
+                const badgePenyusun = document.getElementById('badge-status-penyusun-ttd');
+                if (badgePenyusun) {
+                    badgePenyusun.innerHTML = `
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                            Siap Disimpan
+                        </span>
+                    `;
+                }
+
+                document.getElementById('modalCanvasTtd').style.display = 'none';
+            } else {
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Canvas Kosong',
+                        text: 'Silakan gambar tanda tangan Anda terlebih dahulu.',
+                        confirmButtonText: 'Mengerti',
+                        confirmButtonColor: '#059669'
+                    });
+                } else {
+                    alert('Silakan gambar tanda tangan Anda terlebih dahulu.');
+                }
+            }
+        };
 
         document.addEventListener('DOMContentLoaded', function() {
             applyMapa01Mode();
-            initAsesorCanvas();
+            initValidatorCanvas();
             initMatriksAsesmenLogic();
 
             const formM = document.getElementById('form-mapa01');
@@ -2347,7 +2378,6 @@
                                                         .filter(m => m.checked)
                                                         .map(m => m.value);
                             
-                            // 1. Relasi L (Langsung): CL atau DIT
                             if (chkL) {
                                 if (checkedMethods.includes('CL') || checkedMethods.includes('DIT')) {
                                     chkL.checked = true;
@@ -2356,7 +2386,6 @@
                                 }
                             }
                             
-                            // 2. Relasi TL (Tidak Langsung): VPK atau CVP
                             if (chkTL) {
                                 if (checkedMethods.includes('VPK') || checkedMethods.includes('CVP')) {
                                     chkTL.checked = true;
@@ -2365,7 +2394,6 @@
                                 }
                             }
                             
-                            // 3. Relasi T (Tambahan): DPL atau DPT
                             if (chkT) {
                                 if (checkedMethods.includes('DPL') || checkedMethods.includes('DPT')) {
                                     chkT.checked = true;
@@ -2375,111 +2403,6 @@
                             }
                         });
                     });
-                });
-            }
-
-            // Callback saat simpan tanda tangan canvas asesor
-            const btnSimpan = document.getElementById('btn-simpan-canvas');
-            if (btnSimpan) {
-                btnSimpan.addEventListener('click', function(e) {
-                    const canvas = document.getElementById('canvas-ttd-asesi');
-                    if (canvas) {
-                        const blank = document.createElement('canvas');
-                        blank.width = canvas.width;
-                        blank.height = canvas.height;
-                        if (canvas.toDataURL() === blank.toDataURL()) {
-                            if (typeof Swal !== 'undefined') {
-                                Swal.fire({
-                                    icon: 'warning',
-                                    title: 'Canvas Kosong',
-                                    text: 'Silakan gambar tanda tangan Anda terlebih dahulu pada kotak putih yang disediakan.',
-                                    confirmButtonText: 'OK',
-                                    confirmButtonColor: '#059669'
-                                });
-                            } else {
-                                alert('Silakan gambar tanda tangan Anda terlebih dahulu pada kotak putih yang disediakan.');
-                            }
-                            e.preventDefault();
-                            e.stopPropagation();
-                            return;
-                        }
-
-                        const dataUrl = canvas.toDataURL('image/png');
-                        
-                        let hiddenInput = document.getElementById('input-ttd-asesor-base64');
-                        if (!hiddenInput) {
-                            hiddenInput = document.createElement('input');
-                            hiddenInput.type = 'hidden';
-                            hiddenInput.name = 'tanda_tangan_asesor';
-                            hiddenInput.id = 'input-ttd-asesor-base64';
-                            const f = document.getElementById('form-mapa01') || document.body;
-                            f.appendChild(hiddenInput);
-                        }
-                        hiddenInput.value = dataUrl;
-
-                        let hiddenPenyusun = document.getElementById('input-penyusun-ttd');
-                        if (!hiddenPenyusun) {
-                            hiddenPenyusun = document.createElement('input');
-                            hiddenPenyusun.type = 'hidden';
-                            hiddenPenyusun.name = 'penyusun_validator_tabel[penyusun_1][ttd]';
-                            hiddenPenyusun.id = 'input-penyusun-ttd';
-                            const f = document.getElementById('form-mapa01') || document.body;
-                            f.appendChild(hiddenPenyusun);
-                        }
-                        hiddenPenyusun.value = dataUrl;
-
-                        const todayFormatted = (() => {
-                            const now = new Date();
-                            const d = String(now.getDate()).padStart(2, '0');
-                            const m = String(now.getMonth() + 1).padStart(2, '0');
-                            const y = now.getFullYear();
-                            return `${d}/${m}/${y}`;
-                        })();
-
-                        let hiddenTgl = document.getElementById('input-penyusun-ttd-tgl');
-                        if (!hiddenTgl) {
-                            hiddenTgl = document.createElement('input');
-                            hiddenTgl.type = 'hidden';
-                            hiddenTgl.name = 'penyusun_validator_tabel[penyusun_1][ttd_tanggal]';
-                            hiddenTgl.id = 'input-penyusun-ttd-tgl';
-                            const f = document.getElementById('form-mapa01') || document.body;
-                            f.appendChild(hiddenTgl);
-                        }
-                        hiddenTgl.value = todayFormatted;
-
-                        const container = document.getElementById('container-ttd-asesor-preview');
-                        if (container) {
-                            container.innerHTML = `
-                                <div class="flex flex-col items-center gap-1">
-                                    <div class="h-11 w-28 rounded-lg border border-slate-200 bg-slate-50/80 p-1 flex items-center justify-center shadow-2xs">
-                                        <img src="${dataUrl}" alt="TTD Asesor" class="max-h-9 max-w-full object-contain">
-                                    </div>
-                                    <span class="text-[11px] font-semibold text-slate-500">${todayFormatted}</span>
-                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1"></span> Siap Disimpan
-                                    </span>
-                                    <button type="button" onclick="bukaModal('modalCanvasTtd')" class="text-[10px] text-indigo-600 hover:underline mt-0.5">Ubah</button>
-                                </div>
-                            `;
-                        }
-
-                        const badgePenyusun = document.getElementById('badge-status-penyusun-ttd');
-                        if (badgePenyusun) {
-                            badgePenyusun.innerHTML = `
-                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                                    Siap Disimpan
-                                </span>
-                            `;
-                        }
-
-                        if (typeof tutupModal === 'function') {
-                            tutupModal('modalCanvasTtd');
-                        } else {
-                            const modal = document.getElementById('modalCanvasTtd');
-                            if (modal) modal.style.display = 'none';
-                        }
-                    }
                 });
             }
         });

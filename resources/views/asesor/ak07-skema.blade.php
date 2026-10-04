@@ -3,8 +3,6 @@
 @section('judul', 'Master FR.AK.07 - ' . ($skema->nama_skema ?? 'Skema'))
 
 @push('css')
-    <!-- Signature Pad CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
     <style>
         .custom-scrollbar::-webkit-scrollbar {
             width: 4px;
@@ -22,9 +20,6 @@
 
 @section('konten')
 @php
-    $userSignature = null;
-    $currentSignature = $masterAk07->tanda_tangan_asesor ?? null;
-    $isSigned = !empty($currentSignature);
     $isConfigured = $masterAk07->exists && ($masterAk07->status === 'selesai' || !empty($masterAk07->updated_at));
     $savedChecklist = (array) ($masterAk07->items_checklist ?? []);
     $selectedPotensi = $masterAk07->potensi_asesi !== null ? (int) $masterAk07->potensi_asesi : null;
@@ -112,7 +107,7 @@
             <div class="space-y-0.5">
                 <strong class="text-slate-900 block font-bold">Otomatis Berlaku dan Ditampilkan ke Seluruh Asesi:</strong>
                 <span>
-                    Format checklist penyesuaian, acuan pembanding, metode, dan tanda tangan digital asesor yang disimpan pada formulir ini akan <strong>otomatis diselaraskan dan ditampilkan</strong> ke seluruh asesi yang mendaftar di skema <strong>{{ $skema->nama_skema }}</strong>. Asesi dapat langsung melihat penyesuaian yang telah disiapkan asesor dan membubuhkan persetujuan digital.
+                    Format checklist penyesuaian, acuan pembanding, dan metode yang disimpan pada formulir ini akan <strong>otomatis diselaraskan dan ditampilkan</strong> ke seluruh asesi yang mendaftar di skema <strong>{{ $skema->nama_skema }}</strong>.
                 </span>
             </div>
         </div>
@@ -143,7 +138,7 @@
                 <div>
                     <strong class="text-amber-950 font-bold block text-sm">Mode Pengubahan Terbuka (Edit Mode)</strong>
                     <span class="text-amber-800">
-                        Anda sekarang dapat mengubah potensi asesi, matriks penyesuaian, rekomendasi kesepakatan, dan tanda tangan digital. Klik tombol <strong>Simpan Perubahan</strong> di bagian bawah untuk menyimpan dan mengunci kembali formulir.
+                        Anda sekarang dapat mengubah potensi asesi, matriks penyesuaian, dan rekomendasi kesepakatan. Klik tombol <strong>Simpan Perubahan</strong> di bagian bawah untuk menyimpan dan mengunci kembali formulir.
                     </span>
                 </div>
             </div>
@@ -218,112 +213,6 @@
                         'setelah_pra_asesmen' => ['title' => 'Setelah Asesmen', 'desc' => 'Diterapkan pada tahap umpan balik & pengumpulan bukti tambahan'],
                     ];
                 @endphp
-                @foreach($faseList as $fKey => $fInfo)
-                    <label class="relative flex items-start gap-2.5 p-3 rounded-xl border transition-all text-xs"
-                           :class="[
-                               selectedFase === '{{ $fKey }}' ? 'border-indigo-500 bg-indigo-50/50 text-slate-900 font-semibold shadow-2xs' : 'border-slate-200 bg-white text-slate-600',
-                               isEditMode ? 'cursor-pointer hover:bg-slate-50/80' : 'cursor-not-allowed'
-                           ]">
-                        <input type="radio" 
-                               name="fase_penggunaan" 
-                               value="{{ $fKey }}" 
-                               @click="isEditMode && (selectedFase = (selectedFase === '{{ $fKey }}' ? null : '{{ $fKey }}'))"
-                               :checked="selectedFase === '{{ $fKey }}'" 
-                               :disabled="!isEditMode" 
-                               class="mt-0.5 accent-indigo-600">
-                        <div class="space-y-0.5">
-                            <div class="font-bold text-slate-800">{{ $fInfo['title'] }}</div>
-                            <div class="text-[11px] text-slate-500 leading-tight">{{ $fInfo['desc'] }}</div>
-                        </div>
-                    </label>
-                @endforeach
-            </div>
-        </div>
-
-        <!-- 3. MATRIKS 8 KATEGORI STANDAR BNSP -->
-        <div class="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-4 sm:p-5 space-y-4">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 pb-2.5 gap-2">
-                <div class="flex items-center gap-2 text-sm font-bold text-slate-900">
-                    <span class="w-6 h-6 rounded-lg bg-indigo-50 text-indigo-700 flex items-center justify-center text-xs font-black">3</span>
-                    <span>Matriks Kebutuhan Penyesuaian yang Wajar (8 Kategori Standar BNSP)</span>
-                </div>
-                <div class="flex items-center gap-2">
-                    <template x-if="!isEditMode">
-                        <span class="text-[11px] text-slate-400 font-semibold flex items-center gap-1">
-                            <span>🔒</span> Terkunci
-                        </span>
-                    </template>
-                    <template x-if="isEditMode">
-                        <div class="flex items-center gap-1.5">
-                            <button type="button" @click="setSemuaTidakPerlu()" class="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-[11px] transition cursor-pointer">
-                                Set Semua Tidak Perlu
-                            </button>
-                            <button type="button" @click="kosongkanSemuaChecklist()" class="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-500 font-semibold text-[11px] transition cursor-pointer">
-                                Kosongkan Semua
-                            </button>
-                        </div>
-                    </template>
-                </div>
-            </div>
-
-            <div class="space-y-3">
-                @foreach($criteriaDefinitions as $cId => $crit)
-                    @php
-                        $itemSaved = $savedChecklist[$cId] ?? [];
-                        $opsiSaved = (array) ($itemSaved['opsi_dipilih'] ?? []);
-                        $ketSaved = $itemSaved['keterangan'] ?? '';
-                    @endphp
-
-                    <div class="border border-slate-200 rounded-xl overflow-hidden transition-all">
-                        <div class="p-3.5 bg-slate-50/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b border-slate-100">
-                            <div class="flex items-center gap-2.5">
-                                <span class="w-6 h-6 rounded-md bg-white border border-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center shrink-0">
-                                    {{ $cId }}
-                                </span>
-                                <div class="font-bold text-xs sm:text-sm text-slate-800">
-                                    {{ $crit['title'] }}
-                                </div>
-                            </div>
-
-                            <div class="inline-flex bg-white p-1 rounded-lg border border-slate-200 shadow-2xs text-xs">
-                                <label class="px-2.5 py-1 rounded-md transition-all flex items-center gap-1.5 font-bold" 
-                                       :class="[
-                                           checklist['{{ $cId }}'] === 'tidak' ? 'bg-slate-700 text-white' : 'text-slate-500',
-                                           isEditMode ? 'cursor-pointer hover:text-slate-800' : 'cursor-not-allowed'
-                                       ]">
-                                    <input type="radio" 
-                                           name="items_checklist[{{ $cId }}][perlu]" 
-                                           value="0" 
-                                           @click="isEditMode && (checklist['{{ $cId }}'] = (checklist['{{ $cId }}'] === 'tidak' ? null : 'tidak'))" 
-                                           :checked="checklist['{{ $cId }}'] === 'tidak'" 
-                                           :disabled="!isEditMode" 
-                                           class="sr-only">
-                                    <span>Tidak Perlu</span>
-                                </label>
-                                <label class="px-2.5 py-1 rounded-md transition-all flex items-center gap-1.5 font-bold" 
-                                       :class="[
-                                           checklist['{{ $cId }}'] === 'perlu' ? 'bg-indigo-600 text-white' : 'text-slate-500',
-                                           isEditMode ? 'cursor-pointer hover:text-slate-800' : 'cursor-not-allowed'
-                                       ]">
-                                    <input type="radio" 
-                                           name="items_checklist[{{ $cId }}][perlu]" 
-                                           value="1" 
-                                           @click="isEditMode && (checklist['{{ $cId }}'] = (checklist['{{ $cId }}'] === 'perlu' ? null : 'perlu'))" 
-                                           :checked="checklist['{{ $cId }}'] === 'perlu'" 
-                                           :disabled="!isEditMode" 
-                                           class="sr-only">
-                                    <span>Perlu Penyesuaian</span>
-                                </label>
-                            </div>
-                        </div>
-
-                        <div x-show="checklist['{{ $cId }}'] === 'perlu'" x-transition class="p-3.5 bg-indigo-50/20 space-y-3 text-xs border-t border-indigo-100">
-                            <div>
-                                <span class="font-bold text-slate-700 block mb-1.5">
-                                    Pilih Opsi Bentuk Penyesuaian yang Disepakati:
-                                </span>
-                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                    @foreach($crit['sub_options'] as $subKey => $subLabel)
                                         <label class="flex items-start gap-2 p-2 rounded-lg bg-white border border-slate-200 transition-colors"
                                                :class="isEditMode ? 'cursor-pointer hover:border-indigo-400' : 'cursor-not-allowed bg-slate-50/60'">
                                             <input type="checkbox" name="items_checklist[{{ $cId }}][opsi][]" value="{{ $subKey }}" {{ in_array($subKey, $opsiSaved) ? 'checked' : '' }} :disabled="!isEditMode" class="mt-0.5 accent-indigo-600">
@@ -405,6 +294,7 @@
             </div>
         </div>
 
+        @if(false)
         <!-- 5. TANDA TANGAN ASESOR -->
         <div class="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-4 sm:p-5 space-y-4">
             <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
@@ -477,15 +367,15 @@
                             </div>
                         @endif
 
-                        <!-- Canvas Box -->
+                        <!-- Canvas Box (Modal Trigger) -->
                         <div x-show="signatureMode === 'canvas'" class="space-y-1.5">
-                            <div class="border-2 border-dashed border-slate-300 rounded-xl bg-white relative p-1">
-                                <canvas id="canvasMasterAk07" class="w-full h-28 rounded-lg cursor-crosshair touch-none"></canvas>
-                                <button type="button" @click="clearCanvas()" class="absolute top-2 right-2 px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded text-[10px] font-bold transition cursor-pointer">
-                                    Bersihkan
+                            <div id="container-ttd-asesor-preview" class="p-3 border-2 border-dashed border-slate-300 rounded-xl bg-slate-50 flex flex-col items-center justify-center min-h-[112px]">
+                                <img src="" id="preview-ttd-asesor" alt="TTD Asesor" class="hidden max-h-20 object-contain mb-2">
+                                <button type="button" id="btn-trigger-modal" onclick="bukaModalTtd()" class="px-3 py-1.5 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-lg text-xs font-bold hover:bg-indigo-100 shadow-sm flex items-center gap-2 transition-colors">
+                                    <i class="fa-solid fa-pen"></i> Gores Tanda Tangan
                                 </button>
+                                <button type="button" onclick="bukaModalTtd()" id="btn-ubah-ttd" class="hidden text-[10px] text-indigo-600 hover:underline mt-0.5 font-semibold">Ubah Tanda Tangan</button>
                             </div>
-                            <span class="text-[10px] text-slate-400 block">Bubuhkan goresan tanda tangan Anda pada canvas putih di atas.</span>
                         </div>
 
                         <input type="hidden" name="tanda_tangan_asesor" id="inputSignatureMasterAk07" x-ref="signatureInput">
@@ -510,6 +400,7 @@
                 </div>
             </div>
         </div>
+        @endif
 
         </fieldset>
 
@@ -631,28 +522,11 @@ function ak07SkemaApp() {
         },
 
         initCanvas() {
-            const canvas = document.getElementById('canvasMasterAk07');
-            if (canvas) {
-                const ratio = Math.max(window.devicePixelRatio || 1, 1);
-                canvas.width = canvas.offsetWidth * ratio;
-                canvas.height = canvas.offsetHeight * ratio;
-                canvas.getContext('2d').scale(ratio, ratio);
-
-                if (!this.sigPad && typeof SignaturePad !== 'undefined') {
-                    this.sigPad = new SignaturePad(canvas, {
-                        backgroundColor: 'rgb(255, 255, 255)',
-                        penColor: 'rgb(15, 23, 42)'
-                    });
-                }
-            }
+            // Digantikan oleh Modal
         },
 
         clearCanvas() {
-            if (this.sigPad) {
-                this.sigPad.clear();
-            }
-            const inputTtd = document.getElementById('inputSignatureMasterAk07');
-            if (inputTtd) inputTtd.value = '';
+            // Digantikan oleh Modal
         },
 
         submitAk07(e) {
@@ -661,36 +535,105 @@ function ak07SkemaApp() {
             }
             if (this.isSubmitting) return;
 
-            const inputTtd = document.getElementById('inputSignatureMasterAk07');
-
-            if (this.signatureMode === 'canvas') {
-                if (!this.sigPad || this.sigPad.isEmpty()) {
-                    if (!'{{ $currentSignature }}' && !'{{ $userSignature }}') {
-                        if (typeof Swal !== 'undefined') {
-                            Swal.fire({
-                                icon: 'warning',
-                                title: 'Tanda Tangan Diperlukan',
-                                text: 'Silakan gores tanda tangan Anda pada canvas terlebih dahulu.',
-                                confirmButtonColor: '#4f46e5'
-                            });
-                        } else {
-                            alert('Silakan gores tanda tangan Anda pada canvas terlebih dahulu.');
-                        }
-                        return;
-                    }
-                    inputTtd.value = '{{ $currentSignature }}';
-                } else {
-                    inputTtd.value = this.sigPad.toDataURL('image/png');
-                }
-            } else if (this.signatureMode === 'existing') {
-                inputTtd.value = '{{ $currentSignature }}';
-            }
-
             this.isSubmitting = true;
             e.target.submit();
         }
     };
 }
+</script>
+
+<!-- MODAL POPUP CANVAS SIGNATURE PAD -->
+<div class="modal-overlay" id="modalCanvasTtd" style="display:none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 99999; justify-content: center; align-items: center;">
+    <div class="modal-konten" style="background: white; border-radius: 12px; padding: 1.75rem; width: 100%; max-width: 500px; text-align: center; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <h3 style="color: #0f172a; margin: 0; font-weight: 800; font-size: 1.15rem;">Tanda Tangan Digital</h3>
+            <button type="button" onclick="document.getElementById('modalCanvasTtd').style.display = 'none'" style="background: none; border: none; font-size: 1.4rem; cursor: pointer; color: #64748b; line-height: 1;">&times;</button>
+        </div>
+
+        <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 1rem; text-align: left;">
+            Gunakan kursor atau layar sentuh untuk menggambar tanda tangan Anda secara presisi pada bidang di bawah:
+        </p>
+
+        <canvas id="canvas-ttd-modal" width="440" height="180" class="canvas-signature-pad" style="border: 2px dashed #94a3b8; border-radius: 8px; background: #ffffff; cursor: crosshair; touch-action: none; display: block; margin: 0 auto; width: 100%; max-width: 440px;"></canvas>
+
+        <div style="margin-top: 1.25rem; display: flex; gap: 0.75rem; justify-content: center;">
+            <button type="button" class="tombol tombol-sekunder tombol-sm px-4 py-2 bg-slate-100 text-slate-700 font-semibold rounded border border-slate-200 shadow-sm" onclick="if(window.signaturePadModal) window.signaturePadModal.clear();">
+                Bersihkan
+            </button>
+            <button type="button" class="tombol tombol-utama tombol-sm px-4 py-2 text-white font-semibold rounded shadow-sm" style="background: #059669; border: 1px solid #059669;" onclick="window.saveTtdAsesor()">
+                Gunakan Tanda Tangan
+            </button>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
+<script>
+    window.signaturePadModal = null;
+
+    window.bukaModalTtd = function() {
+        const modal = document.getElementById('modalCanvasTtd');
+        if (modal) {
+            modal.style.display = 'flex';
+            
+            if (!window.signaturePadModal) {
+                const canvas = document.getElementById('canvas-ttd-modal');
+                if (canvas && window.SignaturePad) {
+                    window.signaturePadModal = new SignaturePad(canvas, {
+                        backgroundColor: 'rgb(255, 255, 255)'
+                    });
+                    
+                    const ratio = Math.max(window.devicePixelRatio || 1, 1);
+                    canvas.width = canvas.offsetWidth * ratio;
+                    canvas.height = canvas.offsetHeight * ratio;
+                    canvas.getContext("2d").scale(ratio, ratio);
+                    window.signaturePadModal.clear();
+                }
+            } else {
+                window.signaturePadModal.clear();
+            }
+        }
+    };
+
+    window.saveTtdAsesor = function() {
+        if (window.signaturePadModal && !window.signaturePadModal.isEmpty()) {
+            const dataUrl = window.signaturePadModal.toDataURL('image/png');
+            
+            // For ak07-skema.blade.php
+            const hiddenInput = document.getElementById('inputSignatureMasterAk07');
+            if(hiddenInput) hiddenInput.value = dataUrl;
+            
+            const previewImg = document.getElementById('preview-ttd-asesor');
+            if(previewImg) {
+                previewImg.src = dataUrl;
+                previewImg.classList.remove('hidden');
+            }
+            
+            const btnTrigger = document.getElementById('btn-trigger-modal');
+            if(btnTrigger) {
+                btnTrigger.classList.add('hidden');
+            }
+            
+            const btnUbah = document.getElementById('btn-ubah-ttd');
+            if(btnUbah) {
+                btnUbah.classList.remove('hidden');
+            }
+
+            document.getElementById('modalCanvasTtd').style.display = 'none';
+        } else {
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Canvas Kosong',
+                    text: 'Silakan gambar tanda tangan Anda terlebih dahulu.',
+                    confirmButtonText: 'Mengerti',
+                    confirmButtonColor: '#059669'
+                });
+            } else {
+                alert('Silakan gambar tanda tangan Anda terlebih dahulu.');
+            }
+        }
+    };
 </script>
 @endpush
 @endsection

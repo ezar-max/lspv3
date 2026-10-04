@@ -554,13 +554,16 @@ class MapaWorkflowService
     public function saveMapa01(PendaftaranAsesi $pendaftaran, array $data, ?string $rawSignature, bool $isConfirm, int $asesorId): Mapa01
     {
         return DB::transaction(function () use ($pendaftaran, $data, $rawSignature, $isConfirm, $asesorId) {
+            $rawSignature = null;
+            unset($data['tanda_tangan_validator']);
+            unset($data['penyusun_validator_tabel']['penyusun_1']['ttd'], $data['penyusun_validator_tabel']['validator_1']['ttd']);
             $isAdminUser = auth()->check() && in_array(auth()->user()->peran, ['admin', 'superadmin']);
             $adminTtds = Pengguna::whereIn('peran', ['admin', 'superadmin'])->pluck('tanda_tangan')->filter()->toArray();
             if ($rawSignature && in_array($rawSignature, $adminTtds, true)) {
                 $rawSignature = null;
             }
 
-            $ttdPath = $this->saveSignatureFile($rawSignature, $pendaftaran->id, 'mapa01');
+            $ttdPath = null;
             if (empty($ttdPath)) {
                 $ttdPath = $pendaftaran->mapa01?->tanda_tangan_asesor 
                     ?: ($pendaftaran->tanda_tangan_asesor 
@@ -596,18 +599,7 @@ class MapaWorkflowService
                 }
 
                 $adminUser = auth()->user();
-                $adminTtd = $adminUser->tanda_tangan;
-                if (!empty($data['tanda_tangan_validator'])) {
-                    $adminTtd = $data['tanda_tangan_validator'];
-                }
-                if ($adminTtd && !str_contains($adminTtd, 'svg')) {
-                    $savedAdminTtd = $this->saveSignatureFile($adminTtd, $pendaftaran->id, 'mapa01_val');
-                    if ($savedAdminTtd) {
-                        $adminTtd = $savedAdminTtd;
-                    }
-                } else {
-                    $adminTtd = null;
-                }
+                $adminTtd = null;
 
                 $penyusunValidator['validator_1']['nama'] = !empty($penyusunValidator['validator_1']['nama']) ? $penyusunValidator['validator_1']['nama'] : ($adminUser->nama_lengkap ?: 'Administrator LSP');
                 $penyusunValidator['validator_1']['nomor_met'] = !empty($penyusunValidator['validator_1']['nomor_met']) ? $penyusunValidator['validator_1']['nomor_met'] : ($adminUser->nomor_registrasi ?: 'REG.ADM.LSP.001');
@@ -616,8 +608,8 @@ class MapaWorkflowService
                 $penyusunValidator['validator_1']['status_validasi'] = 'tervalidasi';
 
                 $pendaftaran->update([
-                    'tanda_tangan_admin' => $adminTtd,
-                    'tanggal_ttd_admin' => now(),
+                    'tanda_tangan_admin' => null,
+                    'tanggal_ttd_admin' => null,
                 ]);
             } else {
                 if (!empty($data['tanda_tangan_validator'])) {
@@ -652,6 +644,11 @@ class MapaWorkflowService
                 $penyusunValidator['validator_1']['nomor_met'] = $defaultAdminMet;
             }
 
+            $penyusunValidator['penyusun_1']['ttd'] = null;
+            $penyusunValidator['penyusun_1']['ttd_tanggal'] = null;
+            $penyusunValidator['validator_1']['ttd'] = null;
+            $penyusunValidator['validator_1']['ttd_tanggal'] = null;
+
             $normalizedKonfirmasi = $this->normalizeKonfirmasiData($data);
 
             $mapa01 = Mapa01::updateOrCreate(
@@ -683,8 +680,8 @@ class MapaWorkflowService
                     'peluang_terintegrasi_teks' => $data['peluang_terintegrasi_teks'] ?? null,
                     'konfirmasi_pihak_relevan_tabel' => $normalizedKonfirmasi['konfirmasi_pihak_relevan_tabel'],
                     'penyusun_validator_tabel' => $penyusunValidator,
-                    'tanda_tangan_asesor' => $ttdPath ?: ($pendaftaran->mapa01?->tanda_tangan_asesor ?? null),
-                    'tanggal_ttd_asesor' => ($isConfirm || $isAdminUser) ? now() : ($pendaftaran->mapa01?->tanggal_ttd_asesor ?? null),
+                    'tanda_tangan_asesor' => null,
+                    'tanggal_ttd_asesor' => null,
                     'status_mapa' => $isConfirm ? 'selesai' : 'draft',
                 ]
             );
@@ -705,13 +702,7 @@ class MapaWorkflowService
         }
 
         return DB::transaction(function () use ($pendaftaran, $sanitizedMatrix, $catatan, $rawSignature, $isConfirm, $asesorId) {
-            $ttdPath = $this->saveSignatureFile($rawSignature, $pendaftaran->id, 'mapa02');
-            if (empty($ttdPath) && $isConfirm) {
-                $ttdPath = auth()->user()?->tanda_tangan ?: $pendaftaran->tanda_tangan_asesor;
-            }
-            if ($ttdPath && (str_contains($ttdPath, 'svg') || str_contains($ttdPath, '<svg'))) {
-                $ttdPath = null;
-            }
+            $ttdPath = null;
 
             $mapa02 = Mapa02::updateOrCreate(
                 ['pendaftaran_id' => $pendaftaran->id],
@@ -720,8 +711,8 @@ class MapaWorkflowService
                     'asesor_id' => $asesorId,
                     'matriks_peta' => $sanitizedMatrix,
                     'catatan_asesor' => $catatan,
-                    'tanda_tangan_asesor' => $ttdPath ?: ($pendaftaran->mapa02?->tanda_tangan_asesor ?? null),
-                    'tanggal_ttd_asesor' => $isConfirm ? now() : ($pendaftaran->mapa02?->tanggal_ttd_asesor ?? null),
+                    'tanda_tangan_asesor' => null,
+                    'tanggal_ttd_asesor' => null,
                     'status_mapa' => $isConfirm ? 'selesai' : 'draft',
                 ]
             );
@@ -736,13 +727,16 @@ class MapaWorkflowService
     public function saveMasterMapa01(SkemaSertifikasi $skema, array $data, ?string $rawSignature, bool $isConfirm, int $asesorId): Mapa01
     {
         return DB::transaction(function () use ($skema, $data, $rawSignature, $isConfirm, $asesorId) {
+            $rawSignature = null;
+            unset($data['tanda_tangan_validator']);
+            unset($data['penyusun_validator_tabel']['penyusun_1']['ttd'], $data['penyusun_validator_tabel']['validator_1']['ttd']);
             $isAdminUser = auth()->check() && in_array(auth()->user()->peran, ['admin', 'superadmin']);
             $adminTtds = Pengguna::whereIn('peran', ['admin', 'superadmin'])->pluck('tanda_tangan')->filter()->toArray();
             if ($rawSignature && in_array($rawSignature, $adminTtds, true)) {
                 $rawSignature = null;
             }
 
-            $ttdPath = $this->saveSignatureFile($rawSignature, null, 'mapa01_master_' . $skema->id);
+            $ttdPath = null;
             if (empty($ttdPath)) {
                 $existingMaster = Mapa01::where('skema_id', $skema->id)->whereNull('pendaftaran_id')->first();
                 $ttdPath = $existingMaster?->tanda_tangan_asesor;
@@ -778,18 +772,7 @@ class MapaWorkflowService
                 }
 
                 $adminUser = auth()->user();
-                $adminTtd = $adminUser->tanda_tangan;
-                if (!empty($data['tanda_tangan_validator'])) {
-                    $adminTtd = $data['tanda_tangan_validator'];
-                }
-                if ($adminTtd && !str_contains($adminTtd, 'svg')) {
-                    $savedAdminTtd = $this->saveSignatureFile($adminTtd, null, 'mapa01_master_val_' . $skema->id);
-                    if ($savedAdminTtd) {
-                        $adminTtd = $savedAdminTtd;
-                    }
-                } else {
-                    $adminTtd = null;
-                }
+                $adminTtd = null;
 
                 $penyusunValidator['validator_1']['nama'] = !empty($penyusunValidator['validator_1']['nama']) ? $penyusunValidator['validator_1']['nama'] : ($adminUser->nama_lengkap ?: 'Administrator LSP');
                 $penyusunValidator['validator_1']['nomor_met'] = !empty($penyusunValidator['validator_1']['nomor_met']) ? $penyusunValidator['validator_1']['nomor_met'] : ($adminUser->nomor_registrasi ?: 'REG.ADM.LSP.001');
@@ -824,6 +807,11 @@ class MapaWorkflowService
                 $penyusunValidator['validator_1']['nomor_met'] = $defaultAdminMet;
             }
 
+            $penyusunValidator['penyusun_1']['ttd'] = null;
+            $penyusunValidator['penyusun_1']['ttd_tanggal'] = null;
+            $penyusunValidator['validator_1']['ttd'] = null;
+            $penyusunValidator['validator_1']['ttd_tanggal'] = null;
+
             $normalizedKonfirmasi = $this->normalizeKonfirmasiData($data);
 
             $mapa01 = Mapa01::updateOrCreate(
@@ -857,8 +845,8 @@ class MapaWorkflowService
                     'peluang_terintegrasi_teks' => $data['peluang_terintegrasi_teks'] ?? null,
                     'konfirmasi_pihak_relevan_tabel' => $normalizedKonfirmasi['konfirmasi_pihak_relevan_tabel'],
                     'penyusun_validator_tabel' => $penyusunValidator,
-                    'tanda_tangan_asesor' => $ttdPath,
-                    'tanggal_ttd_asesor' => ($isConfirm || $isAdminUser) ? now() : null,
+                    'tanda_tangan_asesor' => null,
+                    'tanggal_ttd_asesor' => null,
                     'status_mapa' => $isConfirm ? 'selesai' : 'draft',
                 ]
             );
@@ -868,8 +856,8 @@ class MapaWorkflowService
                     ->whereNotNull('pendaftaran_id')
                     ->update([
                         'penyusun_validator_tabel' => $penyusunValidator,
-                        'tanda_tangan_asesor' => $ttdPath,
-                        'tanggal_ttd_asesor' => $mapa01->tanggal_ttd_asesor,
+                        'tanda_tangan_asesor' => null,
+                        'tanggal_ttd_asesor' => null,
                         'status_mapa' => 'selesai',
                     ]);
 
@@ -903,32 +891,6 @@ class MapaWorkflowService
             $currentUser = auth()->user();
             $isAdmin = $currentUser && in_array($currentUser->peran, ['admin', 'superadmin']);
 
-            // Simpan tanda tangan yang dikirimkan (profil atau canvas digital)
-            $ttdPath = $this->saveSignatureFile($rawSignature, null, 'mapa02_master_' . $skema->id);
-
-            // Otomatis tempel TTD Asesor saat pembuatan / penyimpanan master
-            if (empty($ttdPath)) {
-                $existingMaster = Mapa02::where('skema_id', $skema->id)->whereNull('pendaftaran_id')->first();
-                $ttdPath = $existingMaster?->tanda_tangan_asesor;
-                
-                if (empty($ttdPath) && $rawSignature && Str::startsWith($rawSignature, 'storage/')) {
-                    $ttdPath = $rawSignature;
-                }
-                
-                if (empty($ttdPath)) {
-                    if ($currentUser && !empty($currentUser->tanda_tangan)) {
-                        $ttdPath = $currentUser->tanda_tangan;
-                    } else {
-                        $signerUser = Pengguna::find($asesorId) ?: Pengguna::where('peran', 'asesor')->where('skema_id', $skema->id)->first();
-                        $ttdPath = $signerUser?->tanda_tangan;
-                    }
-                }
-            }
-
-            if ($ttdPath && (str_contains($ttdPath, 'svg') || str_contains($ttdPath, '<svg'))) {
-                $ttdPath = null;
-            }
-
             $mapa02 = Mapa02::updateOrCreate(
                 [
                     'skema_id' => $skema->id,
@@ -938,8 +900,8 @@ class MapaWorkflowService
                     'asesor_id' => $asesorId,
                     'matriks_peta' => $sanitizedMatrix,
                     'catatan_asesor' => $catatan,
-                    'tanda_tangan_asesor' => $ttdPath,
-                    'tanggal_ttd_asesor' => $ttdPath ? now() : null,
+                    'tanda_tangan_asesor' => null,
+                    'tanggal_ttd_asesor' => null,
                     'status_mapa' => $isConfirm ? 'selesai' : 'draft',
                 ]
             );

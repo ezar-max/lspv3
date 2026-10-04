@@ -358,7 +358,7 @@
                         Persetujuan Asesmen & Kerahasiaan (Master Skema)
                     </h3>
                     <p class="text-xs text-slate-500 leading-relaxed">
-                        Penetapan jenis TUK standar, metode bukti yang disepakati, klausul kerahasiaan resmi BNSP, dan tanda tangan digital asesor yang otomatis diambil oleh seluruh formulir asesi di skema ini.
+                        Penetapan jenis TUK standar, metode bukti yang disepakati, dan klausul kerahasiaan resmi BNSP untuk seluruh formulir asesi di skema ini.
                     </p>
 
                     @if(!empty($masterAk01))

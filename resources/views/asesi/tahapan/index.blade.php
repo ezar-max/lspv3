@@ -146,6 +146,7 @@
              STEP 1: FORMULIR FR.APL.01 (PERMOHONAN SERTIFIKASI)
              ========================================================================= -->
         <div x-show="currentStep === 1" x-transition.opacity.duration.300ms class="mt-6 space-y-6">
+            @php $isReadOnlyApl01 = $isAccAdmin || $isDiajukan; @endphp
             @if($isDitolakAdmin && $pendaftaranTerakhirDitolak)
                 <div class="bg-rose-50/90 border border-rose-200/90 rounded-2xl p-5 sm:p-6 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                     <div class="flex items-start gap-3.5">
@@ -178,7 +179,7 @@
                 </div>
             @endif
 
-            @if($isAccAdmin)
+            @if($isReadOnlyApl01)
                 <div class="bg-emerald-50/90 border border-emerald-200/90 rounded-2xl p-5 sm:p-6 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                     <div class="flex items-start gap-3.5">
                         <div class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
@@ -227,12 +228,25 @@
                             <h2 class="text-xl font-bold text-slate-900 mt-1">Data Pribadi & Kontak Asesi</h2>
                             <p class="text-slate-500 text-xs mt-0.5">Pastikan NIK dan data identitas sesuai dengan data kependudukan resmi (KTP/Kartu Pelajar).</p>
                         </div>
-                        @if($isAccAdmin)
+                        @if($isReadOnlyApl01)
                             <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-600 border border-slate-200 shrink-0">
                                 <svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"/></svg>
                                 Terkunci (Read-Only)
                             </span>
                         @endif
+                        
+                        @if($isReadOnlyApl01 && $pendaftaran && !$pendaftaran->request_perbaikan)
+                            <button type="button" onclick="document.getElementById('modalRequestEdit').classList.remove('hidden'); document.getElementById('modalRequestEdit').style.display='flex';" class="px-4 py-1.5 rounded-lg border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-700 font-bold text-xs shadow-sm flex items-center justify-center gap-1.5 cursor-pointer mt-3 transition-colors w-full sm:w-auto">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                                Ajukan Izin Ubah Data
+                            </button>
+                        @elseif($pendaftaran && $pendaftaran->request_perbaikan)
+                            <div class="px-4 py-2 rounded-lg border border-slate-200 bg-slate-50 text-slate-500 font-semibold text-xs mt-3 w-full sm:w-auto text-center inline-flex items-center justify-center gap-1.5">
+                                <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                Menunggu Persetujuan Ubah Data...
+                            </div>
+                        @endif
+
                     </div>
 
                     <!-- Grid Form Data Pribadi -->
@@ -240,40 +254,40 @@
                         <!-- Nama Lengkap -->
                         <div class="space-y-1.5 sm:col-span-2">
                             <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider">Nama Lengkap Sesuai KTP <span class="text-red-500">*</span></label>
-                            <input type="text" name="nama_lengkap" value="{{ old('nama_lengkap', $draftData['nama_lengkap']) }}" required {{ $isAccAdmin ? 'readonly' : '' }}
-                                   class="w-full {{ $isAccAdmin ? 'bg-slate-100 text-slate-600 cursor-not-allowed' : 'bg-white text-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500' }} border border-slate-200 rounded-xl px-3.5 py-2.5 outline-hidden font-medium">
+                            <input type="text" name="nama_lengkap" value="{{ old('nama_lengkap', $draftData['nama_lengkap']) }}" required {{ $isReadOnlyApl01 ? 'readonly' : '' }}
+                                   class="w-full {{ $isReadOnlyApl01 ? 'bg-slate-100 text-slate-600 cursor-not-allowed' : 'bg-white text-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500' }} border border-slate-200 rounded-xl px-3.5 py-2.5 outline-hidden font-medium">
                         </div>
 
                         <!-- NIK / NISN -->
                         <div class="space-y-1.5">
                             <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider">NIK / No. KTP <span class="text-red-500">*</span></label>
-                            <input type="text" name="nik" minlength="16" maxlength="16" pattern="[0-9]{16}" inputmode="numeric" oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 16)" title="NIK harus berjumlah tepat 16 digit angka" value="{{ old('nik', $draftData['nik']) }}" required placeholder="16 Digit NIK" {{ $isAccAdmin ? 'readonly' : '' }}
-                                   class="w-full {{ $isAccAdmin ? 'bg-slate-100 text-slate-600 cursor-not-allowed' : 'bg-white text-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500' }} border border-slate-200 rounded-xl px-3.5 py-2.5 outline-hidden font-mono">
+                            <input type="text" name="nik" minlength="16" maxlength="16" pattern="[0-9]{16}" inputmode="numeric" oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 16)" title="NIK harus berjumlah tepat 16 digit angka" value="{{ old('nik', $draftData['nik']) }}" required placeholder="16 Digit NIK" {{ $isReadOnlyApl01 ? 'readonly' : '' }}
+                                   class="w-full {{ $isReadOnlyApl01 ? 'bg-slate-100 text-slate-600 cursor-not-allowed' : 'bg-white text-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500' }} border border-slate-200 rounded-xl px-3.5 py-2.5 outline-hidden font-mono">
                         </div>
 
                         <!-- Tempat Lahir -->
                         <div class="space-y-1.5">
                             <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider">Tempat Lahir <span class="text-red-500">*</span></label>
-                            <input type="text" name="tempat_lahir" value="{{ old('tempat_lahir', $draftData['tempat_lahir']) }}" required placeholder="Contoh: Bogor" {{ $isAccAdmin ? 'readonly' : '' }}
-                                   class="w-full {{ $isAccAdmin ? 'bg-slate-100 text-slate-600 cursor-not-allowed' : 'bg-white text-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500' }} border border-slate-200 rounded-xl px-3.5 py-2.5 outline-hidden">
+                            <input type="text" name="tempat_lahir" value="{{ old('tempat_lahir', $draftData['tempat_lahir']) }}" required placeholder="Contoh: Bogor" {{ $isReadOnlyApl01 ? 'readonly' : '' }}
+                                   class="w-full {{ $isReadOnlyApl01 ? 'bg-slate-100 text-slate-600 cursor-not-allowed' : 'bg-white text-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500' }} border border-slate-200 rounded-xl px-3.5 py-2.5 outline-hidden">
                         </div>
 
                         <!-- Tanggal Lahir -->
                         <div class="space-y-1.5">
                             <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider">Tanggal Lahir <span class="text-red-500">*</span></label>
-                            <input type="date" name="tanggal_lahir" value="{{ old('tanggal_lahir', $draftData['tanggal_lahir']) }}" max="{{ date('Y-m-d') }}" required {{ $isAccAdmin ? 'readonly' : '' }}
-                                   class="w-full {{ $isAccAdmin ? 'bg-slate-100 text-slate-600 cursor-not-allowed' : 'bg-white text-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500' }} border border-slate-200 rounded-xl px-3.5 py-2.5 outline-hidden">
+                            <input type="date" name="tanggal_lahir" value="{{ old('tanggal_lahir', $draftData['tanggal_lahir']) }}" max="{{ date('Y-m-d') }}" required {{ $isReadOnlyApl01 ? 'readonly' : '' }}
+                                   class="w-full {{ $isReadOnlyApl01 ? 'bg-slate-100 text-slate-600 cursor-not-allowed' : 'bg-white text-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500' }} border border-slate-200 rounded-xl px-3.5 py-2.5 outline-hidden">
                         </div>
 
                         <!-- Jenis Kelamin -->
                         <div class="space-y-1.5">
                             <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider">Jenis Kelamin <span class="text-red-500">*</span></label>
-                            <select name="jenis_kelamin" required {{ $isAccAdmin ? 'disabled' : '' }}
-                                    class="w-full {{ $isAccAdmin ? 'bg-slate-100 text-slate-600 cursor-not-allowed' : 'bg-white text-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500' }} border border-slate-200 rounded-xl px-3.5 py-2.5 outline-hidden">
+                            <select name="jenis_kelamin" required {{ $isReadOnlyApl01 ? 'disabled' : '' }}
+                                    class="w-full {{ $isReadOnlyApl01 ? 'bg-slate-100 text-slate-600 cursor-not-allowed' : 'bg-white text-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500' }} border border-slate-200 rounded-xl px-3.5 py-2.5 outline-hidden">
                                 <option value="Laki-laki" {{ old('jenis_kelamin', $draftData['jenis_kelamin']) === 'Laki-laki' ? 'selected' : '' }}>Laki-laki</option>
                                 <option value="Perempuan" {{ old('jenis_kelamin', $draftData['jenis_kelamin']) === 'Perempuan' ? 'selected' : '' }}>Perempuan</option>
                             </select>
-                            @if($isAccAdmin)
+                            @if($isReadOnlyApl01)
                                 <input type="hidden" name="jenis_kelamin" value="{{ old('jenis_kelamin', $draftData['jenis_kelamin']) }}">
                             @endif
                         </div>
@@ -281,8 +295,8 @@
                         <!-- Nomor HP / WhatsApp -->
                         <div class="space-y-1.5">
                             <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider">No. HP / WhatsApp <span class="text-red-500">*</span></label>
-                            <input type="text" name="nomor_telepon" value="{{ old('nomor_telepon', $draftData['nomor_telepon']) }}" required placeholder="08xxxxxxxxxx" {{ $isAccAdmin ? 'readonly' : '' }}
-                                   class="w-full {{ $isAccAdmin ? 'bg-slate-100 text-slate-600 cursor-not-allowed' : 'bg-white text-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500' }} border border-slate-200 rounded-xl px-3.5 py-2.5 outline-hidden font-mono">
+                            <input type="text" name="nomor_telepon" value="{{ old('nomor_telepon', $draftData['nomor_telepon']) }}" required placeholder="08xxxxxxxxxx" {{ $isReadOnlyApl01 ? 'readonly' : '' }}
+                                   class="w-full {{ $isReadOnlyApl01 ? 'bg-slate-100 text-slate-600 cursor-not-allowed' : 'bg-white text-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500' }} border border-slate-200 rounded-xl px-3.5 py-2.5 outline-hidden font-mono">
                         </div>
 
                         <!-- Email -->
@@ -295,15 +309,15 @@
                         <!-- Lembaga / Sekolah -->
                         <div class="space-y-1.5">
                             <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider">Lembaga / Sekolah / Instansi</label>
-                            <input type="text" name="nama_sekolah_instansi" value="{{ old('nama_sekolah_instansi', $draftData['nama_sekolah_instansi'] ?? 'SMKN 1 Gunungputri') }}" {{ $isAccAdmin ? 'readonly' : '' }}
-                                   class="w-full {{ $isAccAdmin ? 'bg-slate-100 text-slate-600 cursor-not-allowed' : 'bg-white text-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500' }} border border-slate-200 rounded-xl px-3.5 py-2.5 outline-hidden">
+                            <input type="text" name="nama_sekolah_instansi" value="{{ old('nama_sekolah_instansi', $draftData['nama_sekolah_instansi'] ?? 'SMKN 1 Gunungputri') }}" {{ $isReadOnlyApl01 ? 'readonly' : '' }}
+                                   class="w-full {{ $isReadOnlyApl01 ? 'bg-slate-100 text-slate-600 cursor-not-allowed' : 'bg-white text-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500' }} border border-slate-200 rounded-xl px-3.5 py-2.5 outline-hidden">
                         </div>
 
                         <!-- Alamat Rumah -->
                         <div class="space-y-1.5 sm:col-span-2 lg:col-span-3">
                             <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider">Alamat Domisili Lengkap <span class="text-red-500">*</span></label>
-                            <textarea name="alamat" rows="2" required placeholder="Jalan, RT/RW, Kelurahan, Kecamatan, Kota/Kabupaten" {{ $isAccAdmin ? 'readonly' : '' }}
-                                      class="w-full {{ $isAccAdmin ? 'bg-slate-100 text-slate-600 cursor-not-allowed' : 'bg-white text-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500' }} border border-slate-200 rounded-xl px-3.5 py-2 outline-hidden">{{ old('alamat', $draftData['alamat']) }}</textarea>
+                            <textarea name="alamat" rows="2" required placeholder="Jalan, RT/RW, Kelurahan, Kecamatan, Kota/Kabupaten" {{ $isReadOnlyApl01 ? 'readonly' : '' }}
+                                      class="w-full {{ $isReadOnlyApl01 ? 'bg-slate-100 text-slate-600 cursor-not-allowed' : 'bg-white text-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500' }} border border-slate-200 rounded-xl px-3.5 py-2 outline-hidden">{{ old('alamat', $draftData['alamat']) }}</textarea>
                         </div>
                     </div>
 
@@ -319,8 +333,8 @@
                         <!-- Skema Sertifikasi BNSP -->
                         <div class="space-y-1.5">
                             <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider">Skema Sertifikasi BNSP <span class="text-red-500">*</span></label>
-                            <select name="skema_id" id="select-skema-tahapan" onchange="if(typeof updateTabelUnitTahapan==='function') updateTabelUnitTahapan()" required {{ $isAccAdmin ? 'disabled' : '' }}
-                                    class="w-full {{ $isAccAdmin ? 'bg-slate-100 text-slate-600 cursor-not-allowed' : 'bg-white text-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500' }} border border-slate-200 rounded-xl px-3.5 py-2.5 outline-hidden font-semibold">
+                            <select name="skema_id" id="select-skema-tahapan" onchange="if(typeof updateTabelUnitTahapan==='function') updateTabelUnitTahapan()" required {{ $isReadOnlyApl01 ? 'disabled' : '' }}
+                                    class="w-full {{ $isReadOnlyApl01 ? 'bg-slate-100 text-slate-600 cursor-not-allowed' : 'bg-white text-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500' }} border border-slate-200 rounded-xl px-3.5 py-2.5 outline-hidden font-semibold">
                                 <option value="">-- Pilih Skema Sertifikasi --</option>
                                 @foreach($skemaList as $sk)
                                     @php
@@ -332,7 +346,7 @@
                                     </option>
                                 @endforeach
                             </select>
-                            @if($isAccAdmin)
+                            @if($isReadOnlyApl01)
                                 <input type="hidden" name="skema_id" value="{{ old('skema_id', $draftData['skema_id']) }}">
                             @endif
                         </div>
@@ -340,14 +354,14 @@
                         <!-- Tujuan Asesmen -->
                         <div class="space-y-1.5">
                             <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider">Tujuan Asesmen <span class="text-red-500">*</span></label>
-                            <select name="tujuan_asesmen" required {{ $isAccAdmin ? 'disabled' : '' }}
-                                    class="w-full {{ $isAccAdmin ? 'bg-slate-100 text-slate-600 cursor-not-allowed' : 'bg-white text-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500' }} border border-slate-200 rounded-xl px-3.5 py-2.5 outline-hidden">
+                            <select name="tujuan_asesmen" required {{ $isReadOnlyApl01 ? 'disabled' : '' }}
+                                    class="w-full {{ $isReadOnlyApl01 ? 'bg-slate-100 text-slate-600 cursor-not-allowed' : 'bg-white text-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500' }} border border-slate-200 rounded-xl px-3.5 py-2.5 outline-hidden">
                                 <option value="Sertifikasi" {{ old('tujuan_asesmen', $draftData['tujuan_asesmen']) === 'Sertifikasi' ? 'selected' : '' }}>Sertifikasi</option>
                                 <option value="Sertifikasi Ulang" {{ old('tujuan_asesmen', $draftData['tujuan_asesmen']) === 'Sertifikasi Ulang' ? 'selected' : '' }}>Sertifikasi Ulang</option>
                                 <option value="Pengakuan Kompetensi Terkini (PKT)" {{ old('tujuan_asesmen', $draftData['tujuan_asesmen']) === 'Pengakuan Kompetensi Terkini (PKT)' ? 'selected' : '' }}>Pengakuan Kompetensi Terkini (PKT)</option>
                                 <option value="Rekognisi Pembelajaran Lampau (RPL)" {{ old('tujuan_asesmen', $draftData['tujuan_asesmen']) === 'Rekognisi Pembelajaran Lampau (RPL)' ? 'selected' : '' }}>Rekognisi Pembelajaran Lampau (RPL)</option>
                             </select>
-                            @if($isAccAdmin)
+                            @if($isReadOnlyApl01)
                                 <input type="hidden" name="tujuan_asesmen" value="{{ old('tujuan_asesmen', $draftData['tujuan_asesmen']) }}">
                             @endif
                         </div>
@@ -440,7 +454,7 @@
                         <div id="dokumen-ktp" class="bg-slate-50 border border-slate-200/80 rounded-xl p-4 space-y-2.5 transition-all duration-300">
                             <div class="flex items-center justify-between">
                                 <label class="text-xs font-bold text-slate-800 uppercase tracking-wider">1. KTP / Kartu Pelajar</label>
-                                @if($isAccAdmin)
+                                @if($isReadOnlyApl01)
                                     <span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 font-bold flex items-center gap-1">
                                         <svg class="w-3 h-3 text-emerald-600" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg>
                                         Terverifikasi Valid
@@ -490,7 +504,7 @@
                         <div id="dokumen-rapor" class="bg-slate-50 border border-slate-200/80 rounded-xl p-4 space-y-2.5 transition-all duration-300">
                             <div class="flex items-center justify-between">
                                 <label class="text-xs font-bold text-slate-800 uppercase tracking-wider">2. Rapor / Ijazah Terakhir</label>
-                                @if($isAccAdmin)
+                                @if($isReadOnlyApl01)
                                     <span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 font-bold flex items-center gap-1">
                                         <svg class="w-3 h-3 text-emerald-600" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg>
                                         Terverifikasi Valid
@@ -540,7 +554,7 @@
                         <div id="dokumen-pkl" class="bg-slate-50 border border-slate-200/80 rounded-xl p-4 space-y-2.5 transition-all duration-300">
                             <div class="flex items-center justify-between">
                                 <label class="text-xs font-bold text-slate-800 uppercase tracking-wider">3. Sertifikat PKL / Pelatihan</label>
-                                @if($isAccAdmin)
+                                @if($isReadOnlyApl01)
                                     <span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 font-bold flex items-center gap-1">
                                         <svg class="w-3 h-3 text-emerald-600" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg>
                                         Terverifikasi Valid
@@ -590,7 +604,7 @@
                         <div id="dokumen-foto" class="bg-slate-50 border border-slate-200/80 rounded-xl p-4 space-y-2.5 transition-all duration-300">
                             <div class="flex items-center justify-between">
                                 <label class="text-xs font-bold text-slate-800 uppercase tracking-wider">4. Pasfoto 3x4 (Background Merah)</label>
-                                @if($isAccAdmin)
+                                @if($isReadOnlyApl01)
                                     <span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 font-bold flex items-center gap-1">
                                         <svg class="w-3 h-3 text-emerald-600" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg>
                                         Terverifikasi Valid
@@ -638,7 +652,7 @@
                     </div>
 
                     <!-- Digital Signature Pad -->
-                    @if($isAccAdmin && !empty($draftData['tanda_tangan_asesi']))
+                    @if($isReadOnlyApl01 && !empty($draftData['tanda_tangan_asesi']))
                         <div class="border-t border-slate-200/80 pt-6">
                             <div class="flex items-center justify-between mb-3">
                                 <div>
@@ -692,7 +706,7 @@
                         </div>
                     @endif
 
-                    @if($isAccAdmin)
+                    @if($isReadOnlyApl01)
                         <!-- Pengesahan & Tanda Tangan Admin LSP -->
                         <div class="border-t border-emerald-200/90 pt-6 bg-emerald-50/40 -mx-6 sm:-mx-8 px-6 sm:px-8 pb-4 rounded-b-2xl">
                             <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-emerald-200/70 pb-4 mb-4">
@@ -748,13 +762,13 @@
                 </div>
 
                 <!-- Bottom Action Buttons Step 1 -->
-                @if($isAccAdmin)
+                @if($isReadOnlyApl01)
                     <div class="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
                         <div class="flex items-center gap-2 text-xs text-emerald-800 font-medium">
                             <svg class="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
                             </svg>
-                            <span>Data FR.APL.01 telah dikunci (Read-Only) karena telah disetujui oleh Admin LSP.</span>
+                            <span>Data FR.APL.01 telah dikunci (Read-Only) karena {{ $isAccAdmin ? 'telah disetujui oleh Admin LSP' : 'sedang menunggu verifikasi Admin LSP' }}.</span>
                         </div>
                         <button type="button" @click="setStep({{ $isApl02Approved ? 3 : 2 }})" 
                                 class="w-full sm:w-auto px-7 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-sm transition-all duration-150 flex items-center justify-center gap-2">
@@ -833,7 +847,7 @@
                     <div class="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
                         <button type="button" @click="setStep(1)" 
                                 class="w-full sm:w-auto px-6 py-3 rounded-xl border border-slate-300 text-slate-700 bg-white hover:bg-slate-50 font-semibold text-xs sm:text-sm transition-colors flex items-center justify-center gap-2">
-                            &larr; Tinjau Kembali Data Permohonan (FR.APL.01)
+                            &larr; Kembali ke Data Permohonan (FR.APL.01)
                         </button>
                         
                         <div class="text-xs text-slate-400 italic">

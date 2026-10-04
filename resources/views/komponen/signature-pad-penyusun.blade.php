@@ -46,7 +46,9 @@
 
     window.saveSignaturePenyusun = function() {
         if (signaturePadPenyusun && !signaturePadPenyusun.isEmpty()) {
-            const dataUrl = signaturePadPenyusun.toDataURL('image/svg+xml');
+            // Seluruh backend TTD menyimpan gambar raster (PNG), bukan SVG
+            // teks/palsu, agar konsisten dengan MAPA dan dokumen asesmen lain.
+            const dataUrl = signaturePadPenyusun.toDataURL('image/png');
             
             // Set hidden input values in ALL forms
             const hiddenInputs = document.querySelectorAll('.hidden-penyusun-ttd');

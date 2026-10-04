@@ -555,6 +555,7 @@
 <div class="max-w-6xl mx-auto space-y-6 pb-20"
      x-data="{
         isVerified: {{ $isVerified ? 'true' : 'false' }},
+        requestPerbaikan: {{ $pendaftaran->request_perbaikan == 1 ? 'true' : 'false' }},
         documents: {{ json_encode($docsData) }},
         docStatuses: {{ json_encode($initialStatuses) }},
         docNotes: {{ json_encode($initialNotes) }},
@@ -1196,18 +1197,18 @@
 
                 <!-- Dynamic Primary Action Button -->
                 <div class="w-full sm:w-auto">
-                    <!-- If any document is 'tidak_valid': Return for revision -->
-                    <template x-if="hasInvalidDoc">
+                    <!-- If any document is 'tidak_valid' or request_perbaikan is true: Return for revision -->
+                    <template x-if="hasInvalidDoc || requestPerbaikan">
                         <button type="submit" name="status_pendaftaran" value="revisi" formnovalidate
-                                onclick="const sel = document.getElementById('select-jadwal-asesmen'); if (sel) { sel.required = false; sel.value = ''; } return confirm('Kirim Catatan Revisi: Pendaftaran ini akan dikembalikan ke Asesi untuk memperbaiki dokumen yang berstatus Tidak Valid. Lanjutkan?')"
+                                onclick="const sel = document.getElementById('select-jadwal-asesmen'); if (sel) { sel.required = false; sel.value = ''; } return confirm('Kirim Catatan Revisi: Pendaftaran ini akan dikembalikan ke Asesi. Lanjutkan?')"
                                 class="w-full sm:w-auto px-7 py-3 bg-rose-600 hover:bg-rose-700 text-white text-xs sm:text-sm font-bold rounded-xl shadow-xs transition-colors flex items-center justify-center gap-2">
-                            <span>Kirim Catatan Revisi ke Asesi</span>
+                            <span>Izinkan Ubah Data / Revisi ke Asesi</span>
                             <span>&rarr;</span>
                         </button>
                     </template>
 
-                    <!-- If all documents valid: Approve & Unlock APL.02 -->
-                    <template x-if="!hasInvalidDoc">
+                    <!-- If all documents valid and no request_perbaikan: Approve & Unlock APL.02 -->
+                    <template x-if="!hasInvalidDoc && !requestPerbaikan">
                         <button type="submit" name="status_pendaftaran" value="diverifikasi" 
                                 onclick="return validasiSubmitAccAdmin(event)"
                                 class="w-full sm:w-auto px-7 py-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-bold rounded-xl shadow-xs transition-colors flex items-center justify-center gap-2">
