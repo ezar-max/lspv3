@@ -69,7 +69,7 @@ class AdminMapa01AutoValidationTest extends TestCase
 
         // Admin TIDAK boleh melihat tombol untuk membubuhkan tanda tangan asesor
         $response->assertDontSee('Bubuhkan Tanda Tangan');
-        $response->assertSee('Menunggu TTD Asesor');
+        $response->assertDontSee('Bubuhkan TTD');
 
         $response->assertSee('canvas-ttd-validator');
         $response->assertSee('name="tanda_tangan_admin"', false);
@@ -103,6 +103,17 @@ class AdminMapa01AutoValidationTest extends TestCase
             'skema_id' => $this->skema->id,
             'validator_nama' => $this->admin->nama_lengkap,
             'validator_nomor_met' => $this->admin->nomor_registrasi,
+            'konfirmasi_pemeriksaan' => '1',
+        ])->assertSessionHasErrors('tanda_tangan_admin');
+
+        $this->assertSame('menunggu_validasi', $master->fresh()->status_mapa);
+
+        $this->actingAs($this->admin)->post(route('admin.mapa-01.validasi', $master->id), [
+            'is_master_mode' => '1',
+            'skema_id' => $this->skema->id,
+            'validator_nama' => $this->admin->nama_lengkap,
+            'validator_nomor_met' => $this->admin->nomor_registrasi,
+            'konfirmasi_pemeriksaan' => '1',
             'tanda_tangan_admin' => $signature,
         ])->assertSessionHas('sukses');
 
@@ -162,7 +173,7 @@ class AdminMapa01AutoValidationTest extends TestCase
 
         // Asesor melihat tombol modal canvas untuk membubuhkan tanda tangannya
         $response->assertSee("bukaModal('modalCanvasTtd')", false);
-        $response->assertSee('Bubuhkan Tanda Tangan');
+        $response->assertSee('Bubuhkan TTD');
 
         // Saat asesor menyimpan draft, status validator tidak otomatis menjadi tervalidasi
         $this->actingAs($asesorPolos)->post(route('asesor.skema.mapa-01.simpan', $this->skema->id), [
@@ -196,6 +207,7 @@ class AdminMapa01AutoValidationTest extends TestCase
             'is_master_mode' => '1',
             'validator_nama' => $this->admin->nama_lengkap,
             'validator_nomor_met' => $this->admin->nomor_registrasi,
+            'konfirmasi_pemeriksaan' => '1',
             'tanda_tangan_admin' => $signature,
         ]);
 

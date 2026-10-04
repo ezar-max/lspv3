@@ -774,6 +774,7 @@ class AdminController extends Controller
             'validator_nama' => 'required|string|max:255',
             'validator_nomor_met' => 'required|string|max:100',
             'tanda_tangan_admin' => ['required', 'string', 'max:2000000', 'regex:/^data:image\/(png|jpeg);base64,/'],
+            'konfirmasi_pemeriksaan' => 'required|accepted',
             'catatan_validasi' => 'nullable|string|max:1000',
         ], [
             'validator_nama.required' => 'Nama Validator (Admin LSP) wajib diisi.',
@@ -791,7 +792,7 @@ class AdminController extends Controller
             $mapa01->pendaftaran_id,
             'mapa01_admin'
         );
-        if (!$ttdAdmin) {
+        if (!$ttdAdmin || str_starts_with($ttdAdmin, 'data:image/')) {
             return back()->withErrors(['tanda_tangan_admin' => 'Tanda tangan Admin tidak valid.']);
         }
 

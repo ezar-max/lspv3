@@ -322,11 +322,13 @@ class NotificationWorkflowTest extends TestCase
     /** 9. ROLE ADMIN: Asesor menyusun Master FR.MAPA.01 memicu notifikasi validasi ke Admin & Superadmin */
     public function test_asesor_saving_master_mapa01_notifies_admins_for_validation(): void
     {
+        $signature = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
         $response = $this->actingAs($this->asesor)->post(route('asesor.skema.mapa-01.simpan', $this->skema->id), [
             'aksi' => 'konfirmasi',
             'tujuan_asesmen' => 'Sertifikasi Kejuruan',
             'konteks_lingkungan' => 'Tempat kerja simulasi',
             'konteks_peluang_bukti' => 'Tersedia',
+            'tanda_tangan_asesor' => $signature,
         ]);
 
         $response->assertSessionHas('sukses');
@@ -401,6 +403,7 @@ class NotificationWorkflowTest extends TestCase
             'skema_id' => $this->skema->id,
             'validator_nama' => $this->admin->nama_lengkap,
             'validator_nomor_met' => 'ADM.001.2026',
+            'konfirmasi_pemeriksaan' => '1',
             'tanda_tangan_admin' => $signature,
         ]);
 

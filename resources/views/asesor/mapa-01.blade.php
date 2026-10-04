@@ -1853,7 +1853,7 @@
             </div>
 
             <label style="display: flex; align-items: flex-start; gap: .6rem; margin-bottom: 1rem; padding: .75rem; border-radius: 9px; background: #f0fdf4; color: #166534; cursor: pointer; font-size: .78rem; line-height: 1.45;">
-                <input type="checkbox" id="check-review-mapa01" required style="margin-top: .18rem; accent-color: #059669;">
+                <input type="checkbox" id="check-review-mapa01" name="konfirmasi_pemeriksaan" value="1" required style="margin-top: .18rem; accent-color: #059669;">
                 <span>Saya telah memeriksa isi formulir dan menyatakan data ini layak untuk disahkan.</span>
             </label>
 

@@ -556,6 +556,9 @@ class MapaWorkflowService
             $ttdPath = $existingMapa01?->tanda_tangan_asesor;
             if (Str::startsWith($rawSignature ?? '', 'data:image/')) {
                 $ttdPath = $this->saveSignatureFile($rawSignature, $pendaftaran->id, 'mapa01_asesor');
+                if (Str::startsWith($ttdPath ?? '', 'data:image/')) {
+                    $ttdPath = null;
+                }
             } elseif ($rawSignature && $rawSignature !== $ttdPath) {
                 $ttdPath = null;
             }
@@ -685,6 +688,9 @@ class MapaWorkflowService
             $ttdPath = $existingMaster?->tanda_tangan_asesor;
             if (Str::startsWith($rawSignature ?? '', 'data:image/')) {
                 $ttdPath = $this->saveSignatureFile($rawSignature, null, 'mapa01_master_asesor_' . $skema->id);
+                if (Str::startsWith($ttdPath ?? '', 'data:image/')) {
+                    $ttdPath = null;
+                }
             } elseif ($rawSignature && $rawSignature !== $ttdPath) {
                 $ttdPath = null;
             }

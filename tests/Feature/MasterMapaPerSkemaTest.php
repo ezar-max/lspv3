@@ -159,11 +159,11 @@ class MasterMapaPerSkemaTest extends TestCase
     {
         $service = app(MapaWorkflowService::class);
 
-        // Buat dan sahkan master
+        // Buat dan kirim master setelah asesor membubuhkan tanda tangan.
         $service->saveMasterMapa01($this->skema, [
             'tujuan_asesmen' => 'Sertifikasi BNSP Unggulan',
             'konteks_lingkungan' => 'nyata',
-        ], null, true, $this->asesor->id);
+        ], 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', true, $this->asesor->id);
 
         $matrix = [
             $this->unit->id => [
