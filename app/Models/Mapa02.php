@@ -19,12 +19,15 @@ class Mapa02 extends Model
         'catatan_asesor',
         'tanda_tangan_asesor',
         'tanggal_ttd_asesor',
+        'tanda_tangan_admin',
+        'tanggal_ttd_admin',
         'status_mapa',
     ];
 
     protected $casts = [
         'matriks_peta' => 'array',
         'tanggal_ttd_asesor' => 'datetime',
+        'tanggal_ttd_admin' => 'datetime',
     ];
 
     public function pendaftaran()

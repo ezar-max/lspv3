@@ -865,14 +865,14 @@ class AsesorController extends Controller
         }
 
         if ($isConfirm) {
-            $suksesMsg = 'Master FR.MAPA.01 berhasil dikirim dan menunggu tanda tangan serta validasi Administrator.';
+            $suksesMsg = in_array($user->peran, ['admin', 'superadmin'])
+                ? 'Master FR.MAPA.01 berhasil ditandatangani dan diselesaikan oleh Administrator.'
+                : 'Master FR.MAPA.01 berhasil dikirim dan menunggu tanda tangan serta validasi Administrator.';
             return redirect()->route('asesor.mapa', ['skema_id' => $skema->id])
                 ->with('sukses', $suksesMsg);
         }
 
-        $draftMsg = in_array($user->peran, ['admin', 'superadmin'])
-            ? 'Dokumen Master FR.MAPA.01 berhasil disimpan dan langsung tervalidasi.'
-            : 'Draft Master FR.MAPA.01 berhasil disimpan.';
+        $draftMsg = 'Draft Master FR.MAPA.01 berhasil disimpan.';
         return redirect()->route('asesor.skema.mapa-01', $skema->id)
             ->with('sukses', $draftMsg);
     }
@@ -960,14 +960,47 @@ class AsesorController extends Controller
             $request->input('catatan_asesor'),
             $request->input('tanda_tangan_asesor'),
             $isConfirm,
-            $effectiveAsesorId
+            $effectiveAsesorId,
+            $request->input('tanda_tangan_admin'),
+            $request->boolean('konfirmasi_pemeriksaan')
         );
 
         LogAktivitas::catat('Master MAPA.02', 'Menyimpan Master Peta FR.MAPA.02 (' . ($isConfirm ? 'Disahkan' : 'Draft') . ') untuk Skema ' . $skema->kode_skema);
 
+        if ($isConfirm && $user->peran === 'asesor') {
+            $admins = Pengguna::whereIn('peran', ['admin', 'superadmin'])->where('aktif', true)->get();
+            foreach ($admins as $admin) {
+                $hasPendingNotification = $admin->notifications()
+                    ->where('type', SystemAlert::class)
+                    ->get()
+                    ->contains(fn($notification) =>
+                        ($notification->data['metadata']['mapa02_master_skema_id'] ?? null) == $skema->id
+                        && ($notification->data['metadata']['status'] ?? null) === 'menunggu_validasi'
+                        && is_null($notification->read_at)
+                    );
+
+                if (!$hasPendingNotification) {
+                    $admin->notify(new SystemAlert(
+                        'FR.MAPA.02 Sesuai Skema Menunggu Validasi',
+                        'Asesor ' . ($user->nama_lengkap ?: 'Asesor') . ' telah mengirim Master FR.MAPA.02 untuk Skema ' . ($skema->nama_skema ?: 'Sertifikasi') . '. Dokumen menunggu validasi Administrator LSP.',
+                        route('asesor.skema.mapa-02', $skema->id),
+                        'mapa_validation',
+                        [
+                            'mapa02_master_skema_id' => $skema->id,
+                            'skema_id' => $skema->id,
+                            'status' => 'menunggu_validasi',
+                        ]
+                    ));
+                }
+            }
+        }
+
         if ($isConfirm) {
+            $sukses = $isAdmin
+                ? 'Master FR.MAPA.02 berhasil ditandatangani dan diselesaikan Administrator.'
+                : 'Master FR.MAPA.02 berhasil dikirim dan menunggu tanda tangan serta validasi Administrator.';
             return redirect()->route('asesor.mapa', ['skema_id' => $skema->id])
-                ->with('sukses', 'Master Peta Instrumen FR.MAPA.02 berhasil disahkan dan aktif sebagai acuan seluruh asesi pada skema ini!');
+                ->with('sukses', $sukses);
         }
 
         return redirect()->route('asesor.skema.mapa-02', $skema->id)
@@ -1253,14 +1286,14 @@ class AsesorController extends Controller
         LogAktivitas::catat('Perencanaan Asesmen (FR.MAPA.01)', 'Menyimpan dokumen FR.MAPA.01 (' . ($isConfirm ? 'Disahkan' : 'Draft') . ') untuk pendaftaran #' . $pendaftaran->nomor_pendaftaran);
 
         if ($isConfirm) {
-            $suksesMsg = 'FR.MAPA.01 berhasil dikirim dan menunggu tanda tangan serta validasi Administrator.';
+            $suksesMsg = in_array($user->peran, ['admin', 'superadmin'])
+                ? 'FR.MAPA.01 berhasil ditandatangani dan diselesaikan oleh Administrator.'
+                : 'FR.MAPA.01 berhasil dikirim dan menunggu tanda tangan serta validasi Administrator.';
             return redirect()->route('asesor.mapa', ['skema_id' => $pendaftaran->skema_id])
                 ->with('sukses', $suksesMsg);
         }
 
-        $draftMsg = in_array($user->peran, ['admin', 'superadmin'])
-            ? 'Dokumen FR.MAPA.01 berhasil disimpan dan langsung tervalidasi.'
-            : 'Draft FR.MAPA.01 berhasil disimpan.';
+        $draftMsg = 'Draft FR.MAPA.01 berhasil disimpan.';
         return redirect()->route('asesor.mapa-01', $pendaftaran->id)
             ->with('sukses', $draftMsg);
     }
@@ -1324,18 +1357,51 @@ class AsesorController extends Controller
             $request->input('catatan_asesor'),
             $request->input('tanda_tangan_asesor'),
             $isConfirm,
-            $effectiveAsesorId
+            $effectiveAsesorId,
+            $request->input('tanda_tangan_admin'),
+            $request->boolean('konfirmasi_pemeriksaan')
         );
 
         LogAktivitas::catat('Peta Instrumen Asesmen (FR.MAPA.02)', 'Menyimpan dokumen FR.MAPA.02 (' . ($isConfirm ? 'Disahkan' : 'Draft') . ') untuk pendaftaran #' . $pendaftaran->nomor_pendaftaran);
 
+        if ($isConfirm && $user->peran === 'asesor') {
+            $admins = Pengguna::whereIn('peran', ['admin', 'superadmin'])->where('aktif', true)->get();
+            foreach ($admins as $admin) {
+                $hasPendingNotification = $admin->notifications()
+                    ->where('type', SystemAlert::class)
+                    ->get()
+                    ->contains(fn($notification) =>
+                        ($notification->data['metadata']['mapa02_pendaftaran_id'] ?? null) == $pendaftaran->id
+                        && ($notification->data['metadata']['status'] ?? null) === 'menunggu_validasi'
+                        && is_null($notification->read_at)
+                    );
+
+                if (!$hasPendingNotification) {
+                    $admin->notify(new SystemAlert(
+                        'FR.MAPA.02 Menunggu Validasi',
+                        'Asesor ' . ($user->nama_lengkap ?: 'Asesor') . ' telah mengirim FR.MAPA.02 untuk peserta ' . ($pendaftaran->asesi?->nama_lengkap ?: 'Asesi') . '. Dokumen menunggu validasi Administrator LSP.',
+                        route('asesor.mapa-02', $pendaftaran->id),
+                        'mapa_validation',
+                        [
+                            'mapa02_pendaftaran_id' => $pendaftaran->id,
+                            'skema_id' => $pendaftaran->skema_id,
+                            'status' => 'menunggu_validasi',
+                        ]
+                    ));
+                }
+            }
+        }
+
         if ($isConfirm) {
+            $sukses = in_array($user->peran, ['admin', 'superadmin'])
+                ? 'FR.MAPA.02 berhasil ditandatangani dan diselesaikan Administrator.'
+                : 'FR.MAPA.02 berhasil dikirim dan menunggu tanda tangan serta validasi Administrator.';
             $targetUrl = in_array($user->peran, ['admin', 'superadmin'])
                 ? route('admin.master-muk.index', ['skema_id' => $pendaftaran->skema_id])
                 : route('asesor.mapa');
 
             return redirect($targetUrl)
-                ->with('sukses', 'Peta Instrumen Asesmen (FR.MAPA 02) berhasil disahkan dan siap digunakan untuk pelaksanaan asesmen!');
+                ->with('sukses', $sukses);
         }
 
         return back()->with('sukses', 'Draft Peta Instrumen Asesmen (FR.MAPA 02) berhasil disimpan.');

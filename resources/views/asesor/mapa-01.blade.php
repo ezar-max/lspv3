@@ -507,6 +507,9 @@
         : null;
     $masterValidatorData = $masterMapa01?->penyusun_validator_tabel['validator_1'] ?? [];
     $isMasterSchemeValidated = ($masterValidatorData['status_validasi'] ?? '') === 'tervalidasi';
+    $isAdminAuthoring = $isAdmin
+        && empty($mapa01?->tanda_tangan_asesor)
+        && (!$isMasterSchemeValidated || empty($masterMapa01?->tanda_tangan_asesor));
 
     if (!$isMasterMode && $isMasterSchemeValidated) {
         $adminValidatorData = !empty($adminValidatorData['ttd']) ? $adminValidatorData : $masterValidatorData;
@@ -522,7 +525,9 @@
     $adminValidatorNama = !empty($adminValidatorData['nama']) ? $adminValidatorData['nama'] : $dbAdminNama;
     $adminValidatorMet = !empty($adminValidatorData['nomor_met']) ? $adminValidatorData['nomor_met'] : $dbAdminMet;
     $adminTtd = $mapa01?->tanda_tangan_admin ?: ($adminValidatorData['ttd'] ?? null);
-    $adminTtdTgl = $mapa01?->tanggal_ttd_admin?->format('d/m/Y') ?: ($adminValidatorData['ttd_tanggal'] ?? '');
+    $adminTtdTgl = $mapa01?->tanggal_ttd_admin
+        ? $mapa01->tanggal_ttd_admin->timezone('Asia/Jakarta')->format('d/m/Y H:i:s') . ' WIB'
+        : ($adminValidatorData['ttd_tanggal'] ?? '');
     $adminStatusValidasi = $adminValidatorData['status_validasi'] ?? null;
     $isValidatedAdmin = $adminStatusValidasi === 'tervalidasi' || (!$isMasterMode && $isMasterSchemeValidated);
     $catatanValidasi = $adminValidatorData['catatan'] ?? null;
@@ -671,7 +676,7 @@
             </a>
         </div>
         <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
-            @if($isAdmin)
+            @if($isAdmin && !$isAdminAuthoring)
                 @if(!$isMasterMode && $isMasterSchemeValidated)
                     <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
                         <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
@@ -697,7 +702,7 @@
             </button>
             @if(!$isAsesi)
                 <button type="button" id="btn-simpan-mapa01" onclick="submitMapa01('draft')" class="tombol tombol-utama tombol-sm btn-simpan-mapa01" style="background: #059669; border-color: #059669; font-weight: 700; display: {{ $isConfigured ? 'none' : 'inline-flex' }};">
-                    {{ $isAdmin ? 'Simpan & Validasi Formulir' : 'Simpan Formulir' }}
+                    {{ $isAdminAuthoring ? 'Simpan Draft' : 'Simpan Formulir' }}
                 </button>
             @endif
         </div>
@@ -1602,12 +1607,15 @@
                     $adminTtd = $mapa01?->tanda_tangan_admin ?: ($penyusunTabelSaved['validator_1']['ttd'] ?? null);
                 }
                 if (empty($adminTtdTgl)) {
-                    $adminTtdTgl = $mapa01?->tanggal_ttd_admin?->format('d/m/Y') ?: ($penyusunTabelSaved['validator_1']['ttd_tanggal'] ?? '');
+                    $adminTtdTgl = $mapa01?->tanggal_ttd_admin
+                        ? $mapa01->tanggal_ttd_admin->timezone('Asia/Jakarta')->format('d/m/Y H:i:s') . ' WIB'
+                        : ($penyusunTabelSaved['validator_1']['ttd_tanggal'] ?? '');
                 }
             @endphp
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div class="grid grid-cols-1 {{ $isAdminAuthoring ? '' : 'md:grid-cols-2' }} gap-4 mb-6">
                 <!-- 1. PENYUSUN (ASESOR PENGUJI) -->
+                @if(!$isAdminAuthoring)
                 <div class="relative">
                     <div style="height: 100%; border: 1px solid #dbe2ea; border-radius: 8px; padding: 1rem; background: #fff;">
                         <div style="font-size: .8rem; font-weight: 700; color: #334155; margin-bottom: .25rem;">Tanda Tangan Asesor <span style="color: #dc2626;">*</span></div>
@@ -1616,6 +1624,9 @@
                             <div id="container-ttd-asesor-preview" style="position: relative; margin-bottom: .75rem;">
                                 @if($asesorTtd)
                                     <img src="{{ asset($asesorTtd) }}" alt="Tanda tangan asesor tersimpan" style="display: block; max-width: 100%; max-height: 90px; margin: 0 auto; object-fit: contain;">
+                                    @if($mapa01?->tanggal_ttd_asesor)
+                                        <div style="text-align: center; font-size: .7rem; color: #64748b; margin-top: .25rem;">{{ $mapa01->tanggal_ttd_asesor->timezone('Asia/Jakarta')->format('d/m/Y H:i:s') }} WIB</div>
+                                    @endif
                                 @else
                                     <div style="padding: .5rem; text-align: center; font-size: .75rem; color: #64748b;">Belum ada tanda tangan yang disimpan.</div>
                                 @endif
@@ -1628,7 +1639,9 @@
                             </div>
                         @elseif($asesorTtd)
                             <img src="{{ asset($asesorTtd) }}" alt="Tanda tangan asesor" style="display: block; max-width: 100%; max-height: 120px; margin: .75rem auto; object-fit: contain;">
-                            <div style="text-align: center; font-size: .7rem; color: #64748b;">{{ $mapa01?->tanggal_ttd_asesor?->format('d/m/Y') }}</div>
+                            @if($mapa01?->tanggal_ttd_asesor)
+                                <div style="text-align: center; font-size: .7rem; color: #64748b;">{{ $mapa01->tanggal_ttd_asesor->timezone('Asia/Jakarta')->format('d/m/Y H:i:s') }} WIB</div>
+                            @endif
                         @else
                             <div style="padding: 1.5rem .75rem; text-align: center; color: #b45309; font-size: .78rem;">Menunggu tanda tangan Asesor.</div>
                         @endif
@@ -1640,8 +1653,30 @@
                     <input type="hidden" name="penyusun_validator_tabel[penyusun_1][ttd_tanggal]" id="input-penyusun-ttd-tgl" value="{{ $penyusunTabelSaved['penyusun_1']['ttd_tanggal'] ?? date('d/m/Y') }}">
                     </div>
                 </div>
+                @endif
 
                 <!-- 2. VALIDATOR (ADMIN LSP) -->
+                @if($isAdminAuthoring)
+                <div class="relative" style="border: 1px solid #dbe2ea; border-radius: 8px; padding: 1rem; background: #fff;">
+                    <div style="font-size: .8rem; font-weight: 700; color: #334155; margin-bottom: .25rem;">Tanda Tangan Admin <span style="color: #dc2626;">*</span></div>
+                    <div style="font-size: .72rem; color: #64748b; margin-bottom: .75rem;">{{ $adminValidatorNama }} · {{ $adminValidatorMet }}</div>
+                    <div id="admin-author-signature-preview" style="min-height: 40px; margin-bottom: .75rem;">
+                        @if($adminTtd)
+                            <img src="{{ asset($adminTtd) }}" alt="Tanda tangan Admin tersimpan" style="display: block; max-width: 100%; max-height: 90px; margin: 0 auto; object-fit: contain;">
+                            <div style="text-align: center; font-size: .7rem; color: #64748b;">{{ $adminTtdTgl }}</div>
+                        @endif
+                    </div>
+                    <canvas id="canvas-ttd-admin-author" width="900" height="240" style="display: block; width: 100%; height: 190px; border: 1px solid #dbe2ea; border-radius: 6px; background: #fff; cursor: crosshair; touch-action: none;"></canvas>
+                    <p id="admin-author-signature-time" style="margin: .45rem 0 .75rem; font-size: .7rem; color: #64748b;">{{ $adminTtd ? 'Tanda tangan tersimpan: ' . $adminTtdTgl : 'Belum ditandatangani.' }}</p>
+                    <div style="display: flex; gap: .6rem; flex-wrap: wrap;">
+                        <button type="button" id="btn-clear-canvas-admin-author" class="tombol tombol-sekunder tombol-sm">Hapus</button>
+                        <button type="button" onclick="window.saveAdminAuthorSignature()" class="tombol tombol-utama tombol-sm" style="background: #4f46e5; border-color: #4f46e5;">Simpan Tanda Tangan</button>
+                    </div>
+                    <input type="hidden" name="tanda_tangan_admin" id="input-ttd-admin-author-base64" value="{{ $adminTtd }}">
+                    <input type="hidden" name="penyusun_validator_tabel[validator_1][nama]" value="{{ $adminValidatorNama }}">
+                    <input type="hidden" name="penyusun_validator_tabel[validator_1][nomor_met]" value="{{ $adminValidatorMet }}">
+                </div>
+                @else
                 <div class="relative" style="border: 1px solid #dbe2ea; border-radius: 8px; padding: 1rem; background: #fff;">
                     <div style="font-size: .8rem; font-weight: 700; color: #334155; margin-bottom: .25rem;">Tanda Tangan Validator (Admin LSP)</div>
                     <div style="font-size: .72rem; color: #64748b; margin-bottom: .75rem;">{{ $adminValidatorNama }} · {{ $adminValidatorMet }}</div>
@@ -1673,6 +1708,7 @@
                         @endif
                     @endif
                 </div>
+                @endif
             </div>
 
             <!-- TOMBOL AKSI & NAVIGASI DI BAWAH -->
@@ -1709,20 +1745,22 @@
                     </a>
                     
                     <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center;">
-                        @if($isAdmin)
+                        @if($isAdmin && !$isAdminAuthoring && (!$isMasterSchemeValidated || $isMasterMode))
                             <button type="button" onclick="bukaModal('modalValidasiAdminMapa01')" class="tombol tombol-utama" style="background: #059669; border-color: #059669; font-weight: 700; padding: 0.65rem 1.5rem;">
                                 {{ $isValidatedAdmin ? 'Perbarui Validasi MAPA.01' : 'Validasi & Sahkan FR.MAPA.01' }}
                             </button>
                         @endif
 
+                        @if(!$isAdmin || $isAdminAuthoring || $isMasterMode || !$isMasterSchemeValidated)
                         <div id="bottom-actions-edit" style="display: {{ $isConfigured ? 'none' : 'flex' }}; gap: 0.75rem; flex-wrap: wrap;">
                             <button type="button" onclick="submitMapa01('draft')" class="tombol tombol-sekunder" style="font-weight: 700;">
                                 Simpan Draft
                             </button>
                             <button type="button" onclick="submitMapa01('konfirmasi')" class="tombol tombol-utama" style="background: #2563eb; border-color: #2563eb; font-weight: 700; padding: 0.65rem 1.5rem;">
-                                {{ $isAdmin ? 'Sahkan & Validasi FR.MAPA.01' : 'Sahkan Rencana FR.MAPA.01' }}
+                                {{ $isAdminAuthoring ? 'Sahkan & Selesaikan FR.MAPA.01' : ($isAdmin ? 'Validasi & Sahkan FR.MAPA.01' : 'Sahkan Rencana FR.MAPA.01') }}
                             </button>
                         </div>
+                        @endif
 
                         <div id="bottom-actions-view" style="display: {{ $isConfigured ? 'flex' : 'none' }};">
                             <span class="text-xs text-slate-500 font-medium">Dokumen FR.MAPA.01 Telah Dikonfigurasi</span>
@@ -1828,7 +1866,8 @@
                 <div style="padding: .75rem; background: #fff;">
                     <canvas id="canvas-ttd-validator" width="480" height="150" class="canvas-signature-pad" style="width: 100%; height: 150px; border: 1.5px dashed #94a3b8; border-radius: 8px; background: #fff; cursor: crosshair; touch-action: none; display: block;"></canvas>
                     <input type="hidden" name="tanda_tangan_admin" id="input-ttd-validator-modal-base64">
-                    <p id="validator-signature-hint" style="font-size: .72rem; color: #64748b; margin: .45rem 0 0;">Gambar tanda tangan admin untuk menyelesaikan validasi.</p>
+                    <p id="validator-signature-time" style="font-size: .72rem; color: #64748b; margin: .45rem 0 0;">Belum ditandatangani.</p>
+                    <p id="validator-signature-hint" style="font-size: .72rem; color: #64748b; margin: .2rem 0 0;">Gambar tanda tangan admin untuk menyelesaikan validasi.</p>
                 </div>
             </div>
 
@@ -1855,7 +1894,100 @@
     <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
     <script src="{{ asset('js/asesi/pendaftaran-bagian32.js') }}"></script>
     <script>
+        if (!window.SignaturePad) {
+            window.SignaturePad = class NativeSignaturePad {
+                constructor(canvas, options = {}) {
+                    this.canvas = canvas;
+                    this.context = canvas.getContext('2d');
+                    this.penColor = options.penColor || '#111827';
+                    this.backgroundColor = options.backgroundColor || 'rgba(0, 0, 0, 0)';
+                    this.empty = true;
+                    this.drawing = false;
+                    this.lastPoint = null;
+                    this.listeners = new Map();
+                    this.canvas.style.touchAction = 'none';
+                    this.context.setTransform(1, 0, 0, 1, 0, 0);
+                    this.canvas.addEventListener('pointerdown', event => this.startStroke(event));
+                    this.canvas.addEventListener('pointermove', event => this.moveStroke(event));
+                    this.canvas.addEventListener('pointerup', event => this.endStroke(event));
+                    this.canvas.addEventListener('pointercancel', event => this.endStroke(event));
+                    this.canvas.addEventListener('lostpointercapture', event => this.endStroke(event));
+                    this.clear();
+                }
+
+                addEventListener(name, callback) {
+                    const callbacks = this.listeners.get(name) || [];
+                    callbacks.push(callback);
+                    this.listeners.set(name, callbacks);
+                }
+
+                pointFromEvent(event) {
+                    const rect = this.canvas.getBoundingClientRect();
+                    return {
+                        x: (event.clientX - rect.left) * (this.canvas.width / (rect.width || 1)),
+                        y: (event.clientY - rect.top) * (this.canvas.height / (rect.height || 1)),
+                    };
+                }
+
+                startStroke(event) {
+                    event.preventDefault();
+                    this.canvas.setPointerCapture?.(event.pointerId);
+                    this.drawing = true;
+                    this.empty = false;
+                    this.lastPoint = this.pointFromEvent(event);
+                    const scale = this.canvas.width / (this.canvas.getBoundingClientRect().width || 1);
+                    this.context.fillStyle = this.penColor;
+                    this.context.beginPath();
+                    this.context.arc(this.lastPoint.x, this.lastPoint.y, 1.4 * scale, 0, Math.PI * 2);
+                    this.context.fill();
+                }
+
+                moveStroke(event) {
+                    if (!this.drawing) return;
+                    event.preventDefault();
+                    const point = this.pointFromEvent(event);
+                    const scale = this.canvas.width / (this.canvas.getBoundingClientRect().width || 1);
+                    this.context.strokeStyle = this.penColor;
+                    this.context.lineWidth = 2.8 * scale;
+                    this.context.lineCap = 'round';
+                    this.context.lineJoin = 'round';
+                    this.context.beginPath();
+                    this.context.moveTo(this.lastPoint.x, this.lastPoint.y);
+                    this.context.lineTo(point.x, point.y);
+                    this.context.stroke();
+                    this.lastPoint = point;
+                }
+
+                endStroke(event) {
+                    if (!this.drawing) return;
+                    event.preventDefault?.();
+                    this.drawing = false;
+                    this.lastPoint = null;
+                    (this.listeners.get('endStroke') || []).forEach(callback => callback({ type: 'endStroke', target: this.canvas }));
+                }
+
+                clear() {
+                    this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                    if (this.backgroundColor !== 'rgba(0, 0, 0, 0)') {
+                        this.context.fillStyle = this.backgroundColor;
+                        this.context.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                    }
+                    this.empty = true;
+                    this.drawing = false;
+                }
+
+                isEmpty() {
+                    return this.empty;
+                }
+
+                toDataURL(type = 'image/png') {
+                    return this.canvas.toDataURL(type);
+                }
+            };
+        }
+
         let isMapa01EditMode = {{ (!$isAsesi && $isConfigured) ? 'false' : 'true' }};
+        const isAdminAuthoringMapa01 = @json($isAdminAuthoring);
 
         function applyMapa01Mode() {
             const container = document.getElementById('container-mapa01');
@@ -2069,13 +2201,14 @@
             const form = document.getElementById('form-mapa01');
             if (!form) return;
 
-            if (aksi === 'konfirmasi' && !document.getElementById('input-ttd-asesor-base64')?.value) {
+            const requiredSignatureInput = document.getElementById(isAdminAuthoringMapa01 ? 'input-ttd-admin-author-base64' : 'input-ttd-asesor-base64');
+            if (aksi === 'konfirmasi' && !requiredSignatureInput?.value) {
                 if (typeof Swal !== 'undefined') {
-                    Swal.fire({ icon: 'warning', title: 'Tanda Tangan Asesor Wajib', text: 'Bubuhkan tanda tangan sebelum mengirim FR.MAPA.01 untuk validasi.', confirmButtonColor: '#059669' });
+                    Swal.fire({ icon: 'warning', title: 'Tanda Tangan Wajib', text: isAdminAuthoringMapa01 ? 'Bubuhkan tanda tangan Admin untuk menyelesaikan FR.MAPA.01.' : 'Bubuhkan tanda tangan Asesor sebelum mengirim FR.MAPA.01 untuk validasi.', confirmButtonColor: '#059669' });
                 } else {
-                    alert('Bubuhkan tanda tangan sebelum mengirim FR.MAPA.01 untuk validasi.');
+                    alert(isAdminAuthoringMapa01 ? 'Bubuhkan tanda tangan Admin untuk menyelesaikan FR.MAPA.01.' : 'Bubuhkan tanda tangan Asesor sebelum mengirim FR.MAPA.01 untuk validasi.');
                 }
-                document.getElementById('canvas-ttd-asesor')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                document.getElementById(isAdminAuthoringMapa01 ? 'canvas-ttd-admin-author' : 'canvas-ttd-asesor')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 return;
             }
             const inputAksi = document.getElementById('inputAksiMapa01');
@@ -2088,10 +2221,10 @@
                     { selector: 'input[name="tujuan_asesmen"]:checked', msg: 'Tujuan Asesmen belum dipilih (Bagian 1.1)', elem: 'input[name="tujuan_asesmen"]' },
                     { selector: 'input[name="konteks_lingkungan"]:checked', msg: 'Konteks Lingkungan belum dipilih (Bagian 1.1)', elem: 'input[name="konteks_lingkungan"]' },
                     { selector: 'input[name="konteks_peluang_bukti"]:checked', msg: 'Peluang Bukti belum dipilih (Bagian 1.1)', elem: 'input[name="konteks_peluang_bukti"]' },
-                    { selector: 'input[name="konteks_hubungan_sk"]:checked', msg: 'Hubungan Standar Kompetensi belum dipilih (Bagian 1.1)', elem: 'input[name="konteks_hubungan_sk"]' },
-                    { selector: 'input[name="sasaran_asesmen"]:checked', msg: 'Sasaran Asesmen belum dipilih (Bagian 1.1)', elem: 'input[name="sasaran_asesmen"]' },
+                    { selector: 'input[name="hubungan_standar_bukti"]:checked', msg: 'Hubungan standar dengan bukti belum dipilih (Bagian 1.1)', elem: 'input[name="hubungan_standar_bukti"]' },
+                    { selector: 'input[name="hubungan_standar_aktivitas"]:checked', msg: 'Hubungan standar dengan aktivitas kerja belum dipilih (Bagian 1.1)', elem: 'input[name="hubungan_standar_aktivitas"]' },
+                    { selector: 'input[name="hubungan_standar_pembelajaran"]:checked', msg: 'Hubungan standar dengan kegiatan pembelajaran belum dipilih (Bagian 1.1)', elem: 'input[name="hubungan_standar_pembelajaran"]' },
                     { selector: 'input[name="pelaksana_asesmen[]"]:checked', msg: 'Pelaksana Asesmen belum dipilih (Bagian 1.1)', elem: 'input[name="pelaksana_asesmen[]"]' },
-                    { selector: 'input[name="penyesuaian_kebutuhan_spesifik"]:checked', msg: 'Penyesuaian Kebutuhan Spesifik belum dipilih (Bagian 1.1)', elem: 'input[name="penyesuaian_kebutuhan_spesifik"]' },
                     { selector: 'input[name="standar_industri[]"]:checked', msg: 'Standar Industri belum dipilih (Bagian 1.1)', elem: 'input[name="standar_industri[]"]' },
                     { selector: 'input[name="karakteristik_kandidat_status"]:checked', msg: 'Karakteristik Kandidat belum dipilih (Bagian 3)', elem: 'input[name="karakteristik_kandidat_status"]' },
                     { selector: 'input[name="kebutuhan_kontekstualisasi_status"]:checked', msg: 'Kebutuhan Kontekstualisasi belum dipilih (Bagian 3)', elem: 'input[name="kebutuhan_kontekstualisasi_status"]' },
@@ -2177,6 +2310,19 @@
             }
         }
 
+        function formatWibDateTime(date = new Date()) {
+            return new Intl.DateTimeFormat('id-ID', {
+                timeZone: 'Asia/Jakarta',
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hourCycle: 'h23'
+            }).format(date).replace(',', '') + ' WIB';
+        }
+
         function initValidatorCanvas() {
             const canvas = document.getElementById('canvas-ttd-validator');
             if (!canvas) return;
@@ -2187,14 +2333,20 @@
                 canvas.width = (canvas.offsetWidth || 480) * ratio;
                 canvas.height = (canvas.offsetHeight || 150) * ratio;
                 canvas.getContext("2d").scale(ratio, ratio);
-                validatorPad = new SignaturePad(canvas, { backgroundColor: 'rgb(255, 255, 255)' });
+                validatorPad = new window.SignaturePad(canvas, { backgroundColor: 'rgb(255, 255, 255)' });
                 validatorPad.clear();
+                validatorPad.addEventListener('endStroke', () => {
+                    const time = document.getElementById('validator-signature-time');
+                    if (time) time.textContent = `Ditandatangani: ${formatWibDateTime()}`;
+                });
             }
 
             document.getElementById('btn-clear-canvas-validator')?.addEventListener('click', () => {
                 if (validatorPad) validatorPad.clear();
                 const input = document.getElementById('input-ttd-validator-modal-base64');
                 if (input) input.value = '';
+                const time = document.getElementById('validator-signature-time');
+                if (time) time.textContent = 'Belum ditandatangani.';
             });
 
             document.getElementById('form-validasi-admin-mapa01')?.addEventListener('submit', (event) => {
@@ -2214,6 +2366,47 @@
             });
         }
 
+        window.adminAuthorSignaturePad = null;
+
+        function initAdminAuthorSignatureCanvas() {
+            const canvas = document.getElementById('canvas-ttd-admin-author');
+            if (!canvas || !window.SignaturePad) return;
+
+            const ratio = Math.max(window.devicePixelRatio || 1, 1);
+            canvas.width = (canvas.offsetWidth || 900) * ratio;
+            canvas.height = (canvas.offsetHeight || 190) * ratio;
+            canvas.getContext('2d').scale(ratio, ratio);
+            window.adminAuthorSignaturePad = new window.SignaturePad(canvas, { backgroundColor: 'rgb(255, 255, 255)' });
+            window.adminAuthorSignaturePad.addEventListener('endStroke', window.saveAdminAuthorSignature);
+        }
+
+        window.clearAdminAuthorSignature = function() {
+            window.adminAuthorSignaturePad?.clear();
+            const input = document.getElementById('input-ttd-admin-author-base64');
+            if (input) input.value = '';
+            const preview = document.getElementById('admin-author-signature-preview');
+            if (preview) preview.innerHTML = '';
+            const signedAt = document.getElementById('admin-author-signature-time');
+            if (signedAt) signedAt.textContent = 'Belum ditandatangani.';
+        };
+
+        window.saveAdminAuthorSignature = function() {
+            const pad = window.adminAuthorSignaturePad;
+            if (!pad || pad.isEmpty()) {
+                alert('Silakan gambar tanda tangan Admin terlebih dahulu.');
+                return;
+            }
+
+            const signature = pad.toDataURL('image/png');
+            const input = document.getElementById('input-ttd-admin-author-base64');
+            if (input) input.value = signature;
+            const signedAt = formatWibDateTime();
+            const preview = document.getElementById('admin-author-signature-preview');
+            if (preview) preview.innerHTML = `<img src="${signature}" alt="Pratinjau tanda tangan Admin" style="display:block;max-width:100%;max-height:90px;margin:0 auto;object-fit:contain">`;
+            const time = document.getElementById('admin-author-signature-time');
+            if (time) time.textContent = `Ditandatangani: ${signedAt}`;
+        };
+
         window.signaturePadModal = null;
 
         window.bukaModalTtd = function() {
@@ -2223,8 +2416,9 @@
                 canvas.width = (canvas.offsetWidth || 900) * ratio;
                 canvas.height = (canvas.offsetHeight || 190) * ratio;
                 canvas.getContext('2d').scale(ratio, ratio);
-                window.signaturePadModal = new SignaturePad(canvas, { backgroundColor: 'rgb(255, 255, 255)' });
+                window.signaturePadModal = new window.SignaturePad(canvas, { backgroundColor: 'rgb(255, 255, 255)' });
                 window.signaturePadModal.clear();
+                window.signaturePadModal.addEventListener('endStroke', window.saveTtdAsesor);
             }
         };
 
@@ -2264,13 +2458,7 @@
                 }
                 hiddenPenyusun.value = dataUrl;
 
-                const todayFormatted = (() => {
-                    const now = new Date();
-                    const d = String(now.getDate()).padStart(2, '0');
-                    const m = String(now.getMonth() + 1).padStart(2, '0');
-                    const y = now.getFullYear();
-                    return `${d}/${m}/${y}`;
-                })();
+                const signedAt = formatWibDateTime();
 
                 let hiddenTgl = document.getElementById('input-penyusun-ttd-tgl');
                 if (!hiddenTgl) {
@@ -2281,10 +2469,10 @@
                     const f = document.getElementById('form-mapa01') || document.body;
                     f.appendChild(hiddenTgl);
                 }
-                hiddenTgl.value = todayFormatted;
+                hiddenTgl.value = signedAt;
 
                 const container = document.getElementById('container-ttd-asesor-preview');
-                if (container) container.innerHTML = `<img src="${dataUrl}" alt="Pratinjau tanda tangan asesor" style="display:block;max-width:100%;max-height:90px;margin:0 auto;object-fit:contain"><div style="text-align:center;font-size:.7rem;color:#64748b;margin-top:.25rem">${todayFormatted} · Siap disimpan</div>`;
+                if (container) container.innerHTML = `<img src="${dataUrl}" alt="Pratinjau tanda tangan asesor" style="display:block;max-width:100%;max-height:90px;margin:0 auto;object-fit:contain"><div style="text-align:center;font-size:.7rem;color:#64748b;margin-top:.25rem">Ditandatangani: ${signedAt}</div>`;
 
                 const badgePenyusun = document.getElementById('badge-status-penyusun-ttd');
                 if (badgePenyusun) {
@@ -2314,8 +2502,10 @@
         document.addEventListener('DOMContentLoaded', function() {
             applyMapa01Mode();
             window.bukaModalTtd();
+            initAdminAuthorSignatureCanvas();
             initValidatorCanvas();
             document.getElementById('btn-clear-canvas-asesor')?.addEventListener('click', window.clearTtdAsesor);
+            document.getElementById('btn-clear-canvas-admin-author')?.addEventListener('click', window.clearAdminAuthorSignature);
             initMatriksAsesmenLogic();
 
             const formM = document.getElementById('form-mapa01');

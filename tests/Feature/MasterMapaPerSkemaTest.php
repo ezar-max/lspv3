@@ -134,13 +134,15 @@ class MasterMapaPerSkemaTest extends TestCase
             'aksi' => 'konfirmasi',
             'matriks_peta' => $matrix,
             'catatan_asesor' => 'Matriks master terverifikasi asesor RPL.',
+            'tanda_tangan_asesor' => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
         ]);
 
         $postResponse->assertRedirect(route('asesor.mapa', ['skema_id' => $this->skema->id]));
 
         $master02 = Mapa02::where('skema_id', $this->skema->id)->whereNull('pendaftaran_id')->first();
         $this->assertNotNull($master02);
-        $this->assertEquals('selesai', $master02->status_mapa);
+        $this->assertEquals('menunggu_validasi', $master02->status_mapa);
+        $this->assertNotEmpty($master02->tanda_tangan_asesor);
         $this->assertEquals(1, $master02->matriks_peta[$this->unit->id][$this->elemen->id][$this->kuk->id]['clo']);
     }
 

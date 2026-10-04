@@ -125,6 +125,15 @@ class AsesorMapaWorkflowTest extends TestCase
     {
         $response01 = $this->actingAs($this->asesorA)->get(route('asesor.mapa-01', $this->pendaftaran->id));
         $response01->assertOk();
+        $response01->assertSee('input[name="hubungan_standar_bukti"]:checked', false);
+        $response01->assertSee('input[name="hubungan_standar_aktivitas"]:checked', false);
+        $response01->assertSee('input[name="hubungan_standar_pembelajaran"]:checked', false);
+        $response01->assertSee("signaturePadModal.addEventListener('endStroke', window.saveTtdAsesor)", false);
+        $response01->assertSee('class NativeSignaturePad', false);
+        $response01->assertSee("this.canvas.addEventListener('pointerdown'", false);
+        $this->assertStringNotContainsString('input[name="sasaran_asesmen"]:checked', $response01->getContent());
+        $this->assertStringNotContainsString('input[name="penyesuaian_kebutuhan_spesifik"]:checked', $response01->getContent());
+        $response01->assertDontSee('konteks_hubungan_sk', false);
 
         $response02 = $this->actingAs($this->asesorA)->get(route('asesor.mapa-02', $this->pendaftaran->id));
         $response02->assertOk();
@@ -263,6 +272,7 @@ class AsesorMapaWorkflowTest extends TestCase
     /** 8. Confirm berhasil & status menjadi selesai */
     public function test_confirm_persists_confirmed_status(): void
     {
+        $signature = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
         $matrix = [
             $this->unit1->id => [
                 $this->elemen1->id => [
@@ -275,15 +285,76 @@ class AsesorMapaWorkflowTest extends TestCase
             'aksi' => 'konfirmasi',
             'matriks_peta' => $matrix,
             'catatan_asesor' => 'Rencana asesmen disetujui.',
+            'tanda_tangan_asesor' => $signature,
         ]);
 
         $response->assertRedirect(route('asesor.mapa'));
 
         $mapa02 = Mapa02::where('pendaftaran_id', $this->pendaftaran->id)->first();
         $this->assertNotNull($mapa02);
-        $this->assertEquals('selesai', $mapa02->status_mapa);
-        $this->assertNull($mapa02->tanda_tangan_asesor);
-        $this->assertNull($mapa02->tanggal_ttd_asesor);
+        $this->assertEquals('menunggu_validasi', $mapa02->status_mapa);
+        $this->assertNotEmpty($mapa02->tanda_tangan_asesor);
+        $this->assertNotNull($mapa02->tanggal_ttd_asesor);
+    }
+
+    public function test_admin_signature_completes_mapa02_without_assessor_signature(): void
+    {
+        $signature = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+        $matrix = [
+            $this->unit1->id => [
+                $this->elemen1->id => [
+                    $this->kuk1->id => ['clo' => 1, 'dpt' => 1],
+                ],
+            ],
+        ];
+
+        $this->actingAs($this->admin)->post(route('asesor.mapa-02.simpan', $this->pendaftaran->id), [
+            'aksi' => 'konfirmasi',
+            'matriks_peta' => $matrix,
+            'tanda_tangan_admin' => $signature,
+        ])->assertRedirect(route('admin.master-muk.index', ['skema_id' => $this->skema->id]));
+
+        $mapa02 = Mapa02::where('pendaftaran_id', $this->pendaftaran->id)->firstOrFail();
+        $this->assertSame('selesai', $mapa02->status_mapa);
+        $this->assertEmpty($mapa02->tanda_tangan_asesor);
+        $this->assertNotEmpty($mapa02->tanda_tangan_admin);
+        $this->assertNotNull($mapa02->tanggal_ttd_admin);
+    }
+
+    public function test_admin_review_completes_assessor_submitted_mapa02(): void
+    {
+        $signature = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+        $matrix = [
+            $this->unit1->id => [
+                $this->elemen1->id => [
+                    $this->kuk1->id => ['clo' => 1, 'dpt' => 1],
+                ],
+            ],
+        ];
+
+        $this->actingAs($this->asesorA)->post(route('asesor.mapa-02.simpan', $this->pendaftaran->id), [
+            'aksi' => 'konfirmasi',
+            'matriks_peta' => $matrix,
+            'tanda_tangan_asesor' => $signature,
+        ])->assertRedirect(route('asesor.mapa'));
+
+        $mapa02 = Mapa02::where('pendaftaran_id', $this->pendaftaran->id)->firstOrFail();
+        $this->assertSame('menunggu_validasi', $mapa02->status_mapa);
+        $asesorSignature = $mapa02->tanda_tangan_asesor;
+
+        $this->actingAs($this->admin)->post(route('asesor.mapa-02.simpan', $this->pendaftaran->id), [
+            'aksi' => 'konfirmasi',
+            'matriks_peta' => $matrix,
+            'tanda_tangan_asesor' => $asesorSignature,
+            'tanda_tangan_admin' => $signature,
+            'konfirmasi_pemeriksaan' => '1',
+        ])->assertRedirect(route('admin.master-muk.index', ['skema_id' => $this->skema->id]));
+
+        $mapa02->refresh();
+        $this->assertSame('selesai', $mapa02->status_mapa);
+        $this->assertSame($asesorSignature, $mapa02->tanda_tangan_asesor);
+        $this->assertNotEmpty($mapa02->tanda_tangan_admin);
+        $this->assertNotNull($mapa02->tanggal_ttd_admin);
     }
 
     /** 9. Confirm tanpa instrumen valid ditolak dengan pesan error */

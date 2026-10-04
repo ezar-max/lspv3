@@ -795,13 +795,14 @@ class AdminController extends Controller
         if (!$ttdAdmin || str_starts_with($ttdAdmin, 'data:image/')) {
             return back()->withErrors(['tanda_tangan_admin' => 'Tanda tangan Admin tidak valid.']);
         }
+        $adminSignedAt = now('Asia/Jakarta');
 
         $existingTable = $mapa01->penyusun_validator_tabel ?: [];
         $existingTable['validator_1'] = [
             'nama' => $request->validator_nama ?: ($user->nama_lengkap ?: 'Administrator LSP'),
             'nomor_met' => $request->validator_nomor_met ?: ($user->nomor_registrasi ?: 'REG.ADM.LSP.001'),
             'ttd' => $ttdAdmin,
-            'ttd_tanggal' => now()->format('d/m/Y'),
+            'ttd_tanggal' => $adminSignedAt->format('d/m/Y H:i:s') . ' WIB',
             'status_validasi' => 'tervalidasi',
             'catatan' => $request->catatan_validasi ?: null,
         ];
@@ -811,18 +812,20 @@ class AdminController extends Controller
         $existingTable['penyusun_1']['nama'] = $existingTable['penyusun_1']['nama'] ?? ($asesorModel?->nama_lengkap ?? 'Asesor Penguji');
         $existingTable['penyusun_1']['nomor_met'] = $existingTable['penyusun_1']['nomor_met'] ?? ($asesorModel?->nomor_registrasi ?? 'MET.000.001222 2026');
         $existingTable['penyusun_1']['ttd'] = $mapa01->tanda_tangan_asesor;
-        $existingTable['penyusun_1']['ttd_tanggal'] = $mapa01->tanggal_ttd_asesor?->format('d/m/Y');
+        $existingTable['penyusun_1']['ttd_tanggal'] = $mapa01->tanggal_ttd_asesor
+            ? $mapa01->tanggal_ttd_asesor->timezone('Asia/Jakarta')->format('d/m/Y H:i:s') . ' WIB'
+            : ($existingTable['penyusun_1']['ttd_tanggal'] ?? null);
 
         $mapa01->penyusun_validator_tabel = $existingTable;
         $mapa01->tanda_tangan_admin = $ttdAdmin;
-        $mapa01->tanggal_ttd_admin = now();
+        $mapa01->tanggal_ttd_admin = $adminSignedAt;
         $mapa01->status_mapa = 'selesai';
         $mapa01->save();
 
         if ($mapa01->pendaftaran_id) {
             PendaftaranAsesi::where('id', $mapa01->pendaftaran_id)->update([
                 'tanda_tangan_admin' => $ttdAdmin,
-                'tanggal_ttd_admin' => now(),
+                'tanggal_ttd_admin' => $adminSignedAt,
             ]);
         } else {
             // Master Skema: Sinkronkan ke seluruh pendaftaran asesi pada skema ini
@@ -831,13 +834,13 @@ class AdminController extends Controller
                 ->update([
                     'penyusun_validator_tabel' => $existingTable,
                     'tanda_tangan_admin' => $ttdAdmin,
-                    'tanggal_ttd_admin' => now(),
+                    'tanggal_ttd_admin' => $adminSignedAt,
                     'status_mapa' => 'selesai',
                 ]);
 
             PendaftaranAsesi::where('skema_id', $mapa01->skema_id)->update([
                 'tanda_tangan_admin' => $ttdAdmin,
-                'tanggal_ttd_admin' => now(),
+                'tanggal_ttd_admin' => $adminSignedAt,
             ]);
         }
 

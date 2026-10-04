@@ -57,7 +57,7 @@ class AdminMapa01AutoValidationTest extends TestCase
     /**
      * 1. Halaman MAPA-01 tidak boleh menampilkan tanda tangan SVG otomatis teks font palsu.
      */
-    public function test_admin_can_review_assessor_signature_and_must_sign_to_validate(): void
+    public function test_admin_authoring_shows_only_admin_signature_canvas(): void
     {
         $response = $this->actingAs($this->admin)->get(route('asesor.skema.mapa-01', $this->skema->id));
         $response->assertStatus(200);
@@ -71,11 +71,50 @@ class AdminMapa01AutoValidationTest extends TestCase
         $response->assertDontSee('Bubuhkan Tanda Tangan');
         $response->assertDontSee('Bubuhkan TTD');
 
-        $response->assertSee('canvas-ttd-validator');
+        $response->assertSee('canvas-ttd-admin-author');
+        $response->assertSee("adminAuthorSignaturePad.addEventListener('endStroke', window.saveAdminAuthorSignature)", false);
         $response->assertSee('name="tanda_tangan_admin"', false);
+        $this->assertSame(0, preg_match('/<canvas[^>]*id="canvas-ttd-asesor"/', $response->getContent()));
 
-        // Harus menampilkan tombol Sahkan & Validasi FR.MAPA.01
-        $response->assertSee('Sahkan &amp; Validasi FR.MAPA.01', false);
+        $response->assertSee('Sahkan &amp; Selesaikan FR.MAPA.01', false);
+    }
+
+    public function test_admin_can_complete_master_mapa01_with_admin_signature_only(): void
+    {
+        $signature = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+
+        $this->actingAs($this->admin)->post(route('asesor.skema.mapa-01.simpan', $this->skema->id), [
+            'aksi' => 'konfirmasi',
+            'tujuan_asesmen' => 'Sertifikasi',
+            'tanda_tangan_admin' => $signature,
+        ])->assertRedirect(route('asesor.mapa', ['skema_id' => $this->skema->id]));
+
+        $master = Mapa01::where('skema_id', $this->skema->id)->whereNull('pendaftaran_id')->firstOrFail();
+        $this->assertSame('selesai', $master->status_mapa);
+        $this->assertEmpty($master->tanda_tangan_asesor);
+        $this->assertNotEmpty($master->tanda_tangan_admin);
+        $this->assertSame('tervalidasi', $master->penyusun_validator_tabel['validator_1']['status_validasi']);
+
+        $asesi = Pengguna::create([
+            'nama_lengkap' => 'Peserta Turunan Master Admin',
+            'email' => 'peserta.master.admin@lsp.test',
+            'kata_sandi' => bcrypt('password'),
+            'peran' => 'asesi',
+        ]);
+        $pendaftaran = PendaftaranAsesi::create([
+            'nomor_pendaftaran' => 'REG-MASTER-ADMIN-001',
+            'asesi_id' => $asesi->id,
+            'skema_id' => $this->skema->id,
+            'asesor_id' => $this->asesor->id,
+            'status_pendaftaran' => 'diterima',
+            'tujuan_asesmen' => 'Sertifikasi',
+            'tanggal_daftar' => now(),
+        ]);
+
+        $response = $this->actingAs($this->admin)->get(route('asesor.mapa-01', $pendaftaran->id));
+        $response->assertOk();
+        $response->assertSee('canvas-ttd-admin-author');
+        $this->assertSame(0, preg_match('/<canvas[^>]*id="canvas-ttd-asesor"/', $response->getContent()));
     }
 
     /**
@@ -95,6 +134,9 @@ class AdminMapa01AutoValidationTest extends TestCase
         $master = Mapa01::where('skema_id', $this->skema->id)->whereNull('pendaftaran_id')->first();
         $this->assertNotNull($master);
         $this->assertNotEmpty($master->tanda_tangan_asesor);
+        $this->assertNotNull($master->tanggal_ttd_asesor);
+        $asesorSignedAt = $master->tanggal_ttd_asesor->timezone('Asia/Jakarta')->format('d/m/Y H:i:s') . ' WIB';
+        $this->assertSame($asesorSignedAt, $master->penyusun_validator_tabel['penyusun_1']['ttd_tanggal']);
         $this->assertSame('menunggu_validasi', $master->status_mapa);
         $this->assertNotSame('tervalidasi', $master->penyusun_validator_tabel['validator_1']['status_validasi'] ?? null);
 
@@ -120,6 +162,9 @@ class AdminMapa01AutoValidationTest extends TestCase
         $master->refresh();
         $this->assertSame('selesai', $master->status_mapa);
         $this->assertNotEmpty($master->tanda_tangan_admin);
+        $this->assertNotNull($master->tanggal_ttd_admin);
+        $adminSignedAt = $master->tanggal_ttd_admin->timezone('Asia/Jakarta')->format('d/m/Y H:i:s') . ' WIB';
+        $this->assertSame($adminSignedAt, $master->penyusun_validator_tabel['validator_1']['ttd_tanggal']);
         $this->assertSame('tervalidasi', $master->penyusun_validator_tabel['validator_1']['status_validasi'] ?? null);
         $this->assertSame($master->tanda_tangan_asesor, $master->penyusun_validator_tabel['penyusun_1']['ttd'] ?? null);
     }
@@ -127,7 +172,7 @@ class AdminMapa01AutoValidationTest extends TestCase
     /**
      * 3. Admin menyimpan MAPA-01 peserta langsung tervalidasi tanpa membuat SVG palsu.
      */
-    public function test_admin_cannot_submit_candidate_mapa01_without_assessor_signature(): void
+    public function test_admin_can_complete_candidate_mapa01_with_only_admin_signature(): void
     {
         $asesi = Pengguna::create([
             'nama_lengkap' => 'Peserta Uji Satu',
@@ -146,12 +191,26 @@ class AdminMapa01AutoValidationTest extends TestCase
             'tanggal_daftar' => now(),
         ]);
 
+        $signature = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+
         $this->actingAs($this->admin)->post(route('asesor.mapa-01.simpan', $pendaftaran->id), [
             'aksi' => 'konfirmasi',
             'tujuan_asesmen' => 'Sertifikasi',
-        ])->assertSessionHasErrors('tanda_tangan_asesor');
+        ])->assertSessionHasErrors('tanda_tangan_admin');
 
         $this->assertDatabaseMissing('mapa_01', ['pendaftaran_id' => $pendaftaran->id]);
+
+        $this->actingAs($this->admin)->post(route('asesor.mapa-01.simpan', $pendaftaran->id), [
+            'aksi' => 'konfirmasi',
+            'tujuan_asesmen' => 'Sertifikasi',
+            'tanda_tangan_admin' => $signature,
+        ])->assertRedirect(route('asesor.mapa', ['skema_id' => $this->skema->id]));
+
+        $mapa01 = Mapa01::where('pendaftaran_id', $pendaftaran->id)->firstOrFail();
+        $this->assertSame('selesai', $mapa01->status_mapa);
+        $this->assertNotEmpty($mapa01->tanda_tangan_admin);
+        $this->assertEmpty($mapa01->tanda_tangan_asesor);
+        $this->assertSame('tervalidasi', $mapa01->penyusun_validator_tabel['validator_1']['status_validasi']);
     }
 
     /**

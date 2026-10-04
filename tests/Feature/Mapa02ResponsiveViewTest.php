@@ -106,6 +106,8 @@ class Mapa02ResponsiveViewTest extends TestCase
         $response->assertSee('mapa02-quick-actions');
         $response->assertSee('mapa02-meta-grid');
         $response->assertSee('Geser tabel ke kanan untuk instrumen');
+        $response->assertSee('canvasMapa02Asesor');
+        $response->assertSee('inputTtdAsesor');
     }
 
     public function test_admin_can_view_mapa02_with_responsive_elements()
@@ -119,6 +121,29 @@ class Mapa02ResponsiveViewTest extends TestCase
         $response->assertSee('mapa02-th-ia');
         $response->assertSee('mapa02-td-ia');
         $response->assertSee('mapa02-cb');
+        $response->assertSee('canvasMapa02Admin');
+        $response->assertSee('inputTtdAdmin');
+        $this->assertSame(0, preg_match('/<canvas[^>]*id="canvasMapa02Asesor"/', $response->getContent()));
+    }
+
+    public function test_admin_review_sees_assessor_signature_and_admin_validation_canvas()
+    {
+        \App\Models\Mapa02::create([
+            'pendaftaran_id' => $this->pendaftaran->id,
+            'skema_id' => $this->skema->id,
+            'asesor_id' => $this->asesor->id,
+            'matriks_peta' => [],
+            'tanda_tangan_asesor' => 'storage/signatures/asesor_mapa02.png',
+            'tanggal_ttd_asesor' => now('Asia/Jakarta'),
+            'status_mapa' => 'menunggu_validasi',
+        ]);
+
+        $response = $this->actingAs($this->admin)->get(route('asesor.mapa-02', $this->pendaftaran->id));
+
+        $response->assertOk();
+        $response->assertSee('canvasMapa02Admin');
+        $response->assertSee('konfirmasiPemeriksaanMapa02');
+        $this->assertSame(0, preg_match('/<canvas[^>]*id="canvasMapa02Asesor"/', $response->getContent()));
     }
 
     public function test_master_mapa02_has_responsive_elements()
@@ -132,7 +157,7 @@ class Mapa02ResponsiveViewTest extends TestCase
         $response->assertDontSee('Bubuhkan TTD');
     }
 
-    public function test_asesor_can_save_mapa02_without_signature()
+    public function test_asesor_signature_is_persisted_when_saving_mapa02_draft()
     {
         $response = $this->actingAs($this->asesor)->get(route('asesor.mapa-02', $this->pendaftaran->id));
         $response->assertStatus(200);
@@ -150,6 +175,7 @@ class Mapa02ResponsiveViewTest extends TestCase
 
         $mapa02 = \App\Models\Mapa02::where('pendaftaran_id', $this->pendaftaran->id)->first();
         $this->assertNotNull($mapa02);
-        $this->assertNull($mapa02->tanda_tangan_asesor);
+        $this->assertNotEmpty($mapa02->tanda_tangan_asesor);
+        $this->assertNotNull($mapa02->tanggal_ttd_asesor);
     }
 }
