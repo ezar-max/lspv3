@@ -177,7 +177,14 @@ class MasterMapaPerSkemaTest extends TestCase
                 ],
             ],
         ];
-        $service->saveMasterMapa02($this->skema, $matrix, 'Catatan Khusus Master RPL', null, true, $this->asesor->id);
+        $service->saveMasterMapa02(
+            $this->skema,
+            $matrix,
+            'Catatan Khusus Master RPL',
+            'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+            true,
+            $this->asesor->id
+        );
 
         // Ada asesi baru mendaftar
         $asesi = Pengguna::create([

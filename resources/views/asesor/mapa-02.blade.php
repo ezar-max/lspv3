@@ -73,6 +73,21 @@
            MOBILE ONLY (<= 768px)
            ============================================================ */
         @media (max-width: 768px) {
+            .mapa02-container,
+            .mapa02-container fieldset,
+            .mapa02-container fieldset > *,
+            .mapa02-container .grid,
+            .mapa02-container .bg-white {
+                width: 100%;
+                max-width: 100%;
+                min-width: 0;
+                box-sizing: border-box;
+            }
+
+            .mapa02-container fieldset {
+                min-inline-size: 0;
+            }
+
             .mapa02-table-wrapper {
                 display: block !important;
                 width: 100% !important;

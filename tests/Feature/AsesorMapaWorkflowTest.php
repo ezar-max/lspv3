@@ -764,7 +764,7 @@ class AsesorMapaWorkflowTest extends TestCase
         $m02 = $this->service->getOrCreateMapa02($this->pendaftaran, $this->asesorA->id);
         $this->assertEquals('draft', $m02->status_mapa);
 
-        // 2. Konfirmasi & Sahkan -> status selesai
+        // 2. Asesor mengirim rencana -> menunggu validasi Admin.
         $m02_confirmed = $this->service->saveMapa02(
             $this->pendaftaran,
             [$this->unit1->id => [$this->elemen1->id => [$this->kuk1->id => ['clo' => 1, 'dpt' => 1, 'dpe' => 1]]]],
@@ -773,9 +773,23 @@ class AsesorMapaWorkflowTest extends TestCase
             true, // isConfirm = true
             $this->asesorA->id
         );
+        $this->assertEquals('menunggu_validasi', $m02_confirmed->status_mapa);
+
+        $this->actingAs($this->admin);
+        $m02_confirmed = $this->service->saveMapa02(
+            $this->pendaftaran,
+            $m02_confirmed->matriks_peta,
+            'Catatan confirmed',
+            $m02_confirmed->tanda_tangan_asesor,
+            true,
+            $this->asesorA->id,
+            'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+            true
+        );
         $this->assertEquals('selesai', $m02_confirmed->status_mapa);
 
         // 3. Asesor mengedit & menyimpan sebagai DRAFT -> status kembali draft
+        $this->actingAs($this->asesorA);
         $m02_edited = $this->service->saveMapa02(
             $this->pendaftaran,
             [$this->unit1->id => [$this->elemen1->id => [$this->kuk1->id => ['clo' => 1, 'dpt' => 0, 'dpe' => 1]]]],
@@ -787,7 +801,7 @@ class AsesorMapaWorkflowTest extends TestCase
         $this->assertEquals('draft', $m02_edited->status_mapa);
         $this->assertFalse($this->pendaftaran->isMapaConfirmed());
 
-        // 4. Asesor melakukan konfirmasi ulang -> status kembali selesai
+        // 4. Asesor melakukan konfirmasi ulang -> kembali menunggu validasi admin.
         $m02_reconfirmed = $this->service->saveMapa02(
             $this->pendaftaran,
             [$this->unit1->id => [$this->elemen1->id => [$this->kuk1->id => ['clo' => 1, 'dpt' => 0, 'dpe' => 1]]]],
@@ -796,7 +810,7 @@ class AsesorMapaWorkflowTest extends TestCase
             true, // isConfirm = true
             $this->asesorA->id
         );
-        $this->assertEquals('selesai', $m02_reconfirmed->status_mapa);
+        $this->assertEquals('menunggu_validasi', $m02_reconfirmed->status_mapa);
     }
 
     /** 23. Database unique constraint on mapa tables */

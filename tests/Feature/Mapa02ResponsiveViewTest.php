@@ -122,6 +122,8 @@ class Mapa02ResponsiveViewTest extends TestCase
         $response->assertSee('mapa02-td-ia');
         $response->assertSee('mapa02-cb');
         $response->assertSee('canvasMapa02Admin');
+        $this->assertSame(0, preg_match('/<canvas[^>]*id="canvasMapa02Asesor"/', $response->getContent()));
+        $response->assertSee('canvasMapa02Admin');
         $response->assertSee('inputTtdAdmin');
         $this->assertSame(0, preg_match('/<canvas[^>]*id="canvasMapa02Asesor"/', $response->getContent()));
     }
@@ -144,6 +146,30 @@ class Mapa02ResponsiveViewTest extends TestCase
         $response->assertSee('canvasMapa02Admin');
         $response->assertSee('konfirmasiPemeriksaanMapa02');
         $this->assertSame(0, preg_match('/<canvas[^>]*id="canvasMapa02Asesor"/', $response->getContent()));
+    }
+
+    public function test_admin_can_author_and_complete_master_mapa02_with_only_admin_signature()
+    {
+        $signature = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+        $matrix = [
+            $this->unit->id => [
+                $this->elemen->id => [
+                    $this->kuk->id => ['clo' => 1, 'dpt' => 1],
+                ],
+            ],
+        ];
+
+        $this->actingAs($this->admin)->post(route('asesor.skema.mapa-02.simpan', $this->skema->id), [
+            'aksi' => 'konfirmasi',
+            'matriks_peta' => $matrix,
+            'tanda_tangan_admin' => $signature,
+        ])->assertRedirect(route('asesor.mapa', ['skema_id' => $this->skema->id]));
+
+        $master = \App\Models\Mapa02::where('skema_id', $this->skema->id)->whereNull('pendaftaran_id')->firstOrFail();
+        $this->assertSame('selesai', $master->status_mapa);
+        $this->assertEmpty($master->tanda_tangan_asesor);
+        $this->assertNotEmpty($master->tanda_tangan_admin);
+        $this->assertNotNull($master->tanggal_ttd_admin);
     }
 
     public function test_master_mapa02_has_responsive_elements()

@@ -104,7 +104,7 @@ class MasterAk01PerSkemaTest extends TestCase
             'bukti_dikumpulkan' => ['Observasi Praktik Demonstrasi', 'Uji Tertulis (CBT)'],
             'bukti_dikumpulkan_lainnya' => 'Logbook PKL Industri',
             'catatan_asesor' => 'Asesi wajib membawa laptop sendiri',
-            'tanda_tangan_asesor' => 'storage/signatures/asesor_profil.png',
+            'tanda_tangan_asesor' => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
         ];
 
         $response = $this->actingAs($this->asesor)->post(route('asesor.skema.ak-01.simpan', $this->skema->id), $postData);
@@ -122,6 +122,8 @@ class MasterAk01PerSkemaTest extends TestCase
 
         $master = MasterAk01::where('skema_id', $this->skema->id)->first();
         $this->assertEquals(['Observasi Praktik Demonstrasi', 'Uji Tertulis (CBT)'], $master->bukti_dikumpulkan);
+        $this->assertNotEmpty($master->tanda_tangan_asesor);
+        $this->assertNotNull($master->tanggal_ttd_asesor);
     }
 
     /** 4. Data Master FR.AK.01 tersinkronisasi otomatis ke seluruh pendaftaran asesi pada skema */
@@ -164,7 +166,7 @@ class MasterAk01PerSkemaTest extends TestCase
             'tuk_type' => 'Tempat Kerja',
             'bukti_dikumpulkan' => ['Observasi Praktik Demonstrasi', 'Tanya Jawab Lisan'],
             'bukti_dikumpulkan_lainnya' => 'Portofolio Digital',
-            'tanda_tangan_asesor' => 'storage/signatures/asesor_profil.png',
+            'tanda_tangan_asesor' => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
         ]);
 
         // Refresh model pendaftaran dari DB
@@ -173,17 +175,18 @@ class MasterAk01PerSkemaTest extends TestCase
 
         $this->assertEquals('Tempat Kerja', $pendaftaran1->tuk_type);
         $this->assertEquals('Portofolio Digital', $pendaftaran1->bukti_dikumpulkan_lainnya);
-        $this->assertNull($pendaftaran1->tanda_tangan_asesor_ak01);
-        $this->assertNull($pendaftaran1->tanggal_ttd_asesor_ak01);
+        $this->assertNotEmpty($pendaftaran1->tanda_tangan_asesor_ak01);
+        $this->assertNotNull($pendaftaran1->tanggal_ttd_asesor_ak01);
+        $this->assertNull($pendaftaran1->tanda_tangan_asesi_ak01);
         $this->assertEquals('disetujui_asesor', $pendaftaran1->status_ak01);
 
         $this->assertEquals('Tempat Kerja', $pendaftaran2->tuk_type);
-        $this->assertNull($pendaftaran2->tanda_tangan_asesor_ak01);
+        $this->assertNotEmpty($pendaftaran2->tanda_tangan_asesor_ak01);
         $this->assertEquals('disetujui_asesor', $pendaftaran2->status_ak01);
     }
 
-    /** 5. Asesi membuka FR.AK.01, meninjau data, dan menyetujui tanpa tanda tangan */
-    public function test_asesi_sees_prefilled_ak01_and_can_submit_without_signature(): void
+    /** 5. Asesi hanya menyetujui data master dengan tanda tangan wajib */
+    public function test_asesi_sees_prefilled_ak01_and_must_sign_to_complete(): void
     {
         // Buat master AK.01
         MasterAk01::create([
@@ -217,18 +220,26 @@ class MasterAk01PerSkemaTest extends TestCase
         // Pendaftaran otomatis sync
         $pendaftaran->refresh();
         $this->assertEquals('Mandiri', $pendaftaran->tuk_type);
-        $this->assertNull($pendaftaran->tanda_tangan_asesor_ak01);
+        $this->assertNotEmpty($pendaftaran->tanda_tangan_asesor_ak01);
 
-        // Asesi mengirim persetujuan tanpa TTD
-        $signResponse = $this->actingAs($this->asesi)->post(route('asesi.ak01.sign', ['id' => $pendaftaran->id]), [
+        // Pengiriman tanpa tanda tangan ditolak.
+        $this->actingAs($this->asesi)->post(route('asesi.ak01.sign', ['id' => $pendaftaran->id]), [
             'pendaftaran_id' => $pendaftaran->id,
-        ]);
+        ])->assertSessionHasErrors('tanda_tangan_asesi_ak01');
+
+        $pendaftaran->refresh();
+        $this->assertEquals('disetujui_asesor', $pendaftaran->status_ak01);
+
+        $signature = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+        $this->actingAs($this->asesi)->post(route('asesi.ak01.sign', ['id' => $pendaftaran->id]), [
+            'pendaftaran_id' => $pendaftaran->id,
+            'tanda_tangan_asesi_ak01' => $signature,
+        ])->assertRedirect(route('asesi.dashboard', ['pendaftaran_id' => $pendaftaran->id]));
 
         $pendaftaran->refresh();
 
-        // Status AK.01 selesai karena persetujuan dikirim, bukan karena tanda tangan.
         $this->assertEquals('selesai', $pendaftaran->status_ak01);
-        $this->assertNull($pendaftaran->tanda_tangan_asesi_ak01);
-        $this->assertNull($pendaftaran->tanda_tangan_asesor_ak01);
+        $this->assertNotEmpty($pendaftaran->tanda_tangan_asesi_ak01);
+        $this->assertNotNull($pendaftaran->tanda_tangan_asesor_ak01);
     }
 }

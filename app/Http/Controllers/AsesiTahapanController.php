@@ -798,38 +798,27 @@ class AsesiTahapanController extends Controller
                     ->with('error', 'Masih ada data yang wajib diisi. Silakan lengkapi penilaian seluruh butir KUK terlebih dahulu.');
             }
 
-            // Memastikan bahwa setiap 'K' memiliki bukti pendukung
             foreach ($request->penilaian as $elemenId => $nilai) {
                 if ($nilai === 'K') {
-                    $hasBukti = \App\Models\BuktiApl02::where('pendaftaran_id', $pendaftaran->id)
+                    $hasBukti = BuktiApl02::where('pendaftaran_id', $pendaftaran->id)
                         ->where('elemen_id', $elemenId)
-                        ->exists() || $request->hasFile("bukti_foto.{$elemenId}") || $request->has("bukti_relevan.{$elemenId}");
-                    
+                        ->exists();
+
                     if (!$hasBukti) {
-                        return redirect()->route('asesi.tahapan', ['step' => 2, 'pendaftaran_id' => $pendaftaran->id])
-                            ->withInput()
-                            ->with('error', 'Anda menyatakan Kompeten (K) pada elemen tertentu, namun belum melampirkan Bukti. Harap lengkapi bukti untuk seluruh elemen yang Anda nyatakan Kompeten.');
+                        $buktiRelevan = $request->input("bukti_relevan.{$elemenId}");
+                        $uploadedFiles = $request->file("bukti_foto.{$elemenId}");
+                        $hasDirectFile = $uploadedFiles ? (is_array($uploadedFiles) ? !empty(array_filter($uploadedFiles)) : !empty($uploadedFiles)) : false;
+
+                        if (!$buktiRelevan && !$hasDirectFile) {
+                            return redirect()->route('asesi.tahapan', ['step' => 2, 'pendaftaran_id' => $pendaftaran->id])
+                                ->withInput()
+                                ->with('error', 'Anda menyatakan Kompeten (K) pada elemen tertentu, namun belum melampirkan Bukti. Harap lengkapi bukti untuk seluruh elemen yang Anda nyatakan Kompeten.');
+                        }
                     }
                 }
-            }
-        }
 
-        $isWasRevision = $pendaftaran->isApl02Revision();
-        $ttdAsesi = $request->tanda_tangan_asesi ?: ($pendaftaran->tanda_tangan_asesi ?: $pengguna->tanda_tangan);
-        $pendaftaran->update([
-            'status_apl02' => 'submitted',
-            'tanggal_submit_apl02' => now(),
-            'rekomendasi_asesor_status' => null, // Reset rekomendasi jika perbaikan/submit ulang
-            'tanda_tangan_asesi' => $ttdAsesi,
-            'tanggal_ttd_asesi' => now(),
-        ]);
-
-        foreach ($request->penilaian as $elemenId => $nilai) {
-            // Handle any direct file upload in standard POST fallback
-            if ($request->hasFile("bukti_foto.{$elemenId}")) {
-                $files = is_array($request->file("bukti_foto.{$elemenId}")) 
-                    ? $request->file("bukti_foto.{$elemenId}") 
-                    : [$request->file("bukti_foto.{$elemenId}")];
+                $files = $request->file("bukti_foto.{$elemenId}");
+                $files = is_array($files) ? $files : ($files ? [$files] : []);
 
                 foreach ($files as $file) {
                     $namaAsli = $file->getClientOriginalName();
@@ -848,21 +837,20 @@ class AsesiTahapanController extends Controller
                         'file_size' => $file->getSize(),
                     ]);
                 }
+
+                $firstBukti = BuktiApl02::where('pendaftaran_id', $pendaftaran->id)
+                    ->where('elemen_id', $elemenId)
+                    ->first();
+                $fallbackPath = $firstBukti ? ($firstBukti->sumber === 'apl01' ? ($firstBukti->dokumenAsesi->file_path ?? null) : $firstBukti->file_path) : ($request->input("bukti_relevan.{$elemenId}") ?? null);
+
+                JawabanApl02::updateOrCreate(
+                    ['pendaftaran_id' => $pendaftaran->id, 'elemen_id' => $elemenId],
+                    [
+                        'nilai_kompetensi' => $nilai,
+                        'bukti_relevan' => $fallbackPath,
+                    ]
+                );
             }
-
-            // Sync fallback bukti_relevan
-            $firstBukti = BuktiApl02::where('pendaftaran_id', $pendaftaran->id)
-                ->where('elemen_id', $elemenId)
-                ->first();
-            $fallbackPath = $firstBukti ? ($firstBukti->sumber === 'apl01' ? ($firstBukti->dokumenAsesi->file_path ?? null) : $firstBukti->file_path) : ($request->input("bukti_relevan.{$elemenId}") ?? null);
-
-            JawabanApl02::updateOrCreate(
-                ['pendaftaran_id' => $pendaftaran->id, 'elemen_id' => $elemenId],
-                [
-                    'nilai_kompetensi' => $nilai,
-                    'bukti_relevan' => $fallbackPath,
-                ]
-            );
         }
 
         // Simpan klaim mandiri per butir KUK ke tabel verifikasi_kuk_apl02 (klaim asesi)
@@ -882,6 +870,7 @@ class AsesiTahapanController extends Controller
             }
         }
 
+        $isWasRevision = $pendaftaran->isApl02Revision();
         if ($isWasRevision) {
             LogAktivitas::catat('Pengajuan Ulang FR.APL.02', 'Asesi mengajukan ulang FR.APL.02 #' . $pendaftaran->nomor_pendaftaran . ' setelah perbaikan revisi.');
             $pesanSukses = 'Formulir FR.APL.02 berhasil diajukan ulang ke Asesor setelah perbaikan. Mohon tunggu pemeriksaan ulang dari Asesor.';
@@ -1119,33 +1108,38 @@ class AsesiTahapanController extends Controller
                 ->with('error', 'FR.APL.02 harus disetujui Asesor terlebih dahulu sebelum FR.AK.01 dapat diisi.');
         }
 
+        $masterAk01 = $pendaftaran->skema?->masterAk01;
+        $asesorSignature = $masterAk01?->tanda_tangan_asesor ?: $pendaftaran->tanda_tangan_asesor_ak01;
+        if (empty($asesorSignature) || ($masterAk01 && $masterAk01->status !== 'selesai')) {
+            return redirect()->route('asesi.tahapan', ['pendaftaran_id' => $pendaftaran->id, 'step' => 3])
+                ->with('error', 'FR.AK.01 belum dapat ditandatangani karena rencana asesor belum disimpan dan ditandatangani.');
+        }
+
         $request->validate([
-            'tuk_type' => 'nullable|string|in:Sewaktu,Tempat Kerja,Mandiri',
-            'bukti_dikumpulkan' => 'nullable|array',
-            'bukti_dikumpulkan_lainnya' => 'nullable|string',
+            'tanda_tangan_asesi_ak01' => ['required', 'string', 'max:2000000', 'regex:/^data:image\/(png|jpeg);base64,/'],
         ]);
+
+        $asesiSignature = app(\App\Services\MapaWorkflowService::class)->saveSignatureFile(
+            $request->input('tanda_tangan_asesi_ak01'),
+            $pendaftaran->id,
+            'ak01_asesi'
+        );
+        if (!$asesiSignature || str_starts_with($asesiSignature, 'data:image/')) {
+            return back()->withErrors(['tanda_tangan_asesi_ak01' => 'Tanda tangan Asesi tidak valid.']);
+        }
 
         $oldAk01Status = $pendaftaran->status_ak01;
 
-        \Illuminate\Support\Facades\DB::transaction(function () use ($pendaftaran, $request) {
-            $tukType = $request->input('tuk_type') ?: ($pendaftaran->tuk_type ?: ($pendaftaran->skema?->masterAk01?->tuk_type ?: 'Sewaktu'));
-            $buktiDikumpulkan = $request->input('bukti_dikumpulkan');
-            if (empty($buktiDikumpulkan)) {
-                $buktiDikumpulkan = $pendaftaran->bukti_dikumpulkan ?: ($pendaftaran->skema?->masterAk01?->bukti_dikumpulkan ?: $pendaftaran->getDefaultBuktiDikumpulkanFromSkema());
-            }
-            $buktiLainnya = $request->has('bukti_dikumpulkan_lainnya') 
-                ? $request->bukti_dikumpulkan_lainnya 
-                : ($pendaftaran->bukti_dikumpulkan_lainnya ?: ($pendaftaran->skema?->masterAk01?->bukti_dikumpulkan_lainnya ?? null));
-
+        \Illuminate\Support\Facades\DB::transaction(function () use ($pendaftaran, $masterAk01, $asesorSignature, $asesiSignature) {
             $pendaftaran->update([
-                'tuk_type' => $tukType,
-                'bukti_dikumpulkan' => $buktiDikumpulkan,
-                'bukti_dikumpulkan_lainnya' => $buktiLainnya,
-                'tanda_tangan_asesi_ak01' => null,
-                'tanggal_ttd_asesi_ak01' => null,
+                'tuk_type' => $masterAk01?->tuk_type ?: $pendaftaran->tuk_type,
+                'bukti_dikumpulkan' => $masterAk01?->bukti_dikumpulkan ?: $pendaftaran->bukti_dikumpulkan,
+                'bukti_dikumpulkan_lainnya' => $masterAk01?->bukti_dikumpulkan_lainnya ?? $pendaftaran->bukti_dikumpulkan_lainnya,
+                'tanda_tangan_asesi_ak01' => $asesiSignature,
+                'tanggal_ttd_asesi_ak01' => now('Asia/Jakarta'),
                 'status_ak01' => 'selesai',
-                'tanda_tangan_asesor_ak01' => null,
-                'tanggal_ttd_asesor_ak01' => null,
+                'tanda_tangan_asesor_ak01' => $asesorSignature,
+                'tanggal_ttd_asesor_ak01' => $masterAk01?->tanggal_ttd_asesor ?: $pendaftaran->tanggal_ttd_asesor_ak01,
             ]);
 
             LogAktivitas::catat('Pengisian FR.AK.01', 'Asesi mengirim persetujuan FR.AK.01 #' . $pendaftaran->nomor_pendaftaran);

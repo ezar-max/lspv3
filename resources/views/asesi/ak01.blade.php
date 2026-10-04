@@ -438,7 +438,6 @@
             @endif
         </div>
 
-        @if(false)
         <!-- 4. SECTION TANDA TANGAN DIGITAL (2 PIHAK) -->
         <div class="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-4 sm:p-5 space-y-4">
             <h2 class="font-bold text-xs sm:text-sm text-slate-800 border-b border-slate-100 pb-2">
@@ -571,8 +570,6 @@
             </div>
         </div>
 
-        @endif
-
         <!-- ACTION BAR / SUBMIT -->
         <div class="bg-white rounded-2xl border border-slate-200/90 p-4 shadow-2xs flex flex-col sm:flex-row items-center justify-between gap-3">
             <a href="{{ route('asesi.tahapan', ['step' => 2, 'pendaftaran_id' => $pendaftaran->id]) }}" 
@@ -704,6 +701,17 @@
                         icon: 'warning',
                         title: 'Persetujuan Klausul',
                         text: 'Silakan centang persetujuan klausul sebelum mengirim formulir FR.AK.01.',
+                        confirmButtonColor: '#2563eb'
+                    });
+                    return;
+                }
+
+                const signatureInput = document.getElementById('inputSignatureAk01');
+                if (!signatureInput || !/^data:image\/(png|jpeg);base64,/.test(signatureInput.value)) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Tanda Tangan Asesi',
+                        text: 'Silakan bubuhkan tanda tangan Anda terlebih dahulu sebelum melanjutkan.',
                         confirmButtonColor: '#2563eb'
                     });
                     return;

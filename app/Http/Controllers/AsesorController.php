@@ -1040,7 +1040,18 @@ class AsesorController extends Controller
             'bukti_dikumpulkan' => 'nullable|array',
             'bukti_dikumpulkan_lainnya' => 'nullable|string|max:500',
             'catatan_asesor' => 'nullable|string|max:1000',
+            'tanda_tangan_asesor' => ['required', 'string', 'max:2000000', 'regex:/^data:image\/(png|jpeg);base64,/'],
         ]);
+
+        $asesorSignature = $this->mapaService->saveSignatureFile(
+            $request->input('tanda_tangan_asesor'),
+            null,
+            'ak01_master_asesor_' . $skema->id
+        );
+        if (!$asesorSignature || str_starts_with($asesorSignature, 'data:image/')) {
+            return back()->withErrors(['tanda_tangan_asesor' => 'Tanda tangan Asesor tidak valid.']);
+        }
+        $asesorSignedAt = now('Asia/Jakarta');
 
         $masterAk01 = MasterAk01::updateOrCreate(
             ['skema_id' => $skema->id],
@@ -1050,8 +1061,8 @@ class AsesorController extends Controller
                 'bukti_dikumpulkan' => $request->input('bukti_dikumpulkan', ['Observasi Praktik Demonstrasi', 'Uji Tertulis (CBT)', 'Tanya Jawab Lisan']),
                 'bukti_dikumpulkan_lainnya' => $request->input('bukti_dikumpulkan_lainnya'),
                 'catatan_asesor' => $request->input('catatan_asesor'),
-                'tanda_tangan_asesor' => null,
-                'tanggal_ttd_asesor' => null,
+                'tanda_tangan_asesor' => $asesorSignature,
+                'tanggal_ttd_asesor' => $asesorSignedAt,
                 'status' => 'selesai',
             ]
         );

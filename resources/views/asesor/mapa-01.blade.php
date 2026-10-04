@@ -416,6 +416,73 @@
             margin-right: 0.2rem;
         }
 
+        @media screen and (max-width: 640px) {
+            #container-mapa01,
+            .wadah-mapa01 {
+                width: 100%;
+                max-width: 100%;
+                min-width: 0;
+                box-sizing: border-box;
+            }
+
+            .dokumen-kertas-mapa {
+                width: 100%;
+                min-width: 0;
+                padding: 0.75rem;
+                box-sizing: border-box;
+                overflow-x: hidden;
+            }
+
+            .dokumen-kertas-mapa > table.tabel-mapa-modern {
+                width: 100%;
+                max-width: 100%;
+                table-layout: fixed;
+            }
+
+            .dokumen-kertas-mapa > table.tabel-mapa-modern th,
+            .dokumen-kertas-mapa > table.tabel-mapa-modern td {
+                min-width: 0;
+                padding: 0.35rem;
+                overflow-wrap: anywhere;
+                word-break: normal;
+            }
+
+            .opsi-grid-2 {
+                grid-template-columns: minmax(0, 1fr);
+            }
+
+            .rating-row-modern {
+                align-items: flex-start;
+            }
+
+            .rating-pills-wrap {
+                flex-wrap: wrap;
+                gap: 0.3rem;
+            }
+
+            .header-eksekutif-mapa {
+                padding: 0.75rem;
+            }
+
+            .kop-kode-box {
+                min-width: 0;
+            }
+
+            .tombol-aksi-container {
+                align-items: stretch !important;
+            }
+
+            .tombol-aksi-container > div {
+                width: 100%;
+            }
+
+            .tombol-aksi-container button,
+            .tombol-aksi-container a {
+                max-width: 100%;
+                white-space: normal;
+            }
+        }
+
         /* Print Settings */
         @media print {
             body {

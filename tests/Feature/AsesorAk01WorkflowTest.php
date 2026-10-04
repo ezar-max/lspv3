@@ -184,7 +184,31 @@ class AsesorAk01WorkflowTest extends TestCase
         $this->assertEquals('Tempat Kerja', $this->pendaftaran->tuk_type);
     }
 
-    /** 3. Unauthorized asesor cannot approve AK-01 */
+    /** 3. Asesor wajib membuat tanda tangan sebelum menyetujui FR.APL.02 */
+    public function test_asesor_must_sign_before_approving_apl02(): void
+    {
+        $this->pendaftaran->update([
+            'status_apl02' => 'submitted',
+            'tanda_tangan_asesor' => null,
+            'tanggal_ttd_asesor' => null,
+        ]);
+
+        $response = $this->actingAs($this->asesorA)->post(route('asesor.input-penilaian.simpan', $this->pendaftaran->id), [
+            'action_type' => 'approve',
+            'rekomendasi_asesor_status' => 'dapat_dilanjutkan',
+            'nilai' => [$this->unit1->id => 'K'],
+            'verifikasi_kuk' => [$this->kuk1->id => 'K'],
+            'catatan_rekomendasi' => '',
+            'catatan_unit' => [$this->unit1->id => 'Unit sesuai'],
+        ]);
+
+        $response->assertSessionHas('error', 'Gagal memverifikasi: Tanda Tangan Asesor Penguji wajib dibubuhkan sebelum menyimpan keputusan FR.APL.02.');
+        $this->pendaftaran->refresh();
+        $this->assertNotEquals('approved', $this->pendaftaran->status_apl02);
+        $this->assertNull($this->pendaftaran->tanda_tangan_asesor);
+    }
+
+    /** 4. Unauthorized asesor cannot approve AK-01 */
     public function test_unauthorized_asesor_cannot_approve_ak01(): void
     {
         $this->pendaftaran->update([

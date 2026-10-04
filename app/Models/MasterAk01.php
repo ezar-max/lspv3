@@ -50,32 +50,38 @@ class MasterAk01 extends Model
         }
 
         $count = 0;
-        $query->each(function (PendaftaranAsesi $p) use (&$count) {
-            $dataToUpdate = [];
+        if ($this->status !== 'selesai' || empty($this->tanda_tangan_asesor)) {
+            return $count;
+        }
 
-            // Hanya berikan default TUK dan Bukti jika peserta belum mengisi / status masih 'belum'
-            if ($p->status_ak01 === 'belum' || empty($p->tuk_type)) {
-                $dataToUpdate['tuk_type'] = $this->tuk_type ?? $p->tuk_type ?? 'Sewaktu';
-            }
-            if ($p->status_ak01 === 'belum' || empty($p->bukti_dikumpulkan)) {
-                $dataToUpdate['bukti_dikumpulkan'] = $this->bukti_dikumpulkan ?? $p->bukti_dikumpulkan ?? ['Observasi Praktik Demonstrasi', 'Uji Tertulis (CBT)', 'Tanya Jawab Lisan'];
-            }
-            if ($p->status_ak01 === 'belum' || empty($p->bukti_dikumpulkan_lainnya)) {
-                $dataToUpdate['bukti_dikumpulkan_lainnya'] = $this->bukti_dikumpulkan_lainnya ?? $p->bukti_dikumpulkan_lainnya;
-            }
+        $masterBukti = (array) ($this->bukti_dikumpulkan ?? []);
+        $query->each(function (PendaftaranAsesi $pendaftaran) use (&$count, $masterBukti) {
+            $pendaftaranBukti = (array) ($pendaftaran->bukti_dikumpulkan ?? []);
+            $masterSignedAt = $this->tanggal_ttd_asesor?->format('Y-m-d H:i:s');
+            $pendaftaranSignedAt = $pendaftaran->tanggal_ttd_asesor_ak01?->format('Y-m-d H:i:s');
+            $configurationChanged = $pendaftaran->tuk_type !== $this->tuk_type
+                || $pendaftaranBukti !== $masterBukti
+                || $pendaftaran->bukti_dikumpulkan_lainnya !== $this->bukti_dikumpulkan_lainnya
+                || $pendaftaran->tanda_tangan_asesor_ak01 !== $this->tanda_tangan_asesor
+                || $pendaftaranSignedAt !== $masterSignedAt;
 
-            $dataToUpdate['tanda_tangan_asesor_ak01'] = null;
-            $dataToUpdate['tanggal_ttd_asesor_ak01'] = null;
-            $dataToUpdate['tanda_tangan_asesi_ak01'] = null;
-            $dataToUpdate['tanggal_ttd_asesi_ak01'] = null;
+            $dataToUpdate = [
+                'tuk_type' => $this->tuk_type,
+                'bukti_dikumpulkan' => $masterBukti,
+                'bukti_dikumpulkan_lainnya' => $this->bukti_dikumpulkan_lainnya,
+                'tanda_tangan_asesor_ak01' => $this->tanda_tangan_asesor,
+                'tanggal_ttd_asesor_ak01' => $this->tanggal_ttd_asesor,
+            ];
 
-            if ($this->status === 'selesai' && $p->status_ak01 === 'belum') {
+            if ($configurationChanged) {
+                $dataToUpdate['tanda_tangan_asesi_ak01'] = null;
+                $dataToUpdate['tanggal_ttd_asesi_ak01'] = null;
+                $dataToUpdate['status_ak01'] = 'disetujui_asesor';
+            } elseif ($pendaftaran->status_ak01 === 'belum') {
                 $dataToUpdate['status_ak01'] = 'disetujui_asesor';
             }
 
-            if (!empty($dataToUpdate)) {
-                $p->update($dataToUpdate);
-            }
+            $pendaftaran->update($dataToUpdate);
             $count++;
         });
 

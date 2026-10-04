@@ -21,7 +21,7 @@
 @section('konten')
 @php
     $savedBukti = (array) ($masterAk01->bukti_dikumpulkan ?? []);
-    $isConfigured = $masterAk01->exists && $masterAk01->status === 'selesai';
+    $isConfigured = $masterAk01->exists && $masterAk01->status === 'selesai' && !empty($masterAk01->tanda_tangan_asesor);
 @endphp
 
 <div class="max-w-5xl mx-auto px-2 sm:px-4 py-3 space-y-4" x-data="ak01SkemaApp()">
@@ -270,6 +270,27 @@
 
         </fieldset>
 
+        <div class="bg-white rounded-2xl border border-slate-200/90 p-4 sm:p-5 space-y-3">
+            <div>
+                <label class="text-xs font-bold text-slate-800 uppercase tracking-wider">Tanda Tangan Asesor <span class="text-rose-600">*</span></label>
+                <p class="text-[11px] text-slate-500 mt-1">Tanda tangan wajib dibubuhkan setiap kali rencana AK.01 disimpan dan diterapkan.</p>
+            </div>
+            @if($masterAk01->tanda_tangan_asesor)
+                <div class="flex items-center gap-3">
+                    <img src="{{ asset($masterAk01->tanda_tangan_asesor) }}" alt="Tanda tangan asesor tersimpan" class="max-h-16 max-w-40 object-contain">
+                    @if($masterAk01->tanggal_ttd_asesor)
+                        <span class="text-[10px] text-slate-500">{{ $masterAk01->tanggal_ttd_asesor->timezone('Asia/Jakarta')->format('d/m/Y H:i:s') }} WIB</span>
+                    @endif
+                </div>
+            @endif
+            <canvas id="canvasMasterAk01Asesor" width="900" height="240" class="block w-full h-36 border border-slate-200 rounded-lg bg-white touch-none" style="touch-action: none;"></canvas>
+            <div id="masterAk01SignatureTime" class="text-[10px] text-slate-500">Belum ditandatangani.</div>
+            <input type="hidden" name="tanda_tangan_asesor" id="inputSignatureMasterAk01" value="">
+            <div class="flex gap-2">
+                <button type="button" @click="clearSignature()" class="px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700">Hapus TTD</button>
+            </div>
+        </div>
+
         <!-- ACTION BAR -->
         <div class="bg-white rounded-2xl border border-slate-200/90 p-4 shadow-2xs flex flex-col sm:flex-row items-center justify-between gap-3">
             <a href="{{ (url()->previous() && url()->previous() !== url()->current()) ? url()->previous() : route('asesor.mapa', ['skema_id' => $skema->id]) }}" 
@@ -308,9 +329,81 @@
             isEditMode: {{ $isConfigured ? 'false' : 'true' }},
             agreedToClause: {{ $masterAk01->exists ? 'true' : 'false' }},
             isSubmitting: false,
+            signatureData: '',
+
+            init() {
+                const canvas = document.getElementById('canvasMasterAk01Asesor');
+                if (!canvas) return;
+                const ratio = Math.max(window.devicePixelRatio || 1, 1);
+                const width = canvas.clientWidth || 800;
+                const height = canvas.clientHeight || 144;
+                canvas.width = Math.round(width * ratio);
+                canvas.height = Math.round(height * ratio);
+                const context = canvas.getContext('2d');
+                context.setTransform(ratio, 0, 0, ratio, 0, 0);
+                context.strokeStyle = '#111827';
+                context.lineWidth = 2.4;
+                context.lineCap = 'round';
+                context.lineJoin = 'round';
+                canvas.style.touchAction = 'none';
+
+                let drawing = false;
+                let lastPoint = null;
+                const point = event => {
+                    const rect = canvas.getBoundingClientRect();
+                    return { x: event.clientX - rect.left, y: event.clientY - rect.top };
+                };
+                const start = event => {
+                    event.preventDefault();
+                    drawing = true;
+                    canvas.setPointerCapture?.(event.pointerId);
+                    lastPoint = point(event);
+                    context.beginPath();
+                    context.arc(lastPoint.x, lastPoint.y, 1.2, 0, Math.PI * 2);
+                    context.fillStyle = '#111827';
+                    context.fill();
+                };
+                const move = event => {
+                    if (!drawing) return;
+                    event.preventDefault();
+                    const next = point(event);
+                    context.beginPath();
+                    context.moveTo(lastPoint.x, lastPoint.y);
+                    context.lineTo(next.x, next.y);
+                    context.stroke();
+                    lastPoint = next;
+                };
+                const end = event => {
+                    if (!drawing) return;
+                    event.preventDefault?.();
+                    drawing = false;
+                    lastPoint = null;
+                    this.signatureData = canvas.toDataURL('image/png');
+                    document.getElementById('inputSignatureMasterAk01').value = this.signatureData;
+                    const time = new Intl.DateTimeFormat('id-ID', {
+                        timeZone: 'Asia/Jakarta', day: '2-digit', month: '2-digit', year: 'numeric',
+                        hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23'
+                    }).format(new Date()).replace(',', '') + ' WIB';
+                    document.getElementById('masterAk01SignatureTime').textContent = `Ditandatangani: ${time}`;
+                };
+                canvas.addEventListener('pointerdown', start);
+                canvas.addEventListener('pointermove', move);
+                canvas.addEventListener('pointerup', end);
+                canvas.addEventListener('pointercancel', end);
+            },
 
             toggleEditMode() {
                 this.isEditMode = !this.isEditMode;
+            },
+
+            clearSignature() {
+                const canvas = document.getElementById('canvasMasterAk01Asesor');
+                canvas?.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+                this.signatureData = '';
+                const input = document.getElementById('inputSignatureMasterAk01');
+                if (input) input.value = '';
+                const time = document.getElementById('masterAk01SignatureTime');
+                if (time) time.textContent = 'Belum ditandatangani.';
             },
 
             submitAk01(e) {
@@ -323,6 +416,13 @@
                         text: 'Silakan centang pernyataan kesiapan penyusunan rencana asesmen terlebih dahulu.',
                         confirmButtonColor: '#4f46e5'
                     });
+                    return;
+                }
+
+                const signature = document.getElementById('inputSignatureMasterAk01');
+                if (!signature?.value) {
+                    alert('Tanda tangan asesor wajib dibubuhkan sebelum rencana AK.01 disimpan.');
+                    document.getElementById('canvasMasterAk01Asesor')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
                     return;
                 }
 

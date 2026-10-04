@@ -860,44 +860,33 @@ class PendaftaranAsesi extends Model
         $needsUpdate = false;
         $dataToUpdate = [];
 
-        if ($masterAk01) {
-            // Default TUK jika asesi belum memilih atau status masih 'belum'
-            if (!empty($masterAk01->tuk_type) && (empty($this->tuk_type) || $this->status_ak01 === 'belum')) {
-                if ($this->tuk_type !== $masterAk01->tuk_type) {
-                    $this->tuk_type = $masterAk01->tuk_type;
-                    $dataToUpdate['tuk_type'] = $masterAk01->tuk_type;
-                    $needsUpdate = true;
-                }
-            }
+        if ($masterAk01 && $masterAk01->status === 'selesai' && !empty($masterAk01->tanda_tangan_asesor)) {
+            $masterBukti = (array) ($masterAk01->bukti_dikumpulkan ?? []);
+            $pendaftaranBukti = (array) ($this->bukti_dikumpulkan ?? []);
+            $masterSignedAt = $masterAk01->tanggal_ttd_asesor?->format('Y-m-d H:i:s');
+            $pendaftaranSignedAt = $this->tanggal_ttd_asesor_ak01?->format('Y-m-d H:i:s');
+            $configurationChanged = $this->tuk_type !== $masterAk01->tuk_type
+                || $pendaftaranBukti !== $masterBukti
+                || $this->bukti_dikumpulkan_lainnya !== $masterAk01->bukti_dikumpulkan_lainnya
+                || $this->tanda_tangan_asesor_ak01 !== $masterAk01->tanda_tangan_asesor
+                || $pendaftaranSignedAt !== $masterSignedAt;
 
-            // Default metode bukti jika belum ada, asesi belum memilih, atau status masih 'belum'
-            if (!empty($masterAk01->bukti_dikumpulkan) && (empty($this->bukti_dikumpulkan) || $this->status_ak01 === 'belum')) {
-                if ($this->bukti_dikumpulkan != $masterAk01->bukti_dikumpulkan) {
-                    $this->bukti_dikumpulkan = $masterAk01->bukti_dikumpulkan;
-                    $dataToUpdate['bukti_dikumpulkan'] = $masterAk01->bukti_dikumpulkan;
-                    $needsUpdate = true;
-                }
-            }
+            $dataToUpdate = [
+                'tuk_type' => $masterAk01->tuk_type,
+                'bukti_dikumpulkan' => $masterBukti,
+                'bukti_dikumpulkan_lainnya' => $masterAk01->bukti_dikumpulkan_lainnya,
+                'tanda_tangan_asesor_ak01' => $masterAk01->tanda_tangan_asesor,
+                'tanggal_ttd_asesor_ak01' => $masterAk01->tanggal_ttd_asesor,
+            ];
 
-            if (!empty($masterAk01->bukti_dikumpulkan_lainnya) && (empty($this->bukti_dikumpulkan_lainnya) || $this->status_ak01 === 'belum')) {
-                if ($this->bukti_dikumpulkan_lainnya !== $masterAk01->bukti_dikumpulkan_lainnya) {
-                    $this->bukti_dikumpulkan_lainnya = $masterAk01->bukti_dikumpulkan_lainnya;
-                    $dataToUpdate['bukti_dikumpulkan_lainnya'] = $masterAk01->bukti_dikumpulkan_lainnya;
-                    $needsUpdate = true;
-                }
-            }
-
-            if ($masterAk01->status === 'selesai') {
-                $dataToUpdate['tanda_tangan_asesor_ak01'] = null;
-                $dataToUpdate['tanggal_ttd_asesor_ak01'] = null;
+            if ($configurationChanged) {
                 $dataToUpdate['tanda_tangan_asesi_ak01'] = null;
                 $dataToUpdate['tanggal_ttd_asesi_ak01'] = null;
-                if ($this->status_ak01 === 'belum') {
-                    $this->status_ak01 = 'disetujui_asesor';
-                    $dataToUpdate['status_ak01'] = 'disetujui_asesor';
-                }
-                $needsUpdate = true;
+                $dataToUpdate['status_ak01'] = 'disetujui_asesor';
+            } elseif ($this->status_ak01 === 'belum') {
+                $dataToUpdate['status_ak01'] = 'disetujui_asesor';
             }
+            $needsUpdate = true;
         } else {
             // Fallback jika Master FR.AK.01 belum dikonfigurasi: ambil data form sesuai skemanya dari database
             if (empty($this->bukti_dikumpulkan)) {
