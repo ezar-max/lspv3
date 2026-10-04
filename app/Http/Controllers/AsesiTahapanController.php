@@ -140,54 +140,17 @@ class AsesiTahapanController extends Controller
 
             $isDitolakAsesor = $isApl02Rejected;
             $isAccAsesor = $isApl02Approved;
-            $isAk01Selesai = (!empty($pendaftaran->tanda_tangan_asesi_ak01) || in_array($pendaftaran->status_ak01, ['disetujui_asesi', 'selesai']));
+            $isAk01Selesai = !empty($pendaftaran->tanda_tangan_asesi_ak01);
 
             if ($isAk01Selesai) {
-                $pendaftaran->syncFromMasterAk07IfAvailable();
+                $hasSignedMasterAk07 = $pendaftaran->syncFromMasterAk07IfAvailable();
                 $pendaftaran->refresh();
-
-                $ak07 = $pendaftaran->ak07Adjustment;
-                $defaultChecklist = \App\Models\AssessmentAk07Adjustment::defaultChecklistItems();
-                $namaSkema = $pendaftaran->skema->nama_skema ?? 'Skema Sertifikasi';
-
-                if (!$ak07) {
-                    $defaultPotensi = 1;
-                    if ($pendaftaran->jawabanApl02 && $pendaftaran->jawabanApl02->count() > 0) {
-                        $totalJawaban = $pendaftaran->jawabanApl02->count();
-                        $totalBK = $pendaftaran->jawabanApl02->where('nilai_kompetensi', 'BK')->count();
-                        if ($totalBK > 0) {
-                            $defaultPotensi = ($totalBK / $totalJawaban) > 0.3 ? 3 : 2;
-                        }
-                    }
-                    $ak07 = \App\Models\AssessmentAk07Adjustment::create([
-                        'assessment_registration_id' => $pendaftaran->id,
-                        'potensi_asesi' => $defaultPotensi,
-                        'fase_penggunaan' => 'saat_pra_asesmen',
-                        'items_checklist' => $defaultChecklist,
-                        'status' => 'draft',
-                        'acuan_pembanding_disepakati' => "Standar Kompetensi Kerja Nasional Indonesia (SKKNI) {$namaSkema}",
-                        'metode_disepakati' => 'Observasi Demonstrasi & Wawancara',
-                        'instrumen_disepakati' => 'FR.IA.01, FR.IA.03',
-                        'catatan_asesor' => 'Seluruh proses asesmen disepakati dapat dilaksanakan dengan penyesuaian yang wajar sesuai kesepakatan bersama.',
-                        'asesor_signature' => null,
-                        'asesor_signed_at' => null,
-                    ]);
-                } elseif (empty($ak07->items_checklist)) {
-                    $ak07->update([
-                        'items_checklist' => $defaultChecklist,
-                        'acuan_pembanding_disepakati' => $ak07->acuan_pembanding_disepakati ?? "Standar Kompetensi Kerja Nasional Indonesia (SKKNI) {$namaSkema}",
-                        'metode_disepakati' => $ak07->metode_disepakati ?? 'Observasi Demonstrasi & Wawancara',
-                        'instrumen_disepakati' => $ak07->instrumen_disepakati ?? 'FR.IA.01, FR.IA.03',
-                        'catatan_asesor' => $ak07->catatan_asesor ?? 'Seluruh proses asesmen disepakati dapat dilaksanakan dengan penyesuaian yang wajar sesuai kesepakatan bersama.',
-                        'asesor_signature' => null,
-                        'asesor_signed_at' => null,
-                    ]);
-                }
+                $ak07 = $hasSignedMasterAk07 ? $pendaftaran->ak07Adjustment : null;
             } else {
                 $ak07 = $pendaftaran->ak07Adjustment;
             }
 
-            if ($ak07) {
+            if ($ak07 && !empty($ak07->asesor_signature)) {
                 $isAk07Selesai = $ak07->isConfirmed();
             }
         }

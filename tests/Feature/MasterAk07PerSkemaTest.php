@@ -11,6 +11,7 @@ use App\Models\Pengguna;
 use App\Models\SkemaSertifikasi;
 use App\Models\UnitKompetensi;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class MasterAk07PerSkemaTest extends TestCase
@@ -77,6 +78,7 @@ class MasterAk07PerSkemaTest extends TestCase
 
     public function test_asesor_can_open_and_save_master_ak07()
     {
+        Storage::fake('public');
         $response = $this->actingAs($this->asesor)->get(route('asesor.skema.ak-07', $this->skema->id));
         $response->assertStatus(200);
         $response->assertSee('Master FR.AK.07');
@@ -96,16 +98,37 @@ class MasterAk07PerSkemaTest extends TestCase
                 ],
             ],
             'gunakan_profil' => '1',
+            'tanda_tangan_asesor' => 'data:image/png;base64,' . base64_encode('tanda tangan asesor'),
         ];
 
         $postResponse = $this->actingAs($this->asesor)->post(route('asesor.skema.ak-07.simpan', $this->skema->id), $payload);
         $postResponse->assertRedirect(route('asesor.mapa', ['skema_id' => $this->skema->id]));
 
+        $master = MasterAk07::where('skema_id', $this->skema->id)->firstOrFail();
         $this->assertDatabaseHas('master_ak07', [
             'skema_id' => $this->skema->id,
             'potensi_asesi' => 2,
             'acuan_pembanding_disepakati' => 'SKKNI TI Terbaru',
             'status' => 'selesai',
+        ]);
+        $this->assertNotEmpty($master->tanda_tangan_asesor);
+        $this->assertNotNull($master->tanggal_ttd_asesor);
+        $this->assertTrue(Storage::disk('public')->exists(str_replace('storage/', '', $master->tanda_tangan_asesor)));
+    }
+
+    public function test_asesor_cannot_save_master_ak07_without_signature()
+    {
+        $payload = [
+            'potensi_asesi' => 2,
+            'fase_penggunaan' => 'saat_pra_asesmen',
+        ];
+
+        $response = $this->actingAs($this->asesor)
+            ->post(route('asesor.skema.ak-07.simpan', $this->skema->id), $payload);
+
+        $response->assertSessionHasErrors('tanda_tangan_asesor');
+        $this->assertDatabaseMissing('master_ak07', [
+            'skema_id' => $this->skema->id,
         ]);
     }
 
@@ -134,6 +157,16 @@ class MasterAk07PerSkemaTest extends TestCase
             'status_pendaftaran' => 'disetujui',
         ]);
 
+        $p1->update([
+            'status_apl02' => 'approved',
+            'tanda_tangan_asesi_ak01' => 'signatures/asesi_ak01.png',
+        ]);
+        $emptyBeforeMaster = $this->actingAs($this->asesi1)
+            ->get(route('asesi.tahapan', ['step' => 4, 'pendaftaran_id' => $p1->id]));
+        $emptyBeforeMaster->assertOk();
+        $emptyBeforeMaster->assertSee('FR.AK.07 Belum Diisi Asesor');
+        $emptyBeforeMaster->assertDontSee('SKKNI Standar Terbuka');
+
         // Simpan master AK-07
         $master = MasterAk07::create([
             'skema_id' => $this->skema->id,
@@ -153,25 +186,26 @@ class MasterAk07PerSkemaTest extends TestCase
         $syncedCount = $master->sinkronkanKePeserta();
         $this->assertEquals(2, $syncedCount);
 
-        // Verifikasi asesi1 dan asesi2 memiliki data tersinkron tanpa TTD.
+        // Semua asesi menerima formulir dan tanda tangan asesor yang sama.
         $this->assertDatabaseHas('assessment_ak07_adjustments', [
             'assessment_registration_id' => $p1->id,
             'potensi_asesi' => 3,
             'acuan_pembanding_disepakati' => 'SKKNI Standar Terbuka',
-            'asesor_signature' => null,
+            'asesor_signature' => 'signatures/asesor_profil.png',
         ]);
 
         $this->assertDatabaseHas('assessment_ak07_adjustments', [
             'assessment_registration_id' => $p2->id,
             'potensi_asesi' => 3,
             'acuan_pembanding_disepakati' => 'SKKNI Standar Terbuka',
-            'asesor_signature' => null,
+            'asesor_signature' => 'signatures/asesor_profil.png',
         ]);
 
         // Verifikasi asesi bisa melihat formulir FR.AK.07 yang telah disiapkan asesor
         $viewResponse = $this->actingAs($this->asesi1)->get(route('asesi.ak07', $p1->id));
         $viewResponse->assertStatus(200);
         $viewResponse->assertSee('SKKNI Standar Terbuka');
+        $viewResponse->assertSee('Disahkan Asesor untuk Seluruh Asesi Skema');
     }
 
     public function test_all_fr_ia_forms_can_be_viewed_without_existing_scheme_in_db()

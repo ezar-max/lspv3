@@ -20,7 +20,11 @@
 
 @section('konten')
 @php
-    $isConfigured = $masterAk07->exists && ($masterAk07->status === 'selesai' || !empty($masterAk07->updated_at));
+    $currentSignature = $masterAk07->tanda_tangan_asesor;
+    $isSigned = $masterAk07->status === 'selesai'
+        && !empty($currentSignature)
+        && !empty($masterAk07->tanggal_ttd_asesor);
+    $isConfigured = $isSigned;
     $savedChecklist = (array) ($masterAk07->items_checklist ?? []);
     $selectedPotensi = $masterAk07->potensi_asesi !== null ? (int) $masterAk07->potensi_asesi : null;
     $selectedFase = $masterAk07->fase_penggunaan ?? null;
@@ -249,21 +253,21 @@
                         $ketSaved = $itemSaved['keterangan'] ?? '';
                         $itemState = $itemSaved['perlu_penyesuaian'] ?? null;
                     @endphp
-                    <div class="border border-slate-200 rounded-xl p-3.5 space-y-3">
+                    <div class="border border-slate-200 rounded-xl p-3.5 space-y-3" data-ak07-checklist-category="{{ $cId }}">
                         <h3 class="text-xs font-bold text-slate-800">{{ $cId }}. {{ $crit['title'] }}</h3>
                         <div class="flex flex-wrap gap-3 text-xs">
-                            <label class="flex items-center gap-1.5"><input type="radio" name="items_checklist[{{ $cId }}][perlu]" value="0" {{ $itemState === false || $itemState === 0 ? 'checked' : '' }}> Tidak Perlu</label>
-                            <label class="flex items-center gap-1.5"><input type="radio" name="items_checklist[{{ $cId }}][perlu]" value="1" {{ $itemState === true || $itemState === 1 ? 'checked' : '' }}> Perlu Penyesuaian</label>
+                            <label class="flex items-center gap-1.5"><input type="radio" data-ak07-category="{{ $cId }}" name="items_checklist[{{ $cId }}][perlu]" value="0" {{ $itemState === false || $itemState === 0 ? 'checked' : '' }} @change="checklist['{{ $cId }}'] = 'tidak'"> Tidak Perlu</label>
+                            <label class="flex items-center gap-1.5"><input type="radio" data-ak07-category="{{ $cId }}" name="items_checklist[{{ $cId }}][perlu]" value="1" {{ $itemState === true || $itemState === 1 ? 'checked' : '' }} @change="checklist['{{ $cId }}'] = 'perlu'"> Perlu Penyesuaian</label>
                         </div>
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                             @foreach($crit['sub_options'] as $subKey => $subLabel)
                                 <label class="flex items-start gap-2 p-2 rounded-lg bg-white border border-slate-200 text-[11px]">
-                                    <input type="checkbox" name="items_checklist[{{ $cId }}][opsi][]" value="{{ $subKey }}" {{ in_array($subKey, $opsiSaved) ? 'checked' : '' }}>
+                                    <input type="checkbox" data-ak07-category="{{ $cId }}" name="items_checklist[{{ $cId }}][opsi][]" value="{{ $subKey }}" {{ in_array($subKey, $opsiSaved) ? 'checked' : '' }}>
                                     <span>{{ $subLabel }}</span>
                                 </label>
                             @endforeach
                         </div>
-                        <input type="text" name="items_checklist[{{ $cId }}][keterangan]" value="{{ $ketSaved }}" class="w-full px-3 py-1.5 rounded-lg border border-slate-200 text-xs" placeholder="Catatan khusus penyesuaian">
+                        <input type="text" data-ak07-category="{{ $cId }}" name="items_checklist[{{ $cId }}][keterangan]" value="{{ $ketSaved }}" class="w-full px-3 py-1.5 rounded-lg border border-slate-200 text-xs" placeholder="Catatan khusus penyesuaian">
                     </div>
                 @endforeach
             </div>
@@ -326,7 +330,6 @@
             </div>
         </div>
 
-        @if(false)
         <!-- 5. TANDA TANGAN ASESOR -->
         <div class="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-4 sm:p-5 space-y-4">
             <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
@@ -378,35 +381,14 @@
 
                     <!-- KONTROL TTD SAAT MODE EDIT AKTIF -->
                     <div x-show="isEditMode" class="space-y-2">
-                        <div class="flex items-center gap-3 flex-wrap">
-                            @if(!empty($currentSignature))
-                                <label class="inline-flex items-center gap-1.5 cursor-pointer text-xs font-medium text-slate-700">
-                                    <input type="radio" name="sign_mode" value="existing" x-model="signatureMode" class="accent-indigo-600">
-                                    <span>Gunakan TTD Tersimpan Saat Ini</span>
-                                </label>
-                            @endif
-                            <label class="inline-flex items-center gap-1.5 cursor-pointer text-xs font-medium text-slate-700">
-                                <input type="radio" name="sign_mode" value="canvas" x-model="signatureMode" class="accent-indigo-600">
-                                <span>Gores TTD Baru</span>
-                            </label>
-                        </div>
-
-                        <!-- Preview TTD Tersimpan -->
-                        @if(!empty($currentSignature))
-                            <div x-show="signatureMode === 'existing'" class="p-3 border border-slate-200 rounded-xl bg-white flex flex-col items-center justify-center h-28">
-                                <img src="{{ asset($currentSignature) }}" alt="TTD Tersimpan" class="max-h-20 object-contain">
-                                <span class="text-[10px] text-slate-400 mt-1">Tanda tangan yang tersimpan sebelumnya akan dipertahankan.</span>
-                            </div>
-                        @endif
-
-                        <!-- Canvas Box (Modal Trigger) -->
-                        <div x-show="signatureMode === 'canvas'" class="space-y-1.5">
+                        <div class="space-y-1.5">
                             <div id="container-ttd-asesor-preview" class="p-3 border-2 border-dashed border-slate-300 rounded-xl bg-slate-50 flex flex-col items-center justify-center min-h-[112px]">
                                 <img src="" id="preview-ttd-asesor" alt="TTD Asesor" class="hidden max-h-20 object-contain mb-2">
                                 <button type="button" id="btn-trigger-modal" onclick="bukaModalTtd()" class="px-3 py-1.5 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-lg text-xs font-bold hover:bg-indigo-100 shadow-sm flex items-center gap-2 transition-colors">
                                     <i class="fa-solid fa-pen"></i> Gores Tanda Tangan
                                 </button>
                                 <button type="button" onclick="bukaModalTtd()" id="btn-ubah-ttd" class="hidden text-[10px] text-indigo-600 hover:underline mt-0.5 font-semibold">Ubah Tanda Tangan</button>
+                                <span class="text-[10px] text-slate-500 mt-1">Buat tanda tangan baru setiap kali menyimpan formulir.</span>
                             </div>
                         </div>
 
@@ -432,8 +414,6 @@
                 </div>
             </div>
         </div>
-        @endif
-
         </fieldset>
 
         <!-- SUBMIT BAR / ACTION FOOTER -->
@@ -497,8 +477,6 @@ function ak07SkemaApp() {
     return {
         isEditMode: {{ $isConfigured ? 'false' : 'true' }},
         isSubmitting: false,
-        signatureMode: '{{ !empty($currentSignature) ? "existing" : "canvas" }}',
-        sigPad: null,
         selectedPotensi: {!! json_encode($selectedPotensi) !!},
         selectedFase: {!! json_encode($selectedFase) !!},
         checklist: {
@@ -516,49 +494,38 @@ function ak07SkemaApp() {
 
         setSemuaTidakPerlu() {
             if (!this.isEditMode) return;
-            for (let cId in this.checklist) {
+            for (const cId of Object.keys(this.checklist)) {
                 this.checklist[cId] = 'tidak';
+                const category = this.$root.querySelector(`[data-ak07-checklist-category="${cId}"]`);
+                if (!category) continue;
+
+                category.querySelector('input[type="radio"][value="0"]').checked = true;
+                category.querySelector('input[type="radio"][value="1"]').checked = false;
+                category.querySelectorAll('input[type="checkbox"]').forEach((input) => {
+                    input.checked = false;
+                });
+                const note = category.querySelector('input[name$="[keterangan]"]');
+                if (note) note.value = '';
             }
         },
 
         kosongkanSemuaChecklist() {
             if (!this.isEditMode) return;
-            for (let cId in this.checklist) {
+            for (const cId of Object.keys(this.checklist)) {
                 this.checklist[cId] = null;
+                const category = this.$root.querySelector(`[data-ak07-checklist-category="${cId}"]`);
+                if (!category) continue;
+
+                category.querySelectorAll('input[type="radio"], input[type="checkbox"]').forEach((input) => {
+                    input.checked = false;
+                });
+                const note = category.querySelector('input[name$="[keterangan]"]');
+                if (note) note.value = '';
             }
-        },
-
-        init() {
-            this.$nextTick(() => {
-                if (this.isEditMode && this.signatureMode === 'canvas') {
-                    this.initCanvas();
-                }
-            });
-
-            this.$watch('signatureMode', (val) => {
-                if (val === 'canvas') {
-                    this.$nextTick(() => this.initCanvas());
-                }
-            });
         },
 
         toggleEditMode() {
             this.isEditMode = !this.isEditMode;
-            if (this.isEditMode) {
-                this.$nextTick(() => {
-                    if (this.signatureMode === 'canvas') {
-                        this.initCanvas();
-                    }
-                });
-            }
-        },
-
-        initCanvas() {
-            // Digantikan oleh Modal
-        },
-
-        clearCanvas() {
-            // Digantikan oleh Modal
         },
 
         submitAk07(e) {
@@ -566,6 +533,12 @@ function ak07SkemaApp() {
                 return false;
             }
             if (this.isSubmitting) return;
+
+            const signature = document.getElementById('inputSignatureMasterAk07')?.value || '';
+            if (!/^data:image\/(png|jpeg);base64,/.test(signature)) {
+                alert('Silakan bubuhkan tanda tangan Asesor terlebih dahulu sebelum menyimpan FR.AK.07.');
+                return false;
+            }
 
             this.isSubmitting = true;
             e.target.submit();
@@ -579,7 +552,7 @@ function ak07SkemaApp() {
     <div class="modal-konten" style="background: white; border-radius: 12px; padding: 1.75rem; width: 100%; max-width: 500px; text-align: center; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
             <h3 style="color: #0f172a; margin: 0; font-weight: 800; font-size: 1.15rem;">Tanda Tangan Digital</h3>
-            <button type="button" onclick="document.getElementById('modalCanvasTtd').style.display = 'none'" style="background: none; border: none; font-size: 1.4rem; cursor: pointer; color: #64748b; line-height: 1;">&times;</button>
+            <button type="button" onclick="window.tutupModalTtd()" style="background: none; border: none; font-size: 1.4rem; cursor: pointer; color: #64748b; line-height: 1;">&times;</button>
         </div>
 
         <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 1rem; text-align: left;">
@@ -602,36 +575,99 @@ function ak07SkemaApp() {
 <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
 <script>
     window.signaturePadModal = null;
+    let fallbackSignatureDrawn = false;
+
+    window.tutupModalTtd = function() {
+        const modal = document.getElementById('modalCanvasTtd');
+        if (!modal) return;
+
+        modal.classList.remove('terbuka');
+        modal.style.display = 'none';
+        document.body.classList.remove('modal-terbuka');
+    };
 
     window.bukaModalTtd = function() {
         const modal = document.getElementById('modalCanvasTtd');
         if (modal) {
             modal.style.display = 'flex';
-            
-            if (!window.signaturePadModal) {
+            modal.classList.add('terbuka');
+            document.body.classList.add('modal-terbuka');
+            const input = document.getElementById('inputSignatureMasterAk07');
+            if (input) input.value = '';
+            document.getElementById('preview-ttd-asesor')?.classList.add('hidden');
+            document.getElementById('btn-trigger-modal')?.classList.remove('hidden');
+            document.getElementById('btn-ubah-ttd')?.classList.add('hidden');
+
+            requestAnimationFrame(() => {
                 const canvas = document.getElementById('canvas-ttd-modal');
-                if (canvas && window.SignaturePad) {
-                    window.signaturePadModal = new SignaturePad(canvas, {
-                        backgroundColor: 'rgb(255, 255, 255)'
-                    });
-                    
-                    const ratio = Math.max(window.devicePixelRatio || 1, 1);
-                    canvas.width = canvas.offsetWidth * ratio;
-                    canvas.height = canvas.offsetHeight * ratio;
-                    canvas.getContext("2d").scale(ratio, ratio);
+                if (!canvas) return;
+
+                const ratio = Math.max(window.devicePixelRatio || 1, 1);
+                const width = canvas.clientWidth;
+                const height = canvas.clientHeight;
+                if (!width || !height) return;
+
+                canvas.width = Math.round(width * ratio);
+                canvas.height = Math.round(height * ratio);
+                const context = canvas.getContext('2d');
+                context.setTransform(ratio, 0, 0, ratio, 0, 0);
+                fallbackSignatureDrawn = false;
+
+                if (window.signaturePadModal) {
                     window.signaturePadModal.clear();
+                } else if (typeof SignaturePad !== 'undefined') {
+                    window.signaturePadModal = new SignaturePad(canvas, {
+                        backgroundColor: 'rgb(255, 255, 255)',
+                        penColor: '#0f172a',
+                        minWidth: 1.2,
+                        maxWidth: 2.8
+                    });
+                } else {
+                    window.signaturePadModal = null;
+                    context.lineWidth = 2.5;
+                    context.lineCap = 'round';
+                    context.lineJoin = 'round';
+                    context.strokeStyle = '#0f172a';
+                    if (!canvas.dataset.pointerHandlers) {
+                        let drawing = false;
+                        canvas.addEventListener('pointerdown', (event) => {
+                            event.preventDefault();
+                            drawing = true;
+                            fallbackSignatureDrawn = true;
+                            canvas.setPointerCapture(event.pointerId);
+                            const rect = canvas.getBoundingClientRect();
+                            const ctx = canvas.getContext('2d');
+                            ctx.beginPath();
+                            ctx.moveTo(event.clientX - rect.left, event.clientY - rect.top);
+                        });
+                        canvas.addEventListener('pointermove', (event) => {
+                            if (!drawing) return;
+                            event.preventDefault();
+                            const rect = canvas.getBoundingClientRect();
+                            const ctx = canvas.getContext('2d');
+                            ctx.lineTo(event.clientX - rect.left, event.clientY - rect.top);
+                            ctx.stroke();
+                        });
+                        const stopDrawing = () => { drawing = false; };
+                        canvas.addEventListener('pointerup', stopDrawing);
+                        canvas.addEventListener('pointercancel', stopDrawing);
+                        canvas.dataset.pointerHandlers = 'true';
+                    }
                 }
-            } else {
-                window.signaturePadModal.clear();
-            }
+            });
         }
     };
 
     window.saveTtdAsesor = function() {
-        if (window.signaturePadModal && !window.signaturePadModal.isEmpty()) {
-            const dataUrl = window.signaturePadModal.toDataURL('image/png');
+        const hasSignature = window.signaturePadModal
+            ? !window.signaturePadModal.isEmpty()
+            : fallbackSignatureDrawn;
+        if (hasSignature) {
+            const canvas = document.getElementById('canvas-ttd-modal');
+            const dataUrl = window.signaturePadModal
+                ? window.signaturePadModal.toDataURL('image/png')
+                : canvas.toDataURL('image/png');
             
-            // For ak07-skema.blade.php
             const hiddenInput = document.getElementById('inputSignatureMasterAk07');
             if(hiddenInput) hiddenInput.value = dataUrl;
             
@@ -646,12 +682,9 @@ function ak07SkemaApp() {
                 btnTrigger.classList.add('hidden');
             }
             
-            const btnUbah = document.getElementById('btn-ubah-ttd');
-            if(btnUbah) {
-                btnUbah.classList.remove('hidden');
-            }
+            document.getElementById('btn-ubah-ttd')?.classList.remove('hidden');
 
-            document.getElementById('modalCanvasTtd').style.display = 'none';
+            window.tutupModalTtd();
         } else {
             if (typeof Swal !== 'undefined') {
                 Swal.fire({

@@ -30,7 +30,7 @@
         isStep2Complete: {{ $isApl02Approved ? 'true' : 'false' }},
         isStep3Complete: {{ $isAk01Selesai ? 'true' : 'false' }},
         isStep4Complete: {{ ($isAk07Selesai ?? false) ? 'true' : 'false' }},
-        isAsesiSignedAk01: {{ ($pendaftaran && (!empty($pendaftaran->tanda_tangan_asesi_ak01) || in_array($pendaftaran->status_ak01, ['disetujui_asesi', 'selesai']))) ? 'true' : 'false' }},
+        isAsesiSignedAk01: {{ $isAk01Selesai ? 'true' : 'false' }},
         setStep(step) {
             if (step === 2 && !this.isStep1Complete) return;
             if (step === 3 && !this.isStep2Complete) {
@@ -1607,7 +1607,7 @@
                     </div>
                 </div>
 
-                @if(!empty($pendaftaran->tanda_tangan_asesi_ak01) || $isAk01Selesai)
+                @if($isAk01Selesai)
                     <div class="bg-gradient-to-r from-blue-50/90 via-indigo-50/80 to-blue-50/90 border border-blue-200/80 rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
                         <div class="flex items-start sm:items-center gap-3.5">
                             <div class="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-xs">
@@ -1804,7 +1804,6 @@
                             </label>
                         </div>
 
-                        @if(false)
                         <!-- Tanda Tangan Asesor Preview jika sudah ada -->
                         @php
                             $ttdAsesorSah = $pendaftaran->tanda_tangan_asesor_ak01 ?: ($pendaftaran->skema?->masterAk01?->tanda_tangan_asesor ?? null);
@@ -1829,9 +1828,7 @@
                         @endif
 
                         @php
-                            $existingTtdTahapan = $pendaftaran->tanda_tangan_asesi_ak01 
-                                ?: ($pendaftaran->tanda_tangan_asesi 
-                                ?: ($draftData['tanda_tangan_asesi'] ?? (auth()->user()->tanda_tangan ?? null)));
+                            $existingTtdTahapan = $isAk01Selesai ? $pendaftaran->tanda_tangan_asesi_ak01 : null;
                             $hasExistingTtdTahapan = !empty($existingTtdTahapan);
                             $existingTtdTahapanUrl = null;
                             if ($hasExistingTtdTahapan) {
@@ -1846,22 +1843,34 @@
                              x-data="{ 
                                 isEditing: {{ $hasExistingTtdTahapan ? 'false' : 'true' }},
                                 hasSavedTtd: {{ $hasExistingTtdTahapan ? 'true' : 'false' }},
-                                savedTtd: '{{ $existingTtdTahapan }}',
-                                padComp: signaturePadComponent('canvasSignatureAk01', 'inputSignatureAk01'),
+                                savedTtd: @js($existingTtdTahapan),
+                                signatureEngine: null,
                                 init() {
-                                    this.padComp.init();
-                                    if (this.hasSavedTtd) {
-                                        this.$nextTick(() => updateAk01SubmitButton());
-                                    }
+                                    this.$nextTick(() => this.initSignatureEngine());
+                                    this.$watch('currentStep', (step) => {
+                                        if (step === 3) {
+                                            this.$nextTick(() => this.signatureEngine?.resize());
+                                        }
+                                    });
+                                },
+                                initSignatureEngine() {
+                                    const canvas = document.getElementById('canvasSignatureAk01');
+                                    const input = document.getElementById('inputSignatureAk01');
+                                    if (!canvas || this.signatureEngine) return;
+
+                                    this.signatureEngine = initUnifiedSignatureEngine(canvas, input, () => {
+                                        updateAk01SubmitButton();
+                                    });
+                                    updateAk01SubmitButton();
                                 },
                                 enableEdit() {
                                     this.isEditing = true;
                                     const input = document.getElementById('inputSignatureAk01');
                                     if (input) input.value = '';
                                     this.$nextTick(() => {
-                                        if (this.padComp.engine) {
-                                            this.padComp.engine.clear();
-                                            this.padComp.engine.resize();
+                                        if (this.signatureEngine) {
+                                            this.signatureEngine.clear();
+                                            this.signatureEngine.resize();
                                         }
                                         updateAk01SubmitButton();
                                     });
@@ -1870,20 +1879,22 @@
                                     this.isEditing = false;
                                     const input = document.getElementById('inputSignatureAk01');
                                     if (input) input.value = this.savedTtd;
-                                    if (this.padComp.engine) {
-                                        this.padComp.engine.clear();
+                                    if (this.signatureEngine) {
+                                        this.signatureEngine.clear();
                                     }
                                     this.$nextTick(() => updateAk01SubmitButton());
                                 },
                                 clearCanvas() {
-                                    this.padComp.clearSignature();
+                                    if (this.signatureEngine) {
+                                        this.signatureEngine.clear();
+                                    }
                                 }
                              }">
 
                             <div class="flex items-center justify-between mb-2">
                                 <div>
                                     <label class="text-xs font-bold text-slate-800 uppercase tracking-wider block">Tanda Tangan Digital Asesi</label>
-                                    <span class="text-xs text-slate-500">Bukti persetujuan sah rencana asesmen FR.AK.01.</span>
+                                    <span class="text-xs text-slate-500">Wajib ditandatangani sebelum Anda dapat melanjutkan ke FR.AK.07.</span>
                                 </div>
                                 <div class="flex items-center gap-2">
                                     <template x-if="!isEditing && hasSavedTtd">
@@ -1936,8 +1947,6 @@
                         </div>
                     </div>
 
-                        @endif
-
                     <!-- Bottom Action Final Button -->
                     <div class="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
                         <button type="button" @click="setStep(2)" 
@@ -1946,22 +1955,22 @@
                         </button>
                         
                         <div class="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
-                            @if(!empty($pendaftaran->tanda_tangan_asesi_ak01) || $isAk01Selesai)
+                            @if($isAk01Selesai)
                                 <button type="button" @click="setStep(4)"
                                    class="w-full sm:w-auto px-8 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-md transition-all duration-150 flex items-center justify-center gap-2 cursor-pointer">
                                     <span>Lanjut ke Formulir FR.AK.07 &rarr;</span>
                                 </button>
-                                <button type="submit" id="btn-submit-ak01" x-show="isEditing" style="display: none;"
+                                <button type="submit" id="btn-submit-ak01" x-show="isEditing" style="display: none;" disabled
                                         class="w-full sm:w-auto px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-md transition-all duration-150 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer">
                                     Simpan Perubahan Tanda Tangan
                                 </button>
                             @else
-                                <button type="submit" id="btn-submit-ak01"
+                                <button type="submit" id="btn-submit-ak01" disabled
                                         class="w-full sm:w-auto px-8 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-md transition-all duration-150 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer">
                                     Kirim & Setujui FR.AK.01
                                 </button>
                                 <p id="peringatan-ttd-ak01" class="text-xs text-slate-500 font-semibold flex items-center gap-1.5 mt-1">
-                                    <span>Pastikan rincian persetujuan telah ditinjau sebelum dikirim.</span>
+                                    <span>Tanda tangan wajib diisi sebelum FR.AK.01 dapat dikirim.</span>
                                 </p>
                             @endif
                         </div>
@@ -1994,20 +2003,33 @@
                 </div>
             @else
                 @php
+                    $isConfirmed = false;
+                    $isSignedByAsesiAk07 = false;
+                @endphp
+                @if(!$ak07 || empty($ak07->asesor_signature))
+                    <div class="bg-white rounded-2xl border border-amber-200 shadow-xs p-8 text-center space-y-3">
+                        <div class="w-12 h-12 rounded-xl bg-amber-50 text-amber-700 border border-amber-200 flex items-center justify-center mx-auto font-bold">AK.07</div>
+                        <h2 class="text-base font-bold text-slate-900">FR.AK.07 Belum Diisi Asesor</h2>
+                        <p class="text-sm text-slate-600 max-w-xl mx-auto">
+                            Formulir FR.AK.07 untuk skema ini akan tampil setelah Asesor mengisi dan menandatangani Master FR.AK.07.
+                        </p>
+                        <button type="button" @click="setStep(3)" class="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs">
+                            Kembali ke FR.AK.01
+                        </button>
+                    </div>
+                @else
+                @php
                     $asesorNama = $pendaftaran->asesor->nama_lengkap ?? $pendaftaran->jadwal?->asesor?->nama_lengkap ?? 'Asesor LSP';
                     $asesorMet = $pendaftaran->asesor->nomor_registrasi ?? $pendaftaran->jadwal?->asesor?->nomor_registrasi ?? 'MET.000.004455';
-                    $isConfirmed = $ak07 ? $ak07->isConfirmed() : false;
+                    $isConfirmed = $ak07->isConfirmed() && !empty($ak07->asesor_signature);
                     $profileTtd = null;
                     $isSignedByAsesi = $isConfirmed;
                     $savedChecklist = (array) ($ak07->items_checklist ?? []);
-                    if (empty($savedChecklist)) {
-                        $savedChecklist = \App\Models\AssessmentAk07Adjustment::defaultChecklistItems();
-                    }
-                    $selectedPotensi = (int) ($ak07->potensi_asesi ?? 1);
-                    $selectedFase = $ak07->fase_penggunaan ?? 'saat_pra_asesmen';
+                    $selectedPotensi = $ak07->potensi_asesi !== null ? (int) $ak07->potensi_asesi : null;
+                    $selectedFase = $ak07->fase_penggunaan;
                     $profileTtdAk07 = null;
                     $isSignedByAsesiAk07 = $isConfirmed;
-                    $asesorSigToShow = null;
+                    $asesorSigToShow = $ak07->asesor_signature;
 
                     $faseList = [
                         'pra_asesmen' => ['title' => 'Pra Asesmen', 'desc' => 'Diterapkan sebelum tahapan asesmen dimulai (misal: verifikasi berkas & konsultasi pra-uji)'],
@@ -2286,7 +2308,7 @@
                                 Acuan Pembanding Disepakati:
                             </span>
                             <div class="p-2.5 rounded-xl border border-slate-200 bg-slate-50/60 text-xs text-slate-800 font-medium">
-                                {{ $ak07->acuan_pembanding_disepakati ?? "Standar Kompetensi Kerja Nasional Indonesia (SKKNI) {$pendaftaran->skema->nama_skema}" }}
+                                {{ $ak07->acuan_pembanding_disepakati }}
                             </div>
                         </div>
 
@@ -2295,7 +2317,7 @@
                                 Metode Asesmen Disepakati:
                             </span>
                             <div class="p-2.5 rounded-xl border border-slate-200 bg-slate-50/60 text-xs text-slate-800 font-medium">
-                                {{ $ak07->metode_disepakati ?? 'Observasi Demonstrasi Langsung & Wawancara Terstruktur Klarifikasi' }}
+                                {{ $ak07->metode_disepakati }}
                             </div>
                         </div>
 
@@ -2304,7 +2326,7 @@
                                 Instrumen Pengganti / Penyesuaian:
                             </span>
                             <div class="p-2.5 rounded-xl border border-slate-200 bg-slate-50/60 text-xs text-slate-800 font-medium">
-                                {{ $ak07->instrumen_disepakati ?? 'FR.IA.01 (Observasi Praktik), FR.IA.03 (Pertanyaan Pendukung Observasi)' }}
+                                {{ $ak07->instrumen_disepakati }}
                             </div>
                         </div>
                     </div>
@@ -2314,9 +2336,24 @@
                             Catatan Tambahan Asesor:
                         </span>
                         <div class="p-2.5 rounded-xl border border-slate-200 bg-slate-50/60 text-xs text-slate-700 italic">
-                            {{ ($ak07 && $ak07->catatan_asesor) ? $ak07->catatan_asesor : 'Seluruh proses asesmen disepakati dapat dilaksanakan dengan penyesuaian yang wajar sesuai kesepakatan bersama.' }}
+                            {{ $ak07->catatan_asesor }}
                         </div>
                     </div>
+                </div>
+
+                @php
+                    $ttdMasterAk07Url = \Illuminate\Support\Str::startsWith($asesorSigToShow, ['data:', 'http://', 'https://'])
+                        ? $asesorSigToShow
+                        : asset($asesorSigToShow);
+                @endphp
+                <div class="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-4 sm:p-5 flex items-center justify-between gap-4">
+                    <div>
+                        <h3 class="text-sm font-bold text-slate-900">Disahkan Asesor untuk Seluruh Asesi Skema</h3>
+                        <p class="text-xs text-slate-500 mt-1">
+                            {{ $asesorNama }}{{ $ak07->asesor_signed_at ? ' · ' . $ak07->asesor_signed_at->format('d/m/Y H:i') : '' }}
+                        </p>
+                    </div>
+                    <img src="{{ $ttdMasterAk07Url }}" alt="Tanda tangan Asesor FR.AK.07" class="max-h-16 max-w-40 object-contain">
                 </div>
 
                 @if(false)
@@ -2341,6 +2378,7 @@
                                     <span class="px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-bold">
                                         Belum TTD
                                     </span>
+                                    @endif
                                 @endif
                             </div>
 
@@ -3023,8 +3061,6 @@
 
         function getCanvasCoords(e) {
             const rect = canvas.getBoundingClientRect();
-            const scaleX = canvas.width / (rect.width || 1);
-            const scaleY = canvas.height / (rect.height || 1);
 
             let clientX = e.clientX;
             let clientY = e.clientY;
@@ -3034,8 +3070,8 @@
             }
 
             return {
-                x: (clientX - rect.left) * scaleX,
-                y: (clientY - rect.top) * scaleY
+                x: clientX - rect.left,
+                y: clientY - rect.top
             };
         }
 
@@ -3332,7 +3368,10 @@
         const warning = document.getElementById('peringatan-ttd-ak01');
         if (!btn) return;
 
-        btn.disabled = false;
+        const signatureInput = document.getElementById('inputSignatureAk01');
+        const hasNewSignature = signatureInput
+            && /^data:image\/(png|jpeg);base64,/.test(signatureInput.value);
+        btn.disabled = !hasNewSignature;
         if (warning) warning.style.display = 'flex';
     }
 
@@ -3340,6 +3379,12 @@
         event.preventDefault();
         const form = document.getElementById('form-ak01-asesi');
         if (form && !form.reportValidity()) return false;
+        const signatureInput = document.getElementById('inputSignatureAk01');
+        if (!signatureInput || !/^data:image\/(png|jpeg);base64,/.test(signatureInput.value)) {
+            alert('Silakan bubuhkan tanda tangan digital sebelum melanjutkan.');
+            updateAk01SubmitButton();
+            return false;
+        }
         const btn = document.getElementById('btn-submit-ak01');
         if (btn) {
             btn.disabled = true;

@@ -920,69 +920,13 @@ class PendaftaranAsesi extends Model
         $skema = $this->relationLoaded('skema') ? $this->skema : $this->skema()->with('masterAk07')->first();
         $masterAk07 = $skema?->masterAk07;
 
-        if (!$masterAk07) {
+        if (!$masterAk07 || $masterAk07->status !== 'selesai' || empty($masterAk07->tanda_tangan_asesor)) {
             return false;
         }
 
-        $ak07 = $this->relationLoaded('ak07Adjustment') ? $this->ak07Adjustment : $this->ak07Adjustment()->first();
-        $isNew = false;
-        if (!$ak07) {
-            $ak07 = new \App\Models\AssessmentAk07Adjustment([
-                'assessment_registration_id' => $this->id,
-            ]);
-            $isNew = true;
-        }
+        $syncedCount = $masterAk07->sinkronkanKePeserta($this->id);
+        $this->unsetRelation('ak07Adjustment');
 
-        $needsUpdate = false;
-
-        // Jika baru atau status masih draft, sinkronkan checklist & pengaturan
-        if ($isNew || $ak07->status !== 'confirmed') {
-            if (!empty($masterAk07->potensi_asesi) && ($isNew || empty($ak07->potensi_asesi))) {
-                $ak07->potensi_asesi = $masterAk07->potensi_asesi;
-                $needsUpdate = true;
-            }
-            if (!empty($masterAk07->fase_penggunaan)) {
-                $ak07->fase_penggunaan = $masterAk07->fase_penggunaan;
-                $needsUpdate = true;
-            }
-            if (!empty($masterAk07->items_checklist)) {
-                $ak07->items_checklist = $masterAk07->items_checklist;
-                $needsUpdate = true;
-            }
-            if (!empty($masterAk07->acuan_pembanding_disepakati)) {
-                $ak07->acuan_pembanding_disepakati = $masterAk07->acuan_pembanding_disepakati;
-                $needsUpdate = true;
-            }
-            if (!empty($masterAk07->metode_disepakati)) {
-                $ak07->metode_disepakati = $masterAk07->metode_disepakati;
-                $needsUpdate = true;
-            }
-            if (!empty($masterAk07->instrumen_disepakati)) {
-                $ak07->instrumen_disepakati = $masterAk07->instrumen_disepakati;
-                $needsUpdate = true;
-            }
-            if (!empty($masterAk07->catatan_asesor)) {
-                $ak07->catatan_asesor = $masterAk07->catatan_asesor;
-                $needsUpdate = true;
-            }
-        }
-
-        if ($ak07->asesor_signature !== null || $ak07->asesor_signed_at !== null || $ak07->asesi_signature !== null || $ak07->asesi_signed_at !== null) {
-            $ak07->asesor_signature = null;
-            $ak07->asesor_signed_at = null;
-            $ak07->asesi_signature = null;
-            $ak07->asesi_signed_at = null;
-            $needsUpdate = true;
-        }
-
-        if ($needsUpdate || $isNew) {
-            if ($ak07->status !== 'confirmed') {
-                $ak07->status = 'draft';
-            }
-            $ak07->save();
-            return true;
-        }
-
-        return false;
+        return $syncedCount > 0;
     }
 }

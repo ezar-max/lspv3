@@ -246,7 +246,7 @@
                                 <!-- AK.07 Status Badge -->
                                 <div>
                                     @php $ak07P = $p->ak07Adjustment; @endphp
-                                    <a href="{{ route('asesor.pendaftaran.ak07.edit', $p->id) }}" class="inline-block group" title="Buka Formulir FR.AK.07 Peserta">
+                                    <a href="{{ route('asesor.skema.ak-07', $p->skema_id) }}" class="inline-block group" title="Buka Master FR.AK.07 untuk seluruh asesi di skema">
                                     @if($ak07P && $ak07P->isConfirmed())
                                         <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold" title="FR.AK.07 Disetujui & Sah oleh Asesi">
                                             AK.07 Sah

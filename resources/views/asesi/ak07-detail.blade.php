@@ -10,15 +10,15 @@
     $asesorNama = $pendaftaran->asesor->nama_lengkap ?? $pendaftaran->jadwal?->asesor?->nama_lengkap ?? 'Asesor LSP';
     $asesorMet = $pendaftaran->asesor->nomor_registrasi ?? $pendaftaran->jadwal?->asesor?->nomor_registrasi ?? 'MET.000.004455';
     $profileTtd = null;
-    $isSignedByAsesi = $ak07 ? $ak07->isConfirmed() : false;
-    $isConfirmed = $ak07 ? $ak07->isConfirmed() : false;
+    $isConfirmed = $ak07 && $ak07->isConfirmed() && !empty($ak07->asesor_signature);
+    $isSignedByAsesi = $isConfirmed;
     $savedChecklist = (array) ($ak07->items_checklist ?? []);
-    if (empty($savedChecklist)) {
-        $savedChecklist = \App\Models\AssessmentAk07Adjustment::defaultChecklistItems();
-    }
-    $selectedPotensi = (int) ($ak07->potensi_asesi ?? 1);
-    $selectedFase = $ak07->fase_penggunaan ?? 'saat_pra_asesmen';
-    $asesorSigToShow = null;
+    $selectedPotensi = $ak07?->potensi_asesi !== null ? (int) $ak07->potensi_asesi : null;
+    $selectedFase = $ak07?->fase_penggunaan;
+    $asesorSigToShow = $ak07?->asesor_signature;
+    $asesorSigUrl = $asesorSigToShow
+        ? (\Illuminate\Support\Str::startsWith($asesorSigToShow, ['data:', 'http://', 'https://']) ? $asesorSigToShow : asset($asesorSigToShow))
+        : null;
 
     $faseList = [
         'pra_asesmen' => ['title' => 'Pra Asesmen', 'desc' => 'Diterapkan sebelum tahapan asesmen dimulai (misal: verifikasi berkas & konsultasi pra-uji)'],
@@ -297,7 +297,7 @@
                     Acuan Pembanding Disepakati:
                 </span>
                 <div class="p-2.5 rounded-xl border border-slate-200 bg-slate-50/60 text-xs text-slate-800 font-medium">
-                    {{ $ak07->acuan_pembanding_disepakati ?? "Standar Kompetensi Kerja Nasional Indonesia (SKKNI) {$pendaftaran->skema->nama_skema}" }}
+                    {{ $ak07->acuan_pembanding_disepakati }}
                 </div>
             </div>
 
@@ -306,7 +306,7 @@
                     Metode Asesmen Disepakati:
                 </span>
                 <div class="p-2.5 rounded-xl border border-slate-200 bg-slate-50/60 text-xs text-slate-800 font-medium">
-                    {{ $ak07->metode_disepakati ?? 'Observasi Demonstrasi Langsung & Wawancara Terstruktur Klarifikasi' }}
+                    {{ $ak07->metode_disepakati }}
                 </div>
             </div>
 
@@ -315,7 +315,7 @@
                     Instrumen Pengganti / Penyesuaian:
                 </span>
                 <div class="p-2.5 rounded-xl border border-slate-200 bg-slate-50/60 text-xs text-slate-800 font-medium">
-                    {{ $ak07->instrumen_disepakati ?? 'FR.IA.01 (Observasi Praktik), FR.IA.03 (Pertanyaan Pendukung Observasi)' }}
+                    {{ $ak07->instrumen_disepakati }}
                 </div>
             </div>
         </div>
@@ -325,10 +325,22 @@
                 Catatan Tambahan Asesor:
             </span>
             <div class="p-2.5 rounded-xl border border-slate-200 bg-slate-50/60 text-xs text-slate-700 italic">
-                {{ ($ak07 && $ak07->catatan_asesor) ? $ak07->catatan_asesor : 'Seluruh proses asesmen disepakati dapat dilaksanakan dengan penyesuaian yang wajar sesuai kesepakatan bersama.' }}
+                {{ $ak07->catatan_asesor }}
             </div>
         </div>
     </div>
+
+    @if($asesorSigToShow)
+        <div class="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-4 flex items-center justify-between gap-4">
+            <div>
+                <h3 class="text-sm font-bold text-slate-900">Disahkan Asesor untuk Seluruh Asesi Skema</h3>
+                <p class="text-xs text-slate-500 mt-1">
+                    {{ $asesorNama }}{{ $ak07->asesor_signed_at ? ' · ' . $ak07->asesor_signed_at->format('d/m/Y H:i') : '' }}
+                </p>
+            </div>
+            <img src="{{ $asesorSigUrl }}" alt="Tanda tangan Asesor FR.AK.07" class="max-h-16 max-w-40 object-contain">
+        </div>
+    @endif
 
     @if(false)
     <!-- 5. BAGIAN PENGESAHAN TANDA TANGAN DIGITAL & STATUS KESEPAKATAN -->

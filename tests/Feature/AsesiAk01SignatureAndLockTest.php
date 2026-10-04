@@ -94,6 +94,8 @@ class AsesiAk01SignatureAndLockTest extends TestCase
         $content = $response->getContent();
         $this->assertStringContainsString('name="tuk_type"', $content);
         $this->assertStringContainsString('disabled', $content);
+        $this->assertStringContainsString('id="canvasAk01Asesi"', $content);
+        $this->assertStringContainsString('Silakan bubuhkan tanda tangan digital Anda.', $content);
     }
 
     /** 2. Tanda tangan profil tidak ditampilkan dan asesi harus menandatangani sebelum submit selesai */

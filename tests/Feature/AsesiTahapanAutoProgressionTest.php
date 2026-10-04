@@ -126,6 +126,11 @@ class AsesiTahapanAutoProgressionTest extends TestCase
         $response->assertStatus(200);
         $response->assertViewHas('currentStep', 3);
         $response->assertViewHas('activeStep', 3);
+        $response->assertSee('Tanda Tangan Digital Asesi');
+        $response->assertSee('Wajib ditandatangani sebelum Anda dapat melanjutkan ke FR.AK.07.');
+        $response->assertSee('id="canvasSignatureAk01"', false);
+        $response->assertSee('id="btn-submit-ak01" disabled', false);
+        $response->assertSee('this.signatureEngine = initUnifiedSignatureEngine(canvas, input', false);
     }
 
     public function test_page_auto_advances_to_step_4_when_ak01_is_completed()
@@ -151,7 +156,30 @@ class AsesiTahapanAutoProgressionTest extends TestCase
         $response->assertViewHas('currentStep', 4);
         $response->assertViewHas('activeStep', 4);
         $response->assertSee('FR.AK.07');
-        $response->assertSee('Penyesuaian yang Wajar dan Beralasan');
+        $response->assertSee('FR.AK.07 Belum Diisi Asesor');
+    }
+
+    public function test_page_does_not_advance_to_step_4_when_ak01_status_is_complete_without_signature()
+    {
+        PendaftaranAsesi::create([
+            'asesi_id' => $this->asesi->id,
+            'skema_id' => $this->skema->id,
+            'nomor_pendaftaran' => 'REG-AUTO-006',
+            'tanggal_daftar' => now(),
+            'status_pendaftaran' => 'diverifikasi',
+            'rekomendasi_admin_status' => 'diterima',
+            'tanda_tangan_admin' => 'data:image/png;base64,ttdadmin',
+            'tanggal_ttd_admin' => now(),
+            'status_apl02' => 'approved',
+            'status_ak01' => 'selesai',
+            'tujuan_asesmen' => 'Sertifikasi',
+        ]);
+
+        $response = $this->actingAs($this->asesi)->get(route('asesi.tahapan'));
+
+        $response->assertStatus(200);
+        $response->assertViewHas('currentStep', 3);
+        $response->assertViewHas('isAk01Selesai', false);
+        $response->assertSee('id="canvasSignatureAk01"', false);
     }
 }
-

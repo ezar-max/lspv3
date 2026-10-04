@@ -1109,15 +1109,31 @@ class AsesorController extends Controller
         $user = auth()->user();
         $skema = $this->authorizeSkemaAccess((int) $skemaId);
 
-        $request->validate([
-            'potensi_asesi' => 'nullable|integer|between:1,5',
-            'fase_penggunaan' => 'nullable|string',
+        $validated = $request->validate([
+            'potensi_asesi' => 'required|integer|between:1,5',
+            'fase_penggunaan' => 'required|string|in:pra_asesmen,saat_pra_asesmen,setelah_pra_asesmen',
             'items_checklist' => 'nullable|array',
             'acuan_pembanding_disepakati' => 'nullable|string|max:1000',
             'metode_disepakati' => 'nullable|string|max:1000',
             'instrumen_disepakati' => 'nullable|string|max:1000',
             'catatan_asesor' => 'nullable|string|max:1000',
+            'tanda_tangan_asesor' => ['required', 'string', 'max:2000000', 'regex:/^data:image\\/(png|jpeg);base64,/'],
         ]);
+
+        $rawSignature = $validated['tanda_tangan_asesor'];
+        $signaturePayload = substr($rawSignature, strpos($rawSignature, ',') + 1);
+        if (base64_decode($signaturePayload, true) === false) {
+            return back()->withErrors(['tanda_tangan_asesor' => 'Data tanda tangan tidak valid.'])->withInput();
+        }
+
+        $signaturePath = app(MapaWorkflowService::class)->saveSignatureFile(
+            $rawSignature,
+            null,
+            'ak07_master_asesor_' . $skema->id
+        );
+        if (!$signaturePath || str_starts_with($signaturePath, 'data:image/')) {
+            return back()->withErrors(['tanda_tangan_asesor' => 'Tanda tangan Asesor gagal disimpan.'])->withInput();
+        }
 
         $rawChecklist = $request->input('items_checklist', []);
         $formattedChecklist = [];
@@ -1144,24 +1160,26 @@ class AsesorController extends Controller
             ];
         }
 
-        $masterAk07 = MasterAk07::updateOrCreate(
-            ['skema_id' => $skema->id],
-            [
-                'asesor_id' => $user->id,
-                'potensi_asesi' => $request->filled('potensi_asesi') ? (int) $request->input('potensi_asesi') : null,
-                'fase_penggunaan' => $request->input('fase_penggunaan') ?: null,
-                'items_checklist' => $formattedChecklist,
-                'acuan_pembanding_disepakati' => $request->input('acuan_pembanding_disepakati'),
-                'metode_disepakati' => $request->input('metode_disepakati'),
-                'instrumen_disepakati' => $request->input('instrumen_disepakati'),
-                'catatan_asesor' => $request->input('catatan_asesor'),
-                'tanda_tangan_asesor' => null,
-                'tanggal_ttd_asesor' => null,
-                'status' => 'selesai',
-            ]
-        );
+        $syncedCount = \Illuminate\Support\Facades\DB::transaction(function () use ($skema, $user, $validated, $formattedChecklist, $signaturePath) {
+            $master = MasterAk07::updateOrCreate(
+                ['skema_id' => $skema->id],
+                [
+                    'asesor_id' => $user->id,
+                    'potensi_asesi' => (int) $validated['potensi_asesi'],
+                    'fase_penggunaan' => $validated['fase_penggunaan'],
+                    'items_checklist' => $formattedChecklist,
+                    'acuan_pembanding_disepakati' => $validated['acuan_pembanding_disepakati'] ?? null,
+                    'metode_disepakati' => $validated['metode_disepakati'] ?? null,
+                    'instrumen_disepakati' => $validated['instrumen_disepakati'] ?? null,
+                    'catatan_asesor' => $validated['catatan_asesor'] ?? null,
+                    'tanda_tangan_asesor' => $signaturePath,
+                    'tanggal_ttd_asesor' => now('Asia/Jakarta'),
+                    'status' => 'selesai',
+                ]
+            );
 
-        $syncedCount = $masterAk07->sinkronkanKePeserta();
+            return $master->sinkronkanKePeserta();
+        });
 
         LogAktivitas::catat('Master AK.07', 'Menetapkan dan mengesahkan Master FR.AK.07 untuk Skema ' . $skema->kode_skema . ' (Diterapkan ke ' . $syncedCount . ' asesi)');
 
@@ -1578,4 +1596,3 @@ class AsesorController extends Controller
         ));
     }
 }
-

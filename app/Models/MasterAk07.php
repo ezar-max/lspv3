@@ -47,6 +47,10 @@ class MasterAk07 extends Model
      */
     public function sinkronkanKePeserta(?int $specificPendaftaranId = null): int
     {
+        if ($this->status !== 'selesai' || empty($this->tanda_tangan_asesor)) {
+            return 0;
+        }
+
         $query = PendaftaranAsesi::where('skema_id', $this->skema_id);
 
         if ($specificPendaftaranId) {
@@ -59,22 +63,29 @@ class MasterAk07 extends Model
                 'assessment_registration_id' => $p->id,
             ]);
 
-            // Selaraskan data penyesuaian dari master jika belum dikonfirmasi atau masih draft
-            if (!$ak07->exists || $ak07->status === 'draft') {
-                $ak07->potensi_asesi = $this->potensi_asesi;
-                $ak07->fase_penggunaan = $this->fase_penggunaan;
-                $ak07->items_checklist = $this->items_checklist ?? [];
-                $ak07->acuan_pembanding_disepakati = $this->acuan_pembanding_disepakati;
-                $ak07->metode_disepakati = $this->metode_disepakati;
-                $ak07->instrumen_disepakati = $this->instrumen_disepakati;
-                $ak07->catatan_asesor = $this->catatan_asesor;
+            $masterData = [
+                'potensi_asesi' => $this->potensi_asesi,
+                'fase_penggunaan' => $this->fase_penggunaan,
+                'items_checklist' => $this->items_checklist ?? [],
+                'acuan_pembanding_disepakati' => $this->acuan_pembanding_disepakati,
+                'metode_disepakati' => $this->metode_disepakati,
+                'instrumen_disepakati' => $this->instrumen_disepakati,
+                'catatan_asesor' => $this->catatan_asesor,
+                'asesor_signature' => $this->tanda_tangan_asesor,
+                'asesor_signed_at' => $this->tanggal_ttd_asesor,
+            ];
+            $masterChanged = !$ak07->exists;
+            foreach ($masterData as $attribute => $value) {
+                if ($ak07->getAttribute($attribute) != $value) {
+                    $masterChanged = true;
+                    break;
+                }
             }
 
-            $ak07->asesor_signature = null;
-            $ak07->asesor_signed_at = null;
-            $ak07->asesi_signature = null;
-            $ak07->asesi_signed_at = null;
-            if ($ak07->status !== 'confirmed') {
+            $ak07->fill($masterData);
+            if ($masterChanged) {
+                $ak07->asesi_signature = null;
+                $ak07->asesi_signed_at = null;
                 $ak07->status = 'draft';
             }
 

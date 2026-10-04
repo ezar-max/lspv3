@@ -29,11 +29,9 @@
         $savedBukti = (array) ($pendaftaran->skema?->masterAk01?->bukti_dikumpulkan ?: $pendaftaran->getDefaultBuktiDikumpulkanFromSkema());
     }
 
-    // Ambil tanda tangan yang sudah ada secara hierarki:
-    // 1. TTD AK.01 jika sudah ada
-    // 2. TTD pendaftaran (APL.01 / APL.02)
-    // 3. TTD profil akun asesi
-    $existingTtd = null;
+    // Gunakan tanda tangan yang sudah tersimpan khusus untuk AK.01.
+    // Tanda tangan profil tidak boleh menggantikan tanda tangan baru pada formulir ini.
+    $existingTtd = $isSignedByAsesi ? $pendaftaran->tanda_tangan_asesi_ak01 : null;
 
     $hasExistingTtd = !empty($existingTtd);
     $existingTtdUrl = null;

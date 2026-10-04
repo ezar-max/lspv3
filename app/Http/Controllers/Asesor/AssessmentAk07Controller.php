@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Asesor;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\UpdateAssessmentAk07Request;
 use App\Models\AssessmentAk07Adjustment;
 use App\Models\LogAktivitas;
 use App\Models\PendaftaranAsesi;
@@ -60,150 +59,23 @@ class AssessmentAk07Controller extends Controller
      */
     public function edit($pendaftaranId)
     {
-        $pendaftaran = PendaftaranAsesi::with([
-            'asesi.profilAsesi',
-            'skema.unitKompetensi.elemenKompetensi.kriteriaUnjukKerja',
-            'asesor',
-            'jadwal',
-            'mapa01',
-            'ak07Adjustment',
-        ])->findOrFail($pendaftaranId);
-
+        $pendaftaran = PendaftaranAsesi::with('jadwal')->findOrFail($pendaftaranId);
         $this->authorizeAsesor($pendaftaran);
 
-        // Opsi pengalihan ke Master Skema jika diminta secara eksplisit melalui parameter query
-        if (request()->boolean('master') && $pendaftaran->skema_id) {
-            return redirect()->route('asesor.skema.ak-07', $pendaftaran->skema_id)
-                ->with('info', 'Membuka konfigurasi Master FR.AK.07 untuk skema sertifikasi.');
-        }
-
-        // Sinkronisasi otomatis dari Master FR.AK.07 Skema jika tersedia
-        $pendaftaran->syncFromMasterAk07IfAvailable();
-        $pendaftaran->refresh();
-
-        // Ambil atau buat instance model penyesuaian AK.07
-        $ak07 = $pendaftaran->ak07Adjustment;
-        if (!$ak07) {
-            $defaultPotensi = $this->resolveDefaultPotensi($pendaftaran);
-            
-            $ak07 = new AssessmentAk07Adjustment([
-                'assessment_registration_id' => $pendaftaran->id,
-                'potensi_asesi' => null,
-                'fase_penggunaan' => null,
-                'items_checklist' => [],
-                'status' => 'draft',
-            ]);
-        }
-
-        $criteriaDefinitions = AssessmentAk07Adjustment::CRITERIA_DEFINITIONS;
-        $potensiDefinitions = AssessmentAk07Adjustment::POTENSI_DEFINITIONS;
-
-        return view('asesor.ak07.edit', compact(
-            'pendaftaran',
-            'ak07',
-            'criteriaDefinitions',
-            'potensiDefinitions'
-        ));
+        return redirect()->route('asesor.skema.ak-07', $pendaftaran->skema_id)
+            ->with('info', 'FR.AK.07 diisi satu kali dan berlaku untuk seluruh asesi pada skema ini.');
     }
 
     /**
      * Simpan / Perbarui data checklist dan kesepakatan FR.AK.07
      */
-    public function update(UpdateAssessmentAk07Request $request, $pendaftaranId)
+    public function update(Request $request, $pendaftaranId)
     {
-        $pendaftaran = PendaftaranAsesi::with(['ak07Adjustment', 'jadwal'])->findOrFail($pendaftaranId);
+        $pendaftaran = PendaftaranAsesi::with('jadwal')->findOrFail($pendaftaranId);
         $this->authorizeAsesor($pendaftaran);
 
-        $ak07 = AssessmentAk07Adjustment::firstOrNew([
-            'assessment_registration_id' => $pendaftaran->id,
-        ]);
-
-        $isPreviouslyConfirmed = ($ak07->status === 'confirmed');
-        $isConfirmAction = in_array($request->input('aksi'), ['confirm', 'konfirmasi']);
-
-        // Format items checklist dari form submission
-        $rawChecklist = $request->input('items_checklist', []);
-        $formattedChecklist = [];
-
-        foreach (AssessmentAk07Adjustment::CRITERIA_DEFINITIONS as $catId => $cat) {
-            $catInput = $rawChecklist[$catId] ?? [];
-            $perluVal = $catInput['perlu'] ?? null;
-            $isPerlu = null;
-
-            if ($perluVal !== null && $perluVal !== '') {
-                $isPerlu = filter_var($perluVal, FILTER_VALIDATE_BOOLEAN) || 
-                           ($perluVal === '1') || 
-                           ($perluVal === 1) ||
-                           ($perluVal === 'ya');
-            }
-
-            $opsiDipilih = is_array($catInput['opsi'] ?? null) ? array_values($catInput['opsi']) : [];
-            $keterangan = trim($catInput['keterangan'] ?? '');
-
-            $formattedChecklist[$catId] = [
-                'perlu_penyesuaian' => $isPerlu,
-                'opsi_dipilih' => $isPerlu === true ? $opsiDipilih : [],
-                'keterangan' => $isPerlu === true ? $keterangan : '',
-            ];
-        }
-
-        // Simpan atribut utama
-        $ak07->potensi_asesi = $request->filled('potensi_asesi') ? (int) $request->input('potensi_asesi') : null;
-        $ak07->fase_penggunaan = $request->input('fase_penggunaan') ?: null;
-        $ak07->items_checklist = $formattedChecklist;
-        $ak07->acuan_pembanding_disepakati = $request->input('acuan_pembanding_disepakati');
-        $ak07->metode_disepakati = $request->input('metode_disepakati');
-        $ak07->instrumen_disepakati = $request->input('instrumen_disepakati');
-        $ak07->catatan_asesor = $request->input('catatan_asesor');
-
-        // Perubahan data yang telah dikonfirmasi kembali menjadi draft.
-        if ($isPreviouslyConfirmed && !$isConfirmAction) {
-            $ak07->status = 'draft';
-        } elseif ($isConfirmAction) {
-            $ak07->status = 'confirmed';
-        }
-
-        $ak07->asesor_signature = null;
-        $ak07->asesor_signed_at = null;
-        $ak07->asesi_signature = null;
-        $ak07->asesi_signed_at = null;
-
-        $ak07->save();
-
-        // Jika asesor memilih untuk menerapkan konfigurasi ini ke seluruh asesi skema
-        if ($request->boolean('terapkan_semua_asesi')) {
-            $master = \App\Models\MasterAk07::updateOrCreate(
-                ['skema_id' => $pendaftaran->skema_id],
-                [
-                    'asesor_id' => auth()->id(),
-                    'potensi_asesi' => $ak07->potensi_asesi,
-                    'fase_penggunaan' => $ak07->fase_penggunaan,
-                    'items_checklist' => $ak07->items_checklist,
-                    'acuan_pembanding_disepakati' => $ak07->acuan_pembanding_disepakati,
-                    'metode_disepakati' => $ak07->metode_disepakati,
-                    'instrumen_disepakati' => $ak07->instrumen_disepakati,
-                    'catatan_asesor' => $ak07->catatan_asesor,
-                    'tanda_tangan_asesor' => null,
-                    'tanggal_ttd_asesor' => null,
-                    'status' => $ak07->status,
-                ]
-            );
-            $master->sinkronkanKePeserta();
-        }
-
-        LogAktivitas::create([
-            'pengguna_id' => auth()->id(),
-            'aktivitas' => 'Memperbarui Formulir FR.AK.07 Penyesuaian yang Wajar untuk Pendaftaran #' . $pendaftaran->nomor_pendaftaran . ' (' . strtoupper($ak07->status) . ')',
-            'ip_address' => $request->ip(),
-            'user_agent' => $request->userAgent(),
-        ]);
-
-        $message = $ak07->isConfirmed()
-            ? 'Dokumen FR.AK.07 berhasil disahkan (CONFIRMED).'
-            : 'Draft FR.AK.07 berhasil disimpan.';
-
-        return redirect()->route('asesor.pendaftaran.ak07.edit', $pendaftaran->id)
-            ->with('sukses', $message);
+        return redirect()->route('asesor.skema.ak-07', $pendaftaran->skema_id)
+            ->with('info', 'FR.AK.07 disimpan bersama untuk seluruh asesi pada skema ini.');
     }
 
     /**
@@ -214,31 +86,18 @@ class AssessmentAk07Controller extends Controller
         $pendaftaran = PendaftaranAsesi::with('ak07Adjustment')->findOrFail($pendaftaranId);
         $this->authorizeAsesi($pendaftaran);
 
-        $ak07 = $pendaftaran->ak07Adjustment;
-        if (!$ak07) {
-            $defaultChecklist = AssessmentAk07Adjustment::defaultChecklistItems();
-            $namaSkema = $pendaftaran->skema->nama_skema ?? 'Skema Sertifikasi';
-            $defaultPotensi = $this->resolveDefaultPotensi($pendaftaran);
-
-            $ak07 = AssessmentAk07Adjustment::create([
-                'assessment_registration_id' => $pendaftaran->id,
-                'potensi_asesi' => $defaultPotensi,
-                'fase_penggunaan' => 'saat_pra_asesmen',
-                'items_checklist' => $defaultChecklist,
-                'status' => 'draft',
-                'acuan_pembanding_disepakati' => "Standar Kompetensi Kerja Nasional Indonesia (SKKNI) {$namaSkema}",
-                'metode_disepakati' => 'Observasi Demonstrasi & Wawancara',
-                'instrumen_disepakati' => 'FR.IA.01, FR.IA.03',
-                'catatan_asesor' => 'Seluruh proses asesmen disepakati dapat dilaksanakan dengan penyesuaian yang wajar sesuai kesepakatan bersama.',
-                'asesor_signature' => null,
-                'asesor_signed_at' => null,
-            ]);
+        if (!$pendaftaran->syncFromMasterAk07IfAvailable()) {
+            return redirect()->route('asesi.tahapan', ['pendaftaran_id' => $pendaftaran->id, 'step' => 4])
+                ->with('error', 'FR.AK.07 belum tersedia. Asesor harus mengisi dan menandatangani formulir untuk skema ini terlebih dahulu.');
         }
 
-        $ak07->asesor_signature = null;
-        $ak07->asesor_signed_at = null;
-        $ak07->asesi_signature = null;
-        $ak07->asesi_signed_at = null;
+        $pendaftaran->refresh();
+        $ak07 = $pendaftaran->ak07Adjustment;
+        if (!$ak07 || empty($ak07->asesor_signature)) {
+            return redirect()->route('asesi.tahapan', ['pendaftaran_id' => $pendaftaran->id, 'step' => 4])
+                ->with('error', 'FR.AK.07 belum ditandatangani Asesor.');
+        }
+
         $ak07->status = 'confirmed';
         $ak07->save();
 
@@ -284,40 +143,17 @@ class AssessmentAk07Controller extends Controller
         $this->authorizeAsesi($pendaftaran);
 
         // Sinkronkan data dari Master FR.AK.07 jika ada
-        $pendaftaran->syncFromMasterAk07IfAvailable();
+        $hasSignedMaster = $pendaftaran->syncFromMasterAk07IfAvailable();
         $pendaftaran->refresh();
 
-        $ak07 = $pendaftaran->ak07Adjustment;
-        $defaultChecklist = AssessmentAk07Adjustment::defaultChecklistItems();
-        $namaSkema = $pendaftaran->skema->nama_skema ?? 'Skema Sertifikasi';
-
-        if (!$ak07) {
-            $defaultPotensi = $this->resolveDefaultPotensi($pendaftaran);
-            $ak07 = AssessmentAk07Adjustment::create([
-                'assessment_registration_id' => $pendaftaran->id,
-                'potensi_asesi' => $defaultPotensi,
-                'fase_penggunaan' => 'saat_pra_asesmen',
-                'items_checklist' => $defaultChecklist,
-                'status' => 'draft',
-                'acuan_pembanding_disepakati' => "Standar Kompetensi Kerja Nasional Indonesia (SKKNI) {$namaSkema}",
-                'metode_disepakati' => 'Observasi Demonstrasi & Wawancara',
-                'instrumen_disepakati' => 'FR.IA.01, FR.IA.03',
-                'catatan_asesor' => 'Seluruh proses asesmen disepakati dapat dilaksanakan dengan penyesuaian yang wajar sesuai kesepakatan bersama.',
-                'asesor_signature' => null,
-                'asesor_signed_at' => null,
-            ]);
-        } elseif (empty($ak07->items_checklist)) {
-            $ak07->update([
-                'items_checklist' => $defaultChecklist,
-                'acuan_pembanding_disepakati' => $ak07->acuan_pembanding_disepakati ?? "Standar Kompetensi Kerja Nasional Indonesia (SKKNI) {$namaSkema}",
-                'metode_disepakati' => $ak07->metode_disepakati ?? 'Observasi Demonstrasi & Wawancara',
-                'instrumen_disepakati' => $ak07->instrumen_disepakati ?? 'FR.IA.01, FR.IA.03',
-                'catatan_asesor' => $ak07->catatan_asesor ?? 'Seluruh proses asesmen disepakati dapat dilaksanakan dengan penyesuaian yang wajar sesuai kesepakatan bersama.',
-                'asesor_signature' => null,
-                'asesor_signed_at' => null,
-            ]);
+        if (!$hasSignedMaster) {
+            return redirect()->route('asesi.tahapan', [
+                'pendaftaran_id' => $pendaftaran->id,
+                'step' => 4,
+            ])->with('info', 'FR.AK.07 belum diisi dan ditandatangani Asesor untuk skema ini.');
         }
 
+        $ak07 = $pendaftaran->ak07Adjustment;
         $criteriaDefinitions = AssessmentAk07Adjustment::CRITERIA_DEFINITIONS;
         $potensiDefinitions = AssessmentAk07Adjustment::POTENSI_DEFINITIONS;
 

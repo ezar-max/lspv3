@@ -141,10 +141,7 @@ class AssessmentAk07WorkflowTest extends TestCase
         $response = $this->actingAs($this->asesorA)
             ->get(route('asesor.pendaftaran.ak07.edit', $this->pendaftaran->id));
 
-        $response->assertStatus(200);
-        $response->assertSee('FR.AK.07');
-        $response->assertSee('Ceklis Penyesuaian yang Wajar dan Beralasan');
-        $response->assertSee($this->asesi->nama_lengkap);
+        $response->assertRedirect(route('asesor.skema.ak-07', $this->skema->id));
     }
 
     /**
@@ -161,7 +158,7 @@ class AssessmentAk07WorkflowTest extends TestCase
     /**
      * 3. Asesor dapat menyimpan formulir FR.AK.07 sebagai Draft
      */
-    public function test_asesor_can_save_ak07_as_draft(): void
+    public function test_legacy_asesor_save_route_redirects_to_shared_scheme_form(): void
     {
         $payload = [
             'potensi_asesi' => 2,
@@ -188,26 +185,17 @@ class AssessmentAk07WorkflowTest extends TestCase
         $response = $this->actingAs($this->asesorA)
             ->post(route('asesor.pendaftaran.ak07.update', $this->pendaftaran->id), $payload);
 
-        $response->assertRedirect(route('asesor.pendaftaran.ak07.edit', $this->pendaftaran->id));
-        $response->assertSessionHas('sukses');
-
-        $this->assertDatabaseHas('assessment_ak07_adjustments', [
+        $response->assertRedirect(route('asesor.skema.ak-07', $this->skema->id));
+        $response->assertSessionHas('info');
+        $this->assertDatabaseMissing('assessment_ak07_adjustments', [
             'assessment_registration_id' => $this->pendaftaran->id,
-            'potensi_asesi' => 2,
-            'fase_penggunaan' => 'pra_asesmen',
-            'status' => 'draft',
         ]);
-
-        $ak07 = AssessmentAk07Adjustment::where('assessment_registration_id', $this->pendaftaran->id)->first();
-        $this->assertNotNull($ak07);
-        $this->assertTrue($ak07->items_checklist[1]['perlu_penyesuaian']);
-        $this->assertFalse($ak07->items_checklist[2]['perlu_penyesuaian']);
     }
 
     /**
      * 4. Asesor dapat mengonfirmasi FR.AK.07 dengan tanda tangan profil
      */
-    public function test_asesor_can_confirm_ak07_without_signature(): void
+    public function test_asesor_cannot_save_shared_ak07_through_legacy_endpoint(): void
     {
         $payload = [
             'potensi_asesi' => 3,
@@ -222,12 +210,10 @@ class AssessmentAk07WorkflowTest extends TestCase
         $response = $this->actingAs($this->asesorA)
             ->post(route('asesor.pendaftaran.ak07.update', $this->pendaftaran->id), $payload);
 
-        $response->assertRedirect(route('asesor.pendaftaran.ak07.edit', $this->pendaftaran->id));
+        $response->assertRedirect(route('asesor.skema.ak-07', $this->skema->id));
 
-        $this->assertDatabaseHas('assessment_ak07_adjustments', [
+        $this->assertDatabaseMissing('assessment_ak07_adjustments', [
             'assessment_registration_id' => $this->pendaftaran->id,
-            'status' => 'confirmed',
-            'asesor_signature' => null,
         ]);
     }
 
@@ -242,7 +228,7 @@ class AssessmentAk07WorkflowTest extends TestCase
     /**
      * 6. Asesi dapat melihat detail FR.AK.07 miliknya
      */
-    public function test_asesi_can_view_ak07_detail(): void
+    public function test_asesi_with_legacy_ak07_data_is_redirected_to_shared_form_stage(): void
     {
         AssessmentAk07Adjustment::create([
             'assessment_registration_id' => $this->pendaftaran->id,
@@ -254,9 +240,10 @@ class AssessmentAk07WorkflowTest extends TestCase
         $response = $this->actingAs($this->asesi)
             ->get(route('asesi.ak07', $this->pendaftaran->id));
 
-        $response->assertStatus(200);
-        $response->assertSee('FR.AK.07');
-        $response->assertSee('Ceklis Penyesuaian yang Wajar dan Beralasan');
+        $response->assertRedirect(route('asesi.tahapan', [
+            'pendaftaran_id' => $this->pendaftaran->id,
+            'step' => 4,
+        ]));
     }
 
     /**
@@ -279,7 +266,7 @@ class AssessmentAk07WorkflowTest extends TestCase
     /**
      * 8. Asesi dapat menandatangani FR.AK.07 dan mengonfirmasi kesepakatan
      */
-    public function test_asesi_can_confirm_ak07_without_signature(): void
+    public function test_asesi_cannot_confirm_ak07_before_shared_master_is_signed(): void
     {
         $ak07 = AssessmentAk07Adjustment::create([
             'assessment_registration_id' => $this->pendaftaran->id,
@@ -290,19 +277,23 @@ class AssessmentAk07WorkflowTest extends TestCase
         $response = $this->actingAs($this->asesi)
             ->post(route('asesi.ak07.confirm', $this->pendaftaran->id));
 
-        $response->assertRedirect();
+        $response->assertRedirect(route('asesi.tahapan', [
+            'pendaftaran_id' => $this->pendaftaran->id,
+            'step' => 4,
+        ]));
+        $response->assertSessionHas('error');
         $ak07->refresh();
 
         $this->assertNull($ak07->asesi_signature);
         $this->assertNull($ak07->asesor_signature);
         $this->assertNull($ak07->asesi_signed_at);
-        $this->assertEquals('confirmed', $ak07->status);
+        $this->assertEquals('draft', $ak07->status);
     }
 
     /**
      * 9. Re-confirmation Rule: Perubahan data pada dokumen CONFIRMED otomatis mereset status ke DRAFT
      */
-    public function test_modifying_confirmed_ak07_resets_status_to_draft(): void
+    public function test_legacy_save_route_does_not_modify_individual_ak07_record(): void
     {
         $ak07 = AssessmentAk07Adjustment::create([
             'assessment_registration_id' => $this->pendaftaran->id,
@@ -331,10 +322,9 @@ class AssessmentAk07WorkflowTest extends TestCase
         $response->assertRedirect();
         $ak07->refresh();
 
-        // Status wajib kembali ke draft dan signature dibatalkan
-        $this->assertEquals('draft', $ak07->status);
-        $this->assertNull($ak07->asesor_signature);
-        $this->assertNull($ak07->asesi_signature);
+        $this->assertEquals('confirmed', $ak07->status);
+        $this->assertEquals('sig_asesor.png', $ak07->asesor_signature);
+        $this->assertEquals('sig_asesi.png', $ak07->asesi_signature);
     }
 
     /**
@@ -368,14 +358,14 @@ class AssessmentAk07WorkflowTest extends TestCase
             ->get(route('asesor.daftar-peserta', ['jadwal_id' => $this->jadwal->id]));
         $respPeserta->assertStatus(200);
         $respPeserta->assertSee('FR.AK.07');
-        $respPeserta->assertSee(route('asesor.pendaftaran.ak07.edit', $this->pendaftaran->id));
+        $respPeserta->assertSee(route('asesor.skema.ak-07', $this->skema->id));
 
         // 2. Penilaian Live
         $respLive = $this->actingAs($this->asesorA)
             ->get(route('asesor.penilaian-live', ['pendaftaranId' => $this->pendaftaran->id]));
         $respLive->assertStatus(200);
         $respLive->assertSee('FR.AK.07');
-        $respLive->assertSee(route('asesor.pendaftaran.ak07.edit', $this->pendaftaran->id));
+        $respLive->assertSee(route('asesor.skema.ak-07', $this->skema->id));
 
         // 3. Hub MAPA
         $respMapa = $this->actingAs($this->asesorA)
@@ -397,12 +387,13 @@ class AssessmentAk07WorkflowTest extends TestCase
         $respDash->assertSee('FR.AK.07');
         $respDash->assertSee(route('asesi.ak07', ['pendaftaranId' => $this->pendaftaran->id]));
 
-        // 2. Asesi membuka detail FR.AK.07 langsung bahkan jika belum diisi asesor (auto-initialize)
+        // 2. Tanpa Master FR.AK.07 bertanda tangan, asesi dikembalikan ke tahap formulir yang kosong.
         $respDetail = $this->actingAs($this->asesi)
             ->get(route('asesi.ak07', ['pendaftaranId' => $this->pendaftaran->id]));
-        $respDetail->assertStatus(200);
-        $respDetail->assertSee('FR.AK.07');
-        $respDetail->assertSee('Ceklis Penyesuaian yang Wajar dan Beralasan');
+        $respDetail->assertRedirect(route('asesi.tahapan', [
+            'pendaftaran_id' => $this->pendaftaran->id,
+            'step' => 4,
+        ]));
     }
 
     /**
@@ -424,10 +415,16 @@ class AssessmentAk07WorkflowTest extends TestCase
      */
     public function test_ak01_completion_in_tahapan_redirects_to_ak07(): void
     {
+        $this->pendaftaran->update([
+            'tanda_tangan_asesor_ak01' => 'signatures/asesor_signed.png',
+            'status_ak01' => 'disetujui_asesor',
+        ]);
+        $signature = 'data:image/png;base64,' . base64_encode('asesi signature');
+
         // Pengiriman form AK.01 dari tahapan formulir
         $resp = $this->actingAs($this->asesi)->post(route('asesi.tahapan.ak01'), [
             'pendaftaran_id' => $this->pendaftaran->id,
-            'tanda_tangan_asesi_ak01' => 'signatures/asesi_profil_tersimpan.png',
+            'tanda_tangan_asesi_ak01' => $signature,
         ]);
 
         $resp->assertRedirect(route('asesi.tahapan', ['step' => 4, 'pendaftaran_id' => $this->pendaftaran->id]));
@@ -436,7 +433,7 @@ class AssessmentAk07WorkflowTest extends TestCase
         // Pengujian via AJAX
         $respAjax = $this->actingAs($this->asesi)->postJson(route('asesi.tahapan.ak01'), [
             'pendaftaran_id' => $this->pendaftaran->id,
-            'tanda_tangan_asesi_ak01' => 'signatures/asesi_profil_tersimpan.png',
+            'tanda_tangan_asesi_ak01' => $signature,
         ]);
 
         $respAjax->assertStatus(200);
@@ -450,7 +447,7 @@ class AssessmentAk07WorkflowTest extends TestCase
         $respTahapan = $this->actingAs($this->asesi)->get(route('asesi.tahapan', ['step' => 4, 'pendaftaran_id' => $this->pendaftaran->id]));
         $respTahapan->assertStatus(200);
         $respTahapan->assertSee('FR.AK.07');
-        $respTahapan->assertSee('Penyesuaian yang Wajar dan Beralasan');
+        $respTahapan->assertSee('FR.AK.07 Belum Diisi Asesor');
     }
 
     /**
@@ -481,13 +478,12 @@ class AssessmentAk07WorkflowTest extends TestCase
 
         $respSign = $this->actingAs($this->asesi)->post(route('asesi.ak07.confirm', $this->pendaftaran->id));
 
-        $respSign->assertRedirect(route('asesi.tahapan', ['pendaftaran_id' => $this->pendaftaran->id, 'step' => 5]));
-        $respSign->assertSessionHas('sukses');
+        $respSign->assertRedirect(route('asesi.tahapan', ['pendaftaran_id' => $this->pendaftaran->id, 'step' => 4]));
+        $respSign->assertSessionHas('error');
 
-        // Buka halaman tahapan tanpa parameter step: otomatis berada di Step 5
+        // Buka halaman tahapan; tanpa Master yang disahkan, peserta tetap berada di tahap 4.
         $respTahapan = $this->actingAs($this->asesi)->get(route('asesi.tahapan', ['pendaftaran_id' => $this->pendaftaran->id]));
         $respTahapan->assertStatus(200);
-        $respTahapan->assertSee('FR.IA.05 (Ujian Teori CBT PG)');
-        $respTahapan->assertSee('Palet Nomor Soal');
+        $respTahapan->assertSee('FR.AK.07 Belum Diisi Asesor');
     }
 }
