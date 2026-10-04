@@ -88,6 +88,7 @@ Route::middleware(['auth', 'peran:asesi'])->prefix('asesi')->as('asesi.')->group
     
     // FR.AK.07 (Penyesuaian yang Wajar) untuk Asesi
     Route::get('/ak-07/{pendaftaranId?}', [\App\Http\Controllers\Asesor\AssessmentAk07Controller::class, 'asesiDetail'])->name('ak07');
+    Route::post('/ak-07/{pendaftaranId}/sign-asesi', [\App\Http\Controllers\Asesor\AssessmentAk07Controller::class, 'signAsesi'])->name('ak07.sign-asesi');
     Route::post('/ak-07/{pendaftaranId}/confirm', [\App\Http\Controllers\Asesor\AssessmentAk07Controller::class, 'confirmAsesi'])->name('ak07.confirm');
     
     // RUANG UJIAN ONLINE HARI H (FR.IA)

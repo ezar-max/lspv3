@@ -206,6 +206,16 @@ class MasterAk07PerSkemaTest extends TestCase
         $viewResponse->assertStatus(200);
         $viewResponse->assertSee('SKKNI Standar Terbuka');
         $viewResponse->assertSee('Disahkan Asesor untuk Seluruh Asesi Skema');
+        $viewResponse->assertSee('x-ref="canvas"', false);
+        $viewResponse->assertDontSee('Gores TTD Baru');
+
+        $stageResponse = $this->actingAs($this->asesi1)->get(route('asesi.tahapan', [
+            'step' => 4,
+            'pendaftaran_id' => $p1->id,
+        ]));
+        $stageResponse->assertOk();
+        $stageResponse->assertSee('x-ref="canvas"', false);
+        $stageResponse->assertDontSee('Gores TTD Baru');
     }
 
     public function test_all_fr_ia_forms_can_be_viewed_without_existing_scheme_in_db()

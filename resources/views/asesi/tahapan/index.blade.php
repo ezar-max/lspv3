@@ -2004,6 +2004,7 @@
             @else
                 @php
                     $isConfirmed = false;
+                    $isSignedByAsesi = false;
                     $isSignedByAsesiAk07 = false;
                 @endphp
                 @if(!$ak07 || empty($ak07->asesor_signature))
@@ -2356,9 +2357,8 @@
                     <img src="{{ $ttdMasterAk07Url }}" alt="Tanda tangan Asesor FR.AK.07" class="max-h-16 max-w-40 object-contain">
                 </div>
 
-                @if(false)
                 <!-- 5. BAGIAN PENGESAHAN TANDA TANGAN DIGITAL & STATUS KESEPAKATAN -->
-                <div class="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-4 sm:p-5 space-y-4" x-data="tahapanAk07App()">
+                <div class="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-4 sm:p-5 space-y-4">
                     <div class="flex items-center gap-2 text-sm font-bold text-slate-900 border-b border-slate-100 pb-2.5">
                         <span class="w-6 h-6 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center text-xs font-black">5</span>
                         <span>Pengesahan Tanda Tangan Digital & Status Kesepakatan</span>
@@ -2378,7 +2378,6 @@
                                     <span class="px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-bold">
                                         Belum TTD
                                     </span>
-                                    @endif
                                 @endif
                             </div>
 
@@ -2423,43 +2422,24 @@
                                     </span>
                                 </div>
                             @else
-                                <form id="formSignAsesiAk07Tahapan" action="{{ route('asesi.ak07.sign-asesi', $pendaftaran->id) }}" method="POST" class="space-y-2.5">
+                                <form id="formSignAsesiAk07Tahapan" action="{{ route('asesi.ak07.sign-asesi', $pendaftaran->id) }}" method="POST" class="space-y-2.5" x-data="ak07AsesiSignature()" x-init="init()" @submit.prevent="submit($event)">
                                     @csrf
-                                    <input type="hidden" name="tanda_tangan_asesi" id="inputTtdAsesiTahapan" value="{{ $profileTtd }}">
-
-                                    <div class="flex items-center gap-3">
-                                        @if(!empty($profileTtd))
-                                            <label class="inline-flex items-center gap-1.5 cursor-pointer text-[11px] font-medium text-slate-700">
-                                                <input type="radio" name="sigModeAk07" value="profile" x-model="signatureMode" class="accent-blue-600">
-                                                <span>Gunakan TTD Akun Profil</span>
-                                            </label>
-                                        @endif
-                                        <label class="inline-flex items-center gap-1.5 cursor-pointer text-[11px] font-medium text-slate-700">
-                                            <input type="radio" name="sigModeAk07" value="canvas" x-model="signatureMode" class="accent-blue-600">
-                                            <span>Gores TTD Baru</span>
-                                        </label>
-                                    </div>
+                                    <input type="hidden" name="tanda_tangan_asesi" id="inputTtdAsesiTahapan" x-ref="signatureInput">
 
                                     <!-- Canvas Box -->
-                                    <div x-show="signatureMode === 'canvas'" class="space-y-1">
+                                    <div class="space-y-1">
                                         <div class="border-2 border-dashed border-slate-300 rounded-xl bg-white relative p-1">
-                                            <canvas id="canvasAk07AsesiTahapan" class="w-full h-24 rounded-lg cursor-crosshair touch-none"></canvas>
-                                            <button type="button" @click="clearCanvas()" class="absolute top-1 right-1 px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded text-[9px] font-bold">
-                                                Bersihkan
+                                            <canvas id="canvasAk07AsesiTahapan" x-ref="canvas" width="800" height="240" class="w-full h-32 rounded-lg cursor-crosshair touch-none block" style="touch-action: none;"></canvas>
+                                        </div>
+                                        <div class="flex items-center justify-between text-[11px]">
+                                            <span class="text-slate-500">Gambar tanda tangan langsung pada kotak ini.</span>
+                                            <button type="button" @click="clear()" class="text-rose-600 hover:text-rose-800 font-semibold">
+                                                [ Hapus ]
                                             </button>
                                         </div>
                                     </div>
 
-                                    <!-- Preview Profil Box -->
-                                    <div x-show="signatureMode === 'profile'" class="p-2 border border-slate-200 rounded-xl bg-white flex items-center justify-center h-24">
-                                        @if(!empty($profileTtd))
-                                            <img src="{{ asset($profileTtd) }}" alt="TTD Profil" class="max-h-20 object-contain">
-                                        @else
-                                            <span class="text-slate-400 italic">Belum ada tanda tangan di profil.</span>
-                                        @endif
-                                    </div>
-
-                                    <button type="button" @click="submitSignature()" class="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs shadow-xs transition flex items-center justify-center cursor-pointer">
+                                    <button type="submit" class="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs shadow-xs transition flex items-center justify-center cursor-pointer">
                                         <span>Tandatangani & Setujui Kesepakatan FR.AK.07</span>
                                     </button>
                                 </form>
@@ -2467,23 +2447,6 @@
                         </div>
 
                     </div>
-                </div>
-
-                @endif
-
-                <div class="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-4 sm:p-5 space-y-3">
-                    <h3 class="text-sm font-bold text-slate-900">Konfirmasi Kesepakatan</h3>
-                    <p class="text-xs text-slate-600">Tinjau penyesuaian asesmen sebelum melanjutkan ke tahap ujian.</p>
-                    @if($isConfirmed)
-                        <span class="text-xs font-semibold text-emerald-700">Kesepakatan FR.AK.07 telah dikonfirmasi.</span>
-                    @else
-                        <form action="{{ route('asesi.ak07.confirm', $pendaftaran->id) }}" method="POST">
-                            @csrf
-                            <button type="submit" class="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs">
-                                Konfirmasi &amp; Lanjutkan
-                            </button>
-                        </form>
-                    @endif
                 </div>
 
                 <!-- Bottom Action Step 4 -->
@@ -2508,6 +2471,7 @@
                 </div>
             @endif
         </div>
+        @endif
 
         <!-- =========================================================================
              STEP 5: PELAKSANAAN UJIAN & ASESMEN (FR.IA)
@@ -3254,108 +3218,101 @@
         };
     }
 
-    // =========================================================================
-    // FR.AK.07 SIGNATURE HANDLER (STEP 4)
-    // =========================================================================
-    function tahapanAk07App() {
+    function ak07AsesiSignature() {
         return {
-            signatureMode: '{{ !empty($profileTtdAk07) ? "profile" : "canvas" }}',
-            canvasSignatureData: '',
-            signaturePad: null,
+            canvas: null,
+            context: null,
+            strokes: [],
+            currentStroke: [],
+            drawing: false,
+            pixelRatio: 1,
+            resizeObserver: null,
 
             init() {
-                this.$nextTick(() => {
-                    this.initSignaturePad();
-                });
-                if (this.$watch) {
-                    this.$watch('currentStep', (step) => {
-                        if (step === 4) {
-                            setTimeout(() => this.resizeCanvas(), 50);
-                            setTimeout(() => this.resizeCanvas(), 200);
-                        }
-                    });
-                }
-            },
-
-            initSignaturePad() {
-                const canvas = document.getElementById('canvasAk07AsesiTahapan');
-                if (!canvas) return;
-
-                const self = this;
+                this.canvas = this.$refs.canvas;
+                this.context = this.canvas.getContext('2d');
                 this.resizeCanvas();
-                window.addEventListener('resize', () => self.resizeCanvas());
-
-                if (typeof SignaturePad !== 'undefined') {
-                    this.signaturePad = new SignaturePad(canvas, {
-                        backgroundColor: 'rgba(255, 255, 255, 0)',
-                        penColor: '#0f172a',
-                        minWidth: 1.2,
-                        maxWidth: 2.8
-                    });
-                }
+                this.resizeObserver = new ResizeObserver(() => this.resizeCanvas());
+                this.resizeObserver.observe(this.canvas);
+                this.canvas.addEventListener('pointerdown', (event) => this.start(event));
+                this.canvas.addEventListener('pointermove', (event) => this.move(event));
+                this.canvas.addEventListener('pointerup', () => this.finish());
+                this.canvas.addEventListener('pointercancel', () => this.finish());
             },
 
             resizeCanvas() {
-                const canvas = document.getElementById('canvasAk07AsesiTahapan');
-                if (!canvas) return;
-                const ratio = Math.max(window.devicePixelRatio || 1, 1);
-                const rect = canvas.getBoundingClientRect();
-                const displayWidth = rect.width || canvas.offsetWidth || 400;
-                const displayHeight = rect.height || canvas.offsetHeight || 96;
-                if (displayWidth > 0 && displayHeight > 0) {
-                    canvas.width = Math.round(displayWidth * ratio);
-                    canvas.height = Math.round(displayHeight * ratio);
-                    const ctx = canvas.getContext('2d');
-                    ctx.scale(ratio, ratio);
+                const rect = this.canvas.getBoundingClientRect();
+                if (!rect.width || !rect.height) return;
+                this.pixelRatio = Math.max(window.devicePixelRatio || 1, 1);
+                this.canvas.width = Math.round(rect.width * this.pixelRatio);
+                this.canvas.height = Math.round(rect.height * this.pixelRatio);
+                this.context.setTransform(this.pixelRatio, 0, 0, this.pixelRatio, 0, 0);
+                this.draw();
+            },
+
+            point(event) {
+                const rect = this.canvas.getBoundingClientRect();
+                return { x: event.clientX - rect.left, y: event.clientY - rect.top };
+            },
+
+            start(event) {
+                event.preventDefault();
+                this.drawing = true;
+                this.currentStroke = [this.point(event)];
+                this.canvas.setPointerCapture(event.pointerId);
+                this.draw();
+            },
+
+            move(event) {
+                if (!this.drawing) return;
+                event.preventDefault();
+                this.currentStroke.push(this.point(event));
+                this.draw();
+            },
+
+            finish() {
+                if (!this.drawing) return;
+                this.drawing = false;
+                if (this.currentStroke.length) {
+                    this.strokes.push(this.currentStroke);
+                    this.currentStroke = [];
+                    this.$refs.signatureInput.value = this.canvas.toDataURL('image/png');
                 }
             },
 
-            clearCanvas() {
-                if (this.signaturePad) {
-                    this.signaturePad.clear();
-                    this.canvasSignatureData = '';
-                }
+            draw() {
+                const rect = this.canvas.getBoundingClientRect();
+                this.context.clearRect(0, 0, rect.width, rect.height);
+                this.context.strokeStyle = '#0f172a';
+                this.context.fillStyle = '#0f172a';
+                this.context.lineWidth = 2.8;
+                this.context.lineCap = 'round';
+                this.context.lineJoin = 'round';
+                [...this.strokes, this.currentStroke].forEach((stroke) => {
+                    if (!stroke.length) return;
+                    this.context.beginPath();
+                    this.context.moveTo(stroke[0].x, stroke[0].y);
+                    stroke.slice(1).forEach((point) => this.context.lineTo(point.x, point.y));
+                    this.context.stroke();
+                });
             },
 
-            submitSignature() {
-                const form = document.getElementById('formSignAsesiAk07Tahapan');
-                const input = document.getElementById('inputTtdAsesiTahapan');
-                if (!form || !input) return;
+            clear() {
+                this.strokes = [];
+                this.currentStroke = [];
+                this.drawing = false;
+                this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                this.$refs.signatureInput.value = '';
+            },
 
-                if (this.signatureMode === 'canvas') {
-                    if (!this.signaturePad || this.signaturePad.isEmpty()) {
-                        if (typeof Swal !== 'undefined') {
-                            Swal.fire({
-                                icon: 'warning',
-                                title: 'Tanda Tangan Belum Digores',
-                                text: 'Silakan bubuhkan tanda tangan Anda pada canvas terlebih dahulu.',
-                                confirmButtonColor: '#2563eb'
-                            });
-                        } else {
-                            alert('Silakan bubuhkan tanda tangan Anda pada canvas terlebih dahulu.');
-                        }
-                        return;
-                    }
-                    this.canvasSignatureData = this.signaturePad.toDataURL('image/png');
-                    input.value = this.canvasSignatureData;
-                } else if (this.signatureMode === 'profile') {
-                    input.value = '{{ $profileTtdAk07 ?? "" }}';
-                    if (!input.value) {
-                        if (typeof Swal !== 'undefined') {
-                            Swal.fire({
-                                icon: 'warning',
-                                title: 'Tanda Tangan Profil Kosong',
-                                text: 'Profil Anda belum memiliki tanda tangan. Silakan pilih opsi Gores TTD Baru.',
-                                confirmButtonColor: '#2563eb'
-                            });
-                        } else {
-                            alert('Profil Anda belum memiliki tanda tangan. Silakan pilih opsi Gores TTD Baru.');
-                        }
-                        return;
-                    }
+            submit(event) {
+                if (!this.strokes.length) {
+                    event.preventDefault();
+                    alert('Silakan bubuhkan tanda tangan Anda terlebih dahulu.');
+                    return;
                 }
-
-                form.submit();
+                this.$refs.signatureInput.value = this.canvas.toDataURL('image/png');
+                HTMLFormElement.prototype.submit.call(event.currentTarget);
             }
         };
     }

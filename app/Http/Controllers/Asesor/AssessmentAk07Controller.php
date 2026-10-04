@@ -81,6 +81,58 @@ class AssessmentAk07Controller extends Controller
     /**
      * Tanda tangan digital Asesi untuk FR.AK.07
      */
+    public function signAsesi(Request $request, $pendaftaranId)
+    {
+        $pendaftaran = PendaftaranAsesi::with('ak07Adjustment')->findOrFail($pendaftaranId);
+        $this->authorizeAsesi($pendaftaran);
+
+        if (!$pendaftaran->syncFromMasterAk07IfAvailable()) {
+            return redirect()->route('asesi.tahapan', ['pendaftaran_id' => $pendaftaran->id, 'step' => 4])
+                ->with('error', 'FR.AK.07 belum tersedia. Asesor harus mengisi dan menandatangani formulir untuk skema ini terlebih dahulu.');
+        }
+
+        $validated = $request->validate([
+            'tanda_tangan_asesi' => ['required', 'string', 'max:2000000', 'regex:/^data:image\\/(png|jpeg);base64,/'],
+        ]);
+
+        $rawSignature = $validated['tanda_tangan_asesi'];
+        $signaturePayload = substr($rawSignature, strpos($rawSignature, ',') + 1);
+        if (base64_decode($signaturePayload, true) === false) {
+            return back()->withErrors(['tanda_tangan_asesi' => 'Data tanda tangan Asesi tidak valid.']);
+        }
+
+        $signaturePath = app(\App\Services\MapaWorkflowService::class)->saveSignatureFile(
+            $rawSignature,
+            $pendaftaran->id,
+            'ak07_asesi'
+        );
+        if (!$signaturePath || str_starts_with($signaturePath, 'data:image/')) {
+            return back()->withErrors(['tanda_tangan_asesi' => 'Tanda tangan Asesi gagal disimpan.']);
+        }
+
+        $pendaftaran->refresh();
+        $ak07 = $pendaftaran->ak07Adjustment;
+        if (!$ak07 || empty($ak07->asesor_signature)) {
+            return redirect()->route('asesi.tahapan', ['pendaftaran_id' => $pendaftaran->id, 'step' => 4])
+                ->with('error', 'FR.AK.07 belum ditandatangani Asesor.');
+        }
+
+        $ak07->asesi_signature = $signaturePath;
+        $ak07->asesi_signed_at = now('Asia/Jakarta');
+        $ak07->status = 'confirmed';
+        $ak07->save();
+
+        LogAktivitas::create([
+            'pengguna_id' => auth()->id(),
+            'aktivitas' => 'Asesi menandatangani dan mengonfirmasi FR.AK.07 #' . $pendaftaran->nomor_pendaftaran,
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+        ]);
+
+        return redirect()->route('asesi.tahapan', ['pendaftaran_id' => $pendaftaran->id, 'step' => 5])
+            ->with('sukses', 'FR.AK.07 berhasil ditandatangani dan disetujui. Silakan lanjutkan ke pelaksanaan ujian/tes online.');
+    }
+
     public function confirmAsesi(Request $request, $pendaftaranId)
     {
         $pendaftaran = PendaftaranAsesi::with('ak07Adjustment')->findOrFail($pendaftaranId);
@@ -96,6 +148,11 @@ class AssessmentAk07Controller extends Controller
         if (!$ak07 || empty($ak07->asesor_signature)) {
             return redirect()->route('asesi.tahapan', ['pendaftaran_id' => $pendaftaran->id, 'step' => 4])
                 ->with('error', 'FR.AK.07 belum ditandatangani Asesor.');
+        }
+
+        if (empty($ak07->asesi_signature) || empty($ak07->asesi_signed_at)) {
+            return redirect()->route('asesi.tahapan', ['pendaftaran_id' => $pendaftaran->id, 'step' => 4])
+                ->with('error', 'Silakan bubuhkan tanda tangan pada FR.AK.07 sebelum melanjutkan.');
         }
 
         $ak07->status = 'confirmed';

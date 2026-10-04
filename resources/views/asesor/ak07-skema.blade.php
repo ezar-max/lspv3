@@ -30,7 +30,7 @@
     $selectedFase = $masterAk07->fase_penggunaan ?? null;
 @endphp
 
-<div class="max-w-5xl mx-auto px-2 sm:px-4 py-3 space-y-4" x-data="ak07SkemaApp()">
+<div class="max-w-5xl mx-auto px-2 sm:px-4 py-3 space-y-4" x-data="ak07SkemaApp()" x-init="initSignatureEngine()">
 
     <!-- BREADCRUMB & TOP ACTIONS -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-1">
@@ -382,14 +382,16 @@
                     <!-- KONTROL TTD SAAT MODE EDIT AKTIF -->
                     <div x-show="isEditMode" class="space-y-2">
                         <div class="space-y-1.5">
-                            <div id="container-ttd-asesor-preview" class="p-3 border-2 border-dashed border-slate-300 rounded-xl bg-slate-50 flex flex-col items-center justify-center min-h-[112px]">
-                                <img src="" id="preview-ttd-asesor" alt="TTD Asesor" class="hidden max-h-20 object-contain mb-2">
-                                <button type="button" id="btn-trigger-modal" onclick="bukaModalTtd()" class="px-3 py-1.5 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-lg text-xs font-bold hover:bg-indigo-100 shadow-sm flex items-center gap-2 transition-colors">
-                                    <i class="fa-solid fa-pen"></i> Gores Tanda Tangan
-                                </button>
-                                <button type="button" onclick="bukaModalTtd()" id="btn-ubah-ttd" class="hidden text-[10px] text-indigo-600 hover:underline mt-0.5 font-semibold">Ubah Tanda Tangan</button>
-                                <span class="text-[10px] text-slate-500 mt-1">Buat tanda tangan baru setiap kali menyimpan formulir.</span>
+                            <div class="border border-indigo-300 ring-2 ring-indigo-100 rounded-xl bg-white relative overflow-hidden">
+                                <canvas id="canvasSignatureMasterAk07" width="800" height="240" class="w-full h-32 bg-white cursor-crosshair block" style="touch-action: none; -ms-touch-action: none;"></canvas>
                             </div>
+                            <div class="flex items-center justify-between text-[11px]">
+                                <span class="text-slate-500">Gambar tanda tangan langsung di kotak ini dengan mouse atau layar sentuh.</span>
+                                <button type="button" @click="clearSignature()" class="text-rose-600 hover:text-rose-800 font-semibold cursor-pointer">
+                                    [ Hapus ]
+                                </button>
+                            </div>
+                            <span class="text-[10px] text-slate-500">Buat tanda tangan baru setiap kali menyimpan formulir.</span>
                         </div>
 
                         <input type="hidden" name="tanda_tangan_asesor" id="inputSignatureMasterAk07" x-ref="signatureInput">
@@ -477,6 +479,11 @@ function ak07SkemaApp() {
     return {
         isEditMode: {{ $isConfigured ? 'false' : 'true' }},
         isSubmitting: false,
+        signatureCanvas: null,
+        signatureContext: null,
+        isDrawingSignature: false,
+        signatureStrokes: [],
+        currentSignatureStroke: [],
         selectedPotensi: {!! json_encode($selectedPotensi) !!},
         selectedFase: {!! json_encode($selectedFase) !!},
         checklist: {
@@ -526,6 +533,103 @@ function ak07SkemaApp() {
 
         toggleEditMode() {
             this.isEditMode = !this.isEditMode;
+            if (this.isEditMode) {
+                this.$nextTick(() => this.initSignatureEngine());
+            }
+        },
+
+        initSignatureEngine() {
+            const canvas = document.getElementById('canvasSignatureMasterAk07');
+            if (!canvas) return;
+
+            this.signatureCanvas = canvas;
+            this.signatureContext = canvas.getContext('2d');
+            canvas.style.touchAction = 'none';
+
+            if (canvas.dataset.signatureReady) return;
+            canvas.dataset.signatureReady = 'true';
+
+            canvas.addEventListener('pointerdown', (event) => {
+                event.preventDefault();
+                this.isDrawingSignature = true;
+                this.currentSignatureStroke = [this.getSignaturePoint(event)];
+                canvas.setPointerCapture(event.pointerId);
+                this.drawSignatureStrokes();
+            });
+
+            canvas.addEventListener('pointermove', (event) => {
+                if (!this.isDrawingSignature) return;
+                event.preventDefault();
+                this.currentSignatureStroke.push(this.getSignaturePoint(event));
+                this.drawSignatureStrokes();
+            });
+
+            const finishStroke = () => {
+                if (!this.isDrawingSignature) return;
+                this.isDrawingSignature = false;
+                if (this.currentSignatureStroke.length) {
+                    this.signatureStrokes.push(this.currentSignatureStroke);
+                    this.currentSignatureStroke = [];
+                    this.$refs.signatureInput.value = canvas.toDataURL('image/png');
+                }
+            };
+
+            canvas.addEventListener('pointerup', finishStroke);
+            canvas.addEventListener('pointercancel', finishStroke);
+            canvas.addEventListener('lostpointercapture', finishStroke);
+        },
+
+        getSignaturePoint(event) {
+            const rect = this.signatureCanvas.getBoundingClientRect();
+            return {
+                x: (event.clientX - rect.left) * (this.signatureCanvas.width / rect.width),
+                y: (event.clientY - rect.top) * (this.signatureCanvas.height / rect.height),
+            };
+        },
+
+        drawSignatureStrokes() {
+            const ctx = this.signatureContext;
+            ctx.clearRect(0, 0, this.signatureCanvas.width, this.signatureCanvas.height);
+            ctx.strokeStyle = '#0f172a';
+            ctx.fillStyle = '#0f172a';
+            ctx.lineWidth = 3;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+
+            [...this.signatureStrokes, this.currentSignatureStroke].forEach((stroke) => {
+                if (!stroke.length) return;
+                if (stroke.length === 1) {
+                    ctx.beginPath();
+                    ctx.arc(stroke[0].x, stroke[0].y, ctx.lineWidth / 2, 0, Math.PI * 2);
+                    ctx.fill();
+                    return;
+                }
+
+                ctx.beginPath();
+                ctx.moveTo(stroke[0].x, stroke[0].y);
+                for (let index = 1; index < stroke.length - 1; index++) {
+                    const current = stroke[index];
+                    const next = stroke[index + 1];
+                    ctx.quadraticCurveTo(
+                        current.x,
+                        current.y,
+                        (current.x + next.x) / 2,
+                        (current.y + next.y) / 2
+                    );
+                }
+                const lastPoint = stroke[stroke.length - 1];
+                ctx.lineTo(lastPoint.x, lastPoint.y);
+                ctx.stroke();
+            });
+        },
+
+        clearSignature() {
+            if (!this.signatureCanvas) this.initSignatureEngine();
+            this.signatureStrokes = [];
+            this.currentSignatureStroke = [];
+            this.isDrawingSignature = false;
+            this.signatureContext?.clearRect(0, 0, this.signatureCanvas.width, this.signatureCanvas.height);
+            if (this.$refs.signatureInput) this.$refs.signatureInput.value = '';
         },
 
         submitAk07(e) {
@@ -545,160 +649,6 @@ function ak07SkemaApp() {
         }
     };
 }
-</script>
-
-<!-- MODAL POPUP CANVAS SIGNATURE PAD -->
-<div class="modal-overlay" id="modalCanvasTtd" style="display:none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 99999; justify-content: center; align-items: center;">
-    <div class="modal-konten" style="background: white; border-radius: 12px; padding: 1.75rem; width: 100%; max-width: 500px; text-align: center; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-            <h3 style="color: #0f172a; margin: 0; font-weight: 800; font-size: 1.15rem;">Tanda Tangan Digital</h3>
-            <button type="button" onclick="window.tutupModalTtd()" style="background: none; border: none; font-size: 1.4rem; cursor: pointer; color: #64748b; line-height: 1;">&times;</button>
-        </div>
-
-        <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 1rem; text-align: left;">
-            Gunakan kursor atau layar sentuh untuk menggambar tanda tangan Anda secara presisi pada bidang di bawah:
-        </p>
-
-        <canvas id="canvas-ttd-modal" width="440" height="180" class="canvas-signature-pad" style="border: 2px dashed #94a3b8; border-radius: 8px; background: #ffffff; cursor: crosshair; touch-action: none; display: block; margin: 0 auto; width: 100%; max-width: 440px;"></canvas>
-
-        <div style="margin-top: 1.25rem; display: flex; gap: 0.75rem; justify-content: center;">
-            <button type="button" class="tombol tombol-sekunder tombol-sm px-4 py-2 bg-slate-100 text-slate-700 font-semibold rounded border border-slate-200 shadow-sm" onclick="if(window.signaturePadModal) window.signaturePadModal.clear();">
-                Bersihkan
-            </button>
-            <button type="button" class="tombol tombol-utama tombol-sm px-4 py-2 text-white font-semibold rounded shadow-sm" style="background: #059669; border: 1px solid #059669;" onclick="window.saveTtdAsesor()">
-                Gunakan Tanda Tangan
-            </button>
-        </div>
-    </div>
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
-<script>
-    window.signaturePadModal = null;
-    let fallbackSignatureDrawn = false;
-
-    window.tutupModalTtd = function() {
-        const modal = document.getElementById('modalCanvasTtd');
-        if (!modal) return;
-
-        modal.classList.remove('terbuka');
-        modal.style.display = 'none';
-        document.body.classList.remove('modal-terbuka');
-    };
-
-    window.bukaModalTtd = function() {
-        const modal = document.getElementById('modalCanvasTtd');
-        if (modal) {
-            modal.style.display = 'flex';
-            modal.classList.add('terbuka');
-            document.body.classList.add('modal-terbuka');
-            const input = document.getElementById('inputSignatureMasterAk07');
-            if (input) input.value = '';
-            document.getElementById('preview-ttd-asesor')?.classList.add('hidden');
-            document.getElementById('btn-trigger-modal')?.classList.remove('hidden');
-            document.getElementById('btn-ubah-ttd')?.classList.add('hidden');
-
-            requestAnimationFrame(() => {
-                const canvas = document.getElementById('canvas-ttd-modal');
-                if (!canvas) return;
-
-                const ratio = Math.max(window.devicePixelRatio || 1, 1);
-                const width = canvas.clientWidth;
-                const height = canvas.clientHeight;
-                if (!width || !height) return;
-
-                canvas.width = Math.round(width * ratio);
-                canvas.height = Math.round(height * ratio);
-                const context = canvas.getContext('2d');
-                context.setTransform(ratio, 0, 0, ratio, 0, 0);
-                fallbackSignatureDrawn = false;
-
-                if (window.signaturePadModal) {
-                    window.signaturePadModal.clear();
-                } else if (typeof SignaturePad !== 'undefined') {
-                    window.signaturePadModal = new SignaturePad(canvas, {
-                        backgroundColor: 'rgb(255, 255, 255)',
-                        penColor: '#0f172a',
-                        minWidth: 1.2,
-                        maxWidth: 2.8
-                    });
-                } else {
-                    window.signaturePadModal = null;
-                    context.lineWidth = 2.5;
-                    context.lineCap = 'round';
-                    context.lineJoin = 'round';
-                    context.strokeStyle = '#0f172a';
-                    if (!canvas.dataset.pointerHandlers) {
-                        let drawing = false;
-                        canvas.addEventListener('pointerdown', (event) => {
-                            event.preventDefault();
-                            drawing = true;
-                            fallbackSignatureDrawn = true;
-                            canvas.setPointerCapture(event.pointerId);
-                            const rect = canvas.getBoundingClientRect();
-                            const ctx = canvas.getContext('2d');
-                            ctx.beginPath();
-                            ctx.moveTo(event.clientX - rect.left, event.clientY - rect.top);
-                        });
-                        canvas.addEventListener('pointermove', (event) => {
-                            if (!drawing) return;
-                            event.preventDefault();
-                            const rect = canvas.getBoundingClientRect();
-                            const ctx = canvas.getContext('2d');
-                            ctx.lineTo(event.clientX - rect.left, event.clientY - rect.top);
-                            ctx.stroke();
-                        });
-                        const stopDrawing = () => { drawing = false; };
-                        canvas.addEventListener('pointerup', stopDrawing);
-                        canvas.addEventListener('pointercancel', stopDrawing);
-                        canvas.dataset.pointerHandlers = 'true';
-                    }
-                }
-            });
-        }
-    };
-
-    window.saveTtdAsesor = function() {
-        const hasSignature = window.signaturePadModal
-            ? !window.signaturePadModal.isEmpty()
-            : fallbackSignatureDrawn;
-        if (hasSignature) {
-            const canvas = document.getElementById('canvas-ttd-modal');
-            const dataUrl = window.signaturePadModal
-                ? window.signaturePadModal.toDataURL('image/png')
-                : canvas.toDataURL('image/png');
-            
-            const hiddenInput = document.getElementById('inputSignatureMasterAk07');
-            if(hiddenInput) hiddenInput.value = dataUrl;
-            
-            const previewImg = document.getElementById('preview-ttd-asesor');
-            if(previewImg) {
-                previewImg.src = dataUrl;
-                previewImg.classList.remove('hidden');
-            }
-            
-            const btnTrigger = document.getElementById('btn-trigger-modal');
-            if(btnTrigger) {
-                btnTrigger.classList.add('hidden');
-            }
-            
-            document.getElementById('btn-ubah-ttd')?.classList.remove('hidden');
-
-            window.tutupModalTtd();
-        } else {
-            if (typeof Swal !== 'undefined') {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Canvas Kosong',
-                    text: 'Silakan gambar tanda tangan Anda terlebih dahulu.',
-                    confirmButtonText: 'Mengerti',
-                    confirmButtonColor: '#059669'
-                });
-            } else {
-                alert('Silakan gambar tanda tangan Anda terlebih dahulu.');
-            }
-        }
-    };
 </script>
 @endpush
 @endsection

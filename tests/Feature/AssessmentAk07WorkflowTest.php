@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\AssessmentAk07Adjustment;
 use App\Models\JadwalAsesmen;
+use App\Models\MasterAk07;
 use App\Models\PendaftaranAsesi;
 use App\Models\Pengguna;
 use App\Models\SkemaSertifikasi;
@@ -288,6 +289,42 @@ class AssessmentAk07WorkflowTest extends TestCase
         $this->assertNull($ak07->asesor_signature);
         $this->assertNull($ak07->asesi_signed_at);
         $this->assertEquals('draft', $ak07->status);
+    }
+
+    public function test_asesi_can_sign_and_confirm_shared_ak07(): void
+    {
+        MasterAk07::create([
+            'skema_id' => $this->skema->id,
+            'asesor_id' => $this->asesorA->id,
+            'potensi_asesi' => 2,
+            'fase_penggunaan' => 'saat_pra_asesmen',
+            'tanda_tangan_asesor' => 'signatures/master_asesor.png',
+            'tanggal_ttd_asesor' => now(),
+            'status' => 'selesai',
+        ]);
+
+        $response = $this->actingAs($this->asesi)->post(
+            route('asesi.ak07.sign-asesi', $this->pendaftaran->id),
+            ['tanda_tangan_asesi' => 'data:image/png;base64,' . base64_encode('asesi signature')]
+        );
+
+        $response->assertRedirect(route('asesi.tahapan', [
+            'pendaftaran_id' => $this->pendaftaran->id,
+            'step' => 5,
+        ]));
+        $response->assertSessionHas('sukses');
+
+        $this->assertDatabaseHas('assessment_ak07_adjustments', [
+            'assessment_registration_id' => $this->pendaftaran->id,
+            'status' => 'confirmed',
+            'asesor_signature' => 'signatures/master_asesor.png',
+        ]);
+        $ak07 = AssessmentAk07Adjustment::where('assessment_registration_id', $this->pendaftaran->id)->firstOrFail();
+        $this->assertStringStartsWith(
+            'storage/signatures/sig_ak07_asesi_' . $this->pendaftaran->id . '_',
+            $ak07->asesi_signature
+        );
+        Storage::disk('public')->assertExists(str_replace('storage/', '', $ak07->asesi_signature));
     }
 
     /**

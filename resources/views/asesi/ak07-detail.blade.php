@@ -342,9 +342,8 @@
         </div>
     @endif
 
-    @if(false)
     <!-- 5. BAGIAN PENGESAHAN TANDA TANGAN DIGITAL & STATUS KESEPAKATAN -->
-    <div class="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-4 sm:p-5 space-y-4" x-data="asesiAk07App()">
+    <div class="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-4 sm:p-5 space-y-4">
         <div class="flex items-center gap-2 text-sm font-bold text-slate-900 border-b border-slate-100 pb-2.5">
             <span class="w-6 h-6 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center text-xs font-black">5</span>
             <span>Pengesahan Tanda Tangan Digital & Status Kesepakatan</span>
@@ -408,43 +407,21 @@
                         </span>
                     </div>
                 @else
-                    <form id="formSignAsesi" action="{{ route('asesi.ak07.sign-asesi', $pendaftaran->id) }}" method="POST" class="space-y-2.5">
+                    <form id="formSignAsesi" action="{{ route('asesi.ak07.sign-asesi', $pendaftaran->id) }}" method="POST" class="space-y-2.5" x-data="ak07AsesiSignature()" x-init="init()" @submit.prevent="submit($event)">
                         @csrf
-                        <input type="hidden" name="tanda_tangan_asesi" id="inputTtdAsesi" value="{{ $profileTtd }}">
+                        <input type="hidden" name="tanda_tangan_asesi" x-ref="signatureInput">
 
-                        <div class="flex items-center gap-3">
-                            @if(!empty($profileTtd))
-                                <label class="inline-flex items-center gap-1.5 cursor-pointer text-[11px] font-medium text-slate-700">
-                                    <input type="radio" name="sigMode" value="profile" x-model="signatureMode" class="accent-blue-600">
-                                    <span>Gunakan TTD Akun Profil</span>
-                                </label>
-                            @endif
-                            <label class="inline-flex items-center gap-1.5 cursor-pointer text-[11px] font-medium text-slate-700">
-                                <input type="radio" name="sigMode" value="canvas" x-model="signatureMode" class="accent-blue-600">
-                                <span>Gores TTD Baru</span>
-                            </label>
-                        </div>
-
-                        <!-- Canvas Box -->
-                        <div x-show="signatureMode === 'canvas'" class="space-y-1">
+                        <div class="space-y-1">
                             <div class="border-2 border-dashed border-slate-300 rounded-xl bg-white relative p-1">
-                                <canvas id="canvasAk07Asesi" class="w-full h-24 rounded-lg cursor-crosshair touch-none"></canvas>
-                                <button type="button" @click="clearCanvas()" class="absolute top-1 right-1 px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded text-[9px] font-bold">
-                                    Bersihkan
-                                </button>
+                                <canvas x-ref="canvas" width="800" height="240" class="w-full h-32 rounded-lg cursor-crosshair touch-none block" style="touch-action: none;"></canvas>
+                            </div>
+                            <div class="flex items-center justify-between text-[11px]">
+                                <span class="text-slate-500">Gambar tanda tangan langsung pada kotak ini.</span>
+                                <button type="button" @click="clear()" class="text-rose-600 hover:text-rose-800 font-semibold">[ Hapus ]</button>
                             </div>
                         </div>
 
-                        <!-- Preview Profil Box -->
-                        <div x-show="signatureMode === 'profile'" class="p-2 border border-slate-200 rounded-xl bg-white flex items-center justify-center h-24">
-                            @if(!empty($profileTtd))
-                                <img src="{{ asset($profileTtd) }}" alt="TTD Profil" class="max-h-20 object-contain">
-                            @else
-                                <span class="text-slate-400 italic">Belum ada tanda tangan di profil.</span>
-                            @endif
-                        </div>
-
-                        <button type="button" @click="submitSignature()" class="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs shadow-xs transition flex items-center justify-center cursor-pointer">
+                        <button type="submit" class="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs shadow-xs transition flex items-center justify-center cursor-pointer">
                             <span>Tandatangani & Setujui Kesepakatan FR.AK.07</span>
                         </button>
                     </form>
@@ -453,76 +430,105 @@
 
         </div>
     </div>
-    @endif
-
-    <div class="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-4 sm:p-5 space-y-3">
-        <h2 class="text-sm font-bold text-slate-900">Konfirmasi Kesepakatan</h2>
-        <p class="text-xs text-slate-600">Pastikan penyesuaian yang tercantum sudah sesuai dengan kebutuhan Anda sebelum melanjutkan.</p>
-        @if($isConfirmed)
-            <div class="text-xs font-semibold text-emerald-700">Kesepakatan FR.AK.07 telah dikonfirmasi.</div>
-        @else
-            <form action="{{ route('asesi.ak07.confirm', $pendaftaran->id) }}" method="POST">
-                @csrf
-                <button type="submit" class="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs transition">
-                    Konfirmasi &amp; Lanjutkan
-                </button>
-            </form>
-        @endif
-    </div>
-
 </div>
 
 <!-- Alpine.js Component -->
 <script>
-    function asesiAk07App() {
+    function ak07AsesiSignature() {
         return {
-            signatureMode: '{{ !empty($profileTtd) ? "profile" : "canvas" }}',
-            canvasSignatureData: '',
-            signaturePad: null,
+            canvas: null,
+            context: null,
+            strokes: [],
+            currentStroke: [],
+            drawing: false,
+            pixelRatio: 1,
+            resizeObserver: null,
 
             init() {
-                this.$nextTick(() => {
-                    this.initSignaturePad();
+                this.canvas = this.$refs.canvas;
+                this.context = this.canvas.getContext('2d');
+                this.resizeCanvas();
+                this.resizeObserver = new ResizeObserver(() => this.resizeCanvas());
+                this.resizeObserver.observe(this.canvas);
+                this.canvas.addEventListener('pointerdown', (event) => this.start(event));
+                this.canvas.addEventListener('pointermove', (event) => this.move(event));
+                this.canvas.addEventListener('pointerup', () => this.finish());
+                this.canvas.addEventListener('pointercancel', () => this.finish());
+            },
+
+            resizeCanvas() {
+                const rect = this.canvas.getBoundingClientRect();
+                if (!rect.width || !rect.height) return;
+                this.pixelRatio = Math.max(window.devicePixelRatio || 1, 1);
+                this.canvas.width = Math.round(rect.width * this.pixelRatio);
+                this.canvas.height = Math.round(rect.height * this.pixelRatio);
+                this.context.setTransform(this.pixelRatio, 0, 0, this.pixelRatio, 0, 0);
+                this.draw();
+            },
+
+            point(event) {
+                const rect = this.canvas.getBoundingClientRect();
+                return { x: event.clientX - rect.left, y: event.clientY - rect.top };
+            },
+
+            start(event) {
+                event.preventDefault();
+                this.drawing = true;
+                this.currentStroke = [this.point(event)];
+                this.canvas.setPointerCapture(event.pointerId);
+                this.draw();
+            },
+
+            move(event) {
+                if (!this.drawing) return;
+                event.preventDefault();
+                this.currentStroke.push(this.point(event));
+                this.draw();
+            },
+
+            finish() {
+                if (!this.drawing) return;
+                this.drawing = false;
+                if (this.currentStroke.length) {
+                    this.strokes.push(this.currentStroke);
+                    this.currentStroke = [];
+                    this.$refs.signatureInput.value = this.canvas.toDataURL('image/png');
+                }
+            },
+
+            draw() {
+                const rect = this.canvas.getBoundingClientRect();
+                this.context.clearRect(0, 0, rect.width, rect.height);
+                this.context.strokeStyle = '#0f172a';
+                this.context.fillStyle = '#0f172a';
+                this.context.lineWidth = 2.8;
+                this.context.lineCap = 'round';
+                this.context.lineJoin = 'round';
+                [...this.strokes, this.currentStroke].forEach((stroke) => {
+                    if (!stroke.length) return;
+                    this.context.beginPath();
+                    this.context.moveTo(stroke[0].x, stroke[0].y);
+                    stroke.slice(1).forEach((point) => this.context.lineTo(point.x, point.y));
+                    this.context.stroke();
                 });
             },
 
-            initSignaturePad() {
-                const canvas = document.getElementById('canvasAk07Asesi');
-                if (!canvas) return;
-
-                function resizeCanvas() {
-                    const ratio = Math.max(window.devicePixelRatio || 1, 1);
-                    canvas.width = canvas.offsetWidth * ratio;
-                    canvas.height = canvas.offsetHeight * ratio;
-                    canvas.getContext('2d').scale(ratio, ratio);
-                }
-
-                window.addEventListener('resize', resizeCanvas);
-                resizeCanvas();
-
-                this.signaturePad = new SignaturePad(canvas, {
-                    backgroundColor: 'rgb(255, 255, 255)',
-                    penColor: 'rgb(15, 23, 42)',
-                    minWidth: 1.2,
-                    maxWidth: 2.5
-                });
+            clear() {
+                this.strokes = [];
+                this.currentStroke = [];
+                this.drawing = false;
+                this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                this.$refs.signatureInput.value = '';
             },
 
-            clearCanvas() {
-                if (this.signaturePad) {
-                    this.signaturePad.clear();
-                    this.canvasSignatureData = '';
+            submit(event) {
+                if (!this.strokes.length) {
+                    event.preventDefault();
+                    alert('Silakan bubuhkan tanda tangan Anda terlebih dahulu.');
+                    return;
                 }
-            },
-
-            submitSignature() {
-                if (this.signatureMode === 'canvas' && this.signaturePad && !this.signaturePad.isEmpty()) {
-                    this.canvasSignatureData = this.signaturePad.toDataURL('image/png');
-                    document.getElementById('inputTtdAsesi').value = this.canvasSignatureData;
-                } else if (this.signatureMode === 'profile') {
-                    document.getElementById('inputTtdAsesi').value = '{{ $profileTtd }}';
-                }
-                document.getElementById('formSignAsesi').submit();
+                this.$refs.signatureInput.value = this.canvas.toDataURL('image/png');
+                HTMLFormElement.prototype.submit.call(event.currentTarget);
             }
         };
     }
