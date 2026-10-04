@@ -383,10 +383,13 @@ class NotificationWorkflowTest extends TestCase
     /** 11. ROLE ADMIN: Admin memvalidasi Master FR.MAPA.01 menandai notifikasi sebagai dibaca */
     public function test_admin_validating_master_mapa01_marks_notification_as_read(): void
     {
+        $signature = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+
         // 1. Asesor simpan master MAPA 01
         $this->actingAs($this->asesor)->post(route('asesor.skema.mapa-01.simpan', $this->skema->id), [
             'aksi' => 'konfirmasi',
             'tujuan_asesmen' => 'Sertifikasi',
+            'tanda_tangan_asesor' => $signature,
         ]);
 
         $notif = $this->admin->unreadNotifications()->first();
@@ -398,6 +401,7 @@ class NotificationWorkflowTest extends TestCase
             'skema_id' => $this->skema->id,
             'validator_nama' => $this->admin->nama_lengkap,
             'validator_nomor_met' => 'ADM.001.2026',
+            'tanda_tangan_admin' => $signature,
         ]);
 
         $response->assertSessionHas('sukses');

@@ -64,20 +64,12 @@ class MasterAk01 extends Model
                 $dataToUpdate['bukti_dikumpulkan_lainnya'] = $this->bukti_dikumpulkan_lainnya ?? $p->bukti_dikumpulkan_lainnya;
             }
 
-            // Tanda tangan asesor jika belum diisi
-            $ttdAsesor = $this->tanda_tangan_asesor 
-                ?: ($this->asesor?->tanda_tangan 
-                ?: ($p->asesor?->tanda_tangan ?? null));
+            $dataToUpdate['tanda_tangan_asesor_ak01'] = null;
+            $dataToUpdate['tanggal_ttd_asesor_ak01'] = null;
+            $dataToUpdate['tanda_tangan_asesi_ak01'] = null;
+            $dataToUpdate['tanggal_ttd_asesi_ak01'] = null;
 
-            if (!empty($ttdAsesor) && empty($p->tanda_tangan_asesor_ak01)) {
-                $dataToUpdate['tanda_tangan_asesor_ak01'] = $ttdAsesor;
-                $dataToUpdate['tanggal_ttd_asesor_ak01'] = $this->tanggal_ttd_asesor ?? now();
-            }
-
-            // Update status ak01
-            if (!empty($p->tanda_tangan_asesi_ak01) && (!empty($dataToUpdate['tanda_tangan_asesor_ak01']) || !empty($p->tanda_tangan_asesor_ak01))) {
-                $dataToUpdate['status_ak01'] = 'selesai';
-            } elseif ($p->status_ak01 === 'belum' && (!empty($dataToUpdate['tanda_tangan_asesor_ak01']) || !empty($p->tanda_tangan_asesor_ak01))) {
+            if ($this->status === 'selesai' && $p->status_ak01 === 'belum') {
                 $dataToUpdate['status_ak01'] = 'disetujui_asesor';
             }
 

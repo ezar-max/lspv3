@@ -1804,6 +1804,7 @@
                             </label>
                         </div>
 
+                        @if(false)
                         <!-- Tanda Tangan Asesor Preview jika sudah ada -->
                         @php
                             $ttdAsesorSah = $pendaftaran->tanda_tangan_asesor_ak01 ?: ($pendaftaran->skema?->masterAk01?->tanda_tangan_asesor ?? null);
@@ -1935,6 +1936,8 @@
                         </div>
                     </div>
 
+                        @endif
+
                     <!-- Bottom Action Final Button -->
                     <div class="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
                         <button type="button" @click="setStep(2)" 
@@ -1957,8 +1960,8 @@
                                         class="w-full sm:w-auto px-8 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-md transition-all duration-150 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer">
                                     Kirim & Setujui FR.AK.01
                                 </button>
-                                <p id="peringatan-ttd-ak01" class="text-xs text-amber-600 font-semibold flex items-center gap-1.5 mt-1">
-                                    <span>Anda harus membubuhkan tanda tangan digital terlebih dahulu sebelum dapat mengirim formulir.</span>
+                                <p id="peringatan-ttd-ak01" class="text-xs text-slate-500 font-semibold flex items-center gap-1.5 mt-1">
+                                    <span>Pastikan rincian persetujuan telah ditinjau sebelum dikirim.</span>
                                 </p>
                             @endif
                         </div>
@@ -1993,18 +1996,18 @@
                 @php
                     $asesorNama = $pendaftaran->asesor->nama_lengkap ?? $pendaftaran->jadwal?->asesor?->nama_lengkap ?? 'Asesor LSP';
                     $asesorMet = $pendaftaran->asesor->nomor_registrasi ?? $pendaftaran->jadwal?->asesor?->nomor_registrasi ?? 'MET.000.004455';
-                    $profileTtd = auth()->user()->tanda_tangan;
-                    $isSignedByAsesi = $ak07 ? !empty($ak07->asesi_signature) : false;
                     $isConfirmed = $ak07 ? $ak07->isConfirmed() : false;
+                    $profileTtd = null;
+                    $isSignedByAsesi = $isConfirmed;
                     $savedChecklist = (array) ($ak07->items_checklist ?? []);
                     if (empty($savedChecklist)) {
                         $savedChecklist = \App\Models\AssessmentAk07Adjustment::defaultChecklistItems();
                     }
                     $selectedPotensi = (int) ($ak07->potensi_asesi ?? 1);
                     $selectedFase = $ak07->fase_penggunaan ?? 'saat_pra_asesmen';
-                    $profileTtdAk07 = $profileTtd;
-                    $isSignedByAsesiAk07 = $isSignedByAsesi;
-                    $asesorSigToShow = ($ak07 && $ak07->asesor_signature) ? $ak07->asesor_signature : ($pendaftaran->tanda_tangan_asesor_ak01 ?? $pendaftaran->asesor?->tanda_tangan);
+                    $profileTtdAk07 = null;
+                    $isSignedByAsesiAk07 = $isConfirmed;
+                    $asesorSigToShow = null;
 
                     $faseList = [
                         'pra_asesmen' => ['title' => 'Pra Asesmen', 'desc' => 'Diterapkan sebelum tahapan asesmen dimulai (misal: verifikasi berkas & konsultasi pra-uji)'],
@@ -2316,6 +2319,7 @@
                     </div>
                 </div>
 
+                @if(false)
                 <!-- 5. BAGIAN PENGESAHAN TANDA TANGAN DIGITAL & STATUS KESEPAKATAN -->
                 <div class="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-4 sm:p-5 space-y-4" x-data="tahapanAk07App()">
                     <div class="flex items-center gap-2 text-sm font-bold text-slate-900 border-b border-slate-100 pb-2.5">
@@ -2425,6 +2429,23 @@
                         </div>
 
                     </div>
+                </div>
+
+                @endif
+
+                <div class="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-4 sm:p-5 space-y-3">
+                    <h3 class="text-sm font-bold text-slate-900">Konfirmasi Kesepakatan</h3>
+                    <p class="text-xs text-slate-600">Tinjau penyesuaian asesmen sebelum melanjutkan ke tahap ujian.</p>
+                    @if($isConfirmed)
+                        <span class="text-xs font-semibold text-emerald-700">Kesepakatan FR.AK.07 telah dikonfirmasi.</span>
+                    @else
+                        <form action="{{ route('asesi.ak07.confirm', $pendaftaran->id) }}" method="POST">
+                            @csrf
+                            <button type="submit" class="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs">
+                                Konfirmasi &amp; Lanjutkan
+                            </button>
+                        </form>
+                    @endif
                 </div>
 
                 <!-- Bottom Action Step 4 -->
@@ -3307,40 +3328,18 @@
     // VALIDASI TTD AK-01 SEBELUM SUBMIT
     // =========================================================================
     function updateAk01SubmitButton() {
-        const input = document.getElementById('inputSignatureAk01');
         const btn = document.getElementById('btn-submit-ak01');
         const warning = document.getElementById('peringatan-ttd-ak01');
         if (!btn) return;
 
-        const hasTtd = input && input.value && (input.value.startsWith('data:image') || input.value.length > 5);
-        btn.disabled = !hasTtd;
-        if (warning) {
-            warning.style.display = hasTtd ? 'none' : 'flex';
-        }
+        btn.disabled = false;
+        if (warning) warning.style.display = 'flex';
     }
 
     function validasiAk01Sebelumkirim(event) {
         event.preventDefault();
-
-        const input = document.getElementById('inputSignatureAk01');
-        const hasTtd = input && input.value && (input.value.startsWith('data:image') || input.value.length > 5);
-
-        if (!hasTtd) {
-            if (typeof Swal !== 'undefined') {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Tanda Tangan Belum Diisi',
-                    text: 'Silakan bubuhkan tanda tangan digital Anda pada canvas terlebih dahulu sebelum mengirim formulir FR.AK.01.',
-                    confirmButtonColor: '#059669',
-                    confirmButtonText: 'Mengerti'
-                });
-            } else {
-                alert('Silakan bubuhkan tanda tangan digital Anda terlebih dahulu.');
-            }
-            return false;
-        }
-
         const form = document.getElementById('form-ak01-asesi');
+        if (form && !form.reportValidity()) return false;
         const btn = document.getElementById('btn-submit-ak01');
         if (btn) {
             btn.disabled = true;

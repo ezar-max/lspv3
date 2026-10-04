@@ -508,6 +508,7 @@ class FormulirController extends Controller
             return $this->redirectFallback('Silakan pilih atau daftarkan skema sertifikasi terlebih dahulu.');
         }
         $iaRecord = $pendaftaran->id ? IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.04B')->first() : null;
+        $savedData = $iaRecord?->data_jawaban ?? [];
         $masterInst = \App\Models\SchemeMasterInstrument::with('productSpecifications')
             ->where('skema_id', $pendaftaran->skema_id)
             ->whereIn('instrument_code', \App\Models\SchemeMasterInstrument::getCodeAliases('ia_04b'))
@@ -524,6 +525,7 @@ class FormulirController extends Controller
             return $this->redirectFallback('Silakan pilih atau daftarkan skema sertifikasi terlebih dahulu.');
         }
         $iaRecord = $pendaftaran->id ? IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.11')->first() : null;
+        $savedData = $iaRecord?->data_jawaban ?? [];
         $isMasterMode = empty($pendaftaran->id) || $pendaftaran->id == 0 || !$request->filled('pendaftaran_id');
         return view('formulir.fr-ia-11', compact('pendaftaran', 'iaRecord', 'savedData', 'isMasterMode'));
     }

@@ -275,7 +275,6 @@ class AsesorMapaWorkflowTest extends TestCase
             'aksi' => 'konfirmasi',
             'matriks_peta' => $matrix,
             'catatan_asesor' => 'Rencana asesmen disetujui.',
-            'tanda_tangan_asesor' => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
         ]);
 
         $response->assertRedirect(route('asesor.mapa'));
@@ -283,7 +282,8 @@ class AsesorMapaWorkflowTest extends TestCase
         $mapa02 = Mapa02::where('pendaftaran_id', $this->pendaftaran->id)->first();
         $this->assertNotNull($mapa02);
         $this->assertEquals('selesai', $mapa02->status_mapa);
-        $this->assertNotNull($mapa02->tanggal_ttd_asesor);
+        $this->assertNull($mapa02->tanda_tangan_asesor);
+        $this->assertNull($mapa02->tanggal_ttd_asesor);
     }
 
     /** 9. Confirm tanpa instrumen valid ditolak dengan pesan error */

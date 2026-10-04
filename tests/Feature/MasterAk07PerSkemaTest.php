@@ -153,19 +153,19 @@ class MasterAk07PerSkemaTest extends TestCase
         $syncedCount = $master->sinkronkanKePeserta();
         $this->assertEquals(2, $syncedCount);
 
-        // Verifikasi asesi1 dan asesi2 memiliki ak07 dengan data tersinkron
+        // Verifikasi asesi1 dan asesi2 memiliki data tersinkron tanpa TTD.
         $this->assertDatabaseHas('assessment_ak07_adjustments', [
             'assessment_registration_id' => $p1->id,
             'potensi_asesi' => 3,
             'acuan_pembanding_disepakati' => 'SKKNI Standar Terbuka',
-            'asesor_signature' => 'signatures/asesor_profil.png',
+            'asesor_signature' => null,
         ]);
 
         $this->assertDatabaseHas('assessment_ak07_adjustments', [
             'assessment_registration_id' => $p2->id,
             'potensi_asesi' => 3,
             'acuan_pembanding_disepakati' => 'SKKNI Standar Terbuka',
-            'asesor_signature' => 'signatures/asesor_profil.png',
+            'asesor_signature' => null,
         ]);
 
         // Verifikasi asesi bisa melihat formulir FR.AK.07 yang telah disiapkan asesor
@@ -200,6 +200,9 @@ class MasterAk07PerSkemaTest extends TestCase
         foreach ($routes as $route) {
             $resp = $this->actingAs($this->asesor)->get(route($route));
             $this->assertEquals(200, $resp->status(), "Route {$route} failed to render without scheme.");
+            $resp->assertDontSee('Penyusun (Asesor Penguji)');
+            $resp->assertDontSee('Validator (Admin LSP)');
+            $resp->assertDontSee('Belum ditandatangani');
         }
 
         // Test form ujian asesi (05c dan 06c)

@@ -129,16 +129,14 @@ class Mapa02ResponsiveViewTest extends TestCase
         $response->assertSee('FR.MAPA.02');
         $response->assertSee('mapa02-table-wrapper');
         $response->assertSee('mapa02-table');
-        $response->assertSee('canvasMapa02Asesor');
-        $response->assertSee('inputTtdAsesor');
+        $response->assertDontSee('Bubuhkan TTD');
     }
 
-    public function test_asesor_can_draw_and_save_signature_on_mapa02()
+    public function test_asesor_can_save_mapa02_without_signature()
     {
         $response = $this->actingAs($this->asesor)->get(route('asesor.mapa-02', $this->pendaftaran->id));
         $response->assertStatus(200);
-        $response->assertSee('canvasMapa02Asesor');
-        $response->assertSee('clearCanvas()');
+        $response->assertDontSee('Bubuhkan TTD');
 
         $base64Sig = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
 
@@ -152,7 +150,6 @@ class Mapa02ResponsiveViewTest extends TestCase
 
         $mapa02 = \App\Models\Mapa02::where('pendaftaran_id', $this->pendaftaran->id)->first();
         $this->assertNotNull($mapa02);
-        $this->assertNotNull($mapa02->tanda_tangan_asesor);
-        $this->assertStringContainsString('signatures/', $mapa02->tanda_tangan_asesor);
+        $this->assertNull($mapa02->tanda_tangan_asesor);
     }
 }

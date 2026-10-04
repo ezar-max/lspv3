@@ -207,7 +207,7 @@ class AssessmentAk07WorkflowTest extends TestCase
     /**
      * 4. Asesor dapat mengonfirmasi FR.AK.07 dengan tanda tangan profil
      */
-    public function test_asesor_can_confirm_ak07_with_profile_signature(): void
+    public function test_asesor_can_confirm_ak07_without_signature(): void
     {
         $payload = [
             'potensi_asesi' => 3,
@@ -216,7 +216,6 @@ class AssessmentAk07WorkflowTest extends TestCase
             'acuan_pembanding_disepakati' => 'SKKNI RPL',
             'metode_disepakati' => 'Observasi',
             'instrumen_disepakati' => 'FR.IA.01',
-            'tanda_tangan_asesor' => $this->asesorA->tanda_tangan,
             'aksi' => 'confirm',
         ];
 
@@ -228,33 +227,16 @@ class AssessmentAk07WorkflowTest extends TestCase
         $this->assertDatabaseHas('assessment_ak07_adjustments', [
             'assessment_registration_id' => $this->pendaftaran->id,
             'status' => 'confirmed',
-            'asesor_signature' => $this->asesorA->tanda_tangan,
+            'asesor_signature' => null,
         ]);
     }
 
     /**
-     * 5. Asesor dapat menandatangani FR.AK.07 dengan canvas base64 image
+     * 5. Endpoint tanda tangan asesor tidak lagi tersedia
      */
-    public function test_asesor_can_sign_ak07_with_canvas_signature(): void
+    public function test_asesor_signature_endpoint_is_removed(): void
     {
-        $ak07 = AssessmentAk07Adjustment::create([
-            'assessment_registration_id' => $this->pendaftaran->id,
-            'potensi_asesi' => 1,
-            'status' => 'draft',
-        ]);
-
-        $dummyCanvas = 'data:image/png;base64,' . base64_encode('dummy_png_bytes');
-
-        $response = $this->actingAs($this->asesorA)
-            ->post(route('asesor.pendaftaran.ak07.sign-asesor', $this->pendaftaran->id), [
-                'tanda_tangan_asesor' => $dummyCanvas,
-            ]);
-
-        $response->assertRedirect();
-        $ak07->refresh();
-
-        $this->assertNotNull($ak07->asesor_signature);
-        $this->assertNotNull($ak07->asesor_signed_at);
+        $this->assertNull(app('router')->getRoutes()->getByName('asesor.pendaftaran.ak07.sign-asesor'));
     }
 
     /**
@@ -297,26 +279,23 @@ class AssessmentAk07WorkflowTest extends TestCase
     /**
      * 8. Asesi dapat menandatangani FR.AK.07 dan mengonfirmasi kesepakatan
      */
-    public function test_asesi_can_sign_ak07_and_lock_confirmed(): void
+    public function test_asesi_can_confirm_ak07_without_signature(): void
     {
         $ak07 = AssessmentAk07Adjustment::create([
             'assessment_registration_id' => $this->pendaftaran->id,
             'potensi_asesi' => 1,
-            'asesor_signature' => 'signatures/profil_asesor_a.png',
-            'asesor_signed_at' => now(),
             'status' => 'draft',
         ]);
 
         $response = $this->actingAs($this->asesi)
-            ->post(route('asesi.ak07.sign-asesi', $this->pendaftaran->id), [
-                'tanda_tangan_asesi' => $this->asesi->tanda_tangan,
-            ]);
+            ->post(route('asesi.ak07.confirm', $this->pendaftaran->id));
 
         $response->assertRedirect();
         $ak07->refresh();
 
-        $this->assertEquals('signatures/profil_asesi.png', $ak07->asesi_signature);
-        $this->assertNotNull($ak07->asesi_signed_at);
+        $this->assertNull($ak07->asesi_signature);
+        $this->assertNull($ak07->asesor_signature);
+        $this->assertNull($ak07->asesi_signed_at);
         $this->assertEquals('confirmed', $ak07->status);
     }
 
@@ -500,9 +479,7 @@ class AssessmentAk07WorkflowTest extends TestCase
             'tanda_tangan_asesor_ak01' => 'signatures/profil_asesor_a.png',
         ]);
 
-        $respSign = $this->actingAs($this->asesi)->post(route('asesi.ak07.sign-asesi', $this->pendaftaran->id), [
-            'tanda_tangan_asesi' => 'signatures/asesi_sign_ak07.png',
-        ]);
+        $respSign = $this->actingAs($this->asesi)->post(route('asesi.ak07.confirm', $this->pendaftaran->id));
 
         $respSign->assertRedirect(route('asesi.tahapan', ['pendaftaran_id' => $this->pendaftaran->id, 'step' => 5]));
         $respSign->assertSessionHas('sukses');

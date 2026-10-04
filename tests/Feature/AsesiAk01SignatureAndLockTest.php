@@ -96,34 +96,31 @@ class AsesiAk01SignatureAndLockTest extends TestCase
         $this->assertStringContainsString('disabled', $content);
     }
 
-    /** 2. Tanda tangan asesi otomatis terisi dari profil/pendaftaran dan dapat langsung disetujui */
-    public function test_ak01_autofills_existing_signature_from_profile_and_allows_direct_submission(): void
+    /** 2. Tanda tangan profil tidak ditampilkan dan persetujuan dapat dikirim tanpa TTD */
+    public function test_ak01_does_not_autofill_signature_and_allows_submission(): void
     {
         $response = $this->actingAs($this->asesi)->get(route('asesi.ak01', ['id' => $this->pendaftaran->id]));
 
         $response->assertStatus(200);
 
-        // Memastikan tanda tangan yang tersimpan di profil otomatis diisi
-        $response->assertSee('Otomatis Terisi');
-        $response->assertSee('signatures/asesi_profil_tersimpan.png');
-        $response->assertSee('Ubah Tanda Tangan');
+        $response->assertDontSee('Otomatis Terisi');
+        $response->assertDontSee('Ubah Tanda Tangan');
 
-        // Asesi menyetujui menggunakan tanda tangan yang otomatis terisi
+        // Asesi menyetujui tanpa tanda tangan.
         $submitResponse = $this->actingAs($this->asesi)->post(route('asesi.ak01.sign', ['id' => $this->pendaftaran->id]), [
             'pendaftaran_id' => $this->pendaftaran->id,
-            'tanda_tangan_asesi_ak01' => 'signatures/asesi_profil_tersimpan.png',
         ]);
 
         $submitResponse->assertRedirect(route('asesi.dashboard', ['pendaftaran_id' => $this->pendaftaran->id]));
 
         $this->pendaftaran->refresh();
         $this->assertEquals('selesai', $this->pendaftaran->status_ak01);
-        $this->assertEquals('signatures/asesi_profil_tersimpan.png', $this->pendaftaran->tanda_tangan_asesi_ak01);
-        $this->assertNotNull($this->pendaftaran->tanggal_ttd_asesi_ak01);
+        $this->assertNull($this->pendaftaran->tanda_tangan_asesi_ak01);
+        $this->assertNull($this->pendaftaran->tanggal_ttd_asesi_ak01);
     }
 
-    /** 3. Asesi dapat mengedit tanda tangannya dengan tanda tangan baru */
-    public function test_ak01_allows_asesi_to_edit_signature_with_new_canvas_data(): void
+    /** 3. Payload canvas lama diabaikan pada pengiriman FR.AK.01 */
+    public function test_ak01_ignores_legacy_canvas_signature_payload(): void
     {
         $dummySignature = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
 
@@ -136,7 +133,7 @@ class AsesiAk01SignatureAndLockTest extends TestCase
 
         $this->pendaftaran->refresh();
         $this->assertEquals('selesai', $this->pendaftaran->status_ak01);
-        $this->assertStringStartsWith('storage/signatures/ak01_asesi_', $this->pendaftaran->tanda_tangan_asesi_ak01);
+        $this->assertNull($this->pendaftaran->tanda_tangan_asesi_ak01);
     }
 
     /** 4. Klausul persetujuan ditampilkan dan tombol submit aktif untuk mengirim formulir */
@@ -155,8 +152,8 @@ class AsesiAk01SignatureAndLockTest extends TestCase
         $response->assertSee('Kirim & Setujui FR.AK.01', false);
     }
 
-    /** 5. Jika asesor sudah tanda tangan lebih dulu, saat asesi mengirim AK.01 status menjadi selesai */
-    public function test_ak01_submission_completes_flow_when_asesor_already_signed(): void
+    /** 5. Jika asesor sudah menetapkan AK.01, asesi dapat menyetujui tanpa TTD */
+    public function test_ak01_submission_completes_without_signature_when_asesor_has_set_it(): void
     {
         $this->pendaftaran->update([
             'tanda_tangan_asesor_ak01' => 'signatures/asesor_signed.png',
@@ -166,14 +163,13 @@ class AsesiAk01SignatureAndLockTest extends TestCase
 
         $submitResponse = $this->actingAs($this->asesi)->post(route('asesi.ak01.sign', ['id' => $this->pendaftaran->id]), [
             'pendaftaran_id' => $this->pendaftaran->id,
-            'tanda_tangan_asesi_ak01' => 'signatures/asesi_profil_tersimpan.png',
         ]);
 
         $submitResponse->assertRedirect(route('asesi.dashboard', ['pendaftaran_id' => $this->pendaftaran->id]));
 
         $this->pendaftaran->refresh();
         $this->assertEquals('selesai', $this->pendaftaran->status_ak01);
-        $this->assertEquals('signatures/asesi_profil_tersimpan.png', $this->pendaftaran->tanda_tangan_asesi_ak01);
-        $this->assertNotNull($this->pendaftaran->tanggal_ttd_asesi_ak01);
+        $this->assertNull($this->pendaftaran->tanda_tangan_asesi_ak01);
+        $this->assertNull($this->pendaftaran->tanggal_ttd_asesi_ak01);
     }
 }

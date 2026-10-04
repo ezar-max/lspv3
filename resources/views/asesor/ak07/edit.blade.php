@@ -651,5 +651,4 @@
     };
 </script>
 @endif
-@endpush
 @endsection

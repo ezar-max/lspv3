@@ -1,3 +1,4 @@
+@if(false)
 @php
     $tableClass = $tableClass ?? 'tabel-bnsp';
     $kodeFormNormalized = strtolower(str_replace(['.', '-', ' '], '', $kodeForm ?? ''));
@@ -169,4 +170,5 @@
 
 @if(isset($isMasterMode) && $isMasterMode)
     @include('komponen.signature-pad-penyusun')
+@endif
 @endif

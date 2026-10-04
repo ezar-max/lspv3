@@ -521,8 +521,8 @@
 
     $adminValidatorNama = !empty($adminValidatorData['nama']) ? $adminValidatorData['nama'] : $dbAdminNama;
     $adminValidatorMet = !empty($adminValidatorData['nomor_met']) ? $adminValidatorData['nomor_met'] : $dbAdminMet;
-    $adminTtd = $adminValidatorData['ttd'] ?? ($pendaftaran->tanda_tangan_admin ?? null);
-    $adminTtdTgl = $adminValidatorData['ttd_tanggal'] ?? ($pendaftaran->tanggal_ttd_admin ? \Carbon\Carbon::parse($pendaftaran->tanggal_ttd_admin)->format('d/m/Y') : '');
+    $adminTtd = $mapa01?->tanda_tangan_admin ?: ($adminValidatorData['ttd'] ?? null);
+    $adminTtdTgl = $mapa01?->tanggal_ttd_admin?->format('d/m/Y') ?: ($adminValidatorData['ttd_tanggal'] ?? '');
     $adminStatusValidasi = $adminValidatorData['status_validasi'] ?? null;
     $isValidatedAdmin = $adminStatusValidasi === 'tervalidasi' || (!$isMasterMode && $isMasterSchemeValidated);
     $catatanValidasi = $adminValidatorData['catatan'] ?? null;
@@ -625,10 +625,7 @@
         $adminTtdList[] = $adminTtd;
     }
 
-    $candidateTtd = $mapa01?->tanda_tangan_asesor 
-        ?? ($penyusunTabelSaved['penyusun_1']['ttd'] 
-        ?? ($pendaftaran->tanda_tangan_asesor 
-        ?? (auth()->check() && auth()->user()->peran === 'asesor' ? (auth()->user()->tanda_tangan ?? null) : null)));
+    $candidateTtd = $mapa01?->tanda_tangan_asesor;
     if (!empty($candidateTtd) && in_array($candidateTtd, $adminTtdList, true)) {
         $candidateTtd = null;
     }
@@ -1457,11 +1454,9 @@
                             <th class="th-slate" style="width: 32%; text-align: left; padding: 0.55rem 0.75rem;">
                                 Nama Pejabat / Petugas
                             </th>
-                            @if(false)
                             <th class="th-slate" style="width: 24%; text-align: left; padding: 0.55rem 0.75rem;">
-                                Tanda Tangan & Tanggal
+                                Tanggal Konfirmasi
                             </th>
-                            @endif
                         </tr>
                     </thead>
                     <tbody>
@@ -1549,8 +1544,7 @@
                                     @endif
                                 </td>
 
-                                @if(false)
-                                <!-- Kolom 3: Tanda Tangan & Tanggal -->
+                                <!-- Kolom 3: Tanggal Konfirmasi -->
                                 <td style="padding: 0.6rem 0.75rem; vertical-align: top;">
                                     <div class="flex flex-col gap-1.5">
                                         <div class="flex items-center gap-1.5">
@@ -1591,16 +1585,10 @@
                                         </div>
                                     </div>
                                 </td>
-                                @endif
                             </tr>
                         @endforeach
                     </tbody>
                 </table>
-            </div>
-
-            <!-- TABEL PENYUSUN DAN VALIDATOR -->
-            <div style="font-weight: 800; font-size: 0.95rem; margin-top: 1.5rem; margin-bottom: 0.6rem; color: #0f172a;">
-                Data Penyusun dan Validator:
             </div>
 
             @php
@@ -1611,16 +1599,13 @@
                     $adminValidatorMet = $penyusunTabelSaved['validator_1']['nomor_met'] ?? $dbAdminMet;
                 }
                 if (empty($adminTtd)) {
-                    $adminTtd = $penyusunTabelSaved['validator_1']['ttd'] 
-                        ?? ($pendaftaran->tanda_tangan_admin ?? null);
+                    $adminTtd = $mapa01?->tanda_tangan_admin ?: ($penyusunTabelSaved['validator_1']['ttd'] ?? null);
                 }
                 if (empty($adminTtdTgl)) {
-                    $adminTtdTgl = $penyusunTabelSaved['validator_1']['ttd_tanggal'] 
-                        ?? ($pendaftaran->tanggal_ttd_admin ? \Carbon\Carbon::parse($pendaftaran->tanggal_ttd_admin)->format('d/m/Y') : '');
+                    $adminTtdTgl = $mapa01?->tanggal_ttd_admin?->format('d/m/Y') ?: ($penyusunTabelSaved['validator_1']['ttd_tanggal'] ?? '');
                 }
             @endphp
 
-            @if(false)
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                 <!-- 1. PENYUSUN (ASESOR PENGUJI) -->
                 <div class="relative">
@@ -1684,7 +1669,6 @@
                     @endif
                 </div>
             </div>
-            @endif
 
             <!-- TOMBOL AKSI & NAVIGASI DI BAWAH -->
             @php
@@ -1755,7 +1739,6 @@
     </form>
 </div>
 
-@if(false)
 <!-- MODAL POPUP CANVAS SIGNATURE PAD -->
 <div class="modal-overlay" id="modalCanvasTtd" style="display:none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 99999; justify-content: center; align-items: center;">
     <div class="modal-konten" style="background: white; border-radius: 12px; padding: 1.75rem; width: 100%; max-width: 500px; text-align: center; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);">
@@ -1780,7 +1763,6 @@
         </div>
     </div>
 </div>
-@endif
 
 <!-- MODAL POPUP VALIDASI ADMIN LSP MAPA 01 -->
 <div class="modal-overlay" id="modalValidasiAdminMapa01">
@@ -1855,7 +1837,6 @@
                           placeholder="Catatan hasil verifikasi kelayakan rencana asesmen...">{{ $catatanValidasi }}</textarea>
             </div>
 
-            @if(false)
             <div style="margin-bottom: 1rem; border: 1px solid #cbd5e1; border-radius: 10px; overflow: hidden;">
                 <div style="padding: 0.7rem 0.9rem; background: #f8fafc; display: flex; justify-content: space-between; align-items: center; gap: .75rem;">
                     <div>
@@ -1866,10 +1847,10 @@
                 </div>
                 <div style="padding: .75rem; background: #fff;">
                     <canvas id="canvas-ttd-validator" width="480" height="150" class="canvas-signature-pad" style="width: 100%; height: 150px; border: 1.5px dashed #94a3b8; border-radius: 8px; background: #fff; cursor: crosshair; touch-action: none; display: block;"></canvas>
-                    <p id="validator-signature-hint" style="font-size: .72rem; color: #64748b; margin: .45rem 0 0;">{{ auth()->user()?->tanda_tangan ? 'TTD profil akan digunakan bila bidang ini dikosongkan.' : 'TTD wajib digambar karena profil Anda belum memiliki TTD.' }}</p>
+                    <input type="hidden" name="tanda_tangan_admin" id="input-ttd-validator-modal-base64">
+                    <p id="validator-signature-hint" style="font-size: .72rem; color: #64748b; margin: .45rem 0 0;">Gambar tanda tangan admin untuk menyelesaikan validasi.</p>
                 </div>
             </div>
-            @endif
 
             <label style="display: flex; align-items: flex-start; gap: .6rem; margin-bottom: 1rem; padding: .75rem; border-radius: 9px; background: #f0fdf4; color: #166534; cursor: pointer; font-size: .78rem; line-height: 1.45;">
                 <input type="checkbox" id="check-review-mapa01" required style="margin-top: .18rem; accent-color: #059669;">
@@ -1891,6 +1872,7 @@
 @endsection
 
 @push('js')
+    <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
     <script src="{{ asset('js/asesi/pendaftaran-bagian32.js') }}"></script>
     <script>
         let isMapa01EditMode = {{ (!$isAsesi && $isConfigured) ? 'false' : 'true' }};
@@ -2106,6 +2088,17 @@
         function submitMapa01(aksi) {
             const form = document.getElementById('form-mapa01');
             if (!form) return;
+
+            if (aksi === 'konfirmasi' && !document.getElementById('input-ttd-asesor-base64')?.value) {
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({ icon: 'warning', title: 'Tanda Tangan Asesor Wajib', text: 'Bubuhkan tanda tangan sebelum mengirim FR.MAPA.01 untuk validasi.', confirmButtonColor: '#059669' });
+                } else {
+                    alert('Bubuhkan tanda tangan sebelum mengirim FR.MAPA.01 untuk validasi.');
+                }
+                document.getElementById('modalCanvasTtd')?.style.setProperty('display', 'flex');
+                window.bukaModalTtd?.();
+                return;
+            }
             const inputAksi = document.getElementById('inputAksiMapa01');
             if (inputAksi) inputAksi.value = aksi;
             
@@ -2211,11 +2204,11 @@
 
             let validatorPad;
             if (window.SignaturePad) {
-                validatorPad = new SignaturePad(canvas, { backgroundColor: 'rgb(255, 255, 255)' });
                 const ratio = Math.max(window.devicePixelRatio || 1, 1);
-                canvas.width = canvas.offsetWidth * ratio;
-                canvas.height = canvas.offsetHeight * ratio;
+                canvas.width = (canvas.offsetWidth || 480) * ratio;
+                canvas.height = (canvas.offsetHeight || 150) * ratio;
                 canvas.getContext("2d").scale(ratio, ratio);
+                validatorPad = new SignaturePad(canvas, { backgroundColor: 'rgb(255, 255, 255)' });
                 validatorPad.clear();
             }
 
@@ -2232,10 +2225,13 @@
                     reviewed?.focus();
                     return;
                 }
-                if (validatorPad && !validatorPad.isEmpty()) {
-                    const input = document.getElementById('input-ttd-validator-modal-base64');
-                    if (input) input.value = validatorPad.toDataURL('image/png');
+                if (!validatorPad || validatorPad.isEmpty()) {
+                    event.preventDefault();
+                    alert('Tanda tangan Admin wajib dibuat untuk menyelesaikan validasi.');
+                    return;
                 }
+                const input = document.getElementById('input-ttd-validator-modal-base64');
+                if (input) input.value = validatorPad.toDataURL('image/png');
             });
         }
 
@@ -2248,11 +2244,11 @@
                 if (!window.signaturePadModal) {
                     const canvas = document.getElementById('canvas-ttd-modal');
                     if (canvas && window.SignaturePad) {
-                        window.signaturePadModal = new SignaturePad(canvas, { backgroundColor: 'rgb(255, 255, 255)' });
                         const ratio = Math.max(window.devicePixelRatio || 1, 1);
-                        canvas.width = canvas.offsetWidth * ratio;
-                        canvas.height = canvas.offsetHeight * ratio;
+                        canvas.width = (canvas.offsetWidth || 440) * ratio;
+                        canvas.height = (canvas.offsetHeight || 180) * ratio;
                         canvas.getContext("2d").scale(ratio, ratio);
+                        window.signaturePadModal = new SignaturePad(canvas, { backgroundColor: 'rgb(255, 255, 255)' });
                         window.signaturePadModal.clear();
                     }
                 } else {

@@ -179,8 +179,8 @@ class AsesiTahapanController extends Controller
                         'metode_disepakati' => $ak07->metode_disepakati ?? 'Observasi Demonstrasi & Wawancara',
                         'instrumen_disepakati' => $ak07->instrumen_disepakati ?? 'FR.IA.01, FR.IA.03',
                         'catatan_asesor' => $ak07->catatan_asesor ?? 'Seluruh proses asesmen disepakati dapat dilaksanakan dengan penyesuaian yang wajar sesuai kesepakatan bersama.',
-                        'asesor_signature' => $ak07->asesor_signature ?? $asesorSig,
-                        'asesor_signed_at' => $ak07->asesor_signed_at ?? ($asesorSig ? now() : null),
+                        'asesor_signature' => null,
+                        'asesor_signed_at' => null,
                     ]);
                 }
             } else {

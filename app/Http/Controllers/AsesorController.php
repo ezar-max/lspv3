@@ -865,9 +865,7 @@ class AsesorController extends Controller
         }
 
         if ($isConfirm) {
-            $suksesMsg = in_array($user->peran, ['admin', 'superadmin'])
-                ? 'Dokumen Master FR.MAPA.01 berhasil disahkan dan langsung tervalidasi oleh Administrator.'
-                : 'Master Dokumen FR.MAPA.01 berhasil disahkan.';
+            $suksesMsg = 'Master FR.MAPA.01 berhasil dikirim dan menunggu tanda tangan serta validasi Administrator.';
             return redirect()->route('asesor.mapa', ['skema_id' => $skema->id])
                 ->with('sukses', $suksesMsg);
         }
@@ -1255,9 +1253,7 @@ class AsesorController extends Controller
         LogAktivitas::catat('Perencanaan Asesmen (FR.MAPA.01)', 'Menyimpan dokumen FR.MAPA.01 (' . ($isConfirm ? 'Disahkan' : 'Draft') . ') untuk pendaftaran #' . $pendaftaran->nomor_pendaftaran);
 
         if ($isConfirm) {
-            $suksesMsg = in_array($user->peran, ['admin', 'superadmin'])
-                ? 'Dokumen FR.MAPA.01 berhasil disahkan dan langsung tervalidasi oleh Administrator.'
-                : 'Dokumen FR.MAPA.01 berhasil disahkan.';
+            $suksesMsg = 'FR.MAPA.01 berhasil dikirim dan menunggu tanda tangan serta validasi Administrator.';
             return redirect()->route('asesor.mapa', ['skema_id' => $pendaftaran->skema_id])
                 ->with('sukses', $suksesMsg);
         }

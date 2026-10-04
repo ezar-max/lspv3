@@ -222,7 +222,9 @@ class MapaWorkflowService
                     $existing->save();
                 }
 
-                $masterTtdAdmin = $masterValidator['ttd'] ?? null;
+                $masterTtdAdmin = $master->tanda_tangan_admin ?: ($masterValidator['ttd'] ?? null);
+                $existing->tanda_tangan_admin = $masterTtdAdmin;
+                $existing->tanggal_ttd_admin = $master->tanggal_ttd_admin;
                 if ($masterTtdAdmin && empty($pendaftaran->tanda_tangan_admin)) {
                     $pendaftaran->update([
                         'tanda_tangan_admin' => $masterTtdAdmin,
@@ -253,19 +255,12 @@ class MapaWorkflowService
         $defaultAdminNama = $adminDb?->nama_lengkap ?: 'Administrator LSP';
         $defaultAdminMet = $adminDb?->nomor_registrasi ?: 'REG.ADM.LSP.001';
 
-        $asesorTtdDefault = $master?->tanda_tangan_asesor 
-            ?: ($pendaftaran->tanda_tangan_asesor 
-            ?: ($pendaftaran->asesor?->tanda_tangan ?? null));
-        if (!empty($asesorTtdDefault) && str_contains($asesorTtdDefault, 'svg')) {
-            $asesorTtdDefault = null;
-        }
-
         $defaultPenyusunValidatorTabel = $master?->penyusun_validator_tabel ?: [
             'penyusun_1' => [
                 'nama' => $pendaftaran->asesor?->nama_lengkap ?: 'Asesor Penguji',
                 'nomor_met' => $pendaftaran->asesor?->nomor_registrasi ?: 'MET.000.001222 2026',
-                'ttd' => $asesorTtdDefault,
-                'ttd_tanggal' => $asesorTtdDefault ? now()->format('d/m/Y') : null,
+                'ttd' => null,
+                'ttd_tanggal' => null,
             ],
             'validator_1' => [
                 'nama' => $defaultAdminNama,
@@ -300,8 +295,10 @@ class MapaWorkflowService
             'konfirmasi_orang_relevan' => $master ? ($master->konfirmasi_orang_relevan ?: ['Manajer sertifikasi LSP']) : ['Manajer sertifikasi LSP'],
             'konfirmasi_pihak_relevan_tabel' => $master?->konfirmasi_pihak_relevan_tabel,
             'penyusun_validator_tabel' => $defaultPenyusunValidatorTabel,
-            'tanda_tangan_asesor' => $master?->tanda_tangan_asesor ?: $asesorTtdDefault,
-            'tanggal_ttd_asesor' => $master?->tanggal_ttd_asesor ?: ($asesorTtdDefault ? now() : null),
+            'tanda_tangan_asesor' => null,
+            'tanggal_ttd_asesor' => null,
+            'tanda_tangan_admin' => $master?->tanda_tangan_admin,
+            'tanggal_ttd_admin' => $master?->tanggal_ttd_admin,
             'standar_industri' => $master ? ($master->standar_industri ?: ['Standar Kompetensi:']) : ['Standar Kompetensi:'],
             'rencana_unit_matriks' => $defaultMatriks,
             'karakteristik_kandidat_status' => $master?->karakteristik_kandidat_status ?: 'tidak_ada',
@@ -554,26 +551,27 @@ class MapaWorkflowService
     public function saveMapa01(PendaftaranAsesi $pendaftaran, array $data, ?string $rawSignature, bool $isConfirm, int $asesorId): Mapa01
     {
         return DB::transaction(function () use ($pendaftaran, $data, $rawSignature, $isConfirm, $asesorId) {
-            $rawSignature = null;
             unset($data['tanda_tangan_validator']);
-            unset($data['penyusun_validator_tabel']['penyusun_1']['ttd'], $data['penyusun_validator_tabel']['validator_1']['ttd']);
-            $isAdminUser = auth()->check() && in_array(auth()->user()->peran, ['admin', 'superadmin']);
-            $adminTtds = Pengguna::whereIn('peran', ['admin', 'superadmin'])->pluck('tanda_tangan')->filter()->toArray();
-            if ($rawSignature && in_array($rawSignature, $adminTtds, true)) {
-                $rawSignature = null;
-            }
-
-            $ttdPath = null;
-            if (empty($ttdPath)) {
-                $ttdPath = $pendaftaran->mapa01?->tanda_tangan_asesor 
-                    ?: ($pendaftaran->tanda_tangan_asesor 
-                    ?: ($pendaftaran->asesor?->tanda_tangan ?? null));
-            }
-            if ($ttdPath && (str_contains($ttdPath, 'svg') || str_contains($ttdPath, '<svg'))) {
+            $existingMapa01 = Mapa01::where('pendaftaran_id', $pendaftaran->id)->first();
+            $ttdPath = $existingMapa01?->tanda_tangan_asesor;
+            if (Str::startsWith($rawSignature ?? '', 'data:image/')) {
+                $ttdPath = $this->saveSignatureFile($rawSignature, $pendaftaran->id, 'mapa01_asesor');
+            } elseif ($rawSignature && $rawSignature !== $ttdPath) {
                 $ttdPath = null;
             }
 
-            $penyusunValidator = $data['penyusun_validator_tabel'] ?? [];
+            if ($isConfirm && empty($ttdPath)) {
+                throw ValidationException::withMessages([
+                    'tanda_tangan_asesor' => 'Tanda tangan Asesor wajib dibubuhkan sebelum FR.MAPA.01 dikirim untuk validasi.',
+                ]);
+            }
+
+            $penyusunValidator = $existingMapa01?->penyusun_validator_tabel ?? [];
+            $penyusunValidator['validator_1'] ??= [];
+            $penyusunValidator['penyusun_1'] = array_merge(
+                $penyusunValidator['penyusun_1'] ?? [],
+                $data['penyusun_validator_tabel']['penyusun_1'] ?? []
+            );
 
             // Pastikan baris 1 (Penyusun) adalah Asesor Penguji, BUKAN Admin LSP
             $asesorModel = Pengguna::find($asesorId) ?: ($pendaftaran->asesor ?: Pengguna::where('peran', 'asesor')->where('skema_id', $pendaftaran->skema_id)->first());
@@ -582,55 +580,13 @@ class MapaWorkflowService
                 $penyusunValidator['penyusun_1']['nama'] = $asesorModel?->nama_lengkap ?? 'Asesor Penguji';
                 $penyusunValidator['penyusun_1']['nomor_met'] = $asesorModel?->nomor_registrasi ?? 'MET.000.001222 2026';
             }
-            if (!empty($penyusunValidator['penyusun_1']['ttd']) && (in_array($penyusunValidator['penyusun_1']['ttd'], $adminTtds, true) || str_contains($penyusunValidator['penyusun_1']['ttd'], 'svg'))) {
-                $penyusunValidator['penyusun_1']['ttd'] = $ttdPath ?: ($asesorModel?->tanda_tangan ?? null);
-            }
-            if (empty($penyusunValidator['penyusun_1']['ttd'])) {
-                $penyusunValidator['penyusun_1']['ttd'] = $ttdPath ?: ($pendaftaran->tanda_tangan_asesor ?: ($asesorModel?->tanda_tangan ?? null));
-            }
-            if (!empty($penyusunValidator['penyusun_1']['ttd']) && empty($penyusunValidator['penyusun_1']['ttd_tanggal'])) {
-                $penyusunValidator['penyusun_1']['ttd_tanggal'] = now()->format('d/m/Y');
-            }
-
-            // Jika Admin yang menyimpan/membuat: Otomatis lengkapi data & langsung tervalidasi
-            if ($isAdminUser) {
-                if (empty($penyusunValidator['penyusun_1']['ttd']) && !empty($ttdPath)) {
-                    $penyusunValidator['penyusun_1']['ttd'] = $ttdPath;
-                }
-
-                $adminUser = auth()->user();
-                $adminTtd = null;
-
-                $penyusunValidator['validator_1']['nama'] = !empty($penyusunValidator['validator_1']['nama']) ? $penyusunValidator['validator_1']['nama'] : ($adminUser->nama_lengkap ?: 'Administrator LSP');
-                $penyusunValidator['validator_1']['nomor_met'] = !empty($penyusunValidator['validator_1']['nomor_met']) ? $penyusunValidator['validator_1']['nomor_met'] : ($adminUser->nomor_registrasi ?: 'REG.ADM.LSP.001');
-                $penyusunValidator['validator_1']['ttd'] = $adminTtd;
-                $penyusunValidator['validator_1']['ttd_tanggal'] = now()->format('d/m/Y');
-                $penyusunValidator['validator_1']['status_validasi'] = 'tervalidasi';
-
-                $pendaftaran->update([
-                    'tanda_tangan_admin' => null,
-                    'tanggal_ttd_admin' => null,
-                ]);
-            } else {
-                if (!empty($data['tanda_tangan_validator'])) {
-                    $valTtd = $this->saveSignatureFile($data['tanda_tangan_validator'], $pendaftaran->id, 'mapa01_val');
-                    if ($valTtd) {
-                        $penyusunValidator['validator_1']['ttd'] = $valTtd;
-                        $penyusunValidator['validator_1']['ttd_tanggal'] = now()->format('d/m/Y');
-                        $penyusunValidator['validator_1']['status_validasi'] = 'tervalidasi';
-                    }
-                } elseif (!empty($penyusunValidator['validator_1']['ttd'])) {
-                    $valTtd = $this->saveSignatureFile($penyusunValidator['validator_1']['ttd'], $pendaftaran->id, 'mapa01_val');
-                    if ($valTtd) {
-                        $penyusunValidator['validator_1']['ttd'] = $valTtd;
-                    }
-                } elseif (!empty($pendaftaran->tanda_tangan_admin)) {
-                    $penyusunValidator['validator_1']['ttd'] = $pendaftaran->tanda_tangan_admin;
-                    $penyusunValidator['validator_1']['ttd_tanggal'] = $pendaftaran->tanggal_ttd_admin ? \Carbon\Carbon::parse($pendaftaran->tanggal_ttd_admin)->format('d/m/Y') : date('d/m/Y');
-                    $penyusunValidator['validator_1']['nama'] = $penyusunValidator['validator_1']['nama'] ?? 'Admin LSP SMKN 1 Gunungputri';
-                    $penyusunValidator['validator_1']['nomor_met'] = $penyusunValidator['validator_1']['nomor_met'] ?? 'NIP/REG.ADM.LSP.001';
-                }
-            }
+            $penyusunValidator['penyusun_1']['ttd'] = $ttdPath;
+            $penyusunValidator['penyusun_1']['ttd_tanggal'] = $ttdPath
+                ? ($rawSignature ? now()->format('d/m/Y') : ($penyusunValidator['penyusun_1']['ttd_tanggal'] ?? now()->format('d/m/Y')))
+                : null;
+            $penyusunValidator['validator_1']['ttd'] = null;
+            $penyusunValidator['validator_1']['ttd_tanggal'] = null;
+            $penyusunValidator['validator_1']['status_validasi'] = 'menunggu';
 
             // Pastikan baris 2 (Validator) selalu terisi nama dan nomor_met dari akun admin database jika belum ada
             $adminDb = Pengguna::where('peran', 'admin')->first() ?: Pengguna::where('peran', 'superadmin')->first();
@@ -643,11 +599,6 @@ class MapaWorkflowService
             if (empty($penyusunValidator['validator_1']['nomor_met'])) {
                 $penyusunValidator['validator_1']['nomor_met'] = $defaultAdminMet;
             }
-
-            $penyusunValidator['penyusun_1']['ttd'] = null;
-            $penyusunValidator['penyusun_1']['ttd_tanggal'] = null;
-            $penyusunValidator['validator_1']['ttd'] = null;
-            $penyusunValidator['validator_1']['ttd_tanggal'] = null;
 
             $normalizedKonfirmasi = $this->normalizeKonfirmasiData($data);
 
@@ -680,9 +631,11 @@ class MapaWorkflowService
                     'peluang_terintegrasi_teks' => $data['peluang_terintegrasi_teks'] ?? null,
                     'konfirmasi_pihak_relevan_tabel' => $normalizedKonfirmasi['konfirmasi_pihak_relevan_tabel'],
                     'penyusun_validator_tabel' => $penyusunValidator,
-                    'tanda_tangan_asesor' => null,
-                    'tanggal_ttd_asesor' => null,
-                    'status_mapa' => $isConfirm ? 'selesai' : 'draft',
+                    'tanda_tangan_asesor' => $ttdPath,
+                    'tanggal_ttd_asesor' => $ttdPath ? ($rawSignature ? now() : $existingMapa01?->tanggal_ttd_asesor) : null,
+                    'tanda_tangan_admin' => null,
+                    'tanggal_ttd_admin' => null,
+                    'status_mapa' => $isConfirm ? 'menunggu_validasi' : 'draft',
                 ]
             );
 
@@ -727,73 +680,40 @@ class MapaWorkflowService
     public function saveMasterMapa01(SkemaSertifikasi $skema, array $data, ?string $rawSignature, bool $isConfirm, int $asesorId): Mapa01
     {
         return DB::transaction(function () use ($skema, $data, $rawSignature, $isConfirm, $asesorId) {
-            $rawSignature = null;
             unset($data['tanda_tangan_validator']);
-            unset($data['penyusun_validator_tabel']['penyusun_1']['ttd'], $data['penyusun_validator_tabel']['validator_1']['ttd']);
-            $isAdminUser = auth()->check() && in_array(auth()->user()->peran, ['admin', 'superadmin']);
-            $adminTtds = Pengguna::whereIn('peran', ['admin', 'superadmin'])->pluck('tanda_tangan')->filter()->toArray();
-            if ($rawSignature && in_array($rawSignature, $adminTtds, true)) {
-                $rawSignature = null;
-            }
-
-            $ttdPath = null;
-            if (empty($ttdPath)) {
-                $existingMaster = Mapa01::where('skema_id', $skema->id)->whereNull('pendaftaran_id')->first();
-                $ttdPath = $existingMaster?->tanda_tangan_asesor;
-                if (empty($ttdPath) && $rawSignature && Str::startsWith($rawSignature, 'storage/')) {
-                    $ttdPath = $rawSignature;
-                }
-            }
-            if ($ttdPath && (str_contains($ttdPath, 'svg') || str_contains($ttdPath, '<svg'))) {
+            $existingMaster = Mapa01::where('skema_id', $skema->id)->whereNull('pendaftaran_id')->first();
+            $ttdPath = $existingMaster?->tanda_tangan_asesor;
+            if (Str::startsWith($rawSignature ?? '', 'data:image/')) {
+                $ttdPath = $this->saveSignatureFile($rawSignature, null, 'mapa01_master_asesor_' . $skema->id);
+            } elseif ($rawSignature && $rawSignature !== $ttdPath) {
                 $ttdPath = null;
             }
 
-            $penyusunValidator = $data['penyusun_validator_tabel'] ?? [];
+            if ($isConfirm && empty($ttdPath)) {
+                throw ValidationException::withMessages([
+                    'tanda_tangan_asesor' => 'Tanda tangan Asesor wajib dibubuhkan sebelum FR.MAPA.01 dikirim untuk validasi.',
+                ]);
+            }
+
+            $penyusunValidator = $existingMaster?->penyusun_validator_tabel ?? [];
+            $penyusunValidator['validator_1'] ??= [];
+            $penyusunValidator['penyusun_1'] = array_merge(
+                $penyusunValidator['penyusun_1'] ?? [],
+                $data['penyusun_validator_tabel']['penyusun_1'] ?? []
+            );
             $asesorModel = Pengguna::find($asesorId) ?: Pengguna::where('peran', 'asesor')->where('skema_id', $skema->id)->first();
             $pNama = $penyusunValidator['penyusun_1']['nama'] ?? '';
             if (empty($pNama) || stripos($pNama, 'admin') !== false) {
                 $penyusunValidator['penyusun_1']['nama'] = $asesorModel?->nama_lengkap ?? 'Asesor Penguji';
                 $penyusunValidator['penyusun_1']['nomor_met'] = $asesorModel?->nomor_registrasi ?? 'MET.000.001222 2026';
             }
-            if (!empty($penyusunValidator['penyusun_1']['ttd']) && (in_array($penyusunValidator['penyusun_1']['ttd'], $adminTtds, true) || str_contains($penyusunValidator['penyusun_1']['ttd'], 'svg'))) {
-                $penyusunValidator['penyusun_1']['ttd'] = $ttdPath ?: ($asesorModel?->tanda_tangan ?? null);
-            }
-            if (empty($penyusunValidator['penyusun_1']['ttd']) && !empty($ttdPath)) {
-                $penyusunValidator['penyusun_1']['ttd'] = $ttdPath;
-            }
-            if (!empty($penyusunValidator['penyusun_1']['ttd']) && empty($penyusunValidator['penyusun_1']['ttd_tanggal'])) {
-                $penyusunValidator['penyusun_1']['ttd_tanggal'] = now()->format('d/m/Y');
-            }
-
-            // Jika Admin yang menyimpan/membuat: Otomatis lengkapi data & langsung tervalidasi
-            if ($isAdminUser) {
-                if (empty($penyusunValidator['penyusun_1']['ttd']) && !empty($ttdPath)) {
-                    $penyusunValidator['penyusun_1']['ttd'] = $ttdPath;
-                }
-
-                $adminUser = auth()->user();
-                $adminTtd = null;
-
-                $penyusunValidator['validator_1']['nama'] = !empty($penyusunValidator['validator_1']['nama']) ? $penyusunValidator['validator_1']['nama'] : ($adminUser->nama_lengkap ?: 'Administrator LSP');
-                $penyusunValidator['validator_1']['nomor_met'] = !empty($penyusunValidator['validator_1']['nomor_met']) ? $penyusunValidator['validator_1']['nomor_met'] : ($adminUser->nomor_registrasi ?: 'REG.ADM.LSP.001');
-                $penyusunValidator['validator_1']['ttd'] = $adminTtd;
-                $penyusunValidator['validator_1']['ttd_tanggal'] = now()->format('d/m/Y');
-                $penyusunValidator['validator_1']['status_validasi'] = 'tervalidasi';
-            } else {
-                if (!empty($data['tanda_tangan_validator'])) {
-                    $valTtd = $this->saveSignatureFile($data['tanda_tangan_validator'], null, 'mapa01_master_val_' . $skema->id);
-                    if ($valTtd) {
-                        $penyusunValidator['validator_1']['ttd'] = $valTtd;
-                        $penyusunValidator['validator_1']['ttd_tanggal'] = now()->format('d/m/Y');
-                        $penyusunValidator['validator_1']['status_validasi'] = 'tervalidasi';
-                    }
-                } elseif (!empty($penyusunValidator['validator_1']['ttd'])) {
-                    $valTtd = $this->saveSignatureFile($penyusunValidator['validator_1']['ttd'], null, 'mapa01_master_val_' . $skema->id);
-                    if ($valTtd) {
-                        $penyusunValidator['validator_1']['ttd'] = $valTtd;
-                    }
-                }
-            }
+            $penyusunValidator['penyusun_1']['ttd'] = $ttdPath;
+            $penyusunValidator['penyusun_1']['ttd_tanggal'] = $ttdPath
+                ? ($rawSignature ? now()->format('d/m/Y') : ($penyusunValidator['penyusun_1']['ttd_tanggal'] ?? now()->format('d/m/Y')))
+                : null;
+            $penyusunValidator['validator_1']['ttd'] = null;
+            $penyusunValidator['validator_1']['ttd_tanggal'] = null;
+            $penyusunValidator['validator_1']['status_validasi'] = 'menunggu';
 
             // Pastikan baris 2 (Validator) selalu terisi nama dan nomor_met dari akun admin database jika belum ada
             $adminDb = Pengguna::where('peran', 'admin')->first() ?: Pengguna::where('peran', 'superadmin')->first();
@@ -806,11 +726,6 @@ class MapaWorkflowService
             if (empty($penyusunValidator['validator_1']['nomor_met'])) {
                 $penyusunValidator['validator_1']['nomor_met'] = $defaultAdminMet;
             }
-
-            $penyusunValidator['penyusun_1']['ttd'] = null;
-            $penyusunValidator['penyusun_1']['ttd_tanggal'] = null;
-            $penyusunValidator['validator_1']['ttd'] = null;
-            $penyusunValidator['validator_1']['ttd_tanggal'] = null;
 
             $normalizedKonfirmasi = $this->normalizeKonfirmasiData($data);
 
@@ -845,9 +760,11 @@ class MapaWorkflowService
                     'peluang_terintegrasi_teks' => $data['peluang_terintegrasi_teks'] ?? null,
                     'konfirmasi_pihak_relevan_tabel' => $normalizedKonfirmasi['konfirmasi_pihak_relevan_tabel'],
                     'penyusun_validator_tabel' => $penyusunValidator,
-                    'tanda_tangan_asesor' => null,
-                    'tanggal_ttd_asesor' => null,
-                    'status_mapa' => $isConfirm ? 'selesai' : 'draft',
+                    'tanda_tangan_asesor' => $ttdPath,
+                    'tanggal_ttd_asesor' => $ttdPath ? ($rawSignature ? now() : $existingMaster?->tanggal_ttd_asesor) : null,
+                    'tanda_tangan_admin' => null,
+                    'tanggal_ttd_admin' => null,
+                    'status_mapa' => $isConfirm ? 'menunggu_validasi' : 'draft',
                 ]
             );
 

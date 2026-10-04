@@ -887,22 +887,16 @@ class PendaftaranAsesi extends Model
                 }
             }
 
-            if (!empty($masterAk01->tanda_tangan_asesor)) {
-                if (empty($this->tanda_tangan_asesor_ak01) || $this->tanda_tangan_asesor_ak01 !== $masterAk01->tanda_tangan_asesor) {
-                    $this->tanda_tangan_asesor_ak01 = $masterAk01->tanda_tangan_asesor;
-                    $this->tanggal_ttd_asesor_ak01 = $masterAk01->tanggal_ttd_asesor ?? now();
-                    $dataToUpdate['tanda_tangan_asesor_ak01'] = $masterAk01->tanda_tangan_asesor;
-                    $dataToUpdate['tanggal_ttd_asesor_ak01'] = $this->tanggal_ttd_asesor_ak01;
-
-                    if ($this->status_ak01 === 'belum') {
-                        $this->status_ak01 = 'disetujui_asesor';
-                        $dataToUpdate['status_ak01'] = 'disetujui_asesor';
-                    } elseif (!empty($this->tanda_tangan_asesi_ak01)) {
-                        $this->status_ak01 = 'selesai';
-                        $dataToUpdate['status_ak01'] = 'selesai';
-                    }
-                    $needsUpdate = true;
+            if ($masterAk01->status === 'selesai') {
+                $dataToUpdate['tanda_tangan_asesor_ak01'] = null;
+                $dataToUpdate['tanggal_ttd_asesor_ak01'] = null;
+                $dataToUpdate['tanda_tangan_asesi_ak01'] = null;
+                $dataToUpdate['tanggal_ttd_asesi_ak01'] = null;
+                if ($this->status_ak01 === 'belum') {
+                    $this->status_ak01 = 'disetujui_asesor';
+                    $dataToUpdate['status_ak01'] = 'disetujui_asesor';
                 }
+                $needsUpdate = true;
             }
         } else {
             // Fallback jika Master FR.AK.01 belum dikonfigurasi: ambil data form sesuai skemanya dari database
@@ -984,17 +978,16 @@ class PendaftaranAsesi extends Model
             }
         }
 
-        // Tanda tangan asesor diselaraskan jika belum ada di ak07
-        if (!empty($masterAk07->tanda_tangan_asesor) && empty($ak07->asesor_signature)) {
-            $ak07->asesor_signature = $masterAk07->tanda_tangan_asesor;
-            $ak07->asesor_signed_at = $masterAk07->tanggal_ttd_asesor ?? now();
+        if ($ak07->asesor_signature !== null || $ak07->asesor_signed_at !== null || $ak07->asesi_signature !== null || $ak07->asesi_signed_at !== null) {
+            $ak07->asesor_signature = null;
+            $ak07->asesor_signed_at = null;
+            $ak07->asesi_signature = null;
+            $ak07->asesi_signed_at = null;
             $needsUpdate = true;
         }
 
         if ($needsUpdate || $isNew) {
-            if (!empty($ak07->asesor_signature) && !empty($ak07->asesi_signature)) {
-                $ak07->status = 'confirmed';
-            } else {
+            if ($ak07->status !== 'confirmed') {
                 $ak07->status = 'draft';
             }
             $ak07->save();

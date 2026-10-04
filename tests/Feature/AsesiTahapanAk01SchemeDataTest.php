@@ -45,7 +45,7 @@ class AsesiTahapanAk01SchemeDataTest extends TestCase
         ]);
     }
 
-    /** 1. Tahapan Step 3 otomatis mengambil data metode uji dan TUK dari Master AK.01 skema di database */
+    /** 1. Tahapan Step 3 mengambil data Master AK.01 tanpa menyalin TTD profil */
     public function test_asesi_tahapan_step3_loads_form_data_from_scheme_master_ak01(): void
     {
         // Setup Master AK.01 skema di database
@@ -97,7 +97,8 @@ class AsesiTahapanAk01SchemeDataTest extends TestCase
         $pendaftaran->refresh();
         $this->assertEquals('Sewaktu', $pendaftaran->tuk_type);
         $this->assertEquals(['Observasi Praktik Demonstrasi', 'Tanya Jawab Lisan'], $pendaftaran->bukti_dikumpulkan);
-        $this->assertEquals('signatures/asesor_sig.png', $pendaftaran->tanda_tangan_asesor_ak01);
+        $this->assertNull($pendaftaran->tanda_tangan_asesor_ak01);
+        $this->assertNull($pendaftaran->tanggal_ttd_asesor_ak01);
     }
 
     /** 2. Jika Master AK.01 belum dibuat, tahapan step 3 mengambil default metode sesuai instrumen skema di database */

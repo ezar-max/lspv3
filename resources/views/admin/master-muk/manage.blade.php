@@ -3986,6 +3986,12 @@
                 }
             });
 
+            document.querySelectorAll('div').forEach(function (heading) {
+                if (heading.children.length === 0 && heading.textContent.trim().toUpperCase() === 'PENYUSUN DAN VALIDATOR') {
+                    heading.parentElement?.remove();
+                }
+            });
+
             document.querySelectorAll('.hidden-penyusun-ttd, .preview-penyusun-ttd, input[name*="[ttd]"], button[onclick*="openSignaturePadPenyusun"], img[alt*="TTD"], img[alt*="Tanda Tangan"], canvas[id*="ttd"]').forEach(function (element) {
                 element.remove();
             });

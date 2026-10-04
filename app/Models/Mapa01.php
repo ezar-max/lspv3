@@ -41,6 +41,8 @@ class Mapa01 extends Model
         'penyusun_validator_tabel',
         'tanda_tangan_asesor',
         'tanggal_ttd_asesor',
+        'tanda_tangan_admin',
+        'tanggal_ttd_admin',
         'status_mapa',
     ];
 
@@ -53,6 +55,7 @@ class Mapa01 extends Model
         'konfirmasi_pihak_relevan_tabel' => 'array',
         'penyusun_validator_tabel' => 'array',
         'tanggal_ttd_asesor' => 'datetime',
+        'tanggal_ttd_admin' => 'datetime',
     ];
 
     public function pendaftaran()

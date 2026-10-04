@@ -213,25 +213,57 @@
                         'setelah_pra_asesmen' => ['title' => 'Setelah Asesmen', 'desc' => 'Diterapkan pada tahap umpan balik & pengumpulan bukti tambahan'],
                     ];
                 @endphp
-                                        <label class="flex items-start gap-2 p-2 rounded-lg bg-white border border-slate-200 transition-colors"
-                                               :class="isEditMode ? 'cursor-pointer hover:border-indigo-400' : 'cursor-not-allowed bg-slate-50/60'">
-                                            <input type="checkbox" name="items_checklist[{{ $cId }}][opsi][]" value="{{ $subKey }}" {{ in_array($subKey, $opsiSaved) ? 'checked' : '' }} :disabled="!isEditMode" class="mt-0.5 accent-indigo-600">
-                                            <span class="text-[11px] text-slate-700 leading-snug">{{ $subLabel }}</span>
-                                        </label>
-                                    @endforeach
-                                </div>
-                            </div>
-
-                            <div>
-                                <label class="font-bold text-slate-700 block mb-1">
-                                    Uraian Detail / Catatan Khusus Penyesuaian Kategori {{ $cId }}:
-                                </label>
-                                <input type="text" name="items_checklist[{{ $cId }}][keterangan]" value="{{ $ketSaved }}" 
-                                       :readonly="!isEditMode" :disabled="!isEditMode"
-                                       :class="!isEditMode ? 'bg-slate-50 text-slate-700 cursor-not-allowed border-slate-200' : 'bg-white text-slate-900 border-slate-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500'"
-                                       class="w-full px-3 py-1.5 rounded-lg border text-xs" placeholder="Contoh: Menggunakan instruksi bahasa yang komunikatif & waktu tambahan...">
-                            </div>
+                @foreach($faseList as $fKey => $fInfo)
+                    <label class="relative flex items-start gap-2.5 p-3 rounded-xl border transition-all text-xs"
+                           :class="[
+                               selectedFase === '{{ $fKey }}' ? 'border-indigo-500 bg-indigo-50/50 text-slate-900 font-semibold shadow-2xs' : 'border-slate-200 bg-white text-slate-600',
+                               isEditMode ? 'cursor-pointer hover:bg-slate-50/80' : 'cursor-not-allowed'
+                           ]">
+                        <input type="radio" name="fase_penggunaan" value="{{ $fKey }}"
+                               @click="isEditMode && (selectedFase = (selectedFase === '{{ $fKey }}' ? null : '{{ $fKey }}'))"
+                               :checked="selectedFase === '{{ $fKey }}'" :disabled="!isEditMode" class="mt-0.5 accent-indigo-600">
+                        <div class="space-y-0.5">
+                            <div class="font-bold text-slate-800">{{ $fInfo['title'] }}</div>
+                            <div class="text-[11px] text-slate-500 leading-tight">{{ $fInfo['desc'] }}</div>
                         </div>
+                    </label>
+                @endforeach
+            </div>
+        </div>
+
+        <!-- 3. MATRIKS 8 KATEGORI STANDAR BNSP -->
+        <div class="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-4 sm:p-5 space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
+                <h2 class="text-sm font-bold text-slate-900">3. Matriks Kebutuhan Penyesuaian yang Wajar</h2>
+                <div class="flex items-center gap-1.5">
+                    <button type="button" @click="setSemuaTidakPerlu()" class="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 text-[11px] font-semibold">Set Semua Tidak Perlu</button>
+                    <button type="button" @click="kosongkanSemuaChecklist()" class="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-500 text-[11px] font-semibold">Kosongkan Semua</button>
+                </div>
+            </div>
+
+            <div class="space-y-3">
+                @foreach($criteriaDefinitions as $cId => $crit)
+                    @php
+                        $itemSaved = $savedChecklist[$cId] ?? [];
+                        $opsiSaved = (array) ($itemSaved['opsi_dipilih'] ?? []);
+                        $ketSaved = $itemSaved['keterangan'] ?? '';
+                        $itemState = $itemSaved['perlu_penyesuaian'] ?? null;
+                    @endphp
+                    <div class="border border-slate-200 rounded-xl p-3.5 space-y-3">
+                        <h3 class="text-xs font-bold text-slate-800">{{ $cId }}. {{ $crit['title'] }}</h3>
+                        <div class="flex flex-wrap gap-3 text-xs">
+                            <label class="flex items-center gap-1.5"><input type="radio" name="items_checklist[{{ $cId }}][perlu]" value="0" {{ $itemState === false || $itemState === 0 ? 'checked' : '' }}> Tidak Perlu</label>
+                            <label class="flex items-center gap-1.5"><input type="radio" name="items_checklist[{{ $cId }}][perlu]" value="1" {{ $itemState === true || $itemState === 1 ? 'checked' : '' }}> Perlu Penyesuaian</label>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            @foreach($crit['sub_options'] as $subKey => $subLabel)
+                                <label class="flex items-start gap-2 p-2 rounded-lg bg-white border border-slate-200 text-[11px]">
+                                    <input type="checkbox" name="items_checklist[{{ $cId }}][opsi][]" value="{{ $subKey }}" {{ in_array($subKey, $opsiSaved) ? 'checked' : '' }}>
+                                    <span>{{ $subLabel }}</span>
+                                </label>
+                            @endforeach
+                        </div>
+                        <input type="text" name="items_checklist[{{ $cId }}][keterangan]" value="{{ $ketSaved }}" class="w-full px-3 py-1.5 rounded-lg border border-slate-200 text-xs" placeholder="Catatan khusus penyesuaian">
                     </div>
                 @endforeach
             </div>

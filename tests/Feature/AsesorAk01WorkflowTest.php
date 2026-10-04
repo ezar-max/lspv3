@@ -122,34 +122,31 @@ class AsesorAk01WorkflowTest extends TestCase
         ]);
     }
 
-    /** 1. Asesi signing AK-01 transitions status to selesai (auto-acc) and notifies Asesor */
-    public function test_asesi_signs_ak01_transitions_to_disetujui_asesi_and_notifies_asesor(): void
+    /** 1. Asesi submits AK-01 approval without a signature */
+    public function test_asesi_submits_ak01_approval_without_signature(): void
     {
         Notification::fake();
-
-        $dummySignature = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
 
         $response = $this->actingAs($this->asesi)->post(route('asesi.ak01.simpan', $this->pendaftaran->id), [
             'tuk_type' => 'Sewaktu',
             'persetujuan_asesmen' => '1',
             'persetujuan_kerahasiaan' => '1',
-            'tanda_tangan_asesi_ak01' => $dummySignature,
         ]);
 
         $response->assertRedirect();
         $this->pendaftaran->refresh();
 
         $this->assertEquals('selesai', $this->pendaftaran->status_ak01);
-        $this->assertNotEmpty($this->pendaftaran->tanda_tangan_asesi_ak01);
-        $this->assertNotNull($this->pendaftaran->tanggal_ttd_asesi_ak01);
-        $this->assertNotEmpty($this->pendaftaran->tanda_tangan_asesor_ak01);
-        $this->assertNotNull($this->pendaftaran->tanggal_ttd_asesor_ak01);
+        $this->assertNull($this->pendaftaran->tanda_tangan_asesi_ak01);
+        $this->assertNull($this->pendaftaran->tanggal_ttd_asesi_ak01);
+        $this->assertNull($this->pendaftaran->tanda_tangan_asesor_ak01);
+        $this->assertNull($this->pendaftaran->tanggal_ttd_asesor_ak01);
 
-        Notification::assertSentTo($this->asesorA, AK01ReadyForSignature::class);
+        Notification::assertSentTo($this->asesi, AK01Approved::class);
     }
 
-    /** 2. Asesor can fill and sign AK-01 before Asesi has signed */
-    public function test_asesor_can_fill_and_sign_ak01_before_asesi_signs(): void
+    /** 2. Asesor can save AK-01 planning data without a signature */
+    public function test_asesor_can_fill_ak01_without_signature(): void
     {
         Notification::fake();
 
@@ -160,7 +157,6 @@ class AsesorAk01WorkflowTest extends TestCase
             'tuk_type' => 'Tempat Kerja',
             'bukti_dikumpulkan' => ['Observasi Praktik Demonstrasi', 'Tanya Jawab Lisan'],
             'bukti_dikumpulkan_lainnya' => 'Portofolio Proyek Industri',
-            'tanda_tangan_asesor_ak01' => 'signatures/profil_asesor_a.png'
         ]);
 
         $response->assertRedirect(route('asesor.dashboard'));
@@ -170,22 +166,20 @@ class AsesorAk01WorkflowTest extends TestCase
         $this->assertEquals('Tempat Kerja', $this->pendaftaran->tuk_type);
         $this->assertContains('Observasi Praktik Demonstrasi', $this->pendaftaran->bukti_dikumpulkan);
         $this->assertEquals('Portofolio Proyek Industri', $this->pendaftaran->bukti_dikumpulkan_lainnya);
-        $this->assertEquals('signatures/profil_asesor_a.png', $this->pendaftaran->tanda_tangan_asesor_ak01);
-        $this->assertNotNull($this->pendaftaran->tanggal_ttd_asesor_ak01);
+        $this->assertNull($this->pendaftaran->tanda_tangan_asesor_ak01);
+        $this->assertNull($this->pendaftaran->tanggal_ttd_asesor_ak01);
 
-        // Now Asesi signs the agreement established by Asesor
-        $dummySignature = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
-
+        // Asesi submits agreement established by Asesor.
         $asesiResponse = $this->actingAs($this->asesi)->post(route('asesi.ak01.simpan', $this->pendaftaran->id), [
-            'tanda_tangan_asesi_ak01' => $dummySignature,
+            'persetujuan_asesmen' => '1',
         ]);
 
         $asesiResponse->assertRedirect();
         $this->pendaftaran->refresh();
 
         $this->assertEquals('selesai', $this->pendaftaran->status_ak01);
-        $this->assertNotEmpty($this->pendaftaran->tanda_tangan_asesi_ak01);
-        $this->assertNotNull($this->pendaftaran->tanggal_ttd_asesi_ak01);
+        $this->assertNull($this->pendaftaran->tanda_tangan_asesi_ak01);
+        $this->assertNull($this->pendaftaran->tanggal_ttd_asesi_ak01);
         // Preserved Asesor's settings
         $this->assertEquals('Tempat Kerja', $this->pendaftaran->tuk_type);
     }
@@ -206,8 +200,8 @@ class AsesorAk01WorkflowTest extends TestCase
         $response->assertStatus(403);
     }
 
-    /** 4. Asesor approves AK-01 using profile signature, transitions to selesai and notifies Asesi */
-    public function test_asesor_approves_ak01_with_profile_signature(): void
+    /** 4. Asesor confirms AK-01 without a signature and notifies Asesi */
+    public function test_asesor_approves_ak01_without_signature(): void
     {
         Notification::fake();
 
@@ -225,14 +219,14 @@ class AsesorAk01WorkflowTest extends TestCase
         $this->pendaftaran->refresh();
 
         $this->assertEquals('selesai', $this->pendaftaran->status_ak01);
-        $this->assertEquals('signatures/profil_asesor_a.png', $this->pendaftaran->tanda_tangan_asesor_ak01);
-        $this->assertNotNull($this->pendaftaran->tanggal_ttd_asesor_ak01);
+        $this->assertNull($this->pendaftaran->tanda_tangan_asesor_ak01);
+        $this->assertNull($this->pendaftaran->tanggal_ttd_asesor_ak01);
 
         Notification::assertSentTo($this->asesi, AK01Approved::class);
     }
 
-    /** 5. Asesor approves AK-01 with base64 canvas signature */
-    public function test_asesor_approves_ak01_with_canvas_signature(): void
+    /** 5. Asesor ignores legacy canvas payloads */
+    public function test_asesor_ignores_legacy_canvas_signature_payload(): void
     {
         Notification::fake();
 
@@ -252,9 +246,8 @@ class AsesorAk01WorkflowTest extends TestCase
         $this->pendaftaran->refresh();
 
         $this->assertEquals('selesai', $this->pendaftaran->status_ak01);
-        $this->assertStringContainsString('signatures/', $this->pendaftaran->tanda_tangan_asesor_ak01);
-        $relativeDiskPath = \Illuminate\Support\Str::after($this->pendaftaran->tanda_tangan_asesor_ak01, 'storage/');
-        Storage::disk('public')->assertExists($relativeDiskPath);
+        $this->assertNull($this->pendaftaran->tanda_tangan_asesor_ak01);
+        $this->assertNull($this->pendaftaran->tanggal_ttd_asesor_ak01);
 
         Notification::assertSentTo($this->asesi, AK01Approved::class);
     }

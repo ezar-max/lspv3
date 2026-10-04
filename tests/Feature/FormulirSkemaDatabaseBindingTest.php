@@ -405,13 +405,9 @@ class FormulirSkemaDatabaseBindingTest extends TestCase
 
         $resp = $this->actingAs($asesorPenyusunA)->get(route('formulir.ia01', $pendaftaran->id));
         $resp->assertOk();
-        // Penyusun harus nama akun asesor pembuat form skema tersebut
-        $resp->assertSee('Ir. Hendra Wijaya (Asesor Pembuat Form Skema A)');
-        $resp->assertSee('MET.PENYUSUN.001.2025');
-        // Validator harus akun admin biasa LSP dari database
-        $resp->assertSee('Hj. Siti Aminah, S.E. (Admin LSP Validator)');
-        $resp->assertSee('REG.ADM.LSP.888');
-        // Tidak ada input untuk ketik
+        // UI kartu Penyusun dan Validator telah dihapus dari formulir.
+        $resp->assertDontSee('Penyusun (Asesor Penguji)');
+        $resp->assertDontSee('Validator (Admin LSP)');
         $resp->assertDontSee('Penyusun 2...');
         $resp->assertDontSee('Validator 1...');
         $resp->assertDontSee('Validator 2...');
@@ -436,9 +432,8 @@ class FormulirSkemaDatabaseBindingTest extends TestCase
 
         $respB = $this->actingAs($asesorPenyusunB)->get(route('formulir.ia01', $pendaftaranB->id));
         $respB->assertOk();
-        $respB->assertSee('Dewi Lestari, S.T. (Asesor Skema B)');
-        $respB->assertSee('MET.ASESOR.B.2026');
-        $respB->assertSee('Hj. Siti Aminah, S.E. (Admin LSP Validator)');
+        $respB->assertDontSee('Penyusun (Asesor Penguji)');
+        $respB->assertDontSee('Validator (Admin LSP)');
     }
 
     public function test_action_bar_kembali_button_returns_to_mapa_for_asesor_and_never_daftar_peserta()

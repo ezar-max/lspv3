@@ -758,11 +758,13 @@ class AdminController extends Controller
 
         if ($mapa01->pendaftaran_id && $masterSudahValid) {
             $mapa01->penyusun_validator_tabel = $masterSudahValid->penyusun_validator_tabel;
+            $mapa01->tanda_tangan_admin = $masterSudahValid->tanda_tangan_admin;
+            $mapa01->tanggal_ttd_admin = $masterSudahValid->tanggal_ttd_admin;
             $mapa01->status_mapa = 'selesai';
             $mapa01->save();
             PendaftaranAsesi::where('id', $mapa01->pendaftaran_id)->update([
-                'tanda_tangan_admin' => null,
-                'tanggal_ttd_admin' => null,
+                'tanda_tangan_admin' => $masterSudahValid->tanda_tangan_admin,
+                'tanggal_ttd_admin' => $masterSudahValid->tanggal_ttd_admin,
             ]);
 
             return redirect()->route('asesor.mapa', ['skema_id' => $mapa01->skema_id])->with('info', 'Dokumen FR.MAPA.01 untuk skema sertifikasi ini sudah berstatus tervalidasi melalui Master Skema.');
@@ -771,42 +773,55 @@ class AdminController extends Controller
         $request->validate([
             'validator_nama' => 'required|string|max:255',
             'validator_nomor_met' => 'required|string|max:100',
+            'tanda_tangan_admin' => ['required', 'string', 'max:2000000', 'regex:/^data:image\/(png|jpeg);base64,/'],
             'catatan_validasi' => 'nullable|string|max:1000',
         ], [
             'validator_nama.required' => 'Nama Validator (Admin LSP) wajib diisi.',
             'validator_nomor_met.required' => 'Nomor Registrasi / NIP Validator wajib diisi.',
         ]);
 
-        $ttdAdmin = null;
+        if (empty($mapa01->tanda_tangan_asesor)) {
+            return back()->withErrors([
+                'tanda_tangan_asesor' => 'Asesor harus menandatangani dan mengirim FR.MAPA.01 sebelum validasi admin.',
+            ]);
+        }
+
+        $ttdAdmin = app(\App\Services\MapaWorkflowService::class)->saveSignatureFile(
+            $request->input('tanda_tangan_admin'),
+            $mapa01->pendaftaran_id,
+            'mapa01_admin'
+        );
+        if (!$ttdAdmin) {
+            return back()->withErrors(['tanda_tangan_admin' => 'Tanda tangan Admin tidak valid.']);
+        }
 
         $existingTable = $mapa01->penyusun_validator_tabel ?: [];
         $existingTable['validator_1'] = [
             'nama' => $request->validator_nama ?: ($user->nama_lengkap ?: 'Administrator LSP'),
             'nomor_met' => $request->validator_nomor_met ?: ($user->nomor_registrasi ?: 'REG.ADM.LSP.001'),
-            'ttd' => null,
-            'ttd_tanggal' => null,
+            'ttd' => $ttdAdmin,
+            'ttd_tanggal' => now()->format('d/m/Y'),
             'status_validasi' => 'tervalidasi',
             'catatan' => $request->catatan_validasi ?: null,
         ];
 
-        // Keep the assessor identity while omitting signature data.
+        // Preserve the assessor signature for the completed validation record.
         $asesorModel = $mapa01->asesor ?: ($mapa01->pendaftaran?->asesor ?: Pengguna::where('peran', 'asesor')->where('skema_id', $mapa01->skema_id)->first());
-        $mapa01->tanda_tangan_asesor = null;
-        $mapa01->tanggal_ttd_asesor = null;
-        $existingTable['penyusun_1']['ttd'] = null;
-        $existingTable['penyusun_1']['ttd_tanggal'] = null;
-
         $existingTable['penyusun_1']['nama'] = $existingTable['penyusun_1']['nama'] ?? ($asesorModel?->nama_lengkap ?? 'Asesor Penguji');
         $existingTable['penyusun_1']['nomor_met'] = $existingTable['penyusun_1']['nomor_met'] ?? ($asesorModel?->nomor_registrasi ?? 'MET.000.001222 2026');
+        $existingTable['penyusun_1']['ttd'] = $mapa01->tanda_tangan_asesor;
+        $existingTable['penyusun_1']['ttd_tanggal'] = $mapa01->tanggal_ttd_asesor?->format('d/m/Y');
 
         $mapa01->penyusun_validator_tabel = $existingTable;
+        $mapa01->tanda_tangan_admin = $ttdAdmin;
+        $mapa01->tanggal_ttd_admin = now();
         $mapa01->status_mapa = 'selesai';
         $mapa01->save();
 
         if ($mapa01->pendaftaran_id) {
             PendaftaranAsesi::where('id', $mapa01->pendaftaran_id)->update([
-                'tanda_tangan_admin' => null,
-                'tanggal_ttd_admin' => null,
+                'tanda_tangan_admin' => $ttdAdmin,
+                'tanggal_ttd_admin' => now(),
             ]);
         } else {
             // Master Skema: Sinkronkan ke seluruh pendaftaran asesi pada skema ini
@@ -814,14 +829,14 @@ class AdminController extends Controller
                 ->whereNotNull('pendaftaran_id')
                 ->update([
                     'penyusun_validator_tabel' => $existingTable,
-                    'tanda_tangan_asesor' => null,
-                    'tanggal_ttd_asesor' => null,
+                    'tanda_tangan_admin' => $ttdAdmin,
+                    'tanggal_ttd_admin' => now(),
                     'status_mapa' => 'selesai',
                 ]);
 
             PendaftaranAsesi::where('skema_id', $mapa01->skema_id)->update([
-                'tanda_tangan_admin' => null,
-                'tanggal_ttd_admin' => null,
+                'tanda_tangan_admin' => $ttdAdmin,
+                'tanggal_ttd_admin' => now(),
             ]);
         }
 

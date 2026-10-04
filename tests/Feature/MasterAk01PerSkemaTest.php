@@ -173,16 +173,17 @@ class MasterAk01PerSkemaTest extends TestCase
 
         $this->assertEquals('Tempat Kerja', $pendaftaran1->tuk_type);
         $this->assertEquals('Portofolio Digital', $pendaftaran1->bukti_dikumpulkan_lainnya);
-        $this->assertEquals('storage/signatures/asesor_profil.png', $pendaftaran1->tanda_tangan_asesor_ak01);
+        $this->assertNull($pendaftaran1->tanda_tangan_asesor_ak01);
+        $this->assertNull($pendaftaran1->tanggal_ttd_asesor_ak01);
         $this->assertEquals('disetujui_asesor', $pendaftaran1->status_ak01);
 
         $this->assertEquals('Tempat Kerja', $pendaftaran2->tuk_type);
-        $this->assertEquals('storage/signatures/asesor_profil.png', $pendaftaran2->tanda_tangan_asesor_ak01);
+        $this->assertNull($pendaftaran2->tanda_tangan_asesor_ak01);
         $this->assertEquals('disetujui_asesor', $pendaftaran2->status_ak01);
     }
 
-    /** 5. Asesi membuka formulir FR.AK.01 dan data dari asesor terisi otomatis */
-    public function test_asesi_sees_prefilled_ak01_from_asesor_and_can_sign(): void
+    /** 5. Asesi membuka FR.AK.01, meninjau data, dan menyetujui tanpa tanda tangan */
+    public function test_asesi_sees_prefilled_ak01_and_can_submit_without_signature(): void
     {
         // Buat master AK.01
         MasterAk01::create([
@@ -216,18 +217,18 @@ class MasterAk01PerSkemaTest extends TestCase
         // Pendaftaran otomatis sync
         $pendaftaran->refresh();
         $this->assertEquals('Mandiri', $pendaftaran->tuk_type);
-        $this->assertEquals('storage/signatures/asesor_profil.png', $pendaftaran->tanda_tangan_asesor_ak01);
+        $this->assertNull($pendaftaran->tanda_tangan_asesor_ak01);
 
-        // Asesi menandatangani formulir FR.AK.01
+        // Asesi mengirim persetujuan tanpa TTD
         $signResponse = $this->actingAs($this->asesi)->post(route('asesi.ak01.sign', ['id' => $pendaftaran->id]), [
             'pendaftaran_id' => $pendaftaran->id,
-            'tanda_tangan_asesi_ak01' => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
         ]);
 
         $pendaftaran->refresh();
 
-        // Status AK.01 langsung menjadi 'selesai' karena asesor sudah tanda tangan via Master AK.01
+        // Status AK.01 selesai karena persetujuan dikirim, bukan karena tanda tangan.
         $this->assertEquals('selesai', $pendaftaran->status_ak01);
-        $this->assertNotEmpty($pendaftaran->tanda_tangan_asesi_ak01);
+        $this->assertNull($pendaftaran->tanda_tangan_asesi_ak01);
+        $this->assertNull($pendaftaran->tanda_tangan_asesor_ak01);
     }
 }
