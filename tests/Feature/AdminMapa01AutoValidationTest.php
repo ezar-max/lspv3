@@ -172,8 +172,8 @@ class AdminMapa01AutoValidationTest extends TestCase
         $response->assertStatus(200);
 
         // Asesor melihat tombol modal canvas untuk membubuhkan tanda tangannya
-        $response->assertSee("bukaModal('modalCanvasTtd')", false);
-        $response->assertSee('Bubuhkan TTD');
+        $response->assertSee('id="canvas-ttd-asesor"', false);
+        $response->assertSee('Simpan Tanda Tangan');
 
         // Saat asesor menyimpan draft, status validator tidak otomatis menjadi tervalidasi
         $this->actingAs($asesorPolos)->post(route('asesor.skema.mapa-01.simpan', $this->skema->id), [

@@ -559,6 +559,8 @@ class MapaWorkflowService
                 if (Str::startsWith($ttdPath ?? '', 'data:image/')) {
                     $ttdPath = null;
                 }
+            } elseif (array_key_exists('tanda_tangan_asesor', $data) && $rawSignature === '') {
+                $ttdPath = null;
             } elseif ($rawSignature && $rawSignature !== $ttdPath) {
                 $ttdPath = null;
             }
@@ -691,6 +693,8 @@ class MapaWorkflowService
                 if (Str::startsWith($ttdPath ?? '', 'data:image/')) {
                     $ttdPath = null;
                 }
+            } elseif (array_key_exists('tanda_tangan_asesor', $data) && $rawSignature === '') {
+                $ttdPath = null;
             } elseif ($rawSignature && $rawSignature !== $ttdPath) {
                 $ttdPath = null;
             }

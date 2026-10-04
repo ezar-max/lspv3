@@ -1609,43 +1609,48 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                 <!-- 1. PENYUSUN (ASESOR PENGUJI) -->
                 <div class="relative">
-                    @include('komponen.signature-display', [
-                        'role' => 'Penyusun (Asesor Penguji)',
-                        'metadata' => 'No. MET: ' . $asesorMet . ' | ' . $asesorNama,
-                        'signature' => $asesorTtd,
-                        'date' => 'Disahkan pada: ' . ($penyusunTabelSaved['penyusun_1']['ttd_tanggal'] ?? date('d/m/Y'))
-                    ])
-                    
+                    <div style="height: 100%; border: 1px solid #dbe2ea; border-radius: 8px; padding: 1rem; background: #fff;">
+                        <div style="font-size: .8rem; font-weight: 700; color: #334155; margin-bottom: .25rem;">Tanda Tangan Asesor <span style="color: #dc2626;">*</span></div>
+                        <div style="font-size: .72rem; color: #64748b; margin-bottom: .75rem;">{{ $asesorNama }} · {{ $asesorMet }}</div>
+                        @if(!$isAdmin && !$isAsesi)
+                            <div id="container-ttd-asesor-preview" style="position: relative; margin-bottom: .75rem;">
+                                @if($asesorTtd)
+                                    <img src="{{ asset($asesorTtd) }}" alt="Tanda tangan asesor tersimpan" style="display: block; max-width: 100%; max-height: 90px; margin: 0 auto; object-fit: contain;">
+                                @else
+                                    <div style="padding: .5rem; text-align: center; font-size: .75rem; color: #64748b;">Belum ada tanda tangan yang disimpan.</div>
+                                @endif
+                            </div>
+                            <canvas id="canvas-ttd-asesor" width="900" height="240" style="display: block; width: 100%; height: 190px; border: 1px solid #dbe2ea; border-radius: 6px; background: #fff; cursor: crosshair; touch-action: none;"></canvas>
+                            <p style="margin: .45rem 0 .75rem; font-size: .7rem; color: #64748b;">Gunakan mouse, layar sentuh, atau stylus untuk menggambar tanda tangan.</p>
+                            <div style="display: flex; gap: .6rem; flex-wrap: wrap;">
+                                <button type="button" id="btn-clear-canvas-asesor" class="tombol tombol-sekunder tombol-sm">Hapus</button>
+                                <button type="button" onclick="window.saveTtdAsesor()" class="tombol tombol-utama tombol-sm" style="background: #4f46e5; border-color: #4f46e5;">Simpan Tanda Tangan</button>
+                            </div>
+                        @elseif($asesorTtd)
+                            <img src="{{ asset($asesorTtd) }}" alt="Tanda tangan asesor" style="display: block; max-width: 100%; max-height: 120px; margin: .75rem auto; object-fit: contain;">
+                            <div style="text-align: center; font-size: .7rem; color: #64748b;">{{ $mapa01?->tanggal_ttd_asesor?->format('d/m/Y') }}</div>
+                        @else
+                            <div style="padding: 1.5rem .75rem; text-align: center; color: #b45309; font-size: .78rem;">Menunggu tanda tangan Asesor.</div>
+                        @endif
+
                     <input type="hidden" name="penyusun_validator_tabel[penyusun_1][nama]" value="{{ $asesorNama }}">
                     <input type="hidden" name="penyusun_validator_tabel[penyusun_1][nomor_met]" value="{{ $asesorMet }}">
                     <input type="hidden" name="tanda_tangan_asesor" id="input-ttd-asesor-base64" value="{{ $asesorTtd }}">
                     <input type="hidden" name="penyusun_validator_tabel[penyusun_1][ttd]" id="input-penyusun-ttd" value="{{ $asesorTtd }}">
                     <input type="hidden" name="penyusun_validator_tabel[penyusun_1][ttd_tanggal]" id="input-penyusun-ttd-tgl" value="{{ $penyusunTabelSaved['penyusun_1']['ttd_tanggal'] ?? date('d/m/Y') }}">
-                    
-                    @if(!$isAdmin)
-                        @if($asesorTtd)
-                            <div class="absolute bottom-4 left-1/2 -translate-x-1/2">
-                                <button type="button" onclick="bukaModal('modalCanvasTtd')" class="px-3 py-1 bg-white/80 backdrop-blur text-indigo-600 border border-indigo-200 shadow-sm rounded text-[10px] font-bold hover:bg-indigo-50 transition-colors">Ubah Tanda Tangan</button>
-                            </div>
-                        @else
-                            <div class="absolute inset-0 bg-transparent cursor-pointer z-10" style="top: 50px;" onclick="bukaModal('modalCanvasTtd')"></div>
-                            <div class="absolute bottom-8 left-1/2 -translate-x-1/2 z-0">
-                                <button type="button" onclick="bukaModal('modalCanvasTtd')" class="px-3 py-1.5 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-lg text-xs font-bold hover:bg-indigo-100 shadow-sm flex items-center gap-2 transition-colors">
-                                    <i class="fa-solid fa-pen"></i> Bubuhkan TTD
-                                </button>
-                            </div>
-                        @endif
-                    @endif
+                    </div>
                 </div>
 
                 <!-- 2. VALIDATOR (ADMIN LSP) -->
-                <div class="relative">
-                    @include('komponen.signature-display', [
-                        'role' => 'Validator (Admin LSP)',
-                        'metadata' => 'No. MET: ' . $adminValidatorMet . ' | ' . $adminValidatorNama,
-                        'signature' => $adminTtd,
-                        'date' => 'Divalidasi pada: ' . ($adminTtdTgl ?: ($isAdmin ? date('d/m/Y') : ''))
-                    ])
+                <div class="relative" style="border: 1px solid #dbe2ea; border-radius: 8px; padding: 1rem; background: #fff;">
+                    <div style="font-size: .8rem; font-weight: 700; color: #334155; margin-bottom: .25rem;">Tanda Tangan Validator (Admin LSP)</div>
+                    <div style="font-size: .72rem; color: #64748b; margin-bottom: .75rem;">{{ $adminValidatorNama }} · {{ $adminValidatorMet }}</div>
+                    @if($adminTtd)
+                        <img src="{{ asset($adminTtd) }}" alt="Tanda tangan admin" style="display: block; max-width: 100%; max-height: 120px; margin: .75rem auto; object-fit: contain;">
+                        <div style="text-align: center; font-size: .7rem; color: #64748b;">{{ $adminTtdTgl }}</div>
+                    @else
+                        <div style="padding: 1.5rem .75rem; text-align: center; color: #64748b; font-size: .78rem;">Menunggu validasi dan tanda tangan Admin.</div>
+                    @endif
                     
                     <input type="hidden" name="penyusun_validator_tabel[validator_1][nama]" value="{{ $adminValidatorNama }}">
                     <input type="hidden" name="penyusun_validator_tabel[validator_1][nomor_met]" value="{{ $adminValidatorMet }}">
@@ -1737,31 +1742,6 @@
         </div>
 
     </form>
-</div>
-
-<!-- MODAL POPUP CANVAS SIGNATURE PAD -->
-<div class="modal-overlay" id="modalCanvasTtd" style="display:none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 99999; justify-content: center; align-items: center;">
-    <div class="modal-konten" style="background: white; border-radius: 12px; padding: 1.75rem; width: 100%; max-width: 500px; text-align: center; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-            <h3 style="color: #0f172a; margin: 0; font-weight: 800; font-size: 1.15rem;">Tanda Tangan Digital</h3>
-            <button type="button" onclick="document.getElementById('modalCanvasTtd').style.display = 'none'" style="background: none; border: none; font-size: 1.4rem; cursor: pointer; color: #64748b; line-height: 1;">&times;</button>
-        </div>
-
-        <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 1rem; text-align: left;">
-            Gunakan kursor atau layar sentuh untuk menggambar tanda tangan Anda secara presisi pada bidang di bawah:
-        </p>
-
-        <canvas id="canvas-ttd-modal" width="440" height="180" class="canvas-signature-pad" style="border: 2px dashed #94a3b8; border-radius: 8px; background: #ffffff; cursor: crosshair; touch-action: none; display: block; margin: 0 auto; width: 100%; max-width: 440px;"></canvas>
-
-        <div style="margin-top: 1.25rem; display: flex; gap: 0.75rem; justify-content: center;">
-            <button type="button" class="tombol tombol-sekunder tombol-sm px-4 py-2 bg-slate-100 text-slate-700 font-semibold rounded border border-slate-200 shadow-sm" onclick="if(window.signaturePadModal) window.signaturePadModal.clear();">
-                Bersihkan
-            </button>
-            <button type="button" class="tombol tombol-utama tombol-sm px-4 py-2 text-white font-semibold rounded shadow-sm" style="background: #059669; border: 1px solid #059669;" onclick="window.saveTtdAsesor()">
-                Gunakan Tanda Tangan
-            </button>
-        </div>
-    </div>
 </div>
 
 <!-- MODAL POPUP VALIDASI ADMIN LSP MAPA 01 -->
@@ -2095,8 +2075,7 @@
                 } else {
                     alert('Bubuhkan tanda tangan sebelum mengirim FR.MAPA.01 untuk validasi.');
                 }
-                document.getElementById('modalCanvasTtd')?.style.setProperty('display', 'flex');
-                window.bukaModalTtd?.();
+                document.getElementById('canvas-ttd-asesor')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 return;
             }
             const inputAksi = document.getElementById('inputAksiMapa01');
@@ -2238,23 +2217,25 @@
         window.signaturePadModal = null;
 
         window.bukaModalTtd = function() {
-            const modal = document.getElementById('modalCanvasTtd');
-            if (modal) {
-                modal.style.display = 'flex';
-                if (!window.signaturePadModal) {
-                    const canvas = document.getElementById('canvas-ttd-modal');
-                    if (canvas && window.SignaturePad) {
-                        const ratio = Math.max(window.devicePixelRatio || 1, 1);
-                        canvas.width = (canvas.offsetWidth || 440) * ratio;
-                        canvas.height = (canvas.offsetHeight || 180) * ratio;
-                        canvas.getContext("2d").scale(ratio, ratio);
-                        window.signaturePadModal = new SignaturePad(canvas, { backgroundColor: 'rgb(255, 255, 255)' });
-                        window.signaturePadModal.clear();
-                    }
-                } else {
-                    window.signaturePadModal.clear();
-                }
+            const canvas = document.getElementById('canvas-ttd-asesor');
+            if (canvas && window.SignaturePad && !window.signaturePadModal) {
+                const ratio = Math.max(window.devicePixelRatio || 1, 1);
+                canvas.width = (canvas.offsetWidth || 900) * ratio;
+                canvas.height = (canvas.offsetHeight || 190) * ratio;
+                canvas.getContext('2d').scale(ratio, ratio);
+                window.signaturePadModal = new SignaturePad(canvas, { backgroundColor: 'rgb(255, 255, 255)' });
+                window.signaturePadModal.clear();
             }
+        };
+
+        window.clearTtdAsesor = function() {
+            window.signaturePadModal?.clear();
+            ['input-ttd-asesor-base64', 'input-penyusun-ttd', 'input-penyusun-ttd-tgl'].forEach((id) => {
+                const input = document.getElementById(id);
+                if (input) input.value = '';
+            });
+            const preview = document.getElementById('container-ttd-asesor-preview');
+            if (preview) preview.innerHTML = '<div style="padding: .5rem; text-align: center; font-size: .75rem; color: #64748b;">Belum ada tanda tangan yang disimpan.</div>';
         };
 
         window.saveTtdAsesor = function() {
@@ -2303,20 +2284,7 @@
                 hiddenTgl.value = todayFormatted;
 
                 const container = document.getElementById('container-ttd-asesor-preview');
-                if (container) {
-                    container.innerHTML = `
-                        <div class="flex flex-col items-center gap-1">
-                            <div class="h-11 w-28 rounded-lg border border-slate-200 bg-slate-50/80 p-1 flex items-center justify-center shadow-2xs">
-                                <img src="${dataUrl}" alt="TTD Asesor" class="max-h-9 max-w-full object-contain">
-                            </div>
-                            <span class="text-[11px] font-semibold text-slate-500">${todayFormatted}</span>
-                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1"></span> Siap Disimpan
-                            </span>
-                            <button type="button" onclick="bukaModalTtd()" class="text-[10px] text-indigo-600 hover:underline mt-0.5">Ubah</button>
-                        </div>
-                    `;
-                }
+                if (container) container.innerHTML = `<img src="${dataUrl}" alt="Pratinjau tanda tangan asesor" style="display:block;max-width:100%;max-height:90px;margin:0 auto;object-fit:contain"><div style="text-align:center;font-size:.7rem;color:#64748b;margin-top:.25rem">${todayFormatted} · Siap disimpan</div>`;
 
                 const badgePenyusun = document.getElementById('badge-status-penyusun-ttd');
                 if (badgePenyusun) {
@@ -2328,7 +2296,6 @@
                     `;
                 }
 
-                document.getElementById('modalCanvasTtd').style.display = 'none';
             } else {
                 if (typeof Swal !== 'undefined') {
                     Swal.fire({
@@ -2346,7 +2313,9 @@
 
         document.addEventListener('DOMContentLoaded', function() {
             applyMapa01Mode();
+            window.bukaModalTtd();
             initValidatorCanvas();
+            document.getElementById('btn-clear-canvas-asesor')?.addEventListener('click', window.clearTtdAsesor);
             initMatriksAsesmenLogic();
 
             const formM = document.getElementById('form-mapa01');
