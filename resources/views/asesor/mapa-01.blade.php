@@ -1403,7 +1403,7 @@
                             </label>
                         </div>
                         <div style="font-size: 0.8rem; color: #475569; margin-bottom: 0.25rem;">Jika Ada, tuliskan:</div>
-                        <input type="text" name="karakteristik_kandidat_teks" value="{{ $mapa01->karakteristik_kandidat_teks ?? '' }}" class="input-inline-modern" placeholder="Tuliskan spesifikasi karakteristik khusus jika ada...">
+                        <input type="text" name="karakteristik_kandidat_teks" value="{{ $mapa01->karakteristik_kandidat_teks ?? '' }}" class="input-inline-modern" data-status-field="karakteristik_kandidat_status" data-validation-label="Karakteristik Kandidat" placeholder="Tuliskan spesifikasi karakteristik khusus jika ada...">
                     </td>
                 </tr>
 
@@ -1426,7 +1426,7 @@
                             </label>
                         </div>
                         <div style="font-size: 0.8rem; color: #475569; margin-bottom: 0.25rem;">Jika Ada, tuliskan:</div>
-                        <input type="text" name="kebutuhan_kontekstualisasi_teks" value="{{ $mapa01->kebutuhan_kontekstualisasi_teks ?? '' }}" class="input-inline-modern" placeholder="Tuliskan kebutuhan kontekstualisasi jika ada...">
+                        <input type="text" name="kebutuhan_kontekstualisasi_teks" value="{{ $mapa01->kebutuhan_kontekstualisasi_teks ?? '' }}" class="input-inline-modern" data-status-field="kebutuhan_kontekstualisasi_status" data-validation-label="Kebutuhan Kontekstualisasi" placeholder="Tuliskan kebutuhan kontekstualisasi jika ada...">
                     </td>
                 </tr>
 
@@ -1449,7 +1449,7 @@
                             </label>
                         </div>
                         <div style="font-size: 0.8rem; color: #475569; margin-bottom: 0.25rem;">Jika Ada, tuliskan:</div>
-                        <input type="text" name="saran_pelatihan_teks" value="{{ $mapa01->saran_pelatihan_teks ?? '' }}" class="input-inline-modern" placeholder="Tuliskan saran paket pelatihan jika ada...">
+                        <input type="text" name="saran_pelatihan_teks" value="{{ $mapa01->saran_pelatihan_teks ?? '' }}" class="input-inline-modern" data-status-field="saran_pelatihan_status" data-validation-label="Saran Pelatihan" placeholder="Tuliskan saran paket pelatihan jika ada...">
                     </td>
                 </tr>
 
@@ -1472,7 +1472,7 @@
                             </label>
                         </div>
                         <div style="font-size: 0.8rem; color: #475569; margin-bottom: 0.25rem;">Jika Ada, tuliskan:</div>
-                        <input type="text" name="penyesuaian_perangkat_teks" value="{{ $mapa01->penyesuaian_perangkat_teks ?? '' }}" class="input-inline-modern" placeholder="Tuliskan penyesuaian perangkat jika ada...">
+                        <input type="text" name="penyesuaian_perangkat_teks" value="{{ $mapa01->penyesuaian_perangkat_teks ?? '' }}" class="input-inline-modern" data-status-field="penyesuaian_perangkat_status" data-validation-label="Penyesuaian Perangkat" placeholder="Tuliskan penyesuaian perangkat jika ada...">
                     </td>
                 </tr>
 
@@ -1495,7 +1495,7 @@
                             </label>
                         </div>
                         <div style="font-size: 0.8rem; color: #475569; margin-bottom: 0.25rem;">Jika Ada, tuliskan:</div>
-                        <input type="text" name="peluang_terintegrasi_teks" value="{{ $mapa01->peluang_terintegrasi_teks ?? '' }}" class="input-inline-modern" placeholder="Tuliskan peluang asesmen terintegrasi jika ada...">
+                        <input type="text" name="peluang_terintegrasi_teks" value="{{ $mapa01->peluang_terintegrasi_teks ?? '' }}" class="input-inline-modern" data-status-field="peluang_terintegrasi_status" data-validation-label="Peluang Kegiatan Terintegrasi" placeholder="Tuliskan peluang asesmen terintegrasi jika ada...">
                     </td>
                 </tr>
             </table>
@@ -2281,6 +2281,26 @@
             const inputAksi = document.getElementById('inputAksiMapa01');
             if (inputAksi) inputAksi.value = aksi;
             
+            const conditionalTextFields = form.querySelectorAll('input[data-status-field]');
+            for (const textInput of conditionalTextFields) {
+                const status = form.querySelector(`input[name="${textInput.dataset.statusField}"]:checked`);
+                if (status?.value === 'ada' && !textInput.value.trim()) {
+                    const label = textInput.dataset.validationLabel;
+                    const message = `${label} wajib diisi jika memilih Ada.`;
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({ icon: 'warning', title: 'Formulir Belum Lengkap', text: message, confirmButtonColor: '#059669' })
+                            .then(() => {
+                                textInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                textInput.focus();
+                            });
+                    } else {
+                        alert(message);
+                        textInput.focus();
+                    }
+                    return;
+                }
+            }
+
             // Validasi Kelengkapan (Kecuali Simpan Draft)
             if (aksi !== 'simpan_draft') {
                 const rules = [
@@ -2568,6 +2588,16 @@
 
         document.addEventListener('DOMContentLoaded', function() {
             applyMapa01Mode();
+            document.querySelectorAll('#form-mapa01 input[data-status-field]').forEach(textInput => {
+                const updateRequired = () => {
+                    const status = document.querySelector(`input[name="${textInput.dataset.statusField}"]:checked`);
+                    textInput.required = status?.value === 'ada';
+                };
+                document.querySelectorAll(`input[name="${textInput.dataset.statusField}"]`).forEach(statusInput => {
+                    statusInput.addEventListener('change', updateRequired);
+                });
+                updateRequired();
+            });
             window.bukaModalTtd();
             initAdminAuthorSignatureCanvas();
             initValidatorCanvas();

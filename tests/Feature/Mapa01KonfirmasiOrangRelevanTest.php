@@ -79,6 +79,29 @@ class Mapa01KonfirmasiOrangRelevanTest extends TestCase
         $response->assertSee('Manajer atau supervisor di tempat kerja');
     }
 
+    public function test_saving_requires_text_for_every_modification_field_marked_as_present(): void
+    {
+        $response = $this->actingAs($this->asesor)->post(
+            route('asesor.skema.mapa-01.simpan', $this->skema->id),
+            [
+                'aksi' => 'draft',
+                'karakteristik_kandidat_status' => 'ada',
+                'kebutuhan_kontekstualisasi_status' => 'ada',
+                'saran_pelatihan_status' => 'ada',
+                'penyesuaian_perangkat_status' => 'ada',
+                'peluang_terintegrasi_status' => 'ada',
+            ]
+        );
+
+        $response->assertSessionHasErrors([
+            'karakteristik_kandidat_teks',
+            'kebutuhan_kontekstualisasi_teks',
+            'saran_pelatihan_teks',
+            'penyesuaian_perangkat_teks',
+            'peluang_terintegrasi_teks',
+        ]);
+    }
+
     /**
      * Test penyimpanan konfirmasi orang yang relevan dan tabelnya tersinkronisasi dua arah.
      */
@@ -141,4 +164,3 @@ class Mapa01KonfirmasiOrangRelevanTest extends TestCase
         $this->assertEquals(0, $tabel['lead_asesor']['relevan']);
     }
 }
-

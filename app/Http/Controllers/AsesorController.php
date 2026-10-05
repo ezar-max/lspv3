@@ -807,6 +807,7 @@ class AsesorController extends Controller
     {
         $user = auth()->user();
         $skema = $this->authorizeSkemaAccess((int) $skemaId);
+        $this->validateMapa01ModificationDetails($request);
 
         $schemeAsesor = ($user->peran === 'asesor') 
             ? $user 
@@ -1250,6 +1251,7 @@ class AsesorController extends Controller
         }
 
         $pendaftaran = $query->findOrFail($pendaftaranId);
+        $this->validateMapa01ModificationDetails($request);
 
         $schemeAsesor = ($user->peran === 'asesor')
             ? $user
@@ -1325,6 +1327,23 @@ class AsesorController extends Controller
         $draftMsg = 'Draft FR.MAPA.01 berhasil disimpan.';
         return redirect()->route('asesor.mapa-01', $pendaftaran->id)
             ->with('sukses', $draftMsg);
+    }
+
+    private function validateMapa01ModificationDetails(Request $request): void
+    {
+        $request->validate([
+            'karakteristik_kandidat_teks' => 'required_if:karakteristik_kandidat_status,ada|nullable|string',
+            'kebutuhan_kontekstualisasi_teks' => 'required_if:kebutuhan_kontekstualisasi_status,ada|nullable|string',
+            'saran_pelatihan_teks' => 'required_if:saran_pelatihan_status,ada|nullable|string',
+            'penyesuaian_perangkat_teks' => 'required_if:penyesuaian_perangkat_status,ada|nullable|string',
+            'peluang_terintegrasi_teks' => 'required_if:peluang_terintegrasi_status,ada|nullable|string',
+        ], [
+            'karakteristik_kandidat_teks.required_if' => 'Karakteristik Kandidat wajib diisi jika memilih Ada.',
+            'kebutuhan_kontekstualisasi_teks.required_if' => 'Kebutuhan Kontekstualisasi wajib diisi jika memilih Ada.',
+            'saran_pelatihan_teks.required_if' => 'Saran Pelatihan wajib diisi jika memilih Ada.',
+            'penyesuaian_perangkat_teks.required_if' => 'Penyesuaian Perangkat wajib diisi jika memilih Ada.',
+            'peluang_terintegrasi_teks.required_if' => 'Peluang Kegiatan Terintegrasi wajib diisi jika memilih Ada.',
+        ]);
     }
 
     public function mapa02($pendaftaranId)

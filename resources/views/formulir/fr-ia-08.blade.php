@@ -341,19 +341,22 @@
         </div>
 
         <!-- REKOMENDASI ASESOR -->
+        @php
+            $isExecutionDisabled = $isMasterMode || $isAsesi;
+        @endphp
         <table class="tabel-bnsp" style="margin-bottom: 1.5rem;">
             <tr>
                 <td style="width: 25%; font-weight: 700; background: #f8fafc; vertical-align: middle;">Rekomendasi Asesor:</td>
                 <td>
                     <div style="margin-bottom: 0.75rem;">
                         <label style="display: flex; align-items: flex-start; gap: 0.5rem; cursor: pointer; font-weight: 600; color: #059669;">
-                            <input type="radio" name="rekomendasi" value="K" {{ ($iaRecord->rekomendasi ?? 'K') === 'K' ? 'checked' : '' }} style="margin-top: 0.2rem; accent-color: #059669;" {{ $isAsesi ? 'disabled' : '' }}>
+                            <input type="radio" name="rekomendasi" value="K" {{ ($iaRecord->rekomendasi ?? 'K') === 'K' ? 'checked' : '' }} style="margin-top: 0.2rem; accent-color: #059669;" {{ $isExecutionDisabled ? 'disabled' : '' }}>
                             <span>Asesi telah memenuhi pencapaian seluruh kriteria unjuk kerja, direkomendasikan <strong>KOMPETEN</strong></span>
                         </label>
                     </div>
                     <div>
                         <label style="display: flex; align-items: flex-start; gap: 0.5rem; cursor: pointer; font-weight: 600; color: #dc2626;">
-                            <input type="radio" name="rekomendasi" value="BK" {{ ($iaRecord->rekomendasi ?? '') === 'BK' ? 'checked' : '' }} style="margin-top: 0.2rem; accent-color: #dc2626;" {{ $isAsesi ? 'disabled' : '' }}>
+                            <input type="radio" name="rekomendasi" value="BK" {{ ($iaRecord->rekomendasi ?? '') === 'BK' ? 'checked' : '' }} style="margin-top: 0.2rem; accent-color: #dc2626;" {{ $isExecutionDisabled ? 'disabled' : '' }}>
                             <span>Asesi belum memenuhi aturan bukti (VATM), direkomendasikan <strong>BELUM KOMPETEN</strong> (perlu asesmen lanjutan)</span>
                         </label>
                     </div>

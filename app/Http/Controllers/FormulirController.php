@@ -1124,6 +1124,10 @@ class FormulirController extends Controller
         $pendaftaranIdInt = (int) $pendaftaranId;
         if ($pendaftaranIdInt > 0) {
             $pendaftaran = PendaftaranAsesi::findOrFail($pendaftaranIdInt);
+            // SERVER-SIDE FINAL LOCK
+            if ($pendaftaran->status_pendaftaran === 'selesai' || !empty($pendaftaran->rekomendasi)) {
+                abort(403, 'Akses Ditolak: Pendaftaran ini sudah berstatus Final. Data asesmen tidak dapat diubah lagi.');
+            }
         } else {
             $pendaftaran = $this->dapatkanPendaftaran(0);
             abort_unless($pendaftaran, 404, 'Data skema sertifikasi tidak ditemukan.');
@@ -1176,7 +1180,16 @@ class FormulirController extends Controller
             }
         } else {
             // Mode Master Blanko / Template Skema (id == 0)
-            abort_unless($user && in_array($user->peran, ['admin', 'superadmin', 'asesor']), 403, 'Akses Ditolak.');
+            abort_unless($user, 403, 'Akses Ditolak.');
+            
+            if (!in_array($user->peran, ['admin', 'superadmin'])) {
+                abort_unless($user->peran === 'asesor', 403, 'Akses Ditolak.');
+                // Validasi bahwa Asesor memiliki hak pada skema ini
+                $hasHakSkema = \App\Models\SkemaAsesor::where('asesor_id', $user->id)
+                    ->where('skema_id', $pendaftaran->skema_id)
+                    ->exists();
+                abort_unless($hasHakSkema, 403, 'Akses Ditolak: Anda tidak ditugaskan sebagai asesor untuk skema sertifikasi ini.');
+            }
         }
 
         $dataPayload = $request->except(['_token', 'tanda_tangan']);
@@ -1487,7 +1500,7 @@ class FormulirController extends Controller
            8. CEKLIS VERIFIKASI PORTOFOLIO (FR.IA.08)
            --------------------------------------------------------------------- */
         elseif ($kodeForm === 'FR.IA.08') {
-            if (!$request->has('simpan_draft')) {
+            if (!$request->has('simpan_draft') && !empty($pendaftaranId)) {
                 $request->validate([
                     'dokumen_portofolio' => 'required|array|min:1',
                     'dokumen_portofolio.*.valid' => 'required|in:ya,tidak',
@@ -1643,7 +1656,45 @@ class FormulirController extends Controller
             }
             $meta = $inst->additional_metadata ?? [];
             if (!is_array($meta)) $meta = json_decode($meta, true) ?: [];
-            $meta = array_merge($meta, $dataPayload);
+
+            // FILTER PAYLOAD: Cegah Master Data Leak
+            // Kita filter $dataPayload agar data execution (nama asesi, supervisor, jawaban) 
+            // tidak masuk ke additional_metadata master.
+            $masterPayload = [];
+            
+            if ($kodeForm === 'FR.IA.02') {
+                // Tidak ada form input master di IA.02 saat ini
+            } elseif ($kodeForm === 'FR.IA.03') {
+                if (isset($dataPayload['pertanyaan'])) $masterPayload['pertanyaan'] = $dataPayload['pertanyaan'];
+                if (isset($dataPayload['kelompok_soal'])) $masterPayload['kelompok_soal'] = $dataPayload['kelompok_soal'];
+            } elseif ($kodeForm === 'FR.IA.04A' || $kodeForm === 'FR.IA.04B') {
+                // IA.04A sudah disave manual sebelumnya. IA.04B tidak memiliki input master.
+            } elseif ($kodeForm === 'FR.IA.05C' || $kodeForm === 'FR.IA.06C') {
+                // Ujian Asesi tidak untuk master
+            } elseif ($kodeForm === 'FR.IA.07') {
+                // Pertanyaan lisan diambil dari skema/unit, tidak ada payload tambahan
+            } elseif ($kodeForm === 'FR.IA.08') {
+                if (isset($dataPayload['bukti_tambahan'])) $masterPayload['bukti_tambahan'] = $dataPayload['bukti_tambahan'];
+            } elseif ($kodeForm === 'FR.IA.09') {
+                if (isset($dataPayload['pertanyaan_wawancara']) && is_array($dataPayload['pertanyaan_wawancara'])) {
+                    $masterPayload['pertanyaan_wawancara'] = [];
+                    foreach ($dataPayload['pertanyaan_wawancara'] as $key => $val) {
+                        $masterPayload['pertanyaan_wawancara'][$key] = [
+                            'pertanyaan' => $val['pertanyaan'] ?? ''
+                        ];
+                    }
+                }
+            } elseif ($kodeForm === 'FR.IA.10') {
+                // Saat ini tidak ada input master eksplisit di form 10, jangan simpan apapun
+            } elseif ($kodeForm === 'FR.IA.11') {
+                // FR.IA.11 menyimpan nama validator di master
+                if (isset($dataPayload['validator'])) $masterPayload['validator'] = $dataPayload['validator'];
+            } else {
+                // Untuk FR.IA.05A, FR.IA.06A, FR.IA.05B, dsb
+                $masterPayload = $dataPayload;
+            }
+
+            $meta = array_merge($meta, $masterPayload);
             $meta['is_saved'] = true;
             $inst->additional_metadata = $meta;
             $inst->save();

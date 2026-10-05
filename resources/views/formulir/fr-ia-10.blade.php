@@ -155,6 +155,11 @@
             </tbody>
         </table>
 
+        @php
+            // Disable input eksekusi jika sedang dalam Mode Master atau jika diakses Asesi
+            $isExecutionDisabled = $isMasterMode || $isAsesi;
+        @endphp
+
         <form id="form-ia-10" method="POST" action="{{ route('formulir.ia.simpan', ['kodeForm' => 'FR.IA.10', 'pendaftaranId' => $pendaftaran->id]) }}">
             @csrf
 
@@ -162,19 +167,19 @@
             <table class="tabel-bnsp" style="margin-bottom: 1.5rem;">
                 <tr>
                     <td style="width: 35%; font-weight: 700; background: #f8fafc;">Nama Pengawas/penyelia/atasan/orang lain di perusahaan :</td>
-                    <td><input type="text" name="nama_supervisor" class="input-inline-bnsp" placeholder="Nama lengkap atasan / penyelia..." value="{{ $savedSuper['nama'] ?? '' }}" {{ $isAsesi ? 'readonly' : '' }}></td>
+                    <td><input type="text" name="nama_supervisor" class="input-inline-bnsp" placeholder="Nama lengkap atasan / penyelia..." value="{{ $savedSuper['nama'] ?? '' }}" {{ $isExecutionDisabled ? 'readonly' : '' }}></td>
                 </tr>
                 <tr>
                     <td style="font-weight: 700; background: #f8fafc;">Tempat kerja :</td>
-                    <td><input type="text" name="tempat_kerja" class="input-inline-bnsp" placeholder="Nama perusahaan..." value="{{ $savedSuper['tempat_kerja'] ?? '' }}" {{ $isAsesi ? 'readonly' : '' }}></td>
+                    <td><input type="text" name="tempat_kerja" class="input-inline-bnsp" placeholder="Nama perusahaan..." value="{{ $savedSuper['tempat_kerja'] ?? '' }}" {{ $isExecutionDisabled ? 'readonly' : '' }}></td>
                 </tr>
                 <tr>
                     <td style="font-weight: 700; background: #f8fafc;">Alamat :</td>
-                    <td><input type="text" name="alamat" class="input-inline-bnsp" placeholder="Alamat kantor..." value="{{ $savedSuper['alamat'] ?? '' }}" {{ $isAsesi ? 'readonly' : '' }}></td>
+                    <td><input type="text" name="alamat" class="input-inline-bnsp" placeholder="Alamat kantor..." value="{{ $savedSuper['alamat'] ?? '' }}" {{ $isExecutionDisabled ? 'readonly' : '' }}></td>
                 </tr>
                 <tr>
                     <td style="font-weight: 700; background: #f8fafc;">Telepon :</td>
-                    <td><input type="text" name="telepon" class="input-inline-bnsp" placeholder="Nomor telepon..." value="{{ $savedSuper['telepon'] ?? '' }}" {{ $isAsesi ? 'readonly' : '' }}></td>
+                    <td><input type="text" name="telepon" class="input-inline-bnsp" placeholder="Nomor telepon..." value="{{ $savedSuper['telepon'] ?? '' }}" {{ $isExecutionDisabled ? 'readonly' : '' }}></td>
                 </tr>
             </table>
 
@@ -190,33 +195,33 @@
                 <tbody>
                     <tr>
                         <td>Apakah asesi bekerja dengan mempertimbangkan Kesehatan, Keamanan dan Keselamatan Kerja?</td>
-                        <td style="text-align: center;"><input type="radio" name="q_k3" value="1" {{ isset($savedK3['q_k3']) && (string)$savedK3['q_k3'] === '1' ? 'checked' : '' }} class="checkbox-bnsp checkbox-bnsp-hijau" {{ $isAsesi ? 'disabled' : '' }}></td>
-                        <td style="text-align: center;"><input type="radio" name="q_k3" value="0" {{ isset($savedK3['q_k3']) && (string)$savedK3['q_k3'] === '0' ? 'checked' : '' }} class="checkbox-bnsp checkbox-bnsp-merah" {{ $isAsesi ? 'disabled' : '' }}></td>
+                        <td style="text-align: center;"><input type="radio" name="q_k3" value="1" {{ isset($savedK3['q_k3']) && (string)$savedK3['q_k3'] === '1' ? 'checked' : '' }} class="checkbox-bnsp checkbox-bnsp-hijau" {{ $isExecutionDisabled ? 'disabled' : '' }}></td>
+                        <td style="text-align: center;"><input type="radio" name="q_k3" value="0" {{ isset($savedK3['q_k3']) && (string)$savedK3['q_k3'] === '0' ? 'checked' : '' }} class="checkbox-bnsp checkbox-bnsp-merah" {{ $isExecutionDisabled ? 'disabled' : '' }}></td>
                     </tr>
                     <tr>
                         <td>Apakah asesi berinteraksi dengan harmonis didalam kelompoknya?</td>
-                        <td style="text-align: center;"><input type="radio" name="q_tim" value="1" {{ isset($savedK3['q_tim']) && (string)$savedK3['q_tim'] === '1' ? 'checked' : '' }} class="checkbox-bnsp checkbox-bnsp-hijau" {{ $isAsesi ? 'disabled' : '' }}></td>
-                        <td style="text-align: center;"><input type="radio" name="q_tim" value="0" {{ isset($savedK3['q_tim']) && (string)$savedK3['q_tim'] === '0' ? 'checked' : '' }} class="checkbox-bnsp checkbox-bnsp-merah" {{ $isAsesi ? 'disabled' : '' }}></td>
+                        <td style="text-align: center;"><input type="radio" name="q_tim" value="1" {{ isset($savedK3['q_tim']) && (string)$savedK3['q_tim'] === '1' ? 'checked' : '' }} class="checkbox-bnsp checkbox-bnsp-hijau" {{ $isExecutionDisabled ? 'disabled' : '' }}></td>
+                        <td style="text-align: center;"><input type="radio" name="q_tim" value="0" {{ isset($savedK3['q_tim']) && (string)$savedK3['q_tim'] === '0' ? 'checked' : '' }} class="checkbox-bnsp checkbox-bnsp-merah" {{ $isExecutionDisabled ? 'disabled' : '' }}></td>
                     </tr>
                     <tr>
                         <td>Apakah asesi dapat mengelola tugas-tugas secara bersamaan?</td>
-                        <td style="text-align: center;"><input type="radio" name="q_kelola" value="1" {{ isset($savedK3['q_kelola']) && (string)$savedK3['q_kelola'] === '1' ? 'checked' : '' }} class="checkbox-bnsp checkbox-bnsp-hijau" {{ $isAsesi ? 'disabled' : '' }}></td>
-                        <td style="text-align: center;"><input type="radio" name="q_kelola" value="0" {{ isset($savedK3['q_kelola']) && (string)$savedK3['q_kelola'] === '0' ? 'checked' : '' }} class="checkbox-bnsp checkbox-bnsp-merah" {{ $isAsesi ? 'disabled' : '' }}></td>
+                        <td style="text-align: center;"><input type="radio" name="q_kelola" value="1" {{ isset($savedK3['q_kelola']) && (string)$savedK3['q_kelola'] === '1' ? 'checked' : '' }} class="checkbox-bnsp checkbox-bnsp-hijau" {{ $isExecutionDisabled ? 'disabled' : '' }}></td>
+                        <td style="text-align: center;"><input type="radio" name="q_kelola" value="0" {{ isset($savedK3['q_kelola']) && (string)$savedK3['q_kelola'] === '0' ? 'checked' : '' }} class="checkbox-bnsp checkbox-bnsp-merah" {{ $isExecutionDisabled ? 'disabled' : '' }}></td>
                     </tr>
                     <tr>
                         <td>Apakah asesi dapat dengan cepat beradaptasi dengan peralatan dan lingkungan yang baru?</td>
-                        <td style="text-align: center;"><input type="radio" name="q_adaptasi" value="1" {{ isset($savedK3['q_adaptasi']) && (string)$savedK3['q_adaptasi'] === '1' ? 'checked' : '' }} class="checkbox-bnsp checkbox-bnsp-hijau" {{ $isAsesi ? 'disabled' : '' }}></td>
-                        <td style="text-align: center;"><input type="radio" name="q_adaptasi" value="0" {{ isset($savedK3['q_adaptasi']) && (string)$savedK3['q_adaptasi'] === '0' ? 'checked' : '' }} class="checkbox-bnsp checkbox-bnsp-merah" {{ $isAsesi ? 'disabled' : '' }}></td>
+                        <td style="text-align: center;"><input type="radio" name="q_adaptasi" value="1" {{ isset($savedK3['q_adaptasi']) && (string)$savedK3['q_adaptasi'] === '1' ? 'checked' : '' }} class="checkbox-bnsp checkbox-bnsp-hijau" {{ $isExecutionDisabled ? 'disabled' : '' }}></td>
+                        <td style="text-align: center;"><input type="radio" name="q_adaptasi" value="0" {{ isset($savedK3['q_adaptasi']) && (string)$savedK3['q_adaptasi'] === '0' ? 'checked' : '' }} class="checkbox-bnsp checkbox-bnsp-merah" {{ $isExecutionDisabled ? 'disabled' : '' }}></td>
                     </tr>
                     <tr>
                         <td>Apakah asesi dapat merespon dengan cepat masalah-masalah yang ada di tempat kerjanya?</td>
-                        <td style="text-align: center;"><input type="radio" name="q_respon" value="1" {{ isset($savedK3['q_respon']) && (string)$savedK3['q_respon'] === '1' ? 'checked' : '' }} class="checkbox-bnsp checkbox-bnsp-hijau" {{ $isAsesi ? 'disabled' : '' }}></td>
-                        <td style="text-align: center;"><input type="radio" name="q_respon" value="0" {{ isset($savedK3['q_respon']) && (string)$savedK3['q_respon'] === '0' ? 'checked' : '' }} class="checkbox-bnsp checkbox-bnsp-merah" {{ $isAsesi ? 'disabled' : '' }}></td>
+                        <td style="text-align: center;"><input type="radio" name="q_respon" value="1" {{ isset($savedK3['q_respon']) && (string)$savedK3['q_respon'] === '1' ? 'checked' : '' }} class="checkbox-bnsp checkbox-bnsp-hijau" {{ $isExecutionDisabled ? 'disabled' : '' }}></td>
+                        <td style="text-align: center;"><input type="radio" name="q_respon" value="0" {{ isset($savedK3['q_respon']) && (string)$savedK3['q_respon'] === '0' ? 'checked' : '' }} class="checkbox-bnsp checkbox-bnsp-merah" {{ $isExecutionDisabled ? 'disabled' : '' }}></td>
                     </tr>
                     <tr>
                         <td>Apakah Anda bersedia dihubungi jika verifikasi lebih lanjut dari pernyataan ini diperlukan?</td>
-                        <td style="text-align: center;"><input type="radio" name="q_kontak" value="1" {{ isset($savedK3['q_kontak']) && (string)$savedK3['q_kontak'] === '1' ? 'checked' : '' }} class="checkbox-bnsp checkbox-bnsp-hijau" {{ $isAsesi ? 'disabled' : '' }}></td>
-                        <td style="text-align: center;"><input type="radio" name="q_kontak" value="0" {{ isset($savedK3['q_kontak']) && (string)$savedK3['q_kontak'] === '0' ? 'checked' : '' }} class="checkbox-bnsp checkbox-bnsp-merah" {{ $isAsesi ? 'disabled' : '' }}></td>
+                        <td style="text-align: center;"><input type="radio" name="q_kontak" value="1" {{ isset($savedK3['q_kontak']) && (string)$savedK3['q_kontak'] === '1' ? 'checked' : '' }} class="checkbox-bnsp checkbox-bnsp-hijau" {{ $isExecutionDisabled ? 'disabled' : '' }}></td>
+                        <td style="text-align: center;"><input type="radio" name="q_kontak" value="0" {{ isset($savedK3['q_kontak']) && (string)$savedK3['q_kontak'] === '0' ? 'checked' : '' }} class="checkbox-bnsp checkbox-bnsp-merah" {{ $isExecutionDisabled ? 'disabled' : '' }}></td>
                     </tr>
                 </tbody>
             </table>
@@ -225,26 +230,26 @@
             <table class="tabel-bnsp" style="margin-bottom: 1.5rem;">
                 <tr>
                     <td style="width: 35%; font-weight: 700; background: #f8fafc;">Apa hubungan Anda dengan asesi?</td>
-                    <td><input type="text" name="hubungan" class="input-inline-bnsp" placeholder="Misal: Atasan Langsung / Project Lead..." value="{{ $savedWawancara['hubungan'] ?? '' }}" {{ $isAsesi ? 'readonly' : '' }}></td>
+                    <td><input type="text" name="hubungan" class="input-inline-bnsp" placeholder="Misal: Atasan Langsung / Project Lead..." value="{{ $savedWawancara['hubungan'] ?? '' }}" {{ $isExecutionDisabled ? 'readonly' : '' }}></td>
                 </tr>
                 <tr>
                     <td style="font-weight: 700; background: #f8fafc;">Berapa lama Anda bekerja dengan asesi?</td>
-                    <td><input type="text" name="lama_bekerja" class="input-inline-bnsp" placeholder="Misal: 1 Tahun 6 Bulan..." value="{{ $savedWawancara['lama_bekerja'] ?? '' }}" {{ $isAsesi ? 'readonly' : '' }}></td>
+                    <td><input type="text" name="lama_bekerja" class="input-inline-bnsp" placeholder="Misal: 1 Tahun 6 Bulan..." value="{{ $savedWawancara['lama_bekerja'] ?? '' }}" {{ $isExecutionDisabled ? 'readonly' : '' }}></td>
                 </tr>
                 <tr>
                     <td style="font-weight: 700; background: #f8fafc;">Seberapa dekat Anda bekerja dengan asesi di area yang dinilai?</td>
-                    <td><input type="text" name="kedekatan" class="input-inline-bnsp" placeholder="Misal: Sangat dekat, memonitor pekerjaan harian..." value="{{ $savedWawancara['kedekatan'] ?? '' }}" {{ $isAsesi ? 'readonly' : '' }}></td>
+                    <td><input type="text" name="kedekatan" class="input-inline-bnsp" placeholder="Misal: Sangat dekat, memonitor pekerjaan harian..." value="{{ $savedWawancara['kedekatan'] ?? '' }}" {{ $isExecutionDisabled ? 'readonly' : '' }}></td>
                 </tr>
                 <tr>
                     <td style="font-weight: 700; background: #f8fafc;">Apa pengalaman teknis dan / atau kualifikasi Anda di bidang yang dinilai? <span style="font-weight: 400; font-size: 0.78rem; color: #64748b;">(termasuk asesmen atau kualifikasi pelatihan)</span></td>
-                    <td><textarea name="pengalaman_teknis" class="input-inline-bnsp" rows="2" placeholder="Pengalaman teknis / jabatan / sertifikasi..." {{ $isAsesi ? 'readonly' : '' }}>{{ $savedWawancara['pengalaman_teknis'] ?? '' }}</textarea></td>
+                    <td><textarea name="pengalaman_teknis" class="input-inline-bnsp" rows="2" placeholder="Pengalaman teknis / jabatan / sertifikasi..." {{ $isExecutionDisabled ? 'readonly' : '' }}>{{ $savedWawancara['pengalaman_teknis'] ?? '' }}</textarea></td>
                 </tr>
                 <tr>
                     <td style="font-weight: 700; background: #f8fafc;">
                         {{ !empty($pertanyaanKonsistensiMaster) ? $pertanyaanKonsistensiMaster : ('Secara keseluruhan, apakah Anda yakin asesi melakukan tugas sesuai standar yang diminta oleh unit kompetensi pada skema ' . ($pendaftaran->skema->nama_skema ?? '') . ' secara konsisten?') }}
                     </td>
                     <td>
-                        <textarea name="testimoni_kinerja" class="input-inline-bnsp" rows="2" placeholder="Tuliskan testimoni / penilaian kinerja konsistensi asesi..." {{ $isAsesi ? 'readonly' : '' }}>{{ $savedWawancara['testimoni_kinerja'] ?? '' }}</textarea>
+                        <textarea name="testimoni_kinerja" class="input-inline-bnsp" rows="2" placeholder="Tuliskan testimoni / penilaian kinerja konsistensi asesi..." {{ $isExecutionDisabled ? 'readonly' : '' }}>{{ $savedWawancara['testimoni_kinerja'] ?? '' }}</textarea>
                     </td>
                 </tr>
                 <tr>
@@ -252,7 +257,7 @@
                         Identifikasi kebutuhan pelatihan lebih lanjut untuk asesi:
                     </td>
                     <td>
-                        <textarea name="kebutuhan_pelatihan" class="input-inline-bnsp" rows="2" placeholder="Identifikasi kebutuhan pelatihan bila ada..." {{ $isAsesi ? 'readonly' : '' }}>{{ $savedWawancara['kebutuhan_pelatihan'] ?? '' }}</textarea>
+                        <textarea name="kebutuhan_pelatihan" class="input-inline-bnsp" rows="2" placeholder="Identifikasi kebutuhan pelatihan bila ada..." {{ $isExecutionDisabled ? 'readonly' : '' }}>{{ $savedWawancara['kebutuhan_pelatihan'] ?? '' }}</textarea>
                     </td>
                 </tr>
                 <tr>
@@ -260,7 +265,7 @@
                         Komentar atau catatan lain:
                     </td>
                     <td>
-                        <textarea name="catatan_tambahan" class="input-inline-bnsp" rows="2" placeholder="Komentar atau catatan tambahan..." {{ $isAsesi ? 'readonly' : '' }}>{{ $savedWawancara['catatan_tambahan'] ?? '' }}</textarea>
+                        <textarea name="catatan_tambahan" class="input-inline-bnsp" rows="2" placeholder="Komentar atau catatan tambahan..." {{ $isExecutionDisabled ? 'readonly' : '' }}>{{ $savedWawancara['catatan_tambahan'] ?? '' }}</textarea>
                     </td>
                 </tr>
             </table>

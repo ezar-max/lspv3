@@ -42,8 +42,14 @@
         ])
     @endif
 
+    @php
+        // Disable input eksekusi jika sedang dalam Mode Master atau jika diakses Asesi
+        $isExecutionDisabled = $isMasterMode || $isAsesi;
+    @endphp
+
     <form id="form-ia-11" method="POST" action="{{ route('formulir.ia.simpan', ['kodeForm' => 'FR.IA.11', 'pendaftaranId' => $pendaftaran->id]) }}">
         @csrf
+        <fieldset {{ $isExecutionDisabled ? 'disabled' : '' }} style="border: none; padding: 0; margin: 0;">
         <div class="dokumen-kertas">
             
             <!-- KOP RESMI DOKUMEN STANDAR BNSP -->
@@ -299,6 +305,7 @@
                 </div>
                 <textarea name="catatan" class="input-inline-bnsp" rows="3" placeholder="Tuliskan catatan temuan asesmen...">{{ $savedData['catatan'] ?? '' }}</textarea>
             </div>
+            </fieldset>
 
             <!-- TABEL PENYUSUN DAN VALIDATOR -->
             @include('komponen.tabel-penyusun-validator', [
