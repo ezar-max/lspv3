@@ -8,8 +8,10 @@ use App\Models\DokumenAsesi;
 use App\Models\SkemaSertifikasi;
 use App\Models\JadwalAsesmen;
 use App\Models\JawabanApl02;
+use App\Models\IaPenilaian;
 use App\Models\LogAktivitas;
 use App\Models\Pengguna;
+use App\Services\FrIa01Service;
 use App\Notifications\SystemAlert;
 use Illuminate\Http\Request;
 
@@ -38,11 +40,11 @@ class AsesiController extends Controller
 
         $selectedPendaftaranId = $request->get('pendaftaran_id');
         if ($selectedPendaftaranId) {
-            $pendaftaranTerakhir = PendaftaranAsesi::with(['skema.unitKompetensi', 'jadwal.asesor', 'dokumen', 'rekomendasi', 'asesor', 'jawabanApl02', 'iaPenilaian', 'ak07Adjustment'])
+            $pendaftaranTerakhir = PendaftaranAsesi::with(['skema.unitKompetensi', 'skema.masterInstruments', 'jadwal.asesor', 'dokumen', 'rekomendasi', 'asesor', 'jawabanApl02', 'iaPenilaian', 'ak07Adjustment'])
                 ->where('asesi_id', $pengguna->id)
                 ->find($selectedPendaftaranId);
         } else {
-            $pendaftaranTerakhir = PendaftaranAsesi::with(['skema.unitKompetensi', 'jadwal.asesor', 'dokumen', 'rekomendasi', 'asesor', 'jawabanApl02', 'iaPenilaian', 'ak07Adjustment'])
+            $pendaftaranTerakhir = PendaftaranAsesi::with(['skema.unitKompetensi', 'skema.masterInstruments', 'jadwal.asesor', 'dokumen', 'rekomendasi', 'asesor', 'jawabanApl02', 'iaPenilaian', 'ak07Adjustment'])
                 ->where('asesi_id', $pengguna->id)
                 ->latest()
                 ->first();
@@ -1252,6 +1254,7 @@ class AsesiController extends Controller
 
     public function hasilNilai()
     {
+        JadwalAsesmen::syncAllStatuses();
         $pendaftaranList = PendaftaranAsesi::with(['skema', 'jadwal', 'penilaian.unit', 'rekomendasi.asesor'])
             ->where('asesi_id', auth()->id())
             ->get();
@@ -1268,6 +1271,194 @@ class AsesiController extends Controller
         ->get();
 
         return view('asesi.hasil-nilai', compact('pendaftaranList'));
+    }
+
+    public function hasilFormulir(int $pendaftaranId, FrIa01Service $frIa01Service)
+    {
+        $pendaftaran = PendaftaranAsesi::with([
+            'asesor',
+            'jadwal.asesor',
+            'skema.unitKompetensi.elemenKompetensi.kriteriaUnjukKerja',
+            'iaPenilaian',
+            'rekomendasi',
+            'ak02',
+            'ak03',
+        ])->where('asesi_id', auth()->id())->findOrFail($pendaftaranId);
+
+        abort_unless(
+            $frIa01Service->isAssessmentFinished($pendaftaran),
+            403,
+            'Hasil formulir asesmen hanya tersedia setelah sesi asesmen selesai.'
+        );
+
+        $kukLabels = $pendaftaran->skema->unitKompetensi
+            ->flatMap(fn ($unit) => $unit->elemenKompetensi)
+            ->flatMap(fn ($element) => $element->kriteriaUnjukKerja)
+            ->mapWithKeys(fn ($kuk) => [
+                (string) $kuk->id => $kuk->nomor_kuk.' - '.$kuk->pernyataan_kuk,
+            ])
+            ->all();
+
+        $formNames = [
+            'FR.IA.01' => 'Ceklis Observasi Aktivitas',
+            'FR.IA.02' => 'Lembar Tugas Praktik Demonstrasi',
+            'FR.IA.03' => 'Pertanyaan Lisan',
+            'FR.IA.05' => 'Lembar Jawaban Pilihan Ganda',
+            'FR.IA.06' => 'Lembar Jawaban Esai',
+            'FR.IA.06B' => 'Penilaian Jawaban Esai',
+            'FR.IA.07' => 'Pertanyaan Pendukung Observasi',
+            'FR.IA.08' => 'Ceklis Verifikasi Portofolio',
+            'FR.IA.09' => 'Ceklis Verifikasi Pihak Ketiga',
+            'FR.IA.10' => 'Ceklis Reviu Produk',
+            'FR.IA.11' => 'Ceklis Reviu Produk/Spesifikasi',
+        ];
+        $fieldNames = [
+            'standar_industri' => 'Standar industri',
+            'pencapaian' => 'Pencapaian KUK',
+            'penilaian_kuk' => 'Hasil observasi KUK',
+            'penilaian_lanjut' => 'Penilaian lanjut',
+            'catatan_kuk' => 'Catatan KUK',
+            'umpan_balik' => 'Umpan balik asesor',
+            'catatan_observasi' => 'Catatan observasi',
+            'catatan_praktik' => 'Catatan praktik',
+            'penilaian_esai' => 'Penilaian esai',
+            'respon_lisan' => 'Respons lisan',
+            'penilaian_lisan' => 'Penilaian lisan',
+            'jawaban_pg' => 'Jawaban pilihan ganda',
+            'jawaban_esai' => 'Jawaban esai',
+            'rekomendasi' => 'Rekomendasi',
+            'catatan' => 'Catatan',
+            'keputusan_final' => 'Keputusan akhir',
+            'tindak_lanjut' => 'Tindak lanjut',
+            'komentar_asesor' => 'Komentar asesor',
+            'total_unit' => 'Jumlah unit kompetensi',
+            'total_k' => 'Jumlah unit kompeten',
+            'total_bk' => 'Jumlah unit belum kompeten',
+            'matriks_bukti' => 'Matriks bukti asesmen',
+            'rekomendasi_unit' => 'Rekomendasi per unit',
+            'jawaban_kuesioner' => 'Umpan balik asesi',
+            'catatan_lainnya' => 'Catatan tambahan asesi',
+        ];
+
+        $formulir = $pendaftaran->iaPenilaian
+            ->sortBy('kode_formulir')
+            ->map(function (IaPenilaian $record) use ($kukLabels, $fieldNames, $formNames) {
+                $fields = [];
+                $this->flattenFormResult(
+                    (array) ($record->data_jawaban ?? []),
+                    '',
+                    $fields,
+                    $kukLabels,
+                    $fieldNames
+                );
+
+                return [
+                    'record' => $record,
+                    'code' => $record->kode_formulir,
+                    'name' => $formNames[$record->kode_formulir] ?? 'Formulir asesmen',
+                    'recommendation' => $record->rekomendasi,
+                    'notes' => $record->catatan_asesor,
+                    'status' => $record->status,
+                    'fields' => $fields,
+                ];
+            })
+            ->values();
+
+        if ($pendaftaran->ak02) {
+            $ak02Data = [
+                'rekomendasi_unit' => $pendaftaran->ak02->rekomendasi_unit ?? [],
+                'matriks_bukti' => $pendaftaran->ak02->matriks_bukti ?? [],
+                'keputusan_final' => $pendaftaran->ak02->keputusan_final,
+                'tindak_lanjut' => $pendaftaran->ak02->tindak_lanjut,
+                'komentar_asesor' => $pendaftaran->ak02->komentar_asesor,
+                'total_unit' => $pendaftaran->ak02->total_unit,
+                'total_k' => $pendaftaran->ak02->total_k,
+                'total_bk' => $pendaftaran->ak02->total_bk,
+            ];
+            $fields = [];
+            $this->flattenFormResult($ak02Data, '', $fields, $kukLabels, $fieldNames);
+            $formulir->push([
+                'record' => $pendaftaran->ak02,
+                'code' => 'FR.AK.02',
+                'name' => 'Rekaman Asesmen dan Keputusan',
+                'recommendation' => $pendaftaran->ak02->keputusan_final,
+                'notes' => $pendaftaran->ak02->komentar_asesor,
+                'status' => $pendaftaran->ak02->status,
+                'fields' => $fields,
+            ]);
+        }
+
+        if ($pendaftaran->ak03) {
+            $ak03Data = [
+                'jawaban_kuesioner' => $pendaftaran->ak03->jawaban_kuesioner ?? [],
+                'catatan_lainnya' => $pendaftaran->ak03->catatan_lainnya,
+            ];
+            $fields = [];
+            $this->flattenFormResult($ak03Data, '', $fields, $kukLabels, $fieldNames);
+            $formulir->push([
+                'record' => $pendaftaran->ak03,
+                'code' => 'FR.AK.03',
+                'name' => 'Umpan Balik Asesi',
+                'recommendation' => null,
+                'notes' => null,
+                'status' => $pendaftaran->ak03->status,
+                'fields' => $fields,
+            ]);
+        }
+
+        $formulir = $formulir->sortBy('code')->values();
+        $ia01Record = $pendaftaran->iaPenilaian->firstWhere('kode_formulir', 'FR.IA.01');
+        $canSignIa01 = $frIa01Service->canSignAsesi(auth()->user(), $pendaftaran, $ia01Record);
+
+        return view('asesi.hasil-formulir', compact(
+            'pendaftaran',
+            'formulir',
+            'ia01Record',
+            'canSignIa01'
+        ));
+    }
+
+    private function flattenFormResult(array $data, string $prefix, array &$fields, array $kukLabels, array $fieldNames): void
+    {
+        foreach ($data as $key => $value) {
+            $key = (string) $key;
+            if (str_starts_with($key, '_')
+                || str_starts_with($key, 'signature_')
+                || in_array($key, ['saved_at', 'evaluated_at', 'updated_at', 'created_at', 'signer_user_id', 'signer_role'], true)) {
+                continue;
+            }
+
+            $label = $fieldNames[$key] ?? $kukLabels[$key] ?? str($key)->replace('_', ' ')->title()->toString();
+            $fieldLabel = $prefix === '' ? $label : $prefix.' - '.$label;
+
+            if (is_array($value)) {
+                foreach ($value as $childKey => $childValue) {
+                    $childPrefix = is_int($childKey)
+                        ? $fieldLabel.' #'.($childKey + 1)
+                        : $fieldLabel;
+                    $this->flattenFormResult(
+                        is_array($childValue) ? $childValue : [(string) $childKey => $childValue],
+                        $childPrefix,
+                        $fields,
+                        $kukLabels,
+                        $fieldNames
+                    );
+                }
+
+                continue;
+            }
+
+            if ($value === null || $value === '') {
+                continue;
+            }
+
+            $displayValue = match ((string) $value) {
+                'K' => 'Kompeten (K)',
+                'BK' => 'Belum Kompeten (BK)',
+                default => (string) $value,
+            };
+            $fields[] = ['label' => $fieldLabel, 'value' => $displayValue];
+        }
     }
 
     public function apl02(Request $request)

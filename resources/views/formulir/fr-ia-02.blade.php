@@ -370,7 +370,7 @@
 
                 <!-- ISIAN SKENARIO TUGAS PRAKTIK DEMONSTRASI (PERSIS GAMBAR) -->
                 <label class="label-skenario">Skenario Tugas Praktik Demonstrasi: <span style="color: #ef4444;">*</span></label>
-                <textarea name="kelompok_skenario[{{ $kIndex }}][skenario]" class="textarea-skenario" rows="4" placeholder="{{ $isAsesi ? 'Skenario demonstrasi praktik belum diisi oleh Asesor.' : 'Tuliskan skenario tugas praktik demonstrasi yang harus dilaksanakan oleh asesi...' }}" {{ $isAsesi ? 'readonly' : 'required' }}>{{ $kSkenario }}</textarea>
+                <textarea name="kelompok_skenario[{{ $kIndex }}][skenario]" class="textarea-skenario" rows="4" placeholder="Skenario demonstrasi praktik belum diisi oleh Asesor." readonly>{{ $kSkenario }}</textarea>
                 
                 @if($kIndex === 1)
                     <!-- Simpan juga ke field root skenario untuk backward compatibility -->
@@ -382,7 +382,7 @@
                     <div class="baris-label-input">
                         <div class="nama-label">Perlengkapan dan Peralatan : <span style="color: #ef4444;">*</span></div>
                         <div class="isi-input">
-                            <textarea name="kelompok_skenario[{{ $kIndex }}][peralatan]" class="textarea-skenario" rows="2" placeholder="{{ $isAsesi ? 'Daftar perlengkapan dan peralatan belum diisi.' : 'Sebutkan perlengkapan kerja, bahan uji, APD, dan peralatan yang digunakan...' }}" {{ $isAsesi ? 'readonly' : 'required' }}>{{ $kPeralatan }}</textarea>
+                            <textarea name="kelompok_skenario[{{ $kIndex }}][peralatan]" class="textarea-skenario" rows="2" placeholder="Daftar perlengkapan dan peralatan belum diisi." readonly>{{ $kPeralatan }}</textarea>
                             @if($kIndex === 1)
                                 <input type="hidden" name="peralatan_bahan" value="{{ $kPeralatan }}">
                             @endif
@@ -392,7 +392,7 @@
                     <div class="baris-label-input" style="align-items: center;">
                         <div class="nama-label">{{ $kIndex === 1 ? 'Durasi Waktu :' : 'Waktu :' }} <span style="color: #ef4444;">*</span></div>
                         <div class="isi-input">
-                            <input type="text" name="kelompok_skenario[{{ $kIndex }}][waktu]" class="input-baris-ia02" style="max-width: 250px;" value="{{ $kWaktu }}" placeholder="Contoh: 120 Menit" {{ $isAsesi ? 'readonly' : 'required' }}>
+                            <input type="text" name="kelompok_skenario[{{ $kIndex }}][waktu]" class="input-baris-ia02" style="max-width: 250px;" value="{{ $kWaktu }}" placeholder="Contoh: 120 Menit" readonly>
                             @if($kIndex === 1)
                                 <input type="hidden" name="durasi_waktu" value="{{ $kWaktu }}">
                             @endif
@@ -418,13 +418,6 @@
                 'asesorMet' => $asesorMet ?? '-',
                 'asesorTtd' => $asesorTtd ?? null,
                 'tglAsesmen' => $tglAsesmen ?? null
-            ])
-
-            <!-- TABEL PENYUSUN DAN VALIDATOR (PERSIS GAMBAR HALAMAN 3) -->
-            @include('komponen.tabel-penyusun-validator', [
-                'pendaftaran' => $pendaftaran,
-                'kodeForm' => 'FR.IA.02',
-                'tableClass' => 'tabel-ia02'
             ])
 
         </form>

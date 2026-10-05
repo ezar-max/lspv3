@@ -11,31 +11,48 @@
     
     @php
         $isAsesi = auth()->check() && auth()->user()->peran === 'asesi';
-        $effectiveAsesor = $pendaftaran->asesor ?? ($pendaftaran->jadwal->asesor ?? null);
-        $asesorNama = $effectiveAsesor->nama_lengkap ?? (auth()->check() && auth()->user()->peran === 'asesor' ? auth()->user()->nama_lengkap : '-');
-        $asesorMet = $effectiveAsesor->nomor_registrasi ?? (auth()->check() && auth()->user()->peran === 'asesor' ? auth()->user()->nomor_registrasi : '-');
-        $asesiNama = $pendaftaran->asesi->nama_lengkap ?? '-';
+        $isMasterMode = $isMasterMode ?? ($pendaftaran === null);
+        $effectiveAsesor = $pendaftaran?->asesor ?? ($pendaftaran?->jadwal?->asesor ?? null);
+        $asesorNama = $isMasterMode ? '-' : ($effectiveAsesor->nama_lengkap ?? '-');
+        $asesorMet = $isMasterMode ? '-' : ($effectiveAsesor->nomor_registrasi ?? '-');
+        $asesiNama = $pendaftaran?->asesi?->nama_lengkap ?? '-';
         $asesorSignature = $savedData['signature_asesor'] ?? null;
         $asesiSignature = $savedData['signature_asesi'] ?? null;
-        $tukNama = $pendaftaran->jadwal->nama_tuk ?? ($pendaftaran->tuk_type ?? 'Sewaktu');
-        $tglAsesmen = $pendaftaran->jadwal?->tanggal_uji ? \Carbon\Carbon::parse($pendaftaran->jadwal->tanggal_uji)->format('d-m-Y') : date('d-m-Y');
-        $isMasterMode = $isMasterMode ?? ((int) $pendaftaran->id === 0);
-        $isReadOnly = $isMasterMode || !$canEdit || $isAsesi || $isLocked;
+        $canSaveAssessment = $canEdit && !empty($asesorSignature['path']);
+        $masterTemplateUrl = !$isMasterMode && $canManageMaster
+            ? route('formulir.ia01', ['pendaftaranId' => 0, 'skema_id' => $skema->id])
+            : null;
+        $tukNama = $pendaftaran?->jadwal?->nama_tuk ?? ($pendaftaran?->tuk_type ?? '-');
+        $tglAsesmen = $pendaftaran?->jadwal?->tanggal_uji ? \Carbon\Carbon::parse($pendaftaran->jadwal->tanggal_uji)->format('d-m-Y') : '-';
+        $isAssessmentReadOnly = $isMasterMode || !$canEdit || $isAsesi || $isLocked;
+        $isReadOnly = !$canEdit || $isAsesi || $isLocked;
+        $isStandardReadOnly = !$isMasterMode || !$canManageMaster;
+        $isAssessmentEntryLocked = !$isMasterMode && $isAssessmentReadOnly;
     @endphp
 
     <!-- ACTION BAR ATAS -->
     @include('komponen.action-bar-formulir', [
         'kodeForm' => 'FR.IA.01',
         'namaForm' => 'Ceklis Observasi Aktivitas',
-        'pendaftaranId' => $pendaftaran->id,
+        'pendaftaranId' => $isMasterMode ? 0 : $pendaftaran->id,
         'isAsesi' => $isAsesi,
-        'showSave' => $canEdit,
-        'showDraft' => $canEdit,
+        'showSave' => $canSaveAssessment,
+        'showDraft' => $canSaveAssessment,
         'saveLabel' => 'Simpan Formulir',
+        'draftLabel' => 'Simpan Draft',
         'saveFormId' => 'form-ia-01',
+        'templateUrl' => $masterTemplateUrl,
+        'templateLabel' => 'Kelola Template FR.IA.01',
     ])
 
-    @if($isAsesi)
+    @if($isAsesi && $canSignAsesi)
+        @include('komponen.banner-readonly-asesi', [
+            'judul' => 'Asesmen Selesai - Tanda Tangan Asesi Diperlukan',
+            'keterangan' => 'Periksa hasil penilaian FR.IA.01. Tanda tangan Anda akan mengesahkan penerimaan hasil dan mengunci formulir.',
+            'status' => 'Menunggu Tanda Tangan',
+            'tipe' => 'info'
+        ])
+    @elseif($isAsesi)
         @include('komponen.banner-readonly-asesi', [
             'judul' => 'Mode Pratinjau Asesi (Hanya Baca)',
             'keterangan' => 'Formulir dan instrumen penilaian ini diisi dan dinilai oleh Asesor Kompetensi Anda.',
@@ -53,10 +70,34 @@
             'tipeDokumen' => 'Ceklis Observasi'
         ])
 
-        @if($isLocked)
+        @if($isMasterMode)
+            <div class="ia01-status-note" role="status">
+                <strong>Master FR.IA.01 — atur standar acuan untuk KUK.</strong>
+                Bagian pencapaian, penilaian lanjut, umpan balik, rekomendasi, dan tanda tangan hanya diisi pada execution masing-masing asesi.
+                @if($isMasterConfigured)
+                    Versi {{ data_get($masterInst?->additional_metadata, 'published_version', 1) }} yang diterbitkan tetap digunakan untuk asesmen baru sampai draft berikutnya diterbitkan.
+                @else
+                    Belum ada versi terbit. Asesmen FR.IA.01 belum dapat dibuka untuk asesi sampai standar lengkap diterbitkan.
+                @endif
+                @if(data_get($masterInst?->additional_metadata, 'lifecycle_status') === 'draft' && $isMasterConfigured)
+                    Ada draft perubahan yang belum diterbitkan; versi berjalan tidak berubah.
+                @endif
+            </div>
+        @elseif($isLocked)
             <div class="ia01-status-locked" role="status">Formulir telah difinalisasi dan dikunci.</div>
-        @elseif($isMasterMode)
-            <div class="ia01-status-note" role="status">Pratinjau master. Penilaian dan tanda tangan hanya tersedia pada pendaftaran yang memenuhi alur asesmen.</div>
+        @elseif(!$isAssessmentInProgress && !$isAssessmentFinished)
+            <div class="ia01-status-note" role="status">
+                <strong>Formulir belum dibuka.</strong>
+                Isian FR.IA.01 akan aktif otomatis saat jadwal asesmen berstatus berlangsung.
+                @if($pendaftaran?->jadwal?->waktu_mulai)
+                    Jadwal mulai {{ $pendaftaran->jadwal->tanggal_uji ? \Carbon\Carbon::parse($pendaftaran->jadwal->tanggal_uji)->format('d/m/Y') : '' }} pukul {{ substr($pendaftaran->jadwal->waktu_mulai, 0, 5) }} WIB.
+                @endif
+                Tanda tangan asesor dan pencatatan hasil tersedia saat jadwal asesmen berlangsung.
+            </div>
+        @elseif($isAssessmentFinished && !$isLocked && ($iaRecord?->status !== 'submitted'))
+            <div class="ia01-status-note" role="status">Sesi asesmen telah selesai. FR.IA.01 belum dikirim untuk ditandatangani asesi.</div>
+        @elseif($iaRecord?->status === 'submitted')
+            <div class="ia01-status-note" role="status">Hasil telah disimpan oleh asesor dan menunggu tanda tangan asesi setelah sesi asesmen selesai.</div>
         @endif
 
         @if($errors->any())
@@ -75,9 +116,12 @@
                 Penilaian: <strong>{{ $evaluatedKukCount }} / {{ count($kukIds) }} KUK</strong>
                 <span>{{ count($kukIds) - $evaluatedKukCount }} item belum dinilai</span>
                 @if($iaRecord)
-                    <span>Status: <strong>{{ $isLocked ? 'Selesai' : 'Draft' }}</strong></span>
+                    <span>Status: <strong>{{ match($iaRecord->status) { 'completed' => 'Selesai & disahkan', 'submitted' => 'Menunggu tanda tangan asesi', default => 'Draft' } }}</strong></span>
                 @endif
             </div>
+        @endif
+        @if($canEdit && !$asesorSignature)
+            <div class="ia01-status-note" role="status">Buat tanda tangan asesor terlebih dahulu. Formulir belum dapat disimpan sebelum tanda tangan asesor tercatat.</div>
         @endif
 
         <!-- IDENTITAS DOKUMEN -->
@@ -89,12 +133,12 @@
                 </td>
                 <td style="width: 12%; font-weight: 600;">Judul</td>
                 <td style="width: 2%;">:</td>
-                <td style="font-weight: 700; color: #0f172a;">{{ $pendaftaran->skema->nama_skema }}</td>
+                <td style="font-weight: 700; color: #0f172a;">{{ $skema->nama_skema }}</td>
             </tr>
             <tr>
                 <td style="font-weight: 600;">Nomor</td>
                 <td>:</td>
-                <td style="font-weight: 700; color: #0f172a;">{{ $pendaftaran->skema->kode_skema }}</td>
+                <td style="font-weight: 700; color: #0f172a;">{{ $skema->kode_skema }}</td>
             </tr>
             <tr>
                 <td colspan="2" style="font-weight: 600;">TUK</td>
@@ -133,21 +177,23 @@
             </ul>
         </div>
 
-        <form id="form-ia-01" method="POST" action="{{ route('formulir.ia.simpan', ['kodeForm' => 'FR.IA.01', 'pendaftaranId' => $pendaftaran->id]) }}">
+        <form id="form-ia-01" class="{{ $isAssessmentEntryLocked ? 'ia01-assessment-readonly' : '' }}" method="POST" action="{{ $isMasterMode ? route('formulir.ia01.master.save', ['skemaId' => $skema->id]) : route('formulir.ia.simpan', ['kodeForm' => 'FR.IA.01', 'pendaftaranId' => $pendaftaran->id]) }}">
             @csrf
-            @unless($isMasterMode)
+            @if($isMasterMode)
+                <input type="hidden" name="master_version" value="{{ $masterVersion }}">
+            @else
                 <input type="hidden" name="version" value="{{ $savedData['_version'] ?? $iaRecord?->updated_at?->format('Y-m-d H:i:s') ?? '' }}">
                 <input type="hidden" name="finalisasi" value="1">
-            @endunless
+            @endif
             @php
-                $standarMap = $savedData['standar_industri'] ?? [];
+                $meta = $masterInst->additional_metadata ?? [];
+                if (!is_array($meta)) $meta = json_decode($meta, true) ?: [];
+                $standarMap = (array) $masterStandards;
                 $pencapaianMap = $savedData['pencapaian'] ?? [];
                 $lanjutMap = $savedData['penilaian_lanjut'] ?? [];
                 $catatanKukMap = $savedData['catatan_kuk'] ?? [];
 
-                $allUnits = $pendaftaran->skema->unitKompetensi ?? collect();
-                $meta = $masterInst->additional_metadata ?? [];
-                if (!is_array($meta)) $meta = json_decode($meta, true) ?: [];
+                $allUnits = $skema->unitKompetensi ?? collect();
                 $kelompokSplit = (int)($meta['kelompok_split'] ?? 0);
                 $defaultStandarMaster = $meta['default_standard'] ?? null;
                 $standarElemenMaster = $meta['standar_elemen'] ?? [];
@@ -254,17 +300,17 @@
                                         </td>
 
                                         <td style="border: 1px solid #0f172a; padding: 6px; vertical-align: middle; text-align: center; background: #fafafa;">
-                                            <textarea name="standar_industri[{{ $kuk->id }}]" rows="2" class="input-inline-bnsp" placeholder="Standar Industri..." {{ $isReadOnly ? 'readonly' : 'required' }}>{{ $curStandar }}</textarea>
+                                            <textarea name="standar_industri[{{ $kuk->id }}]" rows="2" class="input-inline-bnsp" placeholder="Standar Industri atau Tempat Kerja..." {{ $isStandardReadOnly ? 'readonly' : '' }}>{{ $curStandar }}</textarea>
                                         </td>
 
                                         <td style="text-align: center; vertical-align: middle; border: 1px solid #0f172a; padding: 4px;">
-                                            <input type="radio" name="pencapaian[{{ $kuk->id }}]" value="K" {{ $curPencapaian === 'K' ? 'checked' : '' }} style="width: 16px; height: 16px; accent-color: #059669; cursor: pointer;" {{ $isReadOnly ? 'disabled' : 'required' }}>
+                                            <input type="radio" name="pencapaian[{{ $kuk->id }}]" value="K" {{ $curPencapaian === 'K' ? 'checked' : '' }} style="width: 16px; height: 16px; accent-color: #059669; cursor: pointer;" {{ $isAssessmentReadOnly ? 'disabled' : 'required' }}>
                                         </td>
                                         <td style="text-align: center; vertical-align: middle; border: 1px solid #0f172a; padding: 4px;">
-                                            <input type="radio" name="pencapaian[{{ $kuk->id }}]" value="BK" {{ $curPencapaian === 'BK' ? 'checked' : '' }} style="width: 16px; height: 16px; accent-color: #dc2626; cursor: pointer;" {{ $isReadOnly ? 'disabled' : '' }}>
+                                            <input type="radio" name="pencapaian[{{ $kuk->id }}]" value="BK" {{ $curPencapaian === 'BK' ? 'checked' : '' }} style="width: 16px; height: 16px; accent-color: #dc2626; cursor: pointer;" {{ $isAssessmentReadOnly ? 'disabled' : '' }}>
                                         </td>
                                         <td style="border: 1px solid #0f172a; padding: 4px; vertical-align: middle;">
-                                            <input type="text" name="penilaian_lanjut[{{ $kuk->id }}]" class="input-inline-bnsp" value="{{ $curLanjut }}" placeholder="..." style="font-size: 0.78rem; width: 100%;" {{ $isReadOnly ? 'readonly' : '' }}>
+                                            <input type="text" name="penilaian_lanjut[{{ $kuk->id }}]" class="input-inline-bnsp" value="{{ $curLanjut }}" placeholder="..." style="font-size: 0.78rem; width: 100%;" {{ $isAssessmentReadOnly ? 'readonly' : '' }}>
                                         </td>
                                     </tr>
                                 @endforeach
@@ -305,11 +351,11 @@
                 <div style="font-weight: 700; font-size: 0.88rem; color: #0f172a; margin-bottom: 0.35rem;">Rekomendasi Keputusan Asesor:</div>
                 <div style="display: flex; align-items: center; gap: 1.5rem;">
                     <label style="display: inline-flex; align-items: center; gap: 0.35rem; font-weight: 600; font-size: 0.85rem; cursor: pointer;">
-                        <input type="radio" name="rekomendasi" value="K" {{ ($iaRecord->rekomendasi ?? null) === 'K' ? 'checked' : '' }} {{ $isReadOnly ? 'disabled' : 'required' }}>
+                        <input type="radio" name="rekomendasi" value="K" {{ ($iaRecord->rekomendasi ?? null) === 'K' ? 'checked' : '' }} {{ $isAssessmentReadOnly ? 'disabled' : 'required' }}>
                         <span style="color: #16a34a;">Kompeten (K)</span>
                     </label>
                     <label style="display: inline-flex; align-items: center; gap: 0.35rem; font-weight: 600; font-size: 0.85rem; cursor: pointer;">
-                        <input type="radio" name="rekomendasi" value="BK" {{ ($iaRecord->rekomendasi ?? null) === 'BK' ? 'checked' : '' }} {{ $isReadOnly ? 'disabled' : '' }}>
+                        <input type="radio" name="rekomendasi" value="BK" {{ ($iaRecord->rekomendasi ?? null) === 'BK' ? 'checked' : '' }} {{ $isAssessmentReadOnly ? 'disabled' : '' }}>
                         <span style="color: #dc2626;">Belum Kompeten (BK)</span>
                     </label>
                 </div>
@@ -403,17 +449,17 @@
                                             </td>
 
                                             <td style="border: 1px solid #0f172a; padding: 6px; vertical-align: middle; text-align: center; background: #fafafa;">
-                                                <textarea name="standar_industri[{{ $kuk->id }}]" rows="2" class="input-inline-bnsp" placeholder="Standar Industri..." {{ $isReadOnly ? 'readonly' : 'required' }}>{{ $curStandar }}</textarea>
+                                                <textarea name="standar_industri[{{ $kuk->id }}]" rows="2" class="input-inline-bnsp" placeholder="Standar Industri atau Tempat Kerja..." {{ $isStandardReadOnly ? 'readonly' : '' }}>{{ $curStandar }}</textarea>
                                             </td>
 
                                             <td style="text-align: center; vertical-align: middle; border: 1px solid #0f172a; padding: 4px;">
-                                                <input type="radio" name="pencapaian[{{ $kuk->id }}]" value="K" {{ $curPencapaian === 'K' ? 'checked' : '' }} style="width: 16px; height: 16px; accent-color: #059669; cursor: pointer;" {{ $isReadOnly ? 'disabled' : 'required' }}>
+                                                <input type="radio" name="pencapaian[{{ $kuk->id }}]" value="K" {{ $curPencapaian === 'K' ? 'checked' : '' }} style="width: 16px; height: 16px; accent-color: #059669; cursor: pointer;" {{ $isAssessmentReadOnly ? 'disabled' : 'required' }}>
                                             </td>
                                             <td style="text-align: center; vertical-align: middle; border: 1px solid #0f172a; padding: 4px;">
-                                                <input type="radio" name="pencapaian[{{ $kuk->id }}]" value="BK" {{ $curPencapaian === 'BK' ? 'checked' : '' }} style="width: 16px; height: 16px; accent-color: #dc2626; cursor: pointer;" {{ $isReadOnly ? 'disabled' : '' }}>
+                                                <input type="radio" name="pencapaian[{{ $kuk->id }}]" value="BK" {{ $curPencapaian === 'BK' ? 'checked' : '' }} style="width: 16px; height: 16px; accent-color: #dc2626; cursor: pointer;" {{ $isAssessmentReadOnly ? 'disabled' : '' }}>
                                             </td>
                                             <td style="border: 1px solid #0f172a; padding: 4px; vertical-align: middle;">
-                                                <input type="text" name="penilaian_lanjut[{{ $kuk->id }}]" class="input-inline-bnsp" value="{{ $curLanjut }}" placeholder="..." style="font-size: 0.78rem; width: 100%;" {{ $isReadOnly ? 'readonly' : '' }}>
+                                                <input type="text" name="penilaian_lanjut[{{ $kuk->id }}]" class="input-inline-bnsp" value="{{ $curLanjut }}" placeholder="..." style="font-size: 0.78rem; width: 100%;" {{ $isAssessmentReadOnly ? 'readonly' : '' }}>
                                             </td>
                                         </tr>
                                     @endforeach
@@ -426,14 +472,24 @@
                 </div>
             @endforeach
         @endif
+            @if($isMasterMode && $canManageMaster)
+                <div class="ia01-master-actions">
+                    <button type="submit" class="tombol tombol-sekunder" name="action" value="draft">Simpan Draft Master</button>
+                    <button type="submit" class="tombol tombol-utama" name="action" value="publish">Terbitkan Master</button>
+                </div>
+            @endif
         </form>
 
+        @unless($isMasterMode)
         <section class="ia01-signatures" aria-labelledby="ia01-signatures-title">
             <h2 id="ia01-signatures-title">Tanda Tangan</h2>
             <div class="ia01-signature-grid">
                 @foreach([
                     'asesi' => ['label' => 'ASESI', 'nama' => $asesiNama, 'reg' => null, 'data' => $asesiSignature, 'allowed' => $canSignAsesi],
-                    'asesor' => ['label' => 'ASESOR', 'nama' => $asesorNama, 'reg' => $asesorMet, 'data' => $asesorSignature, 'allowed' => $canSignAsesor],
+                    'asesor' => [
+                        'label' => 'ASESOR', 'nama' => $asesorNama, 'reg' => $asesorMet,
+                        'data' => $asesorSignature, 'allowed' => $canSignAsesor,
+                    ],
                 ] as $signer => $signatureInfo)
                     <div class="ia01-signature">
                         <strong>{{ $signatureInfo['label'] }}</strong>
@@ -457,7 +513,7 @@
                             @endif
                         @endif
 
-                        @if($signatureInfo['allowed'] && !$isLocked && $iaRecord)
+                        @if($signatureInfo['allowed'] && !$isLocked && ($iaRecord || $signer === 'asesor'))
                             <button
                                 type="button"
                                 class="tombol tombol-sekunder tombol-sm ia01-open-signature"
@@ -466,13 +522,16 @@
                                 data-endpoint="{{ route('formulir.ia01.signature.store', ['pendaftaranId' => $pendaftaran->id, 'signer' => $signer]) }}">
                                 {{ !empty($signatureInfo['data']['path']) ? 'Ubah Tanda Tangan' : 'Buat Tanda Tangan' }}
                             </button>
-                        @elseif($signatureInfo['allowed'] && !$isLocked && !$iaRecord)
-                            <small>Simpan draft terlebih dahulu untuk menandatangani formulir.</small>
+                        @elseif($signer === 'asesi' && !$isLocked && $isAssessmentFinished && $iaRecord?->status !== 'submitted')
+                            <small>Tanda tangan asesi tersedia setelah asesor mengirim hasil FR.IA.01.</small>
+                        @elseif($signer === 'asesor' && !$isLocked && $iaRecord?->status !== 'submitted' && !$isAssessmentInProgress && !$isAssessmentFinished)
+                            <small>Tanda tangan asesor tersedia saat jadwal asesmen berlangsung.</small>
                         @endif
                     </div>
                 @endforeach
             </div>
         </section>
+        @endunless
 
     </div>
 </div>
@@ -483,14 +542,29 @@
             @csrf
             <input type="hidden" name="version" value="{{ $savedData['_version'] ?? $iaRecord?->updated_at?->format('Y-m-d H:i:s') ?? '' }}">
             <input type="hidden" name="signature" id="ia01-signature-value">
-            <h2 id="ia01-signature-title">Tanda Tangan</h2>
-            <p>Gunakan mouse, touch, atau stylus untuk membuat tanda tangan.</p>
-            <canvas id="ia01-signature-canvas" aria-label="Area tanda tangan"></canvas>
+            <div class="ia01-signature-dialog-header">
+                <div>
+                    <h2 id="ia01-signature-title">Tanda Tangan</h2>
+                    <p>Gunakan mouse, layar sentuh, atau stylus untuk membubuhkan tanda tangan.</p>
+                </div>
+                <button type="button" class="ia01-signature-dialog-close" id="ia01-signature-close" aria-label="Tutup dialog tanda tangan">
+                    <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                </button>
+            </div>
+            <div class="ia01-signature-canvas-wrap">
+                <canvas id="ia01-signature-canvas" aria-label="Area tanda tangan"></canvas>
+            </div>
             <p class="ia01-signature-error" id="ia01-signature-error" role="alert" hidden></p>
             <div class="ia01-signature-actions">
-                <button type="button" class="tombol tombol-sekunder tombol-sm" id="ia01-signature-clear">Hapus</button>
-                <button type="button" class="tombol tombol-sekunder tombol-sm" id="ia01-signature-cancel">Batalkan</button>
-                <button type="submit" class="tombol tombol-utama tombol-sm">Simpan Tanda Tangan</button>
+                <button type="button" class="tombol tombol-sekunder tombol-sm" id="ia01-signature-clear">
+                    <i class="fa-solid fa-eraser" aria-hidden="true"></i> Hapus
+                </button>
+                <div class="ia01-signature-actions-end">
+                    <button type="button" class="tombol tombol-sekunder tombol-sm" id="ia01-signature-cancel">Batalkan</button>
+                    <button type="submit" class="tombol tombol-utama tombol-sm">
+                        <i class="fa-solid fa-check" aria-hidden="true"></i> Simpan Tanda Tangan
+                    </button>
+                </div>
             </div>
         </form>
     </dialog>

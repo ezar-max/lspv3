@@ -113,6 +113,13 @@
                             <i class="fa-solid fa-hourglass-half"></i> Asesmen Belum Selesai
                         </span>
                     @endif
+                    @if($isSelesai || $p->jadwal?->status_jadwal === 'selesai')
+                        <div style="margin-top:.65rem;">
+                            <a href="{{ route('asesi.hasil-formulir', $p->id) }}" class="tombol tombol-utama" style="font-size:.84rem;">
+                                Lihat Formulir & Rincian Hasil
+                            </a>
+                        </div>
+                    @endif
                 </div>
             </div>
 

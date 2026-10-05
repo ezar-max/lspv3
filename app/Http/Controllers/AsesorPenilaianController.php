@@ -142,6 +142,11 @@ class AsesorPenilaianController extends Controller
         }
 
         $tabAction = $request->input('tab_action', 'rekap');
+        if ($tabAction === 'observasi') {
+            return redirect()
+                ->route('formulir.ia01', $pendaftaran->id)
+                ->with('info', 'FR.IA.01 diisi melalui formulir resmi saat sesi asesmen berlangsung.');
+        }
         $isFinal = ($tabAction === 'rekap_final' && $request->filled('keputusan'));
 
         $request->validate([
@@ -158,30 +163,7 @@ class AsesorPenilaianController extends Controller
 
         $ttdAsesor = $request->tanda_tangan_asesor ?: ($user->tanda_tangan ?? $pendaftaran->tanda_tangan_asesor);
 
-        // 1. Simpan Ceklis Observasi Praktik (FR.IA.01) jika instrumen aktif di MAPA.02
-        $penilaianKuk = $request->input('penilaian_kuk', []);
-        if ($pendaftaran->isInstrumenAktif('FR.IA.01') && (!empty($penilaianKuk) || $request->has('catatan_observasi'))) {
-            IaPenilaian::updateOrCreate(
-                ['pendaftaran_id' => $pendaftaran->id, 'kode_formulir' => 'FR.IA.01'],
-                [
-                    'user_id' => $user->id,
-                    'role' => 'asesor',
-                    'data_jawaban' => [
-                        'penilaian_kuk' => $penilaianKuk,
-                        'catatan_observasi' => $request->input('catatan_observasi', ''),
-                        'evaluated_at' => now()->toDateTimeString(),
-                        'total_kuk_dinilai' => count($penilaianKuk)
-                    ],
-                    'rekomendasi' => in_array('BK', $penilaianKuk) ? 'BK' : 'K',
-                    'catatan_asesor' => $request->input('catatan_observasi', 'Seluruh kriteria unjuk kerja telah diobservasi secara langsung di TUK.'),
-                    'status' => 'completed',
-                    'tanda_tangan' => $ttdAsesor,
-                    'tanggal_tanda_tangan' => now(),
-                ]
-            );
-        }
-
-        // 2. Simpan Tugas Praktik Demonstrasi (FR.IA.02) jika ada catatan
+        // 1. Simpan Tugas Praktik Demonstrasi (FR.IA.02) jika ada catatan
         if ($pendaftaran->isInstrumenAktif('FR.IA.02') && $request->has('catatan_praktik')) {
             $catatanPraktik = $request->input('catatan_praktik', '');
             $existingIa02 = IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.02')->first();
@@ -631,4 +613,3 @@ class AsesorPenilaianController extends Controller
             ->with('sukses', "Berhasil menyimpan penilaian ujian esai untuk {$countUpdated} asesi.");
     }
 }
-

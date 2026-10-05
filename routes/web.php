@@ -104,6 +104,7 @@ Route::middleware(['auth', 'peran:asesi'])->prefix('asesi')->as('asesi.')->group
 
     Route::get('/hasil', [AsesiController::class, 'hasilNilai'])->name('hasil');
     Route::get('/hasil-nilai', [AsesiController::class, 'hasilNilai'])->name('hasil-nilai');
+    Route::get('/hasil-formulir/{pendaftaranId}', [AsesiController::class, 'hasilFormulir'])->name('hasil-formulir');
     Route::get('/dokumen', [AsesiController::class, 'dokumenBukti'])->name('dokumen');
 });
 
@@ -312,6 +313,9 @@ Route::middleware(['auth', 'peran:superadmin'])->prefix('superadmin')->as('super
 Route::middleware(['auth'])->prefix('formulir')->as('formulir.')->group(function () {
     Route::get('/', [FormulirController::class, 'index'])->name('index');
     Route::get('/ia-01/{pendaftaranId?}', [FormulirController::class, 'ia01'])->name('ia01');
+    Route::post('/ia-01/master/{skemaId}', [FormulirController::class, 'saveMasterIa01'])
+        ->whereNumber('skemaId')
+        ->name('ia01.master.save');
     Route::get('/ia-01/{pendaftaranId}/signature/{signer}', [FormulirController::class, 'showIa01Signature'])->name('ia01.signature');
     Route::post('/ia-01/{pendaftaranId}/signature/{signer}', [FormulirController::class, 'storeIa01Signature'])
         ->middleware('throttle:10,1')

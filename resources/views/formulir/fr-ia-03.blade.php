@@ -480,7 +480,7 @@
                                     {{ $q }}.
                                 </td>
                                 <td style="vertical-align: top; border-bottom: none;">
-                                    <textarea name="kelompok_soal[{{ $k }}][{{ $q }}][pertanyaan]" class="input-pertanyaan-ia03" rows="2" placeholder="Tuliskan pertanyaan pendukung observasi..." {{ $isAsesi ? 'readonly' : 'required' }}>{{ $valPertanyaan }}</textarea>
+                                    <textarea name="kelompok_soal[{{ $k }}][{{ $q }}][pertanyaan]" class="input-pertanyaan-ia03" rows="2" placeholder="Tuliskan pertanyaan pendukung observasi..." {{ !$isMasterMode ? 'readonly' : 'required' }}>{{ $valPertanyaan }}</textarea>
                                 </td>
                                 <td style="border-bottom: none;"></td>
                                 <td style="border-bottom: none;"></td>

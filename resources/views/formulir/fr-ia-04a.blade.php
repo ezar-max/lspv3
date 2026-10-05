@@ -141,10 +141,10 @@
                     <div style="margin-bottom: 0.5rem; font-weight: 600; color: #0f172a;">
                         Skenario proyek singkat / kegiatan terstruktur lainnya yang berisikan data informasi, lingkup bahasan dan instruksi untuk asesi: <span style="color: #ef4444;">*</span>
                     </div>
-                    <textarea name="skenario" class="input-inline-bnsp" rows="5" placeholder="{{ $isAsesi ? 'Skenario penugasan proyek belum diisi oleh Asesor di sistem.' : 'Tuliskan detail skenario proyek singkat dan instruksi untuk asesi...' }}" {{ $isAsesi ? 'readonly' : 'required' }}>{{ $skenarioVal }}</textarea>
+                    <textarea name="skenario" class="input-inline-bnsp" rows="5" placeholder="Skenario penugasan proyek belum diisi oleh Asesor di sistem." readonly>{{ $skenarioVal }}</textarea>
                     <div style="margin-top: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">
                         <strong style="font-size: 0.85rem;">Waktu : <span style="color: #ef4444;">*</span></strong>
-                        <input type="text" name="waktu_menit" class="input-inline-bnsp" value="{{ $waktuVal ? ($waktuVal . (str_contains($waktuVal, 'Menit') ? '' : ' Menit')) : '' }}" placeholder="Contoh: 90 Menit" style="max-width: 180px;" {{ $isAsesi ? 'readonly' : 'required' }}>
+                        <input type="text" name="waktu_menit" class="input-inline-bnsp" value="{{ $waktuVal ? ($waktuVal . (str_contains($waktuVal, 'Menit') ? '' : ' Menit')) : '' }}" placeholder="Contoh: 90 Menit" style="max-width: 180px;" readonly>
                     </div>
                 </td>
             </tr>
@@ -156,10 +156,10 @@
                     <div style="margin-bottom: 0.5rem; font-weight: 600; color: #0f172a;">
                         Hasil proyek singkat / kegiatan terstruktur lainnya: <span style="color: #ef4444;">*</span>
                     </div>
-                    <textarea name="demonstrasi" class="input-inline-bnsp" rows="4" placeholder="{{ $isAsesi ? 'Poin demonstrasi belum diisi oleh Asesor.' : 'Tuliskan hal-hal yang perlu didemonstrasikan atau dipresentasikan oleh asesi...' }}" {{ $isAsesi ? 'readonly' : 'required' }}>{{ $demoVal }}</textarea>
+                    <textarea name="demonstrasi" class="input-inline-bnsp" rows="4" placeholder="Poin demonstrasi belum diisi oleh Asesor." readonly>{{ $demoVal }}</textarea>
                     <div style="margin-top: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">
                         <strong style="font-size: 0.85rem;">Waktu : <span style="color: #ef4444;">*</span></strong>
-                        <input type="text" name="waktu_demo" class="input-inline-bnsp" value="{{ $waktuDemoVal ? ($waktuDemoVal . (str_contains($waktuDemoVal, 'Menit') ? '' : ' Menit')) : '' }}" placeholder="Contoh: 30 Menit" style="max-width: 180px;" {{ $isAsesi ? 'readonly' : 'required' }}>
+                        <input type="text" name="waktu_demo" class="input-inline-bnsp" value="{{ $waktuDemoVal ? ($waktuDemoVal . (str_contains($waktuDemoVal, 'Menit') ? '' : ' Menit')) : '' }}" placeholder="Contoh: 30 Menit" style="max-width: 180px;" readonly>
                     </div>
                 </td>
             </tr>
@@ -181,7 +181,7 @@
                 </td>
             </tr>
         </table>
-        </form></table>
+        </form>
 
         <!-- TANDA TANGAN PENGESAHAN -->
         @include('komponen.pengesahan-asesi-asesor', [
@@ -200,13 +200,6 @@
         <div style="font-size: 0.78rem; font-style: italic; color: #475569; margin-bottom: 1.5rem;">
             *) Apabila asesi pada Level 4 ke atas, berikan tugas proyek yang meliputi tentang pemecahan masalah dan analisa
         </div>
-
-        <!-- TABEL PENYUSUN DAN VALIDATOR -->
-        @include('komponen.tabel-penyusun-validator', [
-            'pendaftaran' => $pendaftaran,
-            'kodeForm' => 'FR.IA.04A',
-            'tableClass' => 'tabel-bnsp'
-        ])
 
         @include('komponen.navigasi-form-bawah', [
             'nextUrl' => route('formulir.ia04b', $pendaftaran->id),

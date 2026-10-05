@@ -95,6 +95,16 @@
         dialog.close();
     });
 
+    document.getElementById('ia01-signature-close').addEventListener('click', () => {
+        dialog.close();
+    });
+
+    dialog.addEventListener('click', (event) => {
+        if (event.target === dialog) {
+            dialog.close();
+        }
+    });
+
     form.addEventListener('submit', (event) => {
         if (!hasInk) {
             event.preventDefault();

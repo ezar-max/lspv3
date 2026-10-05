@@ -147,6 +147,33 @@
     box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.15);
 }
 
+.ia01-assessment-readonly .input-inline-bnsp[readonly] {
+    border-style: dashed;
+    background: #f1f5f9;
+    color: #64748b;
+    cursor: not-allowed;
+}
+
+.input-inline-bnsp[name^="standar_industri"][readonly] {
+    border-style: dashed;
+    background: #f1f5f9;
+    color: #475569;
+    cursor: not-allowed;
+}
+
+.ia01-master-actions {
+    display: flex;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin: 1.25rem 0;
+}
+
+.ia01-assessment-readonly input[type="radio"]:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
 .kotak-panduan-asesor {
     border: 1px solid #334155;
     padding: 1rem 1.25rem;
@@ -638,15 +665,65 @@
 }
 
 .ia01-signature-dialog {
+    box-sizing: border-box;
+    position: fixed;
+    inset: 0;
+    margin: auto;
     width: min(680px, calc(100% - 2rem));
     max-width: none;
+    max-height: calc(100dvh - 2rem);
+    overflow-y: auto;
     padding: 1.25rem;
     border: 1px solid #cbd5e1;
+    border-radius: 1rem;
+    background: #ffffff;
     color: #1e293b;
+    box-shadow: 0 24px 70px rgba(15, 23, 42, 0.28);
+}
+
+.ia01-signature-dialog form {
+    display: flex;
+    flex-direction: column;
+}
+
+.ia01-signature-dialog-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.ia01-signature-dialog-close {
+    display: inline-flex;
+    width: 2rem;
+    height: 2rem;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.6rem;
+    background: #ffffff;
+    color: #64748b;
+    cursor: pointer;
+}
+
+.ia01-signature-dialog-close:hover {
+    border-color: #cbd5e1;
+    background: #f8fafc;
+    color: #0f172a;
+}
+
+.ia01-signature-canvas-wrap {
+    overflow: hidden;
+    padding: 0.35rem;
+    border: 1px dashed #cbd5e1;
+    border-radius: 0.8rem;
+    background: #f8fafc;
 }
 
 .ia01-signature-dialog::backdrop {
     background: rgba(15, 23, 42, 0.55);
+    backdrop-filter: blur(2px);
 }
 
 .ia01-signature-dialog h2 {
@@ -666,8 +743,9 @@
     display: block;
     width: 100%;
     height: 230px;
-    border: 1px solid #94a3b8;
-    background: transparent;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.55rem;
+    background: #ffffff;
     touch-action: none;
     cursor: crosshair;
 }
@@ -678,10 +756,18 @@
 
 .ia01-signature-actions {
     display: flex;
-    justify-content: flex-end;
+    align-items: center;
+    justify-content: space-between;
     flex-wrap: wrap;
     gap: 0.5rem;
     margin-top: 0.85rem;
+}
+
+.ia01-signature-actions-end {
+    display: flex;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 0.5rem;
 }
 
 @media (max-width: 640px) {
@@ -701,8 +787,34 @@
         padding: 0.85rem;
     }
 
+    .ia01-signature-dialog[open] {
+        width: calc(100% - 1rem);
+        max-height: calc(100dvh - 1rem);
+    }
+
     #ia01-signature-canvas {
-        height: 190px;
+        height: min(52vh, 240px);
+        min-height: 160px;
+    }
+
+    .ia01-signature-actions {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .ia01-signature-actions > .tombol,
+    .ia01-signature-actions-end,
+    .ia01-signature-actions-end > .tombol {
+        width: 100%;
+    }
+
+    .ia01-signature-actions-end {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .ia01-signature-actions-end > .tombol:last-child {
+        grid-column: 1 / -1;
     }
 }
 

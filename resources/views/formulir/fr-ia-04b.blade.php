@@ -184,12 +184,12 @@
                     @endphp
                     <tr>
                         <td style="font-weight: 600; color: #0f172a;">
-                            <input type="text" name="spesifikasi[{{ $idx }}][lingkup]" class="input-inline-bnsp" value="{{ $asp['lingkup'] ?? '' }}" placeholder="Lingkup penyajian..." {{ $isAsesi ? 'readonly' : '' }}>
+                            <input type="text" name="spesifikasi[{{ $idx }}][lingkup]" class="input-inline-bnsp" value="{{ $asp['lingkup'] ?? '' }}" placeholder="Lingkup penyajian..." {{ !$isMasterMode ? 'readonly' : '' }}>
                         </td>
                         <td>
                             <div style="margin-bottom: 0.35rem;">
                                 <strong style="color: #0284c7; display: block;">Pertanyaan:</strong>
-                                <textarea name="spesifikasi[{{ $idx }}][tanya]" class="input-inline-bnsp" rows="2" style="font-size: 0.8rem;" {{ $isAsesi ? 'readonly' : '' }}>{{ $asp['tanya'] ?? '' }}</textarea>
+                                <textarea name="spesifikasi[{{ $idx }}][tanya]" class="input-inline-bnsp" rows="2" style="font-size: 0.8rem;" {{ !$isMasterMode ? 'readonly' : '' }}>{{ $asp['tanya'] ?? '' }}</textarea>
                             </div>
                             <div>
                                 <strong style="color: #059669; display: block;">Tanggapan:</strong>
@@ -197,7 +197,7 @@
                             </div>
                         </td>
                         <td>
-                            <input type="text" name="spesifikasi[{{ $idx }}][kuk]" class="input-inline-bnsp" value="{{ $asp['kuk'] ?? '' }}" style="font-size: 0.8rem; font-weight: 600;" {{ $isAsesi ? 'readonly' : '' }}>
+                            <input type="text" name="spesifikasi[{{ $idx }}][kuk]" class="input-inline-bnsp" value="{{ $asp['kuk'] ?? '' }}" style="font-size: 0.8rem; font-weight: 600;" {{ !$isMasterMode ? 'readonly' : '' }}>
                         </td>
                         <td style="text-align: center; vertical-align: middle;">
                             <input type="radio" name="spesifikasi[{{ $idx }}][pencapaian]" value="K" {{ $pencapaianVal === 'K' ? 'checked' : '' }} style="width: 16px; height: 16px; accent-color: #059669;" {{ $isAsesi ? 'disabled' : '' }}>
@@ -251,13 +251,6 @@
             'asesorMet' => $asesorMet ?? '-',
             'asesorTtd' => $asesorTtd ?? null,
             'tglAsesmen' => $tglAsesmen ?? null
-        ])
-
-        <!-- TABEL PENYUSUN DAN VALIDATOR -->
-        @include('komponen.tabel-penyusun-validator', [
-            'pendaftaran' => $pendaftaran,
-            'kodeForm' => 'FR.IA.04B',
-            'tableClass' => 'tabel-bnsp'
         ])
 
         @include('komponen.navigasi-form-bawah', [

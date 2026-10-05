@@ -3,9 +3,12 @@
 namespace App\Services;
 
 use App\Models\IaPenilaian;
+use App\Models\JadwalAsesmen;
 use App\Models\LogAktivitas;
 use App\Models\PendaftaranAsesi;
 use App\Models\Pengguna;
+use App\Models\SchemeMasterInstrument;
+use App\Models\SkemaSertifikasi;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
@@ -16,7 +19,7 @@ class FrIa01Service
 {
     private const FORM_CODE = 'FR.IA.01';
 
-    private const LOCKED_STATUSES = ['completed', 'submitted', 'evaluated', 'locked', 'selesai'];
+    private const LOCKED_STATUSES = ['completed', 'evaluated', 'locked', 'selesai'];
 
     public function loadAuthorizedRegistration(int $id, Pengguna $user): PendaftaranAsesi
     {
@@ -68,11 +71,39 @@ class FrIa01Service
         abort_unless($mapa02 && $mapa02->status_mapa === 'selesai', 403, 'FR.IA.01 belum dapat digunakan karena MAPA.02 belum dikonfirmasi.');
         abort_unless(! empty($mapa02->matriks_peta), 403, 'MAPA.02 belum memiliki matriks instrumen yang dikonfirmasi.');
         abort_unless($pendaftaran->isInstrumenAktif(self::FORM_CODE), 403, 'FR.IA.01 tidak aktif pada MAPA.02 untuk pendaftaran ini.');
+
+        $record = $pendaftaran->relationLoaded('iaPenilaian')
+            ? $pendaftaran->iaPenilaian->firstWhere('kode_formulir', self::FORM_CODE)
+            : IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', self::FORM_CODE)->first();
+        $hasMasterSnapshot = $this->executionSnapshot($pendaftaran, $record) !== null;
+        abort_unless(
+            $hasMasterSnapshot || $this->publishedMasterSnapshot($pendaftaran->skema) !== null,
+            403,
+            'Master FR.IA.01 belum memiliki standar lengkap yang diterbitkan.'
+        );
     }
 
     public function isLocked(?IaPenilaian $record): bool
     {
         return $record && in_array(strtolower((string) $record->status), self::LOCKED_STATUSES, true);
+    }
+
+    public function isAssessmentInProgress(PendaftaranAsesi $pendaftaran): bool
+    {
+        $jadwal = $pendaftaran->jadwal;
+
+        return $jadwal && $jadwal->syncRealtimeStatus() === 'berlangsung';
+    }
+
+    public function isAssessmentFinished(PendaftaranAsesi $pendaftaran): bool
+    {
+        if ($pendaftaran->status_pendaftaran === 'selesai' || $pendaftaran->rekomendasi()->exists()) {
+            return true;
+        }
+
+        $jadwal = $pendaftaran->jadwal;
+
+        return $jadwal && $jadwal->syncRealtimeStatus() === 'selesai';
     }
 
     private function isRegistrationClosed(PendaftaranAsesi $pendaftaran): bool
@@ -86,6 +117,8 @@ class FrIa01Service
         return in_array($user->peran, ['asesor', 'admin', 'superadmin'], true)
             && ! $this->isRegistrationClosed($pendaftaran)
             && ! $this->isLocked($record)
+            && ($record?->status !== 'submitted')
+            && $this->isAssessmentInProgress($pendaftaran)
             && ($user->peran !== 'asesor'
                 || (int) $pendaftaran->asesor_id === (int) $user->id
                 || $pendaftaran->jadwal()->where('asesor_id', $user->id)->exists());
@@ -96,16 +129,171 @@ class FrIa01Service
         return $user->peran === 'asesor'
             && ! $this->isRegistrationClosed($pendaftaran)
             && ! $this->isLocked($record)
+            && ($record?->status !== 'submitted')
+            && $this->isAssessmentInProgress($pendaftaran)
             && ((int) $pendaftaran->asesor_id === (int) $user->id
                 || $pendaftaran->jadwal()->where('asesor_id', $user->id)->exists());
+    }
+
+    public function canManageMaster(Pengguna $user, SkemaSertifikasi $skema): bool
+    {
+        return in_array($user->peran, ['admin', 'superadmin'], true)
+            || ($user->peran === 'asesor'
+                && ((int) $user->skema_id === (int) $skema->id
+                    || JadwalAsesmen::where('asesor_id', $user->id)->where('skema_id', $skema->id)->exists()));
+    }
+
+    public function saveMaster(SkemaSertifikasi $skema, Pengguna $user, array $input, bool $publish): SchemeMasterInstrument
+    {
+        abort_unless($this->canManageMaster($user, $skema), 403, 'Anda tidak berwenang mengelola master FR.IA.01 untuk skema ini.');
+
+        $validated = Validator::make($input, [
+            'master_version' => ['present', 'nullable', 'string', 'max:64'],
+            'standar_industri' => ['nullable', 'array', 'max:500'],
+            'standar_industri.*' => ['nullable', 'string', 'max:3000'],
+        ])->validate();
+
+        $kukIds = $this->kukIdsForScheme($skema);
+        $standards = $this->normalizeMasterStandards((array) ($validated['standar_industri'] ?? []), $skema);
+        $this->assertMasterKeysBelongToScheme((array) ($validated['standar_industri'] ?? []), $kukIds);
+        if ($publish) {
+            abort_if(!$kukIds, 422, 'Skema belum memiliki KUK untuk diterbitkan sebagai master FR.IA.01.');
+            foreach ($kukIds as $kukId) {
+                if (trim((string) ($standards[$kukId] ?? '')) === '') {
+                    throw ValidationException::withMessages([
+                        'standar_industri' => 'Lengkapi standar industri atau tempat kerja untuk semua KUK sebelum menerbitkan master.',
+                    ]);
+                }
+            }
+        }
+
+        return DB::transaction(function () use ($skema, $user, $validated, $standards, $publish) {
+            $instrument = SchemeMasterInstrument::where('skema_id', $skema->id)
+                ->whereIn('instrument_code', SchemeMasterInstrument::getCodeAliases('ia_01'))
+                ->lockForUpdate()
+                ->first();
+            $instrument ??= new SchemeMasterInstrument([
+                'skema_id' => $skema->id,
+                'instrument_code' => 'ia_01',
+                'title' => 'Ceklis Observasi Aktivitas',
+                'is_active' => true,
+                'created_by' => $user->id,
+            ]);
+
+            $metadata = $instrument->additional_metadata ?? [];
+            $draftVersion = data_get($metadata, '_draft_version');
+            $submittedVersion = (string) ($validated['master_version'] ?? '');
+            if ($draftVersion && !hash_equals((string) $draftVersion, $submittedVersion)) {
+                abort(409, 'Master FR.IA.01 berubah di tab lain. Muat ulang halaman sebelum menyimpan.');
+            }
+
+            if (!array_key_exists('lifecycle_status', $metadata)
+                && !empty($metadata['is_saved'])
+                && empty($metadata['published_version'])) {
+                $legacyStandards = (array) ($metadata['standar_industri'] ?? $metadata['kuk_standards'] ?? []);
+                $legacyStandards['standar_elemen'] = $legacyStandards['standar_elemen'] ?? $metadata['standar_elemen'] ?? [];
+                $legacyStandards['default_standard'] = $legacyStandards['default_standard'] ?? $metadata['default_standard'] ?? $metadata['metadata_default_standard'] ?? '';
+                $legacyPublishedStandards = $this->normalizeMasterStandards($legacyStandards, $skema);
+                if ($this->standardsCoverKuks($legacyPublishedStandards, $this->kukIdsForScheme($skema))) {
+                    $metadata['published_standards'] = $legacyPublishedStandards;
+                    $metadata['published_version'] = 1;
+                    $metadata['published_at'] = $metadata['saved_at'] ?? now()->toIso8601String();
+                }
+            }
+
+            $metadata['standar_industri'] = $standards;
+            $metadata['draft_standards'] = $standards;
+            unset($metadata['signature_asesor']);
+            $metadata['_draft_version'] = (string) Str::uuid();
+            $metadata['is_saved'] = true;
+            $metadata['saved_at'] = now()->toDateTimeString();
+
+            if ($publish) {
+                $metadata['published_standards'] = $standards;
+                $metadata['published_version'] = (int) ($metadata['published_version'] ?? 0) + 1;
+                $metadata['published_at'] = now()->toIso8601String();
+                $metadata['lifecycle_status'] = 'published';
+            } else {
+                $metadata['lifecycle_status'] = 'draft';
+            }
+
+            $instrument->additional_metadata = $metadata;
+            $instrument->save();
+            LogAktivitas::catat(
+                $publish ? 'Master FR.IA.01 diterbitkan' : 'Draft master FR.IA.01 disimpan',
+                "Skema ID {$skema->id}; instrumen {$instrument->id}"
+            );
+
+            return $instrument;
+        });
+    }
+
+    public function publishedMasterSnapshot(SkemaSertifikasi $skema): ?array
+    {
+        $kukIds = $this->kukIdsForScheme($skema);
+        if (!$kukIds) {
+            return null;
+        }
+
+        $instrument = SchemeMasterInstrument::where('skema_id', $skema->id)
+            ->whereIn('instrument_code', SchemeMasterInstrument::getCodeAliases('ia_01'))
+            ->where('is_active', true)
+            ->first();
+        if (!$instrument) {
+            return null;
+        }
+
+        $metadata = $instrument->additional_metadata ?? [];
+        $legacyPublished = !array_key_exists('lifecycle_status', $metadata)
+            && (bool) ($metadata['is_saved'] ?? false);
+        if (!$legacyPublished && empty($metadata['published_version'])) {
+            return null;
+        }
+
+        $source = $legacyPublished
+            ? (!empty($metadata['published_standards'])
+                ? $metadata['published_standards']
+                : (!empty($metadata['standar_industri']) ? $metadata['standar_industri'] : ($metadata['kuk_standards'] ?? [])))
+            : ($metadata['published_standards'] ?? []);
+        $source = (array) $source;
+        $source['standar_elemen'] = $source['standar_elemen'] ?? $metadata['standar_elemen'] ?? [];
+        $source['default_standard'] = $source['default_standard'] ?? $metadata['default_standard'] ?? $metadata['metadata_default_standard'] ?? '';
+        $standards = $this->normalizeMasterStandards((array) $source, $skema);
+        foreach ($kukIds as $kukId) {
+            if (trim((string) ($standards[$kukId] ?? '')) === '') {
+                return null;
+            }
+        }
+
+        return [
+            'instrument_id' => (int) $instrument->id,
+            'version' => (int) ($metadata['published_version'] ?? 1),
+            'published_at' => $metadata['published_at'] ?? $instrument->updated_at?->toIso8601String(),
+            'standar_industri' => $standards,
+        ];
+    }
+
+    public function masterEditorStandards(?SchemeMasterInstrument $instrument, SkemaSertifikasi $skema): array
+    {
+        $metadata = $instrument?->additional_metadata ?? [];
+
+        return $this->normalizeMasterStandards(
+            (array) ($metadata['draft_standards'] ?? $metadata['published_standards'] ?? $metadata['standar_industri'] ?? $metadata['kuk_standards'] ?? []),
+            $skema
+        );
+    }
+
+    public function executionStandards(PendaftaranAsesi $pendaftaran, ?IaPenilaian $record): array
+    {
+        return $this->executionSnapshot($pendaftaran, $record)['standar_industri'] ?? [];
     }
 
     public function canSignAsesi(Pengguna $user, PendaftaranAsesi $pendaftaran, ?IaPenilaian $record): bool
     {
         return $user->peran === 'asesi'
             && (int) $pendaftaran->asesi_id === (int) $user->id
-            && ! $this->isRegistrationClosed($pendaftaran)
-            && ! $this->isLocked($record);
+            && $record?->status === 'submitted'
+            && $this->isAssessmentFinished($pendaftaran);
     }
 
     public function kukIds(PendaftaranAsesi $pendaftaran): array
@@ -127,6 +315,11 @@ class FrIa01Service
             ->where('kode_formulir', self::FORM_CODE)
             ->first();
         abort_unless($this->canEdit($user, $pendaftaran, $record), 403, 'FR.IA.01 sudah terkunci atau Anda tidak berwenang mengubahnya.');
+        abort_unless(
+            $this->hasValidSignature($record, 'asesor', $pendaftaran),
+            422,
+            'Tanda tangan asesor wajib dibuat sebelum menyimpan FR.IA.01.'
+        );
 
         $validated = Validator::make($input, [
             'version' => ['present', 'nullable', 'string', 'max:64'],
@@ -152,7 +345,6 @@ class FrIa01Service
         $this->assertMapKeysBelongToRegistration($validated, $kukIds, $elementIds);
 
         $pencapaian = (array) ($validated['pencapaian'] ?? []);
-        $standar = $this->normalizeStandar((array) ($validated['standar_industri'] ?? []), $pendaftaran);
         $penilaianLanjut = (array) ($validated['penilaian_lanjut'] ?? []);
         $catatanKuk = (array) ($validated['catatan_kuk'] ?? []);
         $umpanBalik = trim((string) ($validated['umpan_balik'] ?? ''));
@@ -160,20 +352,12 @@ class FrIa01Service
         $finalize = ! isset($validated['simpan_draft']) && isset($validated['finalisasi']);
 
         if ($finalize) {
-            $incomplete = [];
             foreach ($kukIds as $kukId) {
                 if (! in_array($pencapaian[$kukId] ?? null, ['K', 'BK'], true)) {
-                    $incomplete[] = (string) $kukId;
+                    throw ValidationException::withMessages([
+                        'pencapaian' => 'Lengkapi pencapaian untuk semua KUK sebelum menyimpan formulir.',
+                    ]);
                 }
-                if (trim((string) ($standar[$kukId] ?? '')) === '') {
-                    $incomplete[] = 'standar:'.$kukId;
-                }
-            }
-
-            if ($incomplete) {
-                throw ValidationException::withMessages([
-                    'pencapaian' => 'Lengkapi pencapaian dan standar industri untuk semua KUK sebelum menyimpan formulir.',
-                ]);
             }
             if (! $kukIds) {
                 throw ValidationException::withMessages(['pencapaian' => 'Skema belum memiliki KUK untuk dinilai.']);
@@ -184,15 +368,14 @@ class FrIa01Service
             if (! $rekomendasi) {
                 throw ValidationException::withMessages(['rekomendasi' => 'Pilih rekomendasi Kompeten atau Belum Kompeten.']);
             }
-            if (! $this->hasValidSignature($record, 'asesor', $pendaftaran)
-                || ! $this->hasValidSignature($record, 'asesi', $pendaftaran)) {
+            if (! $this->hasValidSignature($record, 'asesor', $pendaftaran)) {
                 throw ValidationException::withMessages([
-                    'signature' => 'Tanda tangan asesor dan asesi wajib tersedia sebelum formulir difinalisasi.',
+                    'signature' => 'Tanda tangan asesor wajib tersedia sebelum formulir difinalisasi.',
                 ]);
             }
         }
 
-        $saved = DB::transaction(function () use ($pendaftaran, $user, $validated, $standar, $pencapaian, $penilaianLanjut, $catatanKuk, $umpanBalik, $rekomendasi, $finalize) {
+        $saved = DB::transaction(function () use ($pendaftaran, $user, $validated, $pencapaian, $penilaianLanjut, $catatanKuk, $umpanBalik, $rekomendasi, $finalize, $kukIds) {
             PendaftaranAsesi::whereKey($pendaftaran->id)->lockForUpdate()->firstOrFail();
             $current = IaPenilaian::where('pendaftaran_id', $pendaftaran->id)
                 ->where('kode_formulir', self::FORM_CODE)
@@ -200,15 +383,31 @@ class FrIa01Service
                 ->first();
             $this->assertVersion($current, (string) ($validated['version'] ?? ''));
             abort_unless(! $this->isLocked($current), 403, 'FR.IA.01 sudah terkunci dan tidak dapat diubah.');
-            if ($finalize && (! $this->hasValidSignature($current, 'asesor', $pendaftaran)
-                || ! $this->hasValidSignature($current, 'asesi', $pendaftaran))) {
+            abort_unless($current?->status !== 'submitted', 403, 'FR.IA.01 sudah dikirim untuk ditandatangani asesi.');
+            abort_unless(
+                $this->isAssessmentInProgress($pendaftaran),
+                403,
+                'FR.IA.01 hanya dapat diisi saat jadwal asesmen sedang berlangsung.'
+            );
+            if (! $this->hasValidSignature($current, 'asesor', $pendaftaran)) {
                 throw ValidationException::withMessages([
-                    'signature' => 'Tanda tangan asesor dan asesi wajib tersedia sebelum formulir difinalisasi.',
+                    'signature' => 'Tanda tangan asesor wajib tersedia sebelum menyimpan FR.IA.01.',
                 ]);
             }
 
             $data = $current?->data_jawaban ?? [];
+            $snapshot = $this->executionSnapshot($pendaftaran, $current);
+            abort_unless(is_array($snapshot), 403, 'Master FR.IA.01 belum diterbitkan atau tidak lagi tersedia.');
+            $standar = (array) ($snapshot['standar_industri'] ?? []);
+            foreach ($kukIds as $kukId) {
+                if (trim((string) ($standar[$kukId] ?? '')) === '') {
+                    throw ValidationException::withMessages([
+                        'standar_industri' => 'Standar master FR.IA.01 belum lengkap untuk semua KUK.',
+                    ]);
+                }
+            }
             $data = array_merge($data, [
+                'master_snapshot' => $snapshot,
                 'standar_industri' => $standar,
                 'pencapaian' => $pencapaian,
                 'penilaian_lanjut' => $penilaianLanjut,
@@ -228,7 +427,7 @@ class FrIa01Service
             $current->data_jawaban = $data;
             $current->catatan_asesor = $umpanBalik;
             $current->rekomendasi = $rekomendasi;
-            $current->status = $finalize ? 'completed' : 'draft';
+            $current->status = $finalize ? 'submitted' : 'draft';
             $current->tanda_tangan = data_get($data, 'signature_asesor.path', $current->tanda_tangan);
             $current->save();
 
@@ -251,14 +450,8 @@ class FrIa01Service
         if (! in_array($signer, ['asesor', 'asesi'], true)) {
             abort(404);
         }
-        if ($signer === 'asesor') {
-            abort_unless($this->canSignAsesor($user, $pendaftaran, null), 403, 'Hanya asesor yang ditugaskan yang dapat menandatangani formulir ini.');
-        } else {
-            abort_unless($this->canSignAsesi($user, $pendaftaran, null), 403, 'Tanda tangan hanya dapat diberikan oleh asesi pada pendaftarannya sendiri.');
-        }
-
         $validated = Validator::make($input, [
-            'version' => ['required', 'string', 'max:64'],
+            'version' => ['present', 'nullable', 'string', 'max:64'],
             'signature' => ['required', 'string', 'max:500000', 'regex:/^data:image\\/png;base64,[A-Za-z0-9+\\/=]+$/'],
         ])->validate();
         $binary = $this->decodeSignature($validated['signature']);
@@ -266,10 +459,19 @@ class FrIa01Service
         $record = IaPenilaian::where('pendaftaran_id', $pendaftaran->id)
             ->where('kode_formulir', self::FORM_CODE)
             ->first();
-        abort_unless($record, 422, 'Simpan draft FR.IA.01 terlebih dahulu sebelum memberikan tanda tangan.');
+        abort_unless(
+            $record || $signer === 'asesor',
+            422,
+            'Asesor harus menandatangani FR.IA.01 terlebih dahulu sebelum asesi dapat membubuhkan tanda tangan.'
+        );
         abort_unless(! $this->isLocked($record), 403, 'FR.IA.01 sudah terkunci dan tidak menerima tanda tangan baru.');
+        if ($signer === 'asesor') {
+            abort_unless($this->canSignAsesor($user, $pendaftaran, $record), 403, 'Tanda tangan hanya dapat dibuat oleh asesor yang ditugaskan sebelum formulir dikirim atau dikunci.');
+        } else {
+            abort_unless($this->canSignAsesi($user, $pendaftaran, $record), 403, 'Asesi hanya dapat menandatangani setelah asesmen selesai dan formulir dikirim.');
+        }
 
-        $previousPath = data_get($record->data_jawaban, 'signature_'.$signer.'.path');
+        $previousPath = data_get($record?->data_jawaban, 'signature_'.$signer.'.path');
         $path = 'signatures/fr-ia-01/'.$pendaftaran->id.'/'.Str::uuid().'.png';
         if (! Storage::disk('local')->put($path, $binary)) {
             throw new \RuntimeException('Tanda tangan tidak dapat disimpan ke penyimpanan privat.');
@@ -278,11 +480,28 @@ class FrIa01Service
         try {
             $saved = DB::transaction(function () use ($pendaftaran, $user, $signer, $validated, $record, $path) {
                 PendaftaranAsesi::whereKey($pendaftaran->id)->lockForUpdate()->firstOrFail();
-                $current = IaPenilaian::whereKey($record->id)->lockForUpdate()->firstOrFail();
-                $this->assertVersion($current, $validated['version']);
+                $current = $record
+                    ? IaPenilaian::whereKey($record->id)->lockForUpdate()->firstOrFail()
+                    : IaPenilaian::where('pendaftaran_id', $pendaftaran->id)
+                        ->where('kode_formulir', self::FORM_CODE)
+                        ->lockForUpdate()
+                        ->first();
+                $this->assertVersion($current, (string) ($validated['version'] ?? ''));
                 abort_unless(! $this->isLocked($current), 403, 'FR.IA.01 sudah terkunci dan tidak menerima tanda tangan baru.');
+                if ($signer === 'asesor') {
+                    abort_unless($this->canSignAsesor($user, $pendaftaran, $current), 403, 'Tanda tangan hanya dapat dibuat oleh asesor yang ditugaskan sebelum formulir dikirim atau dikunci.');
+                } else {
+                    abort_unless($this->canSignAsesi($user, $pendaftaran, $current), 403, 'Asesi hanya dapat menandatangani setelah asesmen selesai dan formulir dikirim.');
+                }
 
-                $data = $current->data_jawaban ?? [];
+                $data = $current?->data_jawaban ?? [];
+                if (empty($data['master_snapshot'])) {
+                    $snapshot = $this->executionSnapshot($pendaftaran, $current);
+                    abort_unless(is_array($snapshot), 403, 'Master FR.IA.01 belum diterbitkan atau tidak lagi tersedia.');
+                    $data['master_snapshot'] = $snapshot;
+                    $data['standar_industri'] = $snapshot['standar_industri'];
+                    $data['standar_industri_scope'] = 'kuk';
+                }
                 $field = 'signature_'.$signer;
                 $data[$field] = [
                     'path' => $path,
@@ -294,10 +513,16 @@ class FrIa01Service
                     'status' => 'signed',
                 ];
                 $data['_version'] = (string) Str::uuid();
+                $current ??= new IaPenilaian([
+                    'pendaftaran_id' => $pendaftaran->id,
+                    'kode_formulir' => self::FORM_CODE,
+                ]);
                 $current->data_jawaban = $data;
                 if ($signer === 'asesor') {
                     $current->tanda_tangan = $path;
                     $current->tanggal_tanda_tangan = now();
+                } else {
+                    $current->status = 'completed';
                 }
                 $current->save();
 
@@ -334,17 +559,18 @@ class FrIa01Service
 
         $record = IaPenilaian::where('pendaftaran_id', $pendaftaran->id)
             ->where('kode_formulir', self::FORM_CODE)
-            ->firstOrFail();
-        $signature = data_get($record->data_jawaban, 'signature_'.$signer);
-        $expectedUserId = $signer === 'asesi'
-            ? (int) $pendaftaran->asesi_id
-            : (int) ($pendaftaran->asesor_id ?: $pendaftaran->jadwal?->asesor_id);
+            ->first();
+        $signature = data_get($record?->data_jawaban, 'signature_'.$signer);
+        abort_unless($record, 404, 'Tanda tangan tidak tersedia.');
+        $expectedUserIds = $signer === 'asesi'
+            ? [(int) $pendaftaran->asesi_id]
+            : array_filter([(int) $pendaftaran->asesor_id, (int) $pendaftaran->jadwal?->asesor_id]);
 
         abort_unless(
             is_array($signature)
                 && (int) ($signature['pendaftaran_id'] ?? 0) === (int) $pendaftaran->id
                 && ($signature['document'] ?? null) === self::FORM_CODE
-                && (int) ($signature['signer_user_id'] ?? 0) === $expectedUserId
+                && in_array((int) ($signature['signer_user_id'] ?? 0), $expectedUserIds, true)
                 && ($signature['signer_role'] ?? null) === $signer
                 && is_string($signature['path'] ?? null)
                 && str_starts_with($signature['path'], 'signatures/fr-ia-01/'.$pendaftaran->id.'/')
@@ -373,6 +599,18 @@ class FrIa01Service
         }
     }
 
+    private function assertMasterKeysBelongToScheme(array $standards, array $kukIds): void
+    {
+        $allowed = array_fill_keys(array_map('strval', $kukIds), true);
+        foreach (array_keys($standards) as $key) {
+            if (!isset($allowed[(string) $key])) {
+                throw ValidationException::withMessages([
+                    'standar_industri' => 'Data master berisi ID KUK yang tidak termasuk dalam skema ini.',
+                ]);
+            }
+        }
+    }
+
     private function assertPayloadSize(array $input): void
     {
         if (strlen(serialize($input)) > 4 * 1024 * 1024) {
@@ -382,19 +620,70 @@ class FrIa01Service
         }
     }
 
-    private function normalizeStandar(array $standar, PendaftaranAsesi $pendaftaran): array
+    public function kukIdsForScheme(SkemaSertifikasi $skema): array
     {
+        return $skema->unitKompetensi
+            ->flatMap(fn ($unit) => $unit->elemenKompetensi->flatMap(fn ($elemen) => $elemen->kriteriaUnjukKerja->pluck('id')))
+            ->map(fn ($id) => (int) $id)
+            ->values()
+            ->all();
+    }
+
+    private function normalizeMasterStandards(array $standards, SkemaSertifikasi $skema): array
+    {
+        $elementStandards = (array) ($standards['standar_elemen'] ?? []);
+        $defaultStandard = $standards['default_standard'] ?? $standards['metadata_default_standard'] ?? '';
         $normalized = [];
-        foreach ($pendaftaran->skema->unitKompetensi as $unit) {
+        foreach ($skema->unitKompetensi as $unit) {
             foreach ($unit->elemenKompetensi as $elemen) {
+                $elementValue = $standards[$elemen->id] ?? $elementStandards[$elemen->id] ?? null;
                 foreach ($elemen->kriteriaUnjukKerja as $kuk) {
-                    $value = $standar[$kuk->id] ?? $standar[$elemen->id] ?? '';
+                    $value = $standards[$kuk->id] ?? $elementValue ?? $defaultStandard;
                     $normalized[$kuk->id] = is_string($value) ? trim($value) : '';
                 }
             }
         }
 
         return $normalized;
+    }
+
+    private function executionSnapshot(PendaftaranAsesi $pendaftaran, ?IaPenilaian $record): ?array
+    {
+        $kukIds = $this->kukIds($pendaftaran);
+        $savedSnapshot = data_get($record?->data_jawaban, 'master_snapshot');
+        if (is_array($savedSnapshot)
+            && is_array($savedSnapshot['standar_industri'] ?? null)
+            && $this->standardsCoverKuks($savedSnapshot['standar_industri'], $kukIds)) {
+            return $savedSnapshot;
+        }
+
+        $legacyStandards = data_get($record?->data_jawaban, 'standar_industri');
+        if (is_array($legacyStandards) && $this->standardsCoverKuks($legacyStandards, $kukIds)) {
+            return [
+                'instrument_id' => null,
+                'version' => 0,
+                'published_at' => null,
+                'legacy_execution_standards' => true,
+                'standar_industri' => $legacyStandards,
+            ];
+        }
+
+        return $this->publishedMasterSnapshot($pendaftaran->skema);
+    }
+
+    private function standardsCoverKuks(array $standards, array $kukIds): bool
+    {
+        if (!$kukIds) {
+            return false;
+        }
+
+        foreach ($kukIds as $kukId) {
+            if (!is_string($standards[$kukId] ?? null) || trim($standards[$kukId]) === '') {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private function assertVersion(?IaPenilaian $record, string $version): void
@@ -420,14 +709,14 @@ class FrIa01Service
         }
 
         $signature = data_get($record->data_jawaban, 'signature_'.$signer);
-        $expectedUserId = $signer === 'asesi'
-            ? (int) $pendaftaran->asesi_id
-            : (int) ($pendaftaran->asesor_id ?: $pendaftaran->jadwal?->asesor_id);
+        $expectedUserIds = $signer === 'asesi'
+            ? [(int) $pendaftaran->asesi_id]
+            : array_filter([(int) $pendaftaran->asesor_id, (int) $pendaftaran->jadwal?->asesor_id]);
 
         return is_array($signature)
             && (int) ($signature['pendaftaran_id'] ?? 0) === (int) $pendaftaran->id
             && ($signature['document'] ?? null) === self::FORM_CODE
-            && (int) ($signature['signer_user_id'] ?? 0) === $expectedUserId
+            && in_array((int) ($signature['signer_user_id'] ?? 0), $expectedUserIds, true)
             && ($signature['signer_role'] ?? null) === $signer
             && is_string($signature['path'] ?? null)
             && str_starts_with($signature['path'], 'signatures/fr-ia-01/'.$pendaftaran->id.'/')

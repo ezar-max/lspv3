@@ -11,6 +11,7 @@ use App\Models\KriteriaUnjukKerja;
 use App\Models\Mapa01;
 use App\Models\Mapa02;
 use App\Models\PendaftaranAsesi;
+use App\Models\SchemeMasterInstrument;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 class FormulirSkemaDatabaseBindingTest extends TestCase
@@ -109,29 +110,42 @@ class FormulirSkemaDatabaseBindingTest extends TestCase
             'peran' => 'asesor',
             'skema_id' => $this->skemaA->id,
         ]);
+
+        $this->createPublishedMaster($this->skemaA);
+        $this->createPublishedMaster($this->skemaB);
     }
 
     public function test_form_ia01_binds_dynamically_to_requested_skema()
     {
         $this->actingAs($this->admin);
+        $this->assertSame(0, PendaftaranAsesi::count());
 
         // Buka FR.IA.01 untuk Skema A
-        $responseA = $this->get(route('formulir.ia01', ['skema_id' => $this->skemaA->id]));
+        $responseA = $this->get(route('formulir.ia01', [
+            'pendaftaranId' => 0,
+            'skema_id' => $this->skemaA->id,
+        ]));
         $responseA->assertOk();
         $responseA->assertSee($this->skemaA->nama_skema);
         $responseA->assertSee($this->skemaA->kode_skema);
         $responseA->assertSee($this->unitA->kode_unit);
         $responseA->assertSee($this->unitA->judul_unit);
         $responseA->assertDontSee($this->unitB->kode_unit);
+        $responseA->assertDontSee('(Blanko / Pratinjau Master)');
+        $this->assertSame(0, PendaftaranAsesi::count());
 
         // Buka FR.IA.01 untuk Skema B
-        $responseB = $this->get(route('formulir.ia01', ['skema_id' => $this->skemaB->id]));
+        $responseB = $this->get(route('formulir.ia01', [
+            'pendaftaranId' => 0,
+            'skema_id' => $this->skemaB->id,
+        ]));
         $responseB->assertOk();
         $responseB->assertSee($this->skemaB->nama_skema);
         $responseB->assertSee($this->skemaB->kode_skema);
         $responseB->assertSee($this->unitB->kode_unit);
         $responseB->assertSee($this->unitB->judul_unit);
         $responseB->assertDontSee($this->unitA->kode_unit);
+        $this->assertSame(0, PendaftaranAsesi::count());
     }
 
     public function test_form_ia02_and_ia03_bind_dynamically_to_database_skema()
@@ -201,7 +215,10 @@ class FormulirSkemaDatabaseBindingTest extends TestCase
     {
         $this->actingAs($this->admin);
 
-        $response = $this->get(route('formulir.ia01', ['skema_id' => $this->skemaA->id]));
+        $response = $this->get(route('formulir.ia01', [
+            'pendaftaranId' => 0,
+            'skema_id' => $this->skemaA->id,
+        ]));
         $response->assertOk();
         $response->assertDontSee('window.history.back()');
     }
@@ -230,7 +247,10 @@ class FormulirSkemaDatabaseBindingTest extends TestCase
         ];
 
         foreach ($routesToTest as $routeName) {
-            $response = $this->get(route($routeName, ['skema_id' => $this->skemaA->id]));
+            $params = $routeName === 'formulir.ia01'
+                ? ['pendaftaranId' => 0, 'skema_id' => $this->skemaA->id]
+                : ['skema_id' => $this->skemaA->id];
+            $response = $this->get(route($routeName, $params));
             $response->assertOk();
             // Kedua unit harus tampil di setiap form!
             $response->assertSee($this->unitA->kode_unit);
@@ -365,12 +385,24 @@ class FormulirSkemaDatabaseBindingTest extends TestCase
             'nomor_registrasi' => 'REG.ADM.LSP.888',
         ]);
 
-        $instrument = \App\Models\SchemeMasterInstrument::create([
+        $publishedStandards = $this->skemaA->unitKompetensi()
+            ->with('elemenKompetensi.kriteriaUnjukKerja')
+            ->get()
+            ->flatMap(fn ($unit) => $unit->elemenKompetensi->flatMap(fn ($element) => $element->kriteriaUnjukKerja->pluck('id')))
+            ->mapWithKeys(fn ($id) => [$id => 'Standar master untuk '.$this->skemaA->kode_skema])
+            ->all();
+        $instrument = SchemeMasterInstrument::create([
             'skema_id' => $this->skemaA->id,
             'instrument_code' => 'ia01',
             'title' => 'Ceklis Observasi',
             'created_by' => $asesorPenyusunA->id,
             'is_active' => true,
+            'additional_metadata' => [
+                'is_saved' => true,
+                'lifecycle_status' => 'published',
+                'published_version' => 1,
+                'published_standards' => $publishedStandards,
+            ],
         ]);
 
         $jadwal = \App\Models\JadwalAsesmen::create([
@@ -465,7 +497,10 @@ class FormulirSkemaDatabaseBindingTest extends TestCase
         $pesertaPenilaianUrl = route('asesor.daftar-peserta');
 
         foreach ($routesToTest as $routeName) {
-            $response = $this->get(route($routeName, ['skema_id' => $this->skemaA->id]));
+            $params = $routeName === 'formulir.ia01'
+                ? ['pendaftaranId' => 0, 'skema_id' => $this->skemaA->id]
+                : ['skema_id' => $this->skemaA->id];
+            $response = $this->get(route($routeName, $params));
             $response->assertOk();
             $response->assertSee($expectedBackUrl);
             $response->assertDontSee($pesertaPenilaianUrl);
@@ -503,7 +538,10 @@ class FormulirSkemaDatabaseBindingTest extends TestCase
         $expectedBackUrl = route('admin.master-muk.index', ['skema_id' => $this->skemaA->id]);
 
         foreach ($routesToTest as $routeName) {
-            $response = $this->get(route($routeName, ['skema_id' => $this->skemaA->id]));
+            $params = $routeName === 'formulir.ia01'
+                ? ['pendaftaranId' => 0, 'skema_id' => $this->skemaA->id]
+                : ['skema_id' => $this->skemaA->id];
+            $response = $this->get(route($routeName, $params));
             $response->assertOk();
             $response->assertSee($expectedBackUrl);
             $response->assertDontSee(route('asesor.daftar-peserta'));
@@ -539,6 +577,29 @@ class FormulirSkemaDatabaseBindingTest extends TestCase
             'asesor_id' => $asesor->id,
             'matriks_peta' => $matrix,
             'status_mapa' => 'selesai',
+        ]);
+    }
+
+    private function createPublishedMaster(SkemaSertifikasi $skema): void
+    {
+        $kukIds = $skema->unitKompetensi()
+            ->with('elemenKompetensi.kriteriaUnjukKerja')
+            ->get()
+            ->flatMap(fn ($unit) => $unit->elemenKompetensi->flatMap(fn ($element) => $element->kriteriaUnjukKerja->pluck('id')))
+            ->mapWithKeys(fn ($id) => [$id => 'Standar master untuk '.$skema->kode_skema])
+            ->all();
+
+        SchemeMasterInstrument::create([
+            'skema_id' => $skema->id,
+            'instrument_code' => 'ia_01',
+            'title' => 'Ceklis Observasi Aktivitas',
+            'is_active' => true,
+            'additional_metadata' => [
+                'is_saved' => true,
+                'lifecycle_status' => 'published',
+                'published_version' => 1,
+                'published_standards' => $kukIds,
+            ],
         ]);
     }
 }

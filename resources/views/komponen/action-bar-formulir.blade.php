@@ -14,6 +14,8 @@
     $signedLabel = $signedLabel ?? 'Telah Ditandatangani';
     $signRoute = $signRoute ?? null;
     $signLabel = $signLabel ?? 'Tanda Tangani Hasil Asesmen';
+    $templateUrl = $templateUrl ?? null;
+    $templateLabel = $templateLabel ?? 'Kelola Template';
     $role = auth()->check() ? auth()->user()->peran : null;
 
     $skemaId = $skemaId ?? ($pendaftaran->skema_id ?? request('skema_id') ?? (auth()->check() ? auth()->user()->skema_id : null) ?? session('active_selected_skema_id'));
@@ -82,6 +84,12 @@
                     </button>
                 @endif
             @endif
+        @endif
+
+        @if($templateUrl)
+            <a href="{{ $templateUrl }}" class="tombol tombol-sekunder tombol-sm">
+                {{ $templateLabel }}
+            </a>
         @endif
 
         {{ $slot ?? '' }}

@@ -10,6 +10,7 @@ use App\Models\IaPenilaian;
 use App\Models\Mapa01;
 use App\Models\Mapa02;
 use App\Models\MasterAk01;
+use App\Models\SchemeMasterInstrument;
 use App\Services\FrIa01Service;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -415,53 +416,109 @@ class FormulirController extends Controller
         $user = $request->user();
         abort_unless($user, 401);
         $requestedId = $pendaftaranId ?? $request->get('pendaftaran_id');
-        $pendaftaran = is_numeric($requestedId) && (int) $requestedId > 0
-            ? $this->frIa01Service->loadAuthorizedRegistration((int) $requestedId, $user)
-            : $this->dapatkanPendaftaran($requestedId);
-        if (!$pendaftaran) {
-            return $this->redirectFallback('Silakan pilih atau daftarkan skema sertifikasi terlebih dahulu.');
-        }
-        $isMasterMode = (int) $pendaftaran->id === 0;
+        $isMasterMode = is_numeric($requestedId) && (int) $requestedId === 0;
+
         if ($isMasterMode) {
-            abort_unless(in_array($user->peran, ['asesor', 'admin', 'superadmin'], true), 403, 'Pratinjau master hanya tersedia untuk Asesor dan Admin.');
+            abort_unless(in_array($user->peran, ['asesor', 'admin', 'superadmin'], true), 403, 'Master FR.IA.01 hanya tersedia untuk Asesor dan Admin.');
+            $skemaId = (int) ($request->input('skema_id') ?: session('active_selected_skema_id') ?: $user->skema_id);
+            abort_unless($skemaId > 0, 404, 'Skema sertifikasi untuk master FR.IA.01 tidak ditemukan.');
+            $skema = SkemaSertifikasi::with('unitKompetensi.elemenKompetensi.kriteriaUnjukKerja')->findOrFail($skemaId);
+            abort_unless($this->frIa01Service->canManageMaster($user, $skema), 403, 'Anda tidak berwenang mengelola master FR.IA.01 untuk skema ini.');
+            $pendaftaran = null;
         } else {
-            $this->frIa01Service->loadAuthorizedRegistration((int) $pendaftaran->id, $user);
+            if (is_numeric($requestedId) && (int) $requestedId > 0) {
+                $pendaftaran = $this->frIa01Service->loadAuthorizedRegistration((int) $requestedId, $user);
+            } else {
+                $query = PendaftaranAsesi::query()->with(['asesi.profilAsesi', 'skema.unitKompetensi.elemenKompetensi.kriteriaUnjukKerja', 'asesor', 'jadwal.asesor', 'mapa01', 'mapa02', 'iaPenilaian']);
+                if ($user->peran === 'asesi') {
+                    $query->where('asesi_id', $user->id);
+                } elseif ($user->peran === 'asesor') {
+                    $query->where(function ($assigned) use ($user) {
+                        $assigned->where('asesor_id', $user->id)
+                            ->orWhereHas('jadwal', fn ($jadwal) => $jadwal->where('asesor_id', $user->id));
+                    });
+                }
+                if ($request->filled('skema_id')) {
+                    $query->where('skema_id', (int) $request->input('skema_id'));
+                }
+                $pendaftaran = $query->latest()->first();
+                if (!$pendaftaran) {
+                    return $this->redirectFallback('Silakan pilih pendaftaran asesmen FR.IA.01 terlebih dahulu.');
+                }
+                $pendaftaran = $this->frIa01Service->loadAuthorizedRegistration((int) $pendaftaran->id, $user);
+            }
+            $skema = $pendaftaran->skema;
         }
 
         $iaRecord = $isMasterMode ? null : IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.01')->first();
         $savedData = $iaRecord ? ($iaRecord->data_jawaban ?? []) : [];
-        $masterInst = \App\Models\SchemeMasterInstrument::where('skema_id', $pendaftaran->skema_id)
-            ->whereIn('instrument_code', \App\Models\SchemeMasterInstrument::getCodeAliases('ia_01'))
+        $masterInst = SchemeMasterInstrument::where('skema_id', $skema->id)
+            ->whereIn('instrument_code', SchemeMasterInstrument::getCodeAliases('ia_01'))
             ->first();
-        $kukIds = $isMasterMode ? [] : $this->frIa01Service->kukIds($pendaftaran);
+        $masterSnapshot = $this->frIa01Service->publishedMasterSnapshot($skema);
+        $isMasterConfigured = $masterSnapshot !== null;
+        $masterStandards = $isMasterMode
+            ? $this->frIa01Service->masterEditorStandards($masterInst, $skema)
+            : $this->frIa01Service->executionStandards($pendaftaran, $iaRecord);
+        $kukIds = $this->frIa01Service->kukIdsForScheme($skema);
         $pencapaian = (array) ($savedData['pencapaian'] ?? []);
         $evaluatedKukCount = collect($kukIds)->filter(fn ($id) => in_array($pencapaian[$id] ?? null, ['K', 'BK'], true))->count();
+        $isAssessmentInProgress = !$isMasterMode && $this->frIa01Service->isAssessmentInProgress($pendaftaran);
+        $isAssessmentFinished = !$isMasterMode && $this->frIa01Service->isAssessmentFinished($pendaftaran);
         $canEdit = !$isMasterMode && $this->frIa01Service->canEdit($user, $pendaftaran, $iaRecord);
         $canSignAsesor = !$isMasterMode && $this->frIa01Service->canSignAsesor($user, $pendaftaran, $iaRecord);
+        $canManageMaster = $this->frIa01Service->canManageMaster($user, $skema);
         $canSignAsesi = !$isMasterMode && $this->frIa01Service->canSignAsesi($user, $pendaftaran, $iaRecord);
         $isLocked = !$isMasterMode && $this->frIa01Service->isLocked($iaRecord);
+        $masterVersion = data_get($masterInst?->additional_metadata, '_draft_version', '');
 
         return view('formulir.fr-ia-01', compact(
             'pendaftaran',
+            'skema',
             'iaRecord',
             'savedData',
             'masterInst',
+            'masterStandards',
+            'masterVersion',
+            'isMasterConfigured',
             'isMasterMode',
             'kukIds',
             'evaluatedKukCount',
+            'isAssessmentInProgress',
+            'isAssessmentFinished',
             'canEdit',
             'canSignAsesor',
+            'canManageMaster',
             'canSignAsesi',
             'isLocked'
         ));
     }
 
+    public function saveMasterIa01(Request $request, int $skemaId)
+    {
+        $skema = SkemaSertifikasi::with('unitKompetensi.elemenKompetensi.kriteriaUnjukKerja')->findOrFail($skemaId);
+        $publish = $request->input('action') === 'publish';
+        abort_unless(in_array($request->input('action'), ['draft', 'publish'], true), 422, 'Aksi master FR.IA.01 tidak valid.');
+
+        $this->frIa01Service->saveMaster($skema, $request->user(), $request->all(), $publish);
+
+        return redirect()->route('formulir.ia01', ['pendaftaranId' => 0, 'skema_id' => $skema->id])
+            ->with('sukses', $publish
+                ? 'Master FR.IA.01 berhasil diterbitkan. Asesmen baru akan menggunakan versi ini.'
+                : 'Draft master FR.IA.01 berhasil disimpan tanpa mengubah versi yang sedang diterbitkan.');
+    }
+
     public function storeIa01Signature(Request $request, int $pendaftaranId, string $signer)
     {
         $pendaftaran = $this->frIa01Service->loadAuthorizedRegistration($pendaftaranId, $request->user());
-        $this->frIa01Service->sign($pendaftaran, $request->user(), $signer, $request->all());
+        $record = $this->frIa01Service->sign($pendaftaran, $request->user(), $signer, $request->all());
+        if ($record->status === 'completed') {
+            $this->evaluasiKelengkapanAsesmen($pendaftaran);
+        }
 
-        return back()->with('sukses', 'Tanda tangan berhasil disimpan.');
+        return back()->with('sukses', $signer === 'asesi'
+            ? 'Tanda tangan asesi berhasil disimpan. FR.IA.01 kini terkunci.'
+            : 'Tanda tangan asesor berhasil disimpan. Formulir dapat diisi selama asesmen berlangsung.');
     }
 
     public function showIa01Signature(Request $request, int $pendaftaranId, string $signer)
@@ -495,14 +552,16 @@ class FormulirController extends Controller
         $unitTitles = $units->pluck('judul_unit')->filter()->values();
 
         $saved = $iaRecord ? ($iaRecord->data_jawaban ?? []) : [];
+        
+        // MASTER DATA (Strictly read from Master Instrument)
         $dataPraktik = [
-            'judul_tugas' => $saved['judul_tugas'] ?? ($meta['judul_tugas'] ?? ($masterInst?->title ?? ('Tugas Praktik Demonstrasi ' . $skemaNama))),
-            'skenario' => $saved['skenario'] ?? ($meta['scenario'] ?? ($meta['skenario'] ?? '')),
-            'peralatan_bahan' => $saved['peralatan_bahan'] ?? ($meta['tools_equipment'] ?? ($meta['peralatan_bahan'] ?? '')),
-            'durasi_waktu' => $saved['durasi_waktu'] ?? ($meta['durasi_waktu'] ?? ($masterInst?->time_limit_minutes ? ($masterInst->time_limit_minutes . ' Menit') : '')),
-            'instruksi_kerja' => $saved['instruksi_kerja'] ?? ($meta['instruksi_kerja'] ?? ($masterInst?->instructions ? explode("\n", $masterInst->instructions) : [])),
-            'standar_hasil' => $saved['standar_hasil'] ?? ($meta['standar_hasil'] ?? []),
-            'catatan' => $saved['catatan'] ?? ($iaRecord->catatan_asesor ?? ''),
+            'judul_tugas' => $meta['judul_tugas'] ?? ($masterInst?->title ?? ('Tugas Praktik Demonstrasi ' . $skemaNama)),
+            'skenario' => $meta['scenario'] ?? ($meta['skenario'] ?? ''),
+            'peralatan_bahan' => $meta['tools_equipment'] ?? ($meta['peralatan_bahan'] ?? ''),
+            'durasi_waktu' => $meta['durasi_waktu'] ?? ($masterInst?->time_limit_minutes ? ($masterInst->time_limit_minutes . ' Menit') : ''),
+            'instruksi_kerja' => $meta['instruksi_kerja'] ?? ($masterInst?->instructions ? explode("\n", $masterInst->instructions) : []),
+            'standar_hasil' => $meta['standar_hasil'] ?? [],
+            'catatan' => $iaRecord->catatan_asesor ?? ($saved['catatan'] ?? ''),
         ];
 
         $isMasterMode = empty($pendaftaran->id) || $pendaftaran->id == 0 || !$request->filled('pendaftaran_id');
@@ -543,15 +602,16 @@ class FormulirController extends Controller
         if (is_string($meta)) $meta = json_decode($meta, true) ?: [];
         $saved = $iaRecord ? ($iaRecord->data_jawaban ?? []) : [];
         $dataProyek = [
-            'judul_proyek' => $saved['judul_proyek'] ?? ($meta['judul_proyek'] ?? ($masterInst?->title ?? 'Penjelasan Proyek Singkat / Kegiatan Terstruktur')),
-            'skenario' => $saved['skenario'] ?? ($meta['scenario'] ?? ($meta['skenario'] ?? '')),
-            'waktu_menit' => $saved['waktu_menit'] ?? ($meta['waktu_menit'] ?? ''),
-            'demonstrasi' => $saved['demonstrasi'] ?? ($meta['demonstrasi'] ?? ($meta['deliverables'] ?? '')),
-            'waktu_demo' => $saved['waktu_demo'] ?? ($meta['waktu_demo'] ?? ''),
-            'umpan_balik' => $saved['umpan_balik'] ?? ($meta['umpan_balik'] ?? ''),
-            'instruksi_terstruktur' => $saved['instruksi_terstruktur'] ?? ($meta['instruksi_terstruktur'] ?? ($masterInst?->instructions ? explode("\n", $masterInst->instructions) : [])),
-            'durasi_waktu' => $saved['durasi_waktu'] ?? ($meta['durasi_waktu'] ?? ($masterInst?->time_limit_minutes ? ($masterInst->time_limit_minutes . ' Menit') : '')),
-            'peralatan_bahan' => $saved['peralatan_bahan'] ?? ($meta['tools_equipment'] ?? ($meta['peralatan_bahan'] ?? '')),
+            'judul_proyek' => $meta['judul_proyek'] ?? ($masterInst?->title ?? 'Penjelasan Proyek Singkat / Kegiatan Terstruktur'),
+            'skenario' => $meta['scenario'] ?? ($meta['skenario'] ?? ''),
+            'waktu_menit' => $meta['waktu_menit'] ?? '',
+            'demonstrasi' => $meta['demonstrasi'] ?? ($meta['deliverables'] ?? ''),
+            'waktu_demo' => $meta['waktu_demo'] ?? '',
+            'umpan_balik' => $meta['umpan_balik'] ?? '',
+            'instruksi_terstruktur' => $meta['instruksi_terstruktur'] ?? ($masterInst?->instructions ? explode("\n", $masterInst->instructions) : []),
+            'durasi_waktu' => $meta['durasi_waktu'] ?? ($masterInst?->time_limit_minutes ? ($masterInst->time_limit_minutes . ' Menit') : ''),
+            'peralatan_bahan' => $meta['tools_equipment'] ?? ($meta['peralatan_bahan'] ?? ''),
+            'catatan' => $iaRecord->catatan_asesor ?? ($saved['catatan'] ?? ''),
         ];
         $isMasterMode = empty($pendaftaran->id) || $pendaftaran->id == 0 || !$request->filled('pendaftaran_id');
         return view('formulir.fr-ia-04a', compact('pendaftaran', 'iaRecord', 'masterInst', 'dataProyek', 'isMasterMode'));
@@ -755,20 +815,17 @@ class FormulirController extends Controller
             ->where('kode_formulir', 'FR.IA.05A')
             ->first();
             
-        if ($iaRecord && !empty($iaRecord->data_jawaban)) {
-            $soalList = $iaRecord->data_jawaban;
-        } else {
-            $soalList = self::getSoalIa05($pendaftaran->skema_id);
-            if (empty($soalList)) {
-                $soalList = [
-                    1 => [
-                        'no' => 1,
-                        'pertanyaan' => '',
-                        'opsi' => ['A' => '', 'B' => '', 'C' => '', 'D' => ''],
-                        'kunci' => ''
-                    ]
-                ];
-            }
+        // STRICT MASTER LOADING
+        $soalList = self::getSoalIa05($pendaftaran->skema_id);
+        if (empty($soalList)) {
+            $soalList = [
+                1 => [
+                    'no' => 1,
+                    'pertanyaan' => '',
+                    'opsi' => ['A' => '', 'B' => '', 'C' => '', 'D' => ''],
+                    'kunci' => ''
+                ]
+            ];
         }
         
         $isMasterMode = empty($pendaftaran->id) || $pendaftaran->id == 0 || !$request->filled('pendaftaran_id');
@@ -787,12 +844,8 @@ class FormulirController extends Controller
             return $this->redirectFallback('Silakan pilih atau daftarkan skema sertifikasi terlebih dahulu.');
         }
         
-        $iaRecord05a = \App\Models\IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.05A')->first();
-        if ($iaRecord05a && !empty($iaRecord05a->data_jawaban)) {
-            $soalList = $iaRecord05a->data_jawaban;
-        } else {
-            $soalList = self::getSoalIa05($pendaftaran->skema_id);
-        }
+        // STRICT MASTER LOADING
+        $soalList = self::getSoalIa05($pendaftaran->skema_id);
 
         $iaRecord05c = IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.05C')->first();
         $iaRecord05b = IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.05B')->first();
@@ -809,12 +862,8 @@ class FormulirController extends Controller
             return $this->redirectFallback('Silakan pilih atau daftarkan skema sertifikasi terlebih dahulu.');
         }
         
-        $iaRecord05a = \App\Models\IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.05A')->first();
-        if ($iaRecord05a && !empty($iaRecord05a->data_jawaban)) {
-            $soalList = $iaRecord05a->data_jawaban;
-        } else {
-            $soalList = self::getSoalIa05($pendaftaran->skema_id);
-        }
+        // STRICT MASTER LOADING
+        $soalList = self::getSoalIa05($pendaftaran->skema_id);
 
         $iaRecord = IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.05C')->first();
         $isMasterMode = empty($pendaftaran->id) || $pendaftaran->id == 0 || !$request->filled('pendaftaran_id');
@@ -832,20 +881,17 @@ class FormulirController extends Controller
             ->where('kode_formulir', 'FR.IA.06A')
             ->first();
             
-        if ($iaRecord && !empty($iaRecord->data_jawaban)) {
-            $soalList = $iaRecord->data_jawaban;
-        } else {
-            $soalList = self::getSoalIa06($pendaftaran->skema_id);
-            if (empty($soalList)) {
-                $soalList = [
-                    1 => [
-                        'no' => 1,
-                        'pertanyaan' => '',
-                        'kunci' => '',
-                        'kuk' => ''
-                    ]
-                ];
-            }
+        // STRICT MASTER LOADING
+        $soalList = self::getSoalIa06($pendaftaran->skema_id);
+        if (empty($soalList)) {
+            $soalList = [
+                1 => [
+                    'no' => 1,
+                    'pertanyaan' => '',
+                    'kunci' => '',
+                    'kuk' => ''
+                ]
+            ];
         }
         
         $isMasterMode = empty($pendaftaran->id) || $pendaftaran->id == 0 || !$request->filled('pendaftaran_id');
@@ -864,12 +910,8 @@ class FormulirController extends Controller
             return $this->redirectFallback('Silakan pilih atau daftarkan skema sertifikasi terlebih dahulu.');
         }
         
-        $iaRecord06a = \App\Models\IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.06A')->first();
-        if ($iaRecord06a && !empty($iaRecord06a->data_jawaban)) {
-            $soalList = $iaRecord06a->data_jawaban;
-        } else {
-            $soalList = self::getSoalIa06($pendaftaran->skema_id);
-        }
+        // STRICT MASTER LOADING
+        $soalList = self::getSoalIa06($pendaftaran->skema_id);
 
         $iaRecord06c = IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.06C')->first();
         $iaRecord06b = IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.06B')->first();
@@ -886,12 +928,8 @@ class FormulirController extends Controller
             return $this->redirectFallback('Silakan pilih atau daftarkan skema sertifikasi terlebih dahulu.');
         }
         
-        $iaRecord06a = \App\Models\IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.06A')->first();
-        if ($iaRecord06a && !empty($iaRecord06a->data_jawaban)) {
-            $soalList = $iaRecord06a->data_jawaban;
-        } else {
-            $soalList = self::getSoalIa06($pendaftaran->skema_id);
-        }
+        // STRICT MASTER LOADING
+        $soalList = self::getSoalIa06($pendaftaran->skema_id);
 
         $iaRecord = IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.06C')->first();
         $isMasterMode = empty($pendaftaran->id) || $pendaftaran->id == 0 || !$request->filled('pendaftaran_id');
@@ -909,19 +947,16 @@ class FormulirController extends Controller
             ->where('kode_formulir', 'FR.IA.07A')
             ->first();
             
-        if ($iaRecord && !empty($iaRecord->data_jawaban)) {
-            $soalList = $iaRecord->data_jawaban;
-        } else {
-            $soalList = self::getSoalIa07($pendaftaran->skema_id);
-            if (empty($soalList)) {
-                $soalList = [
-                    1 => [
-                        'no' => 1,
-                        'pertanyaan' => '',
-                        'kunci' => ''
-                    ]
-                ];
-            }
+        // STRICT MASTER LOADING
+        $soalList = self::getSoalIa07($pendaftaran->skema_id);
+        if (empty($soalList)) {
+            $soalList = [
+                1 => [
+                    'no' => 1,
+                    'pertanyaan' => '',
+                    'kunci' => ''
+                ]
+            ];
         }
         
         $isMasterMode = empty($pendaftaran->id) || $pendaftaran->id == 0 || !$request->filled('pendaftaran_id');
@@ -935,12 +970,8 @@ class FormulirController extends Controller
             return $this->redirectFallback('Silakan pilih atau daftarkan skema sertifikasi terlebih dahulu.');
         }
         
-        $iaRecord07a = \App\Models\IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.07A')->first();
-        if ($iaRecord07a && !empty($iaRecord07a->data_jawaban)) {
-            $soalList = $iaRecord07a->data_jawaban;
-        } else {
-            $soalList = self::getSoalIa07($pendaftaran->skema_id);
-        }
+        // STRICT MASTER LOADING
+        $soalList = self::getSoalIa07($pendaftaran->skema_id);
         
         $iaRecord = IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.07')->first();
         $isMasterMode = empty($pendaftaran->id) || $pendaftaran->id == 0 || !$request->filled('pendaftaran_id');
@@ -1069,14 +1100,21 @@ class FormulirController extends Controller
 
     public function simpanIa(Request $request, $kodeForm, $pendaftaranId)
     {
+        if (strtoupper(trim($kodeForm)) === 'FR.IA.01' && (int) $pendaftaranId <= 0) {
+            abort_unless(
+                in_array($request->user()?->peran, ['admin', 'superadmin', 'asesor'], true),
+                403,
+                'Akses ditolak.'
+            );
+
+            return back()->with('error', 'Master FR.IA.01 harus disimpan sebagai draft atau diterbitkan melalui alur master khusus. Tanda tangan dan hasil penilaian hanya disimpan pada execution asesi.');
+        }
+
         if (strtoupper(trim($kodeForm)) === 'FR.IA.01' && (int) $pendaftaranId > 0) {
             $pendaftaran = $this->frIa01Service->loadAuthorizedRegistration((int) $pendaftaranId, $request->user());
             $record = $this->frIa01Service->save($pendaftaran, $request->user(), $request->all());
-            if ($record->status === 'completed') {
-                $this->evaluasiKelengkapanAsesmen($pendaftaran);
-            }
-            $message = $record->status === 'completed'
-                ? 'Ceklis Observasi Aktivitas (FR.IA.01) berhasil difinalisasi dan dikunci.'
+            $message = $record->status === 'submitted'
+                ? 'Hasil FR.IA.01 berhasil disimpan dan menunggu tanda tangan asesi setelah asesmen selesai.'
                 : 'Draft Ceklis Observasi Aktivitas (FR.IA.01) berhasil disimpan.';
 
             return back()->with('sukses', $message);
@@ -1170,57 +1208,20 @@ class FormulirController extends Controller
             $rekomendasi = $request->input('rekomendasi', 'K');
             $catatan = $request->input('catatan', '');
             $dataPayload = [
-                'judul_tugas' => $request->input('judul_tugas'),
-                'skenario' => $request->input('skenario'),
-                'peralatan_bahan' => $request->input('peralatan_bahan'),
-                'durasi_waktu' => $request->input('durasi_waktu'),
-                'instruksi_kerja' => $request->input('instruksi_kerja'),
-                'kelompok_skenario' => $request->input('kelompok_skenario', []),
-                'penyusun_validator' => $request->input('penyusun_validator', []),
                 'catatan' => $catatan,
                 'saved_at' => now()->toDateTimeString(),
             ];
 
-            // Sinkronkan ke SchemeMasterInstrument agar Asesi di Ruang Uji / Tahap 5 langsung mendapatkannya
-            if ($pendaftaran->skema_id) {
-                $inst = \App\Models\SchemeMasterInstrument::where('skema_id', $pendaftaran->skema_id)
-                    ->whereIn('instrument_code', \App\Models\SchemeMasterInstrument::getCodeAliases('ia_02'))
-                    ->first();
-                if (!$inst) {
-                    $inst = \App\Models\SchemeMasterInstrument::create([
-                        'skema_id' => $pendaftaran->skema_id,
-                        'instrument_code' => 'ia_02',
-                        'title' => $request->input('judul_tugas') ?: 'Tugas Praktik Demonstrasi',
-                        'is_active' => true,
-                        'created_by' => auth()->id() ?? $pendaftaran->asesor_id,
-                    ]);
-                }
-                $meta = $inst->additional_metadata ?? [];
-                if (!is_array($meta)) $meta = json_decode($meta, true) ?: [];
-
-                if ($request->filled('judul_tugas')) $meta['judul_tugas'] = $request->input('judul_tugas');
-                if ($request->filled('skenario')) $meta['skenario'] = $request->input('skenario');
-                if ($request->filled('peralatan_bahan')) {
-                    $meta['peralatan_bahan'] = is_array($request->peralatan_bahan) 
-                        ? $request->peralatan_bahan 
-                        : array_filter(array_map('trim', preg_split('/\r\n|\r|\n/', (string)$request->peralatan_bahan)));
-                }
-                if ($request->filled('instruksi_kerja')) {
-                    $meta['instruksi_kerja'] = is_array($request->instruksi_kerja)
-                        ? $request->instruksi_kerja
-                        : array_filter(array_map('trim', preg_split('/\r\n|\r|\n/', (string)$request->instruksi_kerja)));
-                }
-                if ($request->filled('durasi_waktu')) {
-                    $numMinutes = (int) preg_replace('/[^0-9]/', '', (string)$request->input('durasi_waktu'));
-                    if ($numMinutes > 0) $inst->time_limit_minutes = $numMinutes;
-                    $meta['durasi_waktu'] = $request->input('durasi_waktu');
-                }
-                $inst->additional_metadata = $meta;
-                if ($request->filled('judul_tugas')) $inst->title = $request->input('judul_tugas');
-                $inst->save();
+            // TTD Asesor dan Asesi (opsional, jika disubmit form)
+            if ($request->filled('ttd_asesi')) {
+                $dataPayload['ttd_asesi'] = $request->input('ttd_asesi');
+                $dataPayload['tgl_ttd_asesi'] = now()->toDateTimeString();
+            }
+            if ($request->filled('ttd_asesor')) {
+                $dataPayload['ttd_asesor'] = $request->input('ttd_asesor');
             }
 
-            $suksesMsg = 'Tugas Praktik Demonstrasi (FR.IA.02) berhasil disimpan dan disinkronkan ke bank instrumen skema.';
+            $suksesMsg = 'Tugas Praktik Demonstrasi (FR.IA.02) berhasil disimpan.';
         }
 
         /* ---------------------------------------------------------------------
@@ -1276,8 +1277,9 @@ class FormulirController extends Controller
                 'saved_at' => now()->toDateTimeString(),
             ];
 
-            // Sinkronkan ke SchemeMasterInstrument (ia_04a)
-            if ($pendaftaran->skema_id) {
+            // Sinkronkan ke SchemeMasterInstrument (ia_04a) hanya pada Master Mode
+            $isMasterMode = empty($pendaftaran->id) || $pendaftaran->id == 0 || !$request->filled('pendaftaran_id');
+            if ($isMasterMode && $pendaftaran->skema_id) {
                 $inst = \App\Models\SchemeMasterInstrument::where('skema_id', $pendaftaran->skema_id)
                     ->whereIn('instrument_code', \App\Models\SchemeMasterInstrument::getCodeAliases('ia_04a'))
                     ->first();
@@ -1330,12 +1332,7 @@ class FormulirController extends Controller
            5. AUTO-GRADING UNTUK UJIAN PILIHAN GANDA (FR.IA.05C) & KUNCI ASESOR (FR.IA.05B / FR.IA.05A)
            --------------------------------------------------------------------- */
         elseif ($kodeForm === 'FR.IA.05C') {
-            $iaRecord05a = \App\Models\IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.05A')->first();
-            if ($iaRecord05a && !empty($iaRecord05a->data_jawaban)) {
-                $masterSoal = $iaRecord05a->data_jawaban;
-            } else {
-                $masterSoal = self::getSoalIa05($pendaftaran->skema_id);
-            }
+            $masterSoal = self::getSoalIa05($pendaftaran->skema_id);
             
             $jawabanAsesi = $request->input('jawaban', []);
             $totalSoal = count($masterSoal);
@@ -1425,12 +1422,7 @@ class FormulirController extends Controller
             $existingRecord = IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.06C')->first();
             
             if ($role === 'asesi') {
-                $iaRecord06a = \App\Models\IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.06A')->first();
-                if ($iaRecord06a && !empty($iaRecord06a->data_jawaban)) {
-                    $masterSoal = $iaRecord06a->data_jawaban;
-                } else {
-                    $masterSoal = self::getSoalIa06($pendaftaran->skema_id);
-                }
+                $masterSoal = self::getSoalIa06($pendaftaran->skema_id);
                 
                 $jawabanEsai = $request->input('jawaban_esai', []);
                 $totalSoal = count($masterSoal);
@@ -1633,8 +1625,8 @@ class FormulirController extends Controller
             $catatan = $request->catatan ?? ($request->umpan_balik ?? null);
         }
 
-        // Sinkronkan ke SchemeMasterInstrument untuk seluruh form IA
-        if ($pendaftaran->skema_id) {
+        // Sinkronkan ke SchemeMasterInstrument HANYA JIKA MODE MASTER (pendaftaran_id == 0)
+        if ($pendaftaran->id == 0 && $pendaftaran->skema_id) {
             $rawCode = strtolower(str_replace(['FR.', 'fr.', '.'], '', $kodeForm));
             $instCode = \App\Models\SchemeMasterInstrument::normalizeCode($rawCode);
             $inst = \App\Models\SchemeMasterInstrument::where('skema_id', $pendaftaran->skema_id)
@@ -1681,7 +1673,26 @@ class FormulirController extends Controller
 
     public function simpanTtdAsesiIa(Request $request, $kodeForm, $pendaftaranId)
     {
-        abort(410, 'Tanda tangan pada instrumen FR.IA telah dinonaktifkan.');
+        $pendaftaran = Pendaftaran::findOrFail($pendaftaranId);
+        
+        $iaRecord = IaPenilaian::firstOrCreate(
+            ['pendaftaran_id' => $pendaftaran->id, 'kode_formulir' => $kodeForm],
+            [
+                'user_id' => auth()->id(),
+                'role' => 'asesi',
+                'status' => 'draft',
+                'data_jawaban' => []
+            ]
+        );
+
+        $dataPayload = $iaRecord->data_jawaban ?? [];
+        $dataPayload['ttd_asesi'] = $request->input('ttd_asesi') ?? auth()->user()->tanda_tangan;
+        $dataPayload['tgl_ttd_asesi'] = now()->toDateTimeString();
+
+        $iaRecord->data_jawaban = $dataPayload;
+        $iaRecord->save();
+
+        return back()->with('sukses', 'Tanda tangan Anda berhasil disimpan pada ' . $kodeForm);
     }
 
     /**

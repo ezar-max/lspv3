@@ -333,6 +333,13 @@ class MasterInstrumentController extends Controller
             }
         }
 
+        if (in_array(SchemeMasterInstrument::normalizeCode($instrument->instrument_code), ['ia_01', 'ia01'], true)) {
+            return redirect()->route('formulir.ia01', [
+                'pendaftaranId' => 0,
+                'skema_id' => $instrument->skema_id,
+            ]);
+        }
+
         $skemaList = SkemaSertifikasi::orderBy('nama_skema', 'asc')->get();
 
         // Kumpulkan daftar KUK untuk seluruh unit kompetensi pada skema
@@ -363,6 +370,12 @@ class MasterInstrumentController extends Controller
         $instrument = SchemeMasterInstrument::findOrFail($id);
 
         $code = SchemeMasterInstrument::normalizeCode($instrument->instrument_code);
+        if (in_array($code, ['ia_01', 'ia01'], true)) {
+            return redirect()->route('formulir.ia01', [
+                'pendaftaranId' => 0,
+                'skema_id' => $instrument->skema_id,
+            ])->with('info', 'Master FR.IA.01 dikelola melalui alur draft dan terbit pada formulirnya.');
+        }
 
         $meta = $instrument->additional_metadata ?? [];
         if (!is_array($meta)) $meta = json_decode($meta, true) ?: [];
@@ -388,14 +401,6 @@ class MasterInstrumentController extends Controller
                     'metadata_scenario.required' => 'Skenario Tugas Praktik Demonstrasi wajib diisi.',
                 ]);
             }
-        } elseif (in_array($code, ['ia_01', 'ia01'])) {
-            $request->validate([
-                'metadata_default_standard' => 'required|string',
-                'metadata_umpan_balik' => 'required|string',
-            ], [
-                'metadata_default_standard.required' => 'Standar acuan utama (SOP) wajib diisi.',
-                'metadata_umpan_balik.required' => 'Umpan balik untuk asesi wajib diisi.',
-            ]);
         } elseif (in_array($code, ['ia_03', 'ia03'])) {
             $request->validate([
                 'metadata_kelompok_soal' => 'required|array|min:1',
@@ -636,6 +641,11 @@ class MasterInstrumentController extends Controller
             $newInstrument->title = $request->input('new_title');
             $newInstrument->created_at = now();
             $newInstrument->updated_at = now();
+            if (in_array(SchemeMasterInstrument::normalizeCode($source->instrument_code), ['ia_01', 'ia01'], true)) {
+                $metadata = $newInstrument->additional_metadata ?? [];
+                unset($metadata['signature_asesor']);
+                $newInstrument->additional_metadata = $metadata;
+            }
             $newInstrument->save();
 
             // Replicate question banks

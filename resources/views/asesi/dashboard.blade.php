@@ -347,6 +347,9 @@
                             <p style="font-size: 0.86rem; color: #14532d; margin: 0;">
                                 Asesor Penguji telah menetapkan keputusan asesmen: <strong>{{ strtoupper($p->rekomendasi->keputusan ?? 'KOMPETEN') }}</strong>. Silakan unduh dan reviu lembar hasil asesmen Anda.
                             </p>
+                            <a href="{{ route('asesi.hasil-formulir', $p->id) }}" class="tombol tombol-utama" style="display:inline-flex; margin-top:.75rem; font-size:.84rem;">
+                                Lihat Formulir & Rincian Hasil
+                            </a>
                         @elseif($tahap4['state'] === 'selesai')
                             @php
                                 $timeInfo = $p->assessment_time_status;
@@ -524,6 +527,11 @@
                     $jamMulai = $jadwal && $jadwal->jam_mulai ? date('H:i', strtotime($jadwal->jam_mulai)) : '08:00';
                     $jamSelesai = $jadwal && $jadwal->jam_selesai ? date('H:i', strtotime($jadwal->jam_selesai)) : '16:00';
                     $namaTuk = $jadwal->nama_tuk ?? ($p->tuk_type ? 'TUK ' . $p->tuk_type : 'TUK Sewaktu');
+                    $ia01Master = $p->skema?->masterInstruments->first(function ($instrument) {
+                        return in_array($instrument->instrument_code, \App\Models\SchemeMasterInstrument::getCodeAliases('ia_01'), true);
+                    });
+                    $canPreviewIa01 = $p->isInstrumenAktif('FR.IA.01')
+                        && (!$ia01Master || ($ia01Master->is_active && $ia01Master->isConfigured()));
 
                     $listFormulir = [];
                     if ($p->isInstrumenAktif('FR.IA.02') && ($p->skema ? $p->skema->hasInstrumen('FR.IA.02') : true)) {
@@ -648,6 +656,17 @@
                             @endforeach
                         </div>
                     </div>
+                    @if($canPreviewIa01)
+                        <div style="margin-top: 1rem; padding: 0.9rem 1rem; border: 1px solid #bfdbfe; background: #eff6ff; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+                            <div>
+                                <strong style="display: block; color: #1e3a8a; font-size: 0.88rem;">FR.IA.01 - Ceklis Observasi Aktivitas</strong>
+                                <span style="font-size: 0.78rem; color: #475569;">Lihat formulir yang digunakan pada asesmen. Formulir ini hanya dapat dilihat oleh asesi.</span>
+                            </div>
+                            <a href="{{ route('formulir.ia01', $p->id) }}" class="tombol tombol-sekunder" style="font-size: 0.82rem;">
+                                Lihat FR.IA.01 &rarr;
+                            </a>
+                        </div>
+                    @endif
                 </div>
             @endif
 

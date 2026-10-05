@@ -225,7 +225,6 @@ class MasterAk07PerSkemaTest extends TestCase
         $this->assertEquals(0, SkemaSertifikasi::count());
 
         $routes = [
-            'formulir.ia01',
             'formulir.ia02',
             'formulir.ia03',
             'formulir.ia04a',
@@ -248,6 +247,10 @@ class MasterAk07PerSkemaTest extends TestCase
             $resp->assertDontSee('Validator (Admin LSP)');
             $resp->assertDontSee('Belum ditandatangani');
         }
+
+        $ia01Response = $this->actingAs($this->asesor)->get(route('formulir.ia01'));
+        $ia01Response->assertRedirect();
+        $ia01Response->assertDontSee('SKM-STANDAR-BNSP');
 
         // Test form ujian asesi (05c dan 06c)
         $resp05c = $this->actingAs($this->asesi1)->get(route('formulir.ia05c'));
