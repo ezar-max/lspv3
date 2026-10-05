@@ -8,6 +8,9 @@ use App\Models\SkemaSertifikasi;
 use App\Models\UnitKompetensi;
 use App\Models\ElemenKompetensi;
 use App\Models\KriteriaUnjukKerja;
+use App\Models\Mapa01;
+use App\Models\Mapa02;
+use App\Models\PendaftaranAsesi;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 class FormulirSkemaDatabaseBindingTest extends TestCase
@@ -299,6 +302,7 @@ class FormulirSkemaDatabaseBindingTest extends TestCase
             'status_pendaftaran' => 'disetujui',
             'tanggal_daftar' => now(),
         ]);
+        $this->confirmMapsFor($pendaftaran, $asesorPenilai);
 
         // 1. Asesor membuka form FR.IA.01 untuk asesi ini
         $responseAsesor = $this->actingAs($asesorPenilai)
@@ -340,15 +344,9 @@ class FormulirSkemaDatabaseBindingTest extends TestCase
             $resp->assertDontSee('(Blanko / Pratinjau Master)');
         }
 
-        // 4. Uji Tabel PENYUSUN DAN VALIDATOR:
-        // - Mengambil data validator dari asesor penguji saat asesmen
-        // - Tidak ada input ketik (Penyusun 2..., Validator 1..., Validator 2...)
-        // - Masing-masing hanya menampilkan 1 baris
-        $responseAsesor->assertSee('PENYUSUN');
-        $responseAsesor->assertSee('VALIDATOR');
-        $responseAsesor->assertDontSee('Penyusun 2...');
-        $responseAsesor->assertDontSee('Validator 1...');
-        $responseAsesor->assertDontSee('Validator 2...');
+        $responseAsesor->assertSee('Tanda Tangan');
+        $responseAsesor->assertSee('ASESI');
+        $responseAsesor->assertSee('ASESOR');
     }
 
     public function test_penyusun_dan_validator_binds_creator_and_admin_validator()
@@ -402,6 +400,7 @@ class FormulirSkemaDatabaseBindingTest extends TestCase
             'status_pendaftaran' => 'disetujui',
             'tanggal_daftar' => now(),
         ]);
+        $this->confirmMapsFor($pendaftaran, $asesorPenyusunA);
 
         $resp = $this->actingAs($asesorPenyusunA)->get(route('formulir.ia01', $pendaftaran->id));
         $resp->assertOk();
@@ -425,10 +424,12 @@ class FormulirSkemaDatabaseBindingTest extends TestCase
         $pendaftaranB = \App\Models\PendaftaranAsesi::create([
             'nomor_pendaftaran' => 'REG-ASESI-B',
             'asesi_id' => $asesi->id,
+            'asesor_id' => $asesorPenyusunB->id,
             'skema_id' => $this->skemaB->id,
             'status_pendaftaran' => 'disetujui',
             'tanggal_daftar' => now(),
         ]);
+        $this->confirmMapsFor($pendaftaranB, $asesorPenyusunB);
 
         $respB = $this->actingAs($asesorPenyusunB)->get(route('formulir.ia01', $pendaftaranB->id));
         $respB->assertOk();
@@ -511,5 +512,33 @@ class FormulirSkemaDatabaseBindingTest extends TestCase
         // Test direct access to formulir.index redirects to admin.master-muk.index
         $indexResponse = $this->get(route('formulir.index', ['skema_id' => $this->skemaA->id]));
         $indexResponse->assertRedirect($expectedBackUrl);
+    }
+
+    private function confirmMapsFor(PendaftaranAsesi $pendaftaran, Pengguna $asesor): void
+    {
+        $skema = $pendaftaran->skema()->with('unitKompetensi.elemenKompetensi.kriteriaUnjukKerja')->firstOrFail();
+        $matrix = [];
+
+        foreach ($skema->unitKompetensi as $unit) {
+            foreach ($unit->elemenKompetensi as $element) {
+                foreach ($element->kriteriaUnjukKerja as $kuk) {
+                    $matrix[$unit->id][$element->id][$kuk->id] = ['clo' => 1];
+                }
+            }
+        }
+
+        Mapa01::create([
+            'pendaftaran_id' => $pendaftaran->id,
+            'skema_id' => $skema->id,
+            'asesor_id' => $asesor->id,
+            'status_mapa' => 'selesai',
+        ]);
+        Mapa02::create([
+            'pendaftaran_id' => $pendaftaran->id,
+            'skema_id' => $skema->id,
+            'asesor_id' => $asesor->id,
+            'matriks_peta' => $matrix,
+            'status_mapa' => 'selesai',
+        ]);
     }
 }

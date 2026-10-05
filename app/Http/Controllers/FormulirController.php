@@ -10,11 +10,16 @@ use App\Models\IaPenilaian;
 use App\Models\Mapa01;
 use App\Models\Mapa02;
 use App\Models\MasterAk01;
+use App\Services\FrIa01Service;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
 class FormulirController extends Controller
 {
+    public function __construct(private FrIa01Service $frIa01Service)
+    {
+    }
+
     /**
      * Helper untuk mengambil data pendaftaran atau membuat mock data dari database yang ada
      */
@@ -407,17 +412,68 @@ class FormulirController extends Controller
 
     public function ia01(Request $request, $pendaftaranId = null)
     {
-        $pendaftaran = $this->dapatkanPendaftaran($pendaftaranId ?: $request->get('pendaftaran_id'));
+        $user = $request->user();
+        abort_unless($user, 401);
+        $requestedId = $pendaftaranId ?? $request->get('pendaftaran_id');
+        $pendaftaran = is_numeric($requestedId) && (int) $requestedId > 0
+            ? $this->frIa01Service->loadAuthorizedRegistration((int) $requestedId, $user)
+            : $this->dapatkanPendaftaran($requestedId);
         if (!$pendaftaran) {
             return $this->redirectFallback('Silakan pilih atau daftarkan skema sertifikasi terlebih dahulu.');
         }
-        $iaRecord = $pendaftaran->id ? IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.01')->first() : null;
+        $isMasterMode = (int) $pendaftaran->id === 0;
+        if ($isMasterMode) {
+            abort_unless(in_array($user->peran, ['asesor', 'admin', 'superadmin'], true), 403, 'Pratinjau master hanya tersedia untuk Asesor dan Admin.');
+        } else {
+            $this->frIa01Service->loadAuthorizedRegistration((int) $pendaftaran->id, $user);
+        }
+
+        $iaRecord = $isMasterMode ? null : IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.01')->first();
         $savedData = $iaRecord ? ($iaRecord->data_jawaban ?? []) : [];
         $masterInst = \App\Models\SchemeMasterInstrument::where('skema_id', $pendaftaran->skema_id)
             ->whereIn('instrument_code', \App\Models\SchemeMasterInstrument::getCodeAliases('ia_01'))
             ->first();
-        $isMasterMode = empty($pendaftaran->id) || $pendaftaran->id == 0 || !$request->filled('pendaftaran_id');
-        return view('formulir.fr-ia-01', compact('pendaftaran', 'iaRecord', 'savedData', 'masterInst', 'isMasterMode'));
+        $kukIds = $isMasterMode ? [] : $this->frIa01Service->kukIds($pendaftaran);
+        $pencapaian = (array) ($savedData['pencapaian'] ?? []);
+        $evaluatedKukCount = collect($kukIds)->filter(fn ($id) => in_array($pencapaian[$id] ?? null, ['K', 'BK'], true))->count();
+        $canEdit = !$isMasterMode && $this->frIa01Service->canEdit($user, $pendaftaran, $iaRecord);
+        $canSignAsesor = !$isMasterMode && $this->frIa01Service->canSignAsesor($user, $pendaftaran, $iaRecord);
+        $canSignAsesi = !$isMasterMode && $this->frIa01Service->canSignAsesi($user, $pendaftaran, $iaRecord);
+        $isLocked = !$isMasterMode && $this->frIa01Service->isLocked($iaRecord);
+
+        return view('formulir.fr-ia-01', compact(
+            'pendaftaran',
+            'iaRecord',
+            'savedData',
+            'masterInst',
+            'isMasterMode',
+            'kukIds',
+            'evaluatedKukCount',
+            'canEdit',
+            'canSignAsesor',
+            'canSignAsesi',
+            'isLocked'
+        ));
+    }
+
+    public function storeIa01Signature(Request $request, int $pendaftaranId, string $signer)
+    {
+        $pendaftaran = $this->frIa01Service->loadAuthorizedRegistration($pendaftaranId, $request->user());
+        $this->frIa01Service->sign($pendaftaran, $request->user(), $signer, $request->all());
+
+        return back()->with('sukses', 'Tanda tangan berhasil disimpan.');
+    }
+
+    public function showIa01Signature(Request $request, int $pendaftaranId, string $signer)
+    {
+        $pendaftaran = $this->frIa01Service->loadAuthorizedRegistration($pendaftaranId, $request->user());
+        $path = $this->frIa01Service->authorizedSignaturePath($pendaftaran, $request->user(), $signer);
+
+        return response()->file($path, [
+            'Content-Type' => 'image/png',
+            'Cache-Control' => 'private, no-store, max-age=0',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
     }
 
     public function ia02(Request $request, $pendaftaranId = null)
@@ -1013,6 +1069,19 @@ class FormulirController extends Controller
 
     public function simpanIa(Request $request, $kodeForm, $pendaftaranId)
     {
+        if (strtoupper(trim($kodeForm)) === 'FR.IA.01' && (int) $pendaftaranId > 0) {
+            $pendaftaran = $this->frIa01Service->loadAuthorizedRegistration((int) $pendaftaranId, $request->user());
+            $record = $this->frIa01Service->save($pendaftaran, $request->user(), $request->all());
+            if ($record->status === 'completed') {
+                $this->evaluasiKelengkapanAsesmen($pendaftaran);
+            }
+            $message = $record->status === 'completed'
+                ? 'Ceklis Observasi Aktivitas (FR.IA.01) berhasil difinalisasi dan dikunci.'
+                : 'Draft Ceklis Observasi Aktivitas (FR.IA.01) berhasil disimpan.';
+
+            return back()->with('sukses', $message);
+        }
+
         $user = auth()->user();
         $pendaftaranIdInt = (int) $pendaftaranId;
         if ($pendaftaranIdInt > 0) {

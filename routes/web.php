@@ -312,6 +312,10 @@ Route::middleware(['auth', 'peran:superadmin'])->prefix('superadmin')->as('super
 Route::middleware(['auth'])->prefix('formulir')->as('formulir.')->group(function () {
     Route::get('/', [FormulirController::class, 'index'])->name('index');
     Route::get('/ia-01/{pendaftaranId?}', [FormulirController::class, 'ia01'])->name('ia01');
+    Route::get('/ia-01/{pendaftaranId}/signature/{signer}', [FormulirController::class, 'showIa01Signature'])->name('ia01.signature');
+    Route::post('/ia-01/{pendaftaranId}/signature/{signer}', [FormulirController::class, 'storeIa01Signature'])
+        ->middleware('throttle:10,1')
+        ->name('ia01.signature.store');
     Route::get('/ia-02/{pendaftaranId?}', [FormulirController::class, 'ia02'])->name('ia02');
     Route::get('/ia-03/{pendaftaranId?}', [FormulirController::class, 'ia03'])->name('ia03');
     Route::get('/ia-04a/{pendaftaranId?}', [FormulirController::class, 'ia04a'])->name('ia04a');

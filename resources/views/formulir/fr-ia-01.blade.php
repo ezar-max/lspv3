@@ -12,15 +12,15 @@
     @php
         $isAsesi = auth()->check() && auth()->user()->peran === 'asesi';
         $effectiveAsesor = $pendaftaran->asesor ?? ($pendaftaran->jadwal->asesor ?? null);
-        $asesorNama = $effectiveAsesor->nama_lengkap ?? (auth()->check() && auth()->user()->peran === 'asesor' ? auth()->user()->nama_lengkap : 'Asesor LSP');
-        $asesorMet = $effectiveAsesor->nomor_registrasi ?? (auth()->check() && auth()->user()->peran === 'asesor' ? auth()->user()->nomor_registrasi : 'MET.000.004455.2023');
-        $asesiNama = $pendaftaran->asesi->nama_lengkap ?? 'Nama Asesi';
-        $asesorTtd = $pendaftaran->tanda_tangan_asesor ?? ($effectiveAsesor->tanda_tangan ?? (auth()->check() && auth()->user()->peran === 'asesor' ? auth()->user()->tanda_tangan : null));
-        $asesiTtd = $iaRecord->data_jawaban['ttd_asesi'] ?? ($pendaftaran->tanda_tangan_asesi ?? null);
-        $tglTtdAsesi = $iaRecord->data_jawaban['tgl_ttd_asesi'] ?? null;
+        $asesorNama = $effectiveAsesor->nama_lengkap ?? (auth()->check() && auth()->user()->peran === 'asesor' ? auth()->user()->nama_lengkap : '-');
+        $asesorMet = $effectiveAsesor->nomor_registrasi ?? (auth()->check() && auth()->user()->peran === 'asesor' ? auth()->user()->nomor_registrasi : '-');
+        $asesiNama = $pendaftaran->asesi->nama_lengkap ?? '-';
+        $asesorSignature = $savedData['signature_asesor'] ?? null;
+        $asesiSignature = $savedData['signature_asesi'] ?? null;
         $tukNama = $pendaftaran->jadwal->nama_tuk ?? ($pendaftaran->tuk_type ?? 'Sewaktu');
         $tglAsesmen = $pendaftaran->jadwal?->tanggal_uji ? \Carbon\Carbon::parse($pendaftaran->jadwal->tanggal_uji)->format('d-m-Y') : date('d-m-Y');
-        $isMasterMode = isset($isMasterMode) ? $isMasterMode : (empty($pendaftaran->id) || $pendaftaran->id == 0 || !request()->filled('pendaftaran_id'));
+        $isMasterMode = $isMasterMode ?? ((int) $pendaftaran->id === 0);
+        $isReadOnly = $isMasterMode || !$canEdit || $isAsesi || $isLocked;
     @endphp
 
     <!-- ACTION BAR ATAS -->
@@ -29,12 +29,10 @@
         'namaForm' => 'Ceklis Observasi Aktivitas',
         'pendaftaranId' => $pendaftaran->id,
         'isAsesi' => $isAsesi,
+        'showSave' => $canEdit,
+        'showDraft' => $canEdit,
         'saveLabel' => 'Simpan Formulir',
         'saveFormId' => 'form-ia-01',
-        'signed' => (bool)$asesiTtd,
-        'signedLabel' => 'Hasil Terverifikasi & Ditandatangani',
-        'signRoute' => route('formulir.ia.simpan-ttd-asesi', ['kodeForm' => 'FR.IA.01', 'pendaftaranId' => $pendaftaran->id]),
-        'signLabel' => 'Tanda Tangani Hasil Asesmen'
     ])
 
     @if($isAsesi)
@@ -54,6 +52,33 @@
             'judulForm' => 'CL - CEKLIS OBSERVASI AKTIVITAS DI TEMPAT KERJA ATAU TEMPAT KERJA SIMULASI',
             'tipeDokumen' => 'Ceklis Observasi'
         ])
+
+        @if($isLocked)
+            <div class="ia01-status-locked" role="status">Formulir telah difinalisasi dan dikunci.</div>
+        @elseif($isMasterMode)
+            <div class="ia01-status-note" role="status">Pratinjau master. Penilaian dan tanda tangan hanya tersedia pada pendaftaran yang memenuhi alur asesmen.</div>
+        @endif
+
+        @if($errors->any())
+            <div class="ia01-validation-errors" role="alert">
+                <strong>Formulir belum dapat disimpan:</strong>
+                <ul>
+                    @foreach($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+
+        @if(!$isMasterMode)
+            <div class="ia01-progress" aria-live="polite">
+                Penilaian: <strong>{{ $evaluatedKukCount }} / {{ count($kukIds) }} KUK</strong>
+                <span>{{ count($kukIds) - $evaluatedKukCount }} item belum dinilai</span>
+                @if($iaRecord)
+                    <span>Status: <strong>{{ $isLocked ? 'Selesai' : 'Draft' }}</strong></span>
+                @endif
+            </div>
+        @endif
 
         <!-- IDENTITAS DOKUMEN -->
         <table class="tabel-bnsp">
@@ -110,6 +135,10 @@
 
         <form id="form-ia-01" method="POST" action="{{ route('formulir.ia.simpan', ['kodeForm' => 'FR.IA.01', 'pendaftaranId' => $pendaftaran->id]) }}">
             @csrf
+            @unless($isMasterMode)
+                <input type="hidden" name="version" value="{{ $savedData['_version'] ?? $iaRecord?->updated_at?->format('Y-m-d H:i:s') ?? '' }}">
+                <input type="hidden" name="finalisasi" value="1">
+            @endunless
             @php
                 $standarMap = $savedData['standar_industri'] ?? [];
                 $pencapaianMap = $savedData['pencapaian'] ?? [];
@@ -203,6 +232,9 @@
                                     @php
                                         $curPencapaian = $pencapaianMap[$kuk->id] ?? null;
                                         $curLanjut = $lanjutMap[$kuk->id] ?? '';
+                                        $curStandar = ($savedData['standar_industri_scope'] ?? null) === 'kuk'
+                                            ? ($standarMap[$kuk->id] ?? $elemStandar)
+                                            : ($standarMap[$elem->id] ?? $standarMap[$kuk->id] ?? $elemStandar);
                                     @endphp
                                     <tr>
                                         @if($kIdx === 0)
@@ -221,21 +253,18 @@
                                             <strong style="color: #0f172a;">{{ $elem->nomor_elemen }}.{{ $kuk->nomor_kuk }}</strong> {{ $kuk->pernyataan_kuk }}
                                         </td>
 
-                                        @if($kIdx === 0)
-                                            <!-- Standar Industri per Elemen Spanning Row (Sesuai Gambar) -->
-                                            <td rowspan="{{ $totalKuk }}" style="border: 1px solid #0f172a; padding: 6px; vertical-align: middle; text-align: center; background: #fafafa;">
-                                                <textarea name="standar_industri[{{ $elem->id }}]" rows="{{ max(2, $totalKuk) }}" class="input-inline-bnsp" style="width: 100%; border: 1px dashed #94a3b8; padding: 4px; font-size: 0.78rem; text-align: center; resize: vertical;" placeholder="Standar Industri..." {{ $isAsesi ? 'readonly' : 'required' }}>{{ $elemStandar }}</textarea>
-                                            </td>
-                                        @endif
+                                        <td style="border: 1px solid #0f172a; padding: 6px; vertical-align: middle; text-align: center; background: #fafafa;">
+                                            <textarea name="standar_industri[{{ $kuk->id }}]" rows="2" class="input-inline-bnsp" placeholder="Standar Industri..." {{ $isReadOnly ? 'readonly' : 'required' }}>{{ $curStandar }}</textarea>
+                                        </td>
 
                                         <td style="text-align: center; vertical-align: middle; border: 1px solid #0f172a; padding: 4px;">
-                                            <input type="radio" name="pencapaian[{{ $kuk->id }}]" value="K" {{ $curPencapaian === 'K' || ($curPencapaian === null && $isAsesi) ? 'checked' : '' }} style="width: 16px; height: 16px; accent-color: #059669; cursor: pointer;" {{ $isAsesi ? 'disabled' : '' }}>
+                                            <input type="radio" name="pencapaian[{{ $kuk->id }}]" value="K" {{ $curPencapaian === 'K' ? 'checked' : '' }} style="width: 16px; height: 16px; accent-color: #059669; cursor: pointer;" {{ $isReadOnly ? 'disabled' : 'required' }}>
                                         </td>
                                         <td style="text-align: center; vertical-align: middle; border: 1px solid #0f172a; padding: 4px;">
-                                            <input type="radio" name="pencapaian[{{ $kuk->id }}]" value="BK" {{ $curPencapaian === 'BK' ? 'checked' : '' }} style="width: 16px; height: 16px; accent-color: #dc2626; cursor: pointer;" {{ $isAsesi ? 'disabled' : '' }}>
+                                            <input type="radio" name="pencapaian[{{ $kuk->id }}]" value="BK" {{ $curPencapaian === 'BK' ? 'checked' : '' }} style="width: 16px; height: 16px; accent-color: #dc2626; cursor: pointer;" {{ $isReadOnly ? 'disabled' : '' }}>
                                         </td>
                                         <td style="border: 1px solid #0f172a; padding: 4px; vertical-align: middle;">
-                                            <input type="text" name="penilaian_lanjut[{{ $kuk->id }}]" class="input-inline-bnsp" value="{{ $curLanjut }}" placeholder="..." style="font-size: 0.78rem; width: 100%;" {{ $isAsesi ? 'readonly' : '' }}>
+                                            <input type="text" name="penilaian_lanjut[{{ $kuk->id }}]" class="input-inline-bnsp" value="{{ $curLanjut }}" placeholder="..." style="font-size: 0.78rem; width: 100%;" {{ $isReadOnly ? 'readonly' : '' }}>
                                         </td>
                                     </tr>
                                 @endforeach
@@ -243,11 +272,7 @@
                                 <tr>
                                     <td style="text-align: center; font-weight: 700; border: 1px solid #0f172a; padding: 6px;">{{ $idxElem + 1 }}</td>
                                     <td style="font-weight: 600; border: 1px solid #0f172a; padding: 6px 8px;">{{ $elem->nomor_elemen }}. {{ $elem->nama_elemen }}</td>
-                                    <td style="font-style: italic; color: #64748b; border: 1px solid #0f172a; padding: 6px 8px;">KUK belum diinput.</td>
-                                    <td style="border: 1px solid #0f172a; padding: 6px;"><input type="text" class="input-inline-bnsp" value="" style="font-size: 0.78rem;"></td>
-                                    <td style="text-align: center; border: 1px solid #0f172a; padding: 4px;"><input type="checkbox" checked style="width: 16px; height: 16px;"></td>
-                                    <td style="text-align: center; border: 1px solid #0f172a; padding: 4px;"><input type="checkbox" style="width: 16px; height: 16px;"></td>
-                                    <td style="border: 1px solid #0f172a; padding: 4px;"><input type="text" class="input-inline-bnsp" style="font-size: 0.78rem;"></td>
+                                    <td colspan="5" style="font-style: italic; color: #64748b; border: 1px solid #0f172a; padding: 6px 8px;">KUK belum diinput.</td>
                                 </tr>
                             @endif
                         @empty
@@ -273,18 +298,18 @@
             @if($isMasterMode)
                 <textarea class="input-inline-bnsp" rows="3" style="width: 100%; border: 1px dashed #cbd5e1; padding: 0.5rem; font-size: 0.85rem; border-radius: 4px; box-sizing: border-box; background-color: #f8fafc; cursor: not-allowed; color: #64748b; font-style: italic;" placeholder="Catatan umpan balik untuk asesi akan diisi oleh Asesor saat pelaksanaan asesmen." disabled readonly></textarea>
             @else
-                <textarea name="umpan_balik" class="input-inline-bnsp" rows="3" style="width: 100%; border: 1px dashed #cbd5e1; padding: 0.5rem; font-size: 0.85rem; border-radius: 4px; box-sizing: border-box;" placeholder="Tuliskan umpan balik untuk asesi..." {{ $isAsesi ? 'readonly' : 'required' }}>{{ $iaRecord->catatan_asesor ?? ($savedData['umpan_balik'] ?? ($meta['umpan_balik'] ?? '')) }}</textarea>
+                <textarea name="umpan_balik" class="input-inline-bnsp" rows="3" style="width: 100%; border: 1px dashed #cbd5e1; padding: 0.5rem; font-size: 0.85rem; border-radius: 4px; box-sizing: border-box;" placeholder="Tuliskan umpan balik untuk asesi..." {{ $isReadOnly ? 'readonly' : 'required' }}>{{ $iaRecord->catatan_asesor ?? ($savedData['umpan_balik'] ?? ($meta['umpan_balik'] ?? '')) }}</textarea>
             @endif
             
             <div style="margin-top: 0.85rem; padding: 0.75rem 1rem; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 4px;">
                 <div style="font-weight: 700; font-size: 0.88rem; color: #0f172a; margin-bottom: 0.35rem;">Rekomendasi Keputusan Asesor:</div>
                 <div style="display: flex; align-items: center; gap: 1.5rem;">
                     <label style="display: inline-flex; align-items: center; gap: 0.35rem; font-weight: 600; font-size: 0.85rem; cursor: pointer;">
-                        <input type="radio" name="rekomendasi" value="K" {{ ($iaRecord->rekomendasi ?? 'K') === 'K' ? 'checked' : '' }} {{ $isAsesi ? 'disabled' : '' }}>
+                        <input type="radio" name="rekomendasi" value="K" {{ ($iaRecord->rekomendasi ?? null) === 'K' ? 'checked' : '' }} {{ $isReadOnly ? 'disabled' : 'required' }}>
                         <span style="color: #16a34a;">Kompeten (K)</span>
                     </label>
                     <label style="display: inline-flex; align-items: center; gap: 0.35rem; font-weight: 600; font-size: 0.85rem; cursor: pointer;">
-                        <input type="radio" name="rekomendasi" value="BK" {{ ($iaRecord->rekomendasi ?? '') === 'BK' ? 'checked' : '' }} {{ $isAsesi ? 'disabled' : '' }}>
+                        <input type="radio" name="rekomendasi" value="BK" {{ ($iaRecord->rekomendasi ?? null) === 'BK' ? 'checked' : '' }} {{ $isReadOnly ? 'disabled' : '' }}>
                         <span style="color: #dc2626;">Belum Kompeten (BK)</span>
                     </label>
                 </div>
@@ -359,6 +384,9 @@
                                         @php
                                             $curPencapaian = $pencapaianMap[$kuk->id] ?? null;
                                             $curLanjut = $lanjutMap[$kuk->id] ?? '';
+                                            $curStandar = ($savedData['standar_industri_scope'] ?? null) === 'kuk'
+                                                ? ($standarMap[$kuk->id] ?? $standarElemenMaster[$elem->id] ?? $defaultStandarMaster ?? '')
+                                                : ($standarMap[$elem->id] ?? $standarMap[$kuk->id] ?? $standarElemenMaster[$elem->id] ?? $defaultStandarMaster ?? '');
                                         @endphp
                                         <tr>
                                             @if($kIdx === 0)
@@ -374,20 +402,18 @@
                                                 <strong style="color: #0f172a;">{{ $elem->nomor_elemen }}.{{ $kuk->nomor_kuk }}</strong> {{ $kuk->pernyataan_kuk }}
                                             </td>
 
-                                            @if($kIdx === 0)
-                                                <td rowspan="{{ $totalKuk }}" style="border: 1px solid #0f172a; padding: 6px; vertical-align: middle; text-align: center; background: #fafafa;">
-                                                    <textarea name="standar_industri[{{ $elem->id }}]" rows="{{ max(2, $totalKuk) }}" class="input-inline-bnsp" style="width: 100%; border: 1px dashed #94a3b8; padding: 4px; font-size: 0.78rem; text-align: center; resize: vertical;" placeholder="Standar Industri..." {{ $isAsesi ? 'readonly' : 'required' }}>{{ $elemStandar }}</textarea>
-                                                </td>
-                                            @endif
+                                            <td style="border: 1px solid #0f172a; padding: 6px; vertical-align: middle; text-align: center; background: #fafafa;">
+                                                <textarea name="standar_industri[{{ $kuk->id }}]" rows="2" class="input-inline-bnsp" placeholder="Standar Industri..." {{ $isReadOnly ? 'readonly' : 'required' }}>{{ $curStandar }}</textarea>
+                                            </td>
 
                                             <td style="text-align: center; vertical-align: middle; border: 1px solid #0f172a; padding: 4px;">
-                                                <input type="radio" name="pencapaian[{{ $kuk->id }}]" value="K" {{ $curPencapaian === 'K' || ($curPencapaian === null && $isAsesi) ? 'checked' : '' }} style="width: 16px; height: 16px; accent-color: #059669; cursor: pointer;" {{ $isAsesi ? 'disabled' : '' }}>
+                                                <input type="radio" name="pencapaian[{{ $kuk->id }}]" value="K" {{ $curPencapaian === 'K' ? 'checked' : '' }} style="width: 16px; height: 16px; accent-color: #059669; cursor: pointer;" {{ $isReadOnly ? 'disabled' : 'required' }}>
                                             </td>
                                             <td style="text-align: center; vertical-align: middle; border: 1px solid #0f172a; padding: 4px;">
-                                                <input type="radio" name="pencapaian[{{ $kuk->id }}]" value="BK" {{ $curPencapaian === 'BK' ? 'checked' : '' }} style="width: 16px; height: 16px; accent-color: #dc2626; cursor: pointer;" {{ $isAsesi ? 'disabled' : '' }}>
+                                                <input type="radio" name="pencapaian[{{ $kuk->id }}]" value="BK" {{ $curPencapaian === 'BK' ? 'checked' : '' }} style="width: 16px; height: 16px; accent-color: #dc2626; cursor: pointer;" {{ $isReadOnly ? 'disabled' : '' }}>
                                             </td>
                                             <td style="border: 1px solid #0f172a; padding: 4px; vertical-align: middle;">
-                                                <input type="text" name="penilaian_lanjut[{{ $kuk->id }}]" class="input-inline-bnsp" value="{{ $curLanjut }}" placeholder="..." style="font-size: 0.78rem; width: 100%;" {{ $isAsesi ? 'readonly' : '' }}>
+                                                <input type="text" name="penilaian_lanjut[{{ $kuk->id }}]" class="input-inline-bnsp" value="{{ $curLanjut }}" placeholder="..." style="font-size: 0.78rem; width: 100%;" {{ $isReadOnly ? 'readonly' : '' }}>
                                             </td>
                                         </tr>
                                     @endforeach
@@ -402,32 +428,76 @@
         @endif
         </form>
 
-        <!-- PENGESAHAN ASESI & ASESOR -->
-        @include('komponen.pengesahan-asesi-asesor', [
-            'kodeForm' => 'FR.IA.01',
-            'isAsesi' => $isAsesi ?? false,
-            'pendaftaran' => $pendaftaran ?? null,
-            'asesiNama' => $asesiNama ?? '-',
-            'asesiTtd' => $asesiTtd ?? null,
-            'tglTtdAsesi' => $tglTtdAsesi ?? null,
-            'asesorNama' => $asesorNama ?? '-',
-            'asesorMet' => $asesorMet ?? '-',
-            'asesorTtd' => $asesorTtd ?? null,
-            'tglAsesmen' => $tglAsesmen ?? null
-        ])
+        <section class="ia01-signatures" aria-labelledby="ia01-signatures-title">
+            <h2 id="ia01-signatures-title">Tanda Tangan</h2>
+            <div class="ia01-signature-grid">
+                @foreach([
+                    'asesi' => ['label' => 'ASESI', 'nama' => $asesiNama, 'reg' => null, 'data' => $asesiSignature, 'allowed' => $canSignAsesi],
+                    'asesor' => ['label' => 'ASESOR', 'nama' => $asesorNama, 'reg' => $asesorMet, 'data' => $asesorSignature, 'allowed' => $canSignAsesor],
+                ] as $signer => $signatureInfo)
+                    <div class="ia01-signature">
+                        <strong>{{ $signatureInfo['label'] }}</strong>
+                        @if(!empty($signatureInfo['data']['path']))
+                            <img
+                                class="ia01-signature-preview"
+                                src="{{ route('formulir.ia01.signature', ['pendaftaranId' => $pendaftaran->id, 'signer' => $signer]) }}"
+                                alt="Tanda tangan digital {{ strtolower($signatureInfo['label']) }}">
+                            <span class="ia01-signature-name">{{ $signatureInfo['nama'] }}</span>
+                            @if($signatureInfo['reg'])
+                                <small>{{ $signatureInfo['reg'] }}</small>
+                            @endif
+                            <small>
+                                {{ !empty($signatureInfo['data']['signed_at']) ? \Carbon\Carbon::parse($signatureInfo['data']['signed_at'])->format('d-m-Y H:i') : '' }}
+                            </small>
+                        @else
+                            <div class="ia01-signature-empty">Tanda tangan belum tersedia</div>
+                            <span class="ia01-signature-name">{{ $signatureInfo['nama'] }}</span>
+                            @if($signatureInfo['reg'])
+                                <small>{{ $signatureInfo['reg'] }}</small>
+                            @endif
+                        @endif
 
-        <!-- TABEL PENYUSUN DAN VALIDATOR -->
-        @include('komponen.tabel-penyusun-validator', [
-            'pendaftaran' => $pendaftaran,
-            'kodeForm' => 'FR.IA.01',
-            'tableClass' => 'tabel-bnsp'
-        ])
+                        @if($signatureInfo['allowed'] && !$isLocked && $iaRecord)
+                            <button
+                                type="button"
+                                class="tombol tombol-sekunder tombol-sm ia01-open-signature"
+                                data-signer="{{ $signer }}"
+                                data-title="Tanda Tangan {{ ucfirst($signer) }}"
+                                data-endpoint="{{ route('formulir.ia01.signature.store', ['pendaftaranId' => $pendaftaran->id, 'signer' => $signer]) }}">
+                                {{ !empty($signatureInfo['data']['path']) ? 'Ubah Tanda Tangan' : 'Buat Tanda Tangan' }}
+                            </button>
+                        @elseif($signatureInfo['allowed'] && !$isLocked && !$iaRecord)
+                            <small>Simpan draft terlebih dahulu untuk menandatangani formulir.</small>
+                        @endif
+                    </div>
+                @endforeach
+            </div>
+        </section>
 
     </div>
 </div>
+
+@if($canSignAsesor || $canSignAsesi)
+    <dialog class="ia01-signature-dialog" id="ia01-signature-dialog" aria-labelledby="ia01-signature-title">
+        <form method="POST" action="{{ route('formulir.ia01.signature.store', ['pendaftaranId' => $pendaftaran->id, 'signer' => $canSignAsesor ? 'asesor' : 'asesi']) }}" id="ia01-signature-form">
+            @csrf
+            <input type="hidden" name="version" value="{{ $savedData['_version'] ?? $iaRecord?->updated_at?->format('Y-m-d H:i:s') ?? '' }}">
+            <input type="hidden" name="signature" id="ia01-signature-value">
+            <h2 id="ia01-signature-title">Tanda Tangan</h2>
+            <p>Gunakan mouse, touch, atau stylus untuk membuat tanda tangan.</p>
+            <canvas id="ia01-signature-canvas" aria-label="Area tanda tangan"></canvas>
+            <p class="ia01-signature-error" id="ia01-signature-error" role="alert" hidden></p>
+            <div class="ia01-signature-actions">
+                <button type="button" class="tombol tombol-sekunder tombol-sm" id="ia01-signature-clear">Hapus</button>
+                <button type="button" class="tombol tombol-sekunder tombol-sm" id="ia01-signature-cancel">Batalkan</button>
+                <button type="submit" class="tombol tombol-utama tombol-sm">Simpan Tanda Tangan</button>
+            </div>
+        </form>
+    </dialog>
+@endif
 @endsection
 
 @push('js')
     <script src="{{ asset('js/formulir/formulir-bnsp.js') }}"></script>
+    <script src="{{ asset('js/formulir/fr-ia-01.js') }}" defer></script>
 @endpush
-
