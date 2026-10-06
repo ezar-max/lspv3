@@ -369,6 +369,30 @@
             box-shadow: 0 0 0 2px rgba(54, 100, 139, 0.15);
         }
 
+        .input-inline-modern:disabled,
+        .input-inline-modern[disabled],
+        .input-inline-modern.is-disabled {
+            background-color: #f1f5f9 !important;
+            color: #94a3b8 !important;
+            border-color: #e2e8f0 !important;
+            cursor: not-allowed !important;
+            opacity: 0.8;
+            box-shadow: none !important;
+        }
+
+        .input-inline-modern.input-error {
+            border-color: #ef4444 !important;
+            background-color: #fef2f2 !important;
+            box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2) !important;
+        }
+
+        .badge-wajib-ada {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #dc2626;
+            margin-left: 0.25rem;
+        }
+
         /* Textarea Bukti Matriks Modern */
         .textarea-bukti-mapa {
             width: 100%;
@@ -1398,12 +1422,23 @@
                             </label>
                             <label class="toggle-segment-btn">
                                 <input type="radio" name="karakteristik_kandidat_status" value="tidak_ada" 
-                                    {{ ($mapa01->karakteristik_kandidat_status ?? '') == 'tidak_ada' ? 'checked' : '' }}>
+                                    {{ ($mapa01->karakteristik_kandidat_status ?? 'tidak_ada') == 'tidak_ada' ? 'checked' : '' }}>
                                 <span>Tidak Ada*</span>
                             </label>
                         </div>
-                        <div style="font-size: 0.8rem; color: #475569; margin-bottom: 0.25rem;">Jika Ada, tuliskan:</div>
-                        <input type="text" name="karakteristik_kandidat_teks" value="{{ $mapa01->karakteristik_kandidat_teks ?? '' }}" class="input-inline-modern" data-status-field="karakteristik_kandidat_status" data-validation-label="Karakteristik Kandidat" placeholder="Tuliskan spesifikasi karakteristik khusus jika ada...">
+                        <div style="font-size: 0.8rem; color: #475569; margin-bottom: 0.25rem;">
+                            Jika Ada, tuliskan:
+                            <span class="badge-wajib-ada text-rose-600 font-bold" style="display: {{ ($mapa01->karakteristik_kandidat_status ?? '') == 'ada' ? 'inline' : 'none' }};">* (Wajib diisi jika Ada)</span>
+                        </div>
+                        <input type="text" name="karakteristik_kandidat_teks" 
+                            value="{{ ($mapa01->karakteristik_kandidat_status ?? '') == 'ada' ? ($mapa01->karakteristik_kandidat_teks ?? '') : '' }}" 
+                            class="input-inline-modern {{ ($mapa01->karakteristik_kandidat_status ?? 'tidak_ada') !== 'ada' ? 'is-disabled' : '' }}" 
+                            data-status-field="karakteristik_kandidat_status" 
+                            data-validation-label="Karakteristik Kandidat" 
+                            data-placeholder-default="Tuliskan spesifikasi karakteristik khusus jika ada..." 
+                            data-placeholder-disabled="Tidak perlu diisi (Memilih Tidak Ada)" 
+                            placeholder="{{ ($mapa01->karakteristik_kandidat_status ?? '') == 'ada' ? 'Tuliskan spesifikasi karakteristik khusus jika ada...' : 'Tidak perlu diisi (Memilih Tidak Ada)' }}"
+                            {{ ($mapa01->karakteristik_kandidat_status ?? 'tidak_ada') !== 'ada' ? 'disabled' : '' }}>
                     </td>
                 </tr>
 
@@ -1421,12 +1456,23 @@
                             </label>
                             <label class="toggle-segment-btn">
                                 <input type="radio" name="kebutuhan_kontekstualisasi_status" value="tidak_ada" 
-                                    {{ ($mapa01->kebutuhan_kontekstualisasi_status ?? '') == 'tidak_ada' ? 'checked' : '' }}>
+                                    {{ ($mapa01->kebutuhan_kontekstualisasi_status ?? 'tidak_ada') == 'tidak_ada' ? 'checked' : '' }}>
                                 <span>Tidak Ada*</span>
                             </label>
                         </div>
-                        <div style="font-size: 0.8rem; color: #475569; margin-bottom: 0.25rem;">Jika Ada, tuliskan:</div>
-                        <input type="text" name="kebutuhan_kontekstualisasi_teks" value="{{ $mapa01->kebutuhan_kontekstualisasi_teks ?? '' }}" class="input-inline-modern" data-status-field="kebutuhan_kontekstualisasi_status" data-validation-label="Kebutuhan Kontekstualisasi" placeholder="Tuliskan kebutuhan kontekstualisasi jika ada...">
+                        <div style="font-size: 0.8rem; color: #475569; margin-bottom: 0.25rem;">
+                            Jika Ada, tuliskan:
+                            <span class="badge-wajib-ada text-rose-600 font-bold" style="display: {{ ($mapa01->kebutuhan_kontekstualisasi_status ?? '') == 'ada' ? 'inline' : 'none' }};">* (Wajib diisi jika Ada)</span>
+                        </div>
+                        <input type="text" name="kebutuhan_kontekstualisasi_teks" 
+                            value="{{ ($mapa01->kebutuhan_kontekstualisasi_status ?? '') == 'ada' ? ($mapa01->kebutuhan_kontekstualisasi_teks ?? '') : '' }}" 
+                            class="input-inline-modern {{ ($mapa01->kebutuhan_kontekstualisasi_status ?? 'tidak_ada') !== 'ada' ? 'is-disabled' : '' }}" 
+                            data-status-field="kebutuhan_kontekstualisasi_status" 
+                            data-validation-label="Kebutuhan Kontekstualisasi" 
+                            data-placeholder-default="Tuliskan kebutuhan kontekstualisasi jika ada..." 
+                            data-placeholder-disabled="Tidak perlu diisi (Memilih Tidak Ada)" 
+                            placeholder="{{ ($mapa01->kebutuhan_kontekstualisasi_status ?? '') == 'ada' ? 'Tuliskan kebutuhan kontekstualisasi jika ada...' : 'Tidak perlu diisi (Memilih Tidak Ada)' }}"
+                            {{ ($mapa01->kebutuhan_kontekstualisasi_status ?? 'tidak_ada') !== 'ada' ? 'disabled' : '' }}>
                     </td>
                 </tr>
 
@@ -1444,12 +1490,23 @@
                             </label>
                             <label class="toggle-segment-btn">
                                 <input type="radio" name="saran_pelatihan_status" value="tidak_ada" 
-                                    {{ ($mapa01->saran_pelatihan_status ?? '') == 'tidak_ada' ? 'checked' : '' }}>
+                                    {{ ($mapa01->saran_pelatihan_status ?? 'tidak_ada') == 'tidak_ada' ? 'checked' : '' }}>
                                 <span>Tidak Ada*</span>
                             </label>
                         </div>
-                        <div style="font-size: 0.8rem; color: #475569; margin-bottom: 0.25rem;">Jika Ada, tuliskan:</div>
-                        <input type="text" name="saran_pelatihan_teks" value="{{ $mapa01->saran_pelatihan_teks ?? '' }}" class="input-inline-modern" data-status-field="saran_pelatihan_status" data-validation-label="Saran Pelatihan" placeholder="Tuliskan saran paket pelatihan jika ada...">
+                        <div style="font-size: 0.8rem; color: #475569; margin-bottom: 0.25rem;">
+                            Jika Ada, tuliskan:
+                            <span class="badge-wajib-ada text-rose-600 font-bold" style="display: {{ ($mapa01->saran_pelatihan_status ?? '') == 'ada' ? 'inline' : 'none' }};">* (Wajib diisi jika Ada)</span>
+                        </div>
+                        <input type="text" name="saran_pelatihan_teks" 
+                            value="{{ ($mapa01->saran_pelatihan_status ?? '') == 'ada' ? ($mapa01->saran_pelatihan_teks ?? '') : '' }}" 
+                            class="input-inline-modern {{ ($mapa01->saran_pelatihan_status ?? 'tidak_ada') !== 'ada' ? 'is-disabled' : '' }}" 
+                            data-status-field="saran_pelatihan_status" 
+                            data-validation-label="Saran Pelatihan" 
+                            data-placeholder-default="Tuliskan saran paket pelatihan jika ada..." 
+                            data-placeholder-disabled="Tidak perlu diisi (Memilih Tidak Ada)" 
+                            placeholder="{{ ($mapa01->saran_pelatihan_status ?? '') == 'ada' ? 'Tuliskan saran paket pelatihan jika ada...' : 'Tidak perlu diisi (Memilih Tidak Ada)' }}"
+                            {{ ($mapa01->saran_pelatihan_status ?? 'tidak_ada') !== 'ada' ? 'disabled' : '' }}>
                     </td>
                 </tr>
 
@@ -1467,12 +1524,23 @@
                             </label>
                             <label class="toggle-segment-btn">
                                 <input type="radio" name="penyesuaian_perangkat_status" value="tidak_ada" 
-                                    {{ ($mapa01->penyesuaian_perangkat_status ?? '') == 'tidak_ada' ? 'checked' : '' }}>
+                                    {{ ($mapa01->penyesuaian_perangkat_status ?? 'tidak_ada') == 'tidak_ada' ? 'checked' : '' }}>
                                 <span>Tidak Ada*</span>
                             </label>
                         </div>
-                        <div style="font-size: 0.8rem; color: #475569; margin-bottom: 0.25rem;">Jika Ada, tuliskan:</div>
-                        <input type="text" name="penyesuaian_perangkat_teks" value="{{ $mapa01->penyesuaian_perangkat_teks ?? '' }}" class="input-inline-modern" data-status-field="penyesuaian_perangkat_status" data-validation-label="Penyesuaian Perangkat" placeholder="Tuliskan penyesuaian perangkat jika ada...">
+                        <div style="font-size: 0.8rem; color: #475569; margin-bottom: 0.25rem;">
+                            Jika Ada, tuliskan:
+                            <span class="badge-wajib-ada text-rose-600 font-bold" style="display: {{ ($mapa01->penyesuaian_perangkat_status ?? '') == 'ada' ? 'inline' : 'none' }};">* (Wajib diisi jika Ada)</span>
+                        </div>
+                        <input type="text" name="penyesuaian_perangkat_teks" 
+                            value="{{ ($mapa01->penyesuaian_perangkat_status ?? '') == 'ada' ? ($mapa01->penyesuaian_perangkat_teks ?? '') : '' }}" 
+                            class="input-inline-modern {{ ($mapa01->penyesuaian_perangkat_status ?? 'tidak_ada') !== 'ada' ? 'is-disabled' : '' }}" 
+                            data-status-field="penyesuaian_perangkat_status" 
+                            data-validation-label="Penyesuaian Perangkat" 
+                            data-placeholder-default="Tuliskan penyesuaian perangkat jika ada..." 
+                            data-placeholder-disabled="Tidak perlu diisi (Memilih Tidak Ada)" 
+                            placeholder="{{ ($mapa01->penyesuaian_perangkat_status ?? '') == 'ada' ? 'Tuliskan penyesuaian perangkat jika ada...' : 'Tidak perlu diisi (Memilih Tidak Ada)' }}"
+                            {{ ($mapa01->penyesuaian_perangkat_status ?? 'tidak_ada') !== 'ada' ? 'disabled' : '' }}>
                     </td>
                 </tr>
 
@@ -1490,12 +1558,23 @@
                             </label>
                             <label class="toggle-segment-btn">
                                 <input type="radio" name="peluang_terintegrasi_status" value="tidak_ada" 
-                                    {{ ($mapa01->peluang_terintegrasi_status ?? '') == 'tidak_ada' ? 'checked' : '' }}>
+                                    {{ ($mapa01->peluang_terintegrasi_status ?? 'tidak_ada') == 'tidak_ada' ? 'checked' : '' }}>
                                 <span>Tidak Ada*</span>
                             </label>
                         </div>
-                        <div style="font-size: 0.8rem; color: #475569; margin-bottom: 0.25rem;">Jika Ada, tuliskan:</div>
-                        <input type="text" name="peluang_terintegrasi_teks" value="{{ $mapa01->peluang_terintegrasi_teks ?? '' }}" class="input-inline-modern" data-status-field="peluang_terintegrasi_status" data-validation-label="Peluang Kegiatan Terintegrasi" placeholder="Tuliskan peluang asesmen terintegrasi jika ada...">
+                        <div style="font-size: 0.8rem; color: #475569; margin-bottom: 0.25rem;">
+                            Jika Ada, tuliskan:
+                            <span class="badge-wajib-ada text-rose-600 font-bold" style="display: {{ ($mapa01->peluang_terintegrasi_status ?? '') == 'ada' ? 'inline' : 'none' }};">* (Wajib diisi jika Ada)</span>
+                        </div>
+                        <input type="text" name="peluang_terintegrasi_teks" 
+                            value="{{ ($mapa01->peluang_terintegrasi_status ?? '') == 'ada' ? ($mapa01->peluang_terintegrasi_teks ?? '') : '' }}" 
+                            class="input-inline-modern {{ ($mapa01->peluang_terintegrasi_status ?? 'tidak_ada') !== 'ada' ? 'is-disabled' : '' }}" 
+                            data-status-field="peluang_terintegrasi_status" 
+                            data-validation-label="Peluang Kegiatan Terintegrasi" 
+                            data-placeholder-default="Tuliskan peluang asesmen terintegrasi jika ada..." 
+                            data-placeholder-disabled="Tidak perlu diisi (Memilih Tidak Ada)" 
+                            placeholder="{{ ($mapa01->peluang_terintegrasi_status ?? '') == 'ada' ? 'Tuliskan peluang asesmen terintegrasi jika ada...' : 'Tidak perlu diisi (Memilih Tidak Ada)' }}"
+                            {{ ($mapa01->peluang_terintegrasi_status ?? 'tidak_ada') !== 'ada' ? 'disabled' : '' }}>
                     </td>
                 </tr>
             </table>
@@ -2111,6 +2190,7 @@
                     });
                 }
                 applyKonfirmasiTabelState();
+                updateModificationInputsState();
             }
         }
 
@@ -2285,19 +2365,28 @@
             for (const textInput of conditionalTextFields) {
                 const status = form.querySelector(`input[name="${textInput.dataset.statusField}"]:checked`);
                 if (status?.value === 'ada' && !textInput.value.trim()) {
-                    const label = textInput.dataset.validationLabel;
-                    const message = `${label} wajib diisi jika memilih Ada.`;
+                    textInput.classList.add('input-error');
+                    const label = textInput.dataset.validationLabel || 'Bagian Modifikasi';
+                    const message = `Kolom "Jika Ada, tuliskan:" pada ${label} wajib diisi karena memilih Ada.`;
                     if (typeof Swal !== 'undefined') {
-                        Swal.fire({ icon: 'warning', title: 'Formulir Belum Lengkap', text: message, confirmButtonColor: '#059669' })
-                            .then(() => {
-                                textInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                textInput.focus();
-                            });
+                        Swal.fire({ 
+                            icon: 'warning', 
+                            title: 'Formulir Belum Lengkap', 
+                            text: message, 
+                            confirmButtonColor: '#059669',
+                            confirmButtonText: 'Lengkapi Sekarang'
+                        })
+                        .then(() => {
+                            textInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            textInput.focus();
+                        });
                     } else {
                         alert(message);
                         textInput.focus();
                     }
                     return;
+                } else {
+                    textInput.classList.remove('input-error');
                 }
             }
 
@@ -2374,6 +2463,15 @@
 
             // Pastikan input nama dan tanggal pada tabel konfirmasi di-enable agar terkirim ke backend
             form.querySelectorAll('.input-nama-relevan, .input-tgl-relevan').forEach(el => {
+                el.disabled = false;
+            });
+
+            // Pastikan field modifikasi yang 'tidak_ada' dikosongkan nilainya dan di-enable sementara agar tidak terhalang submit
+            form.querySelectorAll('input[data-status-field]').forEach(el => {
+                const status = form.querySelector(`input[name="${el.dataset.statusField}"]:checked`);
+                if (status?.value !== 'ada') {
+                    el.value = '';
+                }
                 el.disabled = false;
             });
 
@@ -2586,18 +2684,76 @@
             }
         };
 
+        function updateModificationInputsState(options = {}) {
+            const form = document.getElementById('form-mapa01');
+            if (!form) return;
+
+            form.querySelectorAll('input[data-status-field]').forEach(textInput => {
+                const statusField = textInput.dataset.statusField;
+                const checkedRadio = form.querySelector(`input[name="${statusField}"]:checked`);
+                const statusVal = checkedRadio ? checkedRadio.value : 'tidak_ada';
+                const isAda = (statusVal === 'ada');
+
+                const td = textInput.closest('td');
+                const badgeWajib = td ? td.querySelector('.badge-wajib-ada') : null;
+
+                if (isAda) {
+                    if (typeof isMapa01EditMode === 'undefined' || isMapa01EditMode) {
+                        textInput.disabled = false;
+                        textInput.readOnly = false;
+                    }
+                    textInput.classList.remove('is-disabled');
+                    textInput.required = true;
+                    textInput.setAttribute('aria-required', 'true');
+                    if (textInput.dataset.placeholderDefault) {
+                        textInput.placeholder = textInput.dataset.placeholderDefault;
+                    }
+                    if (badgeWajib) {
+                        badgeWajib.style.display = 'inline';
+                    }
+                    if (options.targetField === statusField && options.focusTarget) {
+                        textInput.focus();
+                    }
+                } else {
+                    textInput.disabled = true;
+                    textInput.classList.add('is-disabled');
+                    textInput.classList.remove('input-error');
+                    textInput.required = false;
+                    textInput.removeAttribute('aria-required');
+                    textInput.value = '';
+                    if (textInput.dataset.placeholderDisabled) {
+                        textInput.placeholder = textInput.dataset.placeholderDisabled;
+                    }
+                    if (badgeWajib) {
+                        badgeWajib.style.display = 'none';
+                    }
+                }
+            });
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
             applyMapa01Mode();
-            document.querySelectorAll('#form-mapa01 input[data-status-field]').forEach(textInput => {
-                const updateRequired = () => {
-                    const status = document.querySelector(`input[name="${textInput.dataset.statusField}"]:checked`);
-                    textInput.required = status?.value === 'ada';
-                };
-                document.querySelectorAll(`input[name="${textInput.dataset.statusField}"]`).forEach(statusInput => {
-                    statusInput.addEventListener('change', updateRequired);
-                });
-                updateRequired();
+            updateModificationInputsState();
+
+            document.querySelectorAll('#form-mapa01 input[type="radio"]').forEach(radio => {
+                if (radio.name.endsWith('_status')) {
+                    radio.addEventListener('change', function() {
+                        updateModificationInputsState({
+                            targetField: this.name,
+                            focusTarget: (this.value === 'ada')
+                        });
+                    });
+                }
             });
+
+            document.querySelectorAll('#form-mapa01 input[data-status-field]').forEach(textInput => {
+                textInput.addEventListener('input', function() {
+                    if (this.value.trim()) {
+                        this.classList.remove('input-error');
+                    }
+                });
+            });
+
             window.bukaModalTtd();
             initAdminAuthorSignatureCanvas();
             initValidatorCanvas();
@@ -2607,8 +2763,42 @@
 
             const formM = document.getElementById('form-mapa01');
             if (formM) {
-                formM.addEventListener('submit', function() {
+                formM.addEventListener('submit', function(e) {
+                    const conditionalTextFields = formM.querySelectorAll('input[data-status-field]');
+                    for (const textInput of conditionalTextFields) {
+                        const status = formM.querySelector(`input[name="${textInput.dataset.statusField}"]:checked`);
+                        if (status?.value === 'ada' && !textInput.value.trim()) {
+                            e.preventDefault();
+                            textInput.classList.add('input-error');
+                            const label = textInput.dataset.validationLabel || 'Bagian Modifikasi';
+                            const message = `Kolom "Jika Ada, tuliskan:" pada ${label} wajib diisi karena memilih Ada.`;
+                            if (typeof Swal !== 'undefined') {
+                                Swal.fire({ 
+                                    icon: 'warning', 
+                                    title: 'Formulir Belum Lengkap', 
+                                    text: message, 
+                                    confirmButtonColor: '#059669',
+                                    confirmButtonText: 'Lengkapi Sekarang'
+                                }).then(() => {
+                                    textInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                    textInput.focus();
+                                });
+                            } else {
+                                alert(message);
+                                textInput.focus();
+                            }
+                            return false;
+                        }
+                    }
+
                     formM.querySelectorAll('.input-nama-relevan, .input-tgl-relevan').forEach(el => {
+                        el.disabled = false;
+                    });
+                    formM.querySelectorAll('input[data-status-field]').forEach(el => {
+                        const status = formM.querySelector(`input[name="${el.dataset.statusField}"]:checked`);
+                        if (status?.value !== 'ada') {
+                            el.value = '';
+                        }
                         el.disabled = false;
                     });
                 });

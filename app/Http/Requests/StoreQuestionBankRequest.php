@@ -11,6 +11,16 @@ class StoreQuestionBankRequest extends FormRequest
         return auth()->check() && in_array(auth()->user()->peran, ['admin', 'asesor', 'superadmin', 'komite_teknis']);
     }
 
+    protected function prepareForValidation(): void
+    {
+        if ($this->has('kuk_id') && ($this->kuk_id === '' || $this->kuk_id === null || $this->kuk_id === '0')) {
+            $this->merge(['kuk_id' => null]);
+        }
+        if ($this->has('points') && ($this->points === '' || $this->points === null)) {
+            $this->merge(['points' => 1]);
+        }
+    }
+
     public function rules(): array
     {
         $rules = [

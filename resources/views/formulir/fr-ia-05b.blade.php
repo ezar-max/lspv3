@@ -115,8 +115,10 @@
         </div>
     @endif
 
-    <form id="form-ia05b-evaluasi" action="{{ route('formulir.ia.simpan', ['kodeForm' => 'FR.IA.05B', 'pendaftaranId' => $pendaftaran->id]) }}" method="POST">
+    <form id="form-ia05b-evaluasi" action="{{ route('formulir.ia.simpan', ['kodeForm' => 'FR.IA.05B', 'pendaftaranId' => $pendaftaran->id ?: 0]) }}" method="POST">
         @csrf
+        <input type="hidden" name="skema_id" value="{{ $pendaftaran->skema_id }}">
+        <input type="hidden" name="pendaftaran_id" value="{{ $pendaftaran->id ?: 0 }}">
 
         <div class="dokumen-kertas">
             

@@ -699,7 +699,7 @@ class AsesorController extends Controller
 
         $request->validate([
             'tuk_type' => 'nullable|string|in:Sewaktu,Tempat Kerja,Mandiri',
-            'bukti_dikumpulkan' => 'nullable|array',
+            'bukti_dikumpulkan' => 'required|array|min:1',
             'bukti_dikumpulkan_lainnya' => 'nullable|string',
         ]);
 
@@ -1038,7 +1038,7 @@ class AsesorController extends Controller
 
         $request->validate([
             'tuk_type' => 'required|string|in:Sewaktu,Tempat Kerja,Mandiri',
-            'bukti_dikumpulkan' => 'nullable|array',
+            'bukti_dikumpulkan' => 'required|array|min:1',
             'bukti_dikumpulkan_lainnya' => 'nullable|string|max:500',
             'catatan_asesor' => 'nullable|string|max:1000',
             'tanda_tangan_asesor' => ['required', 'string', 'max:2000000', 'regex:/^data:image\/(png|jpeg);base64,/'],
@@ -1059,7 +1059,7 @@ class AsesorController extends Controller
             [
                 'asesor_id' => $user->id,
                 'tuk_type' => $request->input('tuk_type', 'Sewaktu'),
-                'bukti_dikumpulkan' => $request->input('bukti_dikumpulkan', ['Observasi Praktik Demonstrasi', 'Uji Tertulis (CBT)', 'Tanya Jawab Lisan']),
+                'bukti_dikumpulkan' => $request->input('bukti_dikumpulkan'),
                 'bukti_dikumpulkan_lainnya' => $request->input('bukti_dikumpulkan_lainnya'),
                 'catatan_asesor' => $request->input('catatan_asesor'),
                 'tanda_tangan_asesor' => $asesorSignature,
@@ -1110,16 +1110,42 @@ class AsesorController extends Controller
         $user = auth()->user();
         $skema = $this->authorizeSkemaAccess((int) $skemaId);
 
-        $validated = $request->validate([
+        $rules = [
             'potensi_asesi' => 'required|integer|between:1,5',
             'fase_penggunaan' => 'required|string|in:pra_asesmen,saat_pra_asesmen,setelah_pra_asesmen',
-            'items_checklist' => 'nullable|array',
+            'items_checklist' => 'required|array',
             'acuan_pembanding_disepakati' => 'nullable|string|max:1000',
             'metode_disepakati' => 'nullable|string|max:1000',
             'instrumen_disepakati' => 'nullable|string|max:1000',
             'catatan_asesor' => 'nullable|string|max:1000',
             'tanda_tangan_asesor' => ['required', 'string', 'max:2000000', 'regex:/^data:image\\/(png|jpeg);base64,/'],
-        ]);
+        ];
+        $messages = [];
+        foreach (\App\Models\AssessmentAk07Adjustment::CRITERIA_DEFINITIONS as $categoryId => $category) {
+            $rules["items_checklist.{$categoryId}"] = 'required|array';
+            $rules["items_checklist.{$categoryId}.perlu"] = 'required|in:0,1';
+            $rules["items_checklist.{$categoryId}.opsi"] = 'nullable|array';
+            $rules["items_checklist.{$categoryId}.opsi.*"] = 'nullable|string';
+            $rules["items_checklist.{$categoryId}.keterangan"] = 'nullable|string|max:500';
+            $messages["items_checklist.{$categoryId}.perlu.required"] = "Pilih status kebutuhan penyesuaian untuk kategori {$categoryId}: {$category['title']}.";
+            $messages["items_checklist.{$categoryId}.perlu.in"] = "Status kebutuhan penyesuaian kategori {$categoryId} tidak valid.";
+        }
+
+        $validated = $request->validate($rules, $messages);
+
+        // Validasi: Kategori dengan status "Perlu Penyesuaian" wajib memilih minimal satu opsi checkbox
+        foreach (\App\Models\AssessmentAk07Adjustment::CRITERIA_DEFINITIONS as $catId => $cat) {
+            $catInput = $validated['items_checklist'][$catId] ?? [];
+            $perluVal = $catInput['perlu'] ?? null;
+            if ($perluVal === '1' || $perluVal === 1) {
+                $opsi = $catInput['opsi'] ?? [];
+                if (!is_array($opsi) || count($opsi) === 0) {
+                    return back()->withErrors([
+                        "items_checklist.{$catId}.opsi" => "Kategori {$catId} ({$cat['title']}) ditandai 'Perlu Penyesuaian', minimal satu opsi checkbox penyesuaian wajib dipilih."
+                    ])->withInput();
+                }
+            }
+        }
 
         $rawSignature = $validated['tanda_tangan_asesor'];
         $signaturePayload = substr($rawSignature, strpos($rawSignature, ',') + 1);
@@ -1136,7 +1162,7 @@ class AsesorController extends Controller
             return back()->withErrors(['tanda_tangan_asesor' => 'Tanda tangan Asesor gagal disimpan.'])->withInput();
         }
 
-        $rawChecklist = $request->input('items_checklist', []);
+        $rawChecklist = $validated['items_checklist'];
         $formattedChecklist = [];
 
         foreach (\App\Models\AssessmentAk07Adjustment::CRITERIA_DEFINITIONS as $catId => $cat) {
@@ -1338,11 +1364,11 @@ class AsesorController extends Controller
             'penyesuaian_perangkat_teks' => 'required_if:penyesuaian_perangkat_status,ada|nullable|string',
             'peluang_terintegrasi_teks' => 'required_if:peluang_terintegrasi_status,ada|nullable|string',
         ], [
-            'karakteristik_kandidat_teks.required_if' => 'Karakteristik Kandidat wajib diisi jika memilih Ada.',
-            'kebutuhan_kontekstualisasi_teks.required_if' => 'Kebutuhan Kontekstualisasi wajib diisi jika memilih Ada.',
-            'saran_pelatihan_teks.required_if' => 'Saran Pelatihan wajib diisi jika memilih Ada.',
-            'penyesuaian_perangkat_teks.required_if' => 'Penyesuaian Perangkat wajib diisi jika memilih Ada.',
-            'peluang_terintegrasi_teks.required_if' => 'Peluang Kegiatan Terintegrasi wajib diisi jika memilih Ada.',
+            'karakteristik_kandidat_teks.required_if' => 'Kolom "Jika Ada, tuliskan:" pada Karakteristik Kandidat wajib diisi jika memilih Ada.',
+            'kebutuhan_kontekstualisasi_teks.required_if' => 'Kolom "Jika Ada, tuliskan:" pada Kebutuhan Kontekstualisasi wajib diisi jika memilih Ada.',
+            'saran_pelatihan_teks.required_if' => 'Kolom "Jika Ada, tuliskan:" pada Saran Pelatihan wajib diisi jika memilih Ada.',
+            'penyesuaian_perangkat_teks.required_if' => 'Kolom "Jika Ada, tuliskan:" pada Penyesuaian Perangkat wajib diisi jika memilih Ada.',
+            'peluang_terintegrasi_teks.required_if' => 'Kolom "Jika Ada, tuliskan:" pada Peluang Kegiatan Terintegrasi wajib diisi jika memilih Ada.',
         ]);
     }
 

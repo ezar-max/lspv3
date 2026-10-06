@@ -264,5 +264,160 @@ class FrIaDatabaseWorkflowTest extends TestCase
             'rekomendasi' => 'kompeten',
         ]);
     }
+
+    /**
+     * Test: Asesor and Admin see editable scenario, tools, and duration fields with required attributes.
+     */
+    public function test_asesor_and_admin_see_editable_required_inputs_in_fr_ia_02(): void
+    {
+        // 1. Asesor view
+        $responseAsesor = $this->actingAs($this->asesor)
+            ->get(route('formulir.ia02', $this->pendaftaran->id));
+        $responseAsesor->assertStatus(200);
+        $responseAsesor->assertSee('name="kelompok_skenario[1][skenario]"', false);
+        $responseAsesor->assertSee('name="kelompok_skenario[1][peralatan]"', false);
+        $responseAsesor->assertSee('name="kelompok_skenario[1][waktu]"', false);
+        // Verify they are required and NOT readonly
+        $this->assertStringNotContainsString('name="kelompok_skenario[1][skenario]" class="textarea-skenario" rows="4" placeholder="Tuliskan skenario tugas praktik demonstrasi..." readonly', $responseAsesor->getContent());
+        $this->assertStringContainsString('name="kelompok_skenario[1][skenario]" class="textarea-skenario" rows="4" placeholder="Tuliskan skenario tugas praktik demonstrasi..." required', $responseAsesor->getContent());
+        $this->assertStringContainsString('<select name="kelompok_skenario[1][waktu]"', $responseAsesor->getContent());
+        $this->assertStringContainsString('<option value="1 Jam"', $responseAsesor->getContent());
+        $this->assertStringContainsString('<option value="2 Jam"', $responseAsesor->getContent());
+
+        // 2. Admin view in master mode
+        $responseAdmin = $this->actingAs($this->admin)
+            ->get(route('formulir.ia02', ['pendaftaran_id' => 0, 'skema_id' => $this->skema->id]));
+        $responseAdmin->assertStatus(200);
+        $this->assertStringContainsString('name="kelompok_skenario[1][skenario]" class="textarea-skenario" rows="4" placeholder="Tuliskan skenario tugas praktik demonstrasi..." required', $responseAdmin->getContent());
+        $this->assertStringContainsString('<select name="kelompok_skenario[1][waktu]"', $responseAdmin->getContent());
+    }
+
+    /**
+     * Test: Asesi sees readonly inputs in FR.IA.02.
+     */
+    public function test_asesi_sees_readonly_inputs_in_fr_ia_02(): void
+    {
+        $responseAsesi = $this->actingAs($this->asesi)
+            ->get(route('formulir.ia02', $this->pendaftaran->id));
+        $responseAsesi->assertStatus(200);
+        $this->assertStringContainsString('name="kelompok_skenario[1][skenario]" class="textarea-skenario" rows="4" placeholder="Skenario demonstrasi praktik belum diisi oleh Asesor." readonly', $responseAsesi->getContent());
+    }
+
+    /**
+     * Test: Saving FR.IA.02 in master mode saves scenario, tools, and duration to SchemeMasterInstrument.
+     */
+    public function test_master_mode_can_save_fr_ia_02_scenario_tools_duration(): void
+    {
+        $payload = [
+            'judul_tugas' => 'Tugas Master Praktik Pakan',
+            'kelompok_skenario' => [
+                1 => [
+                    'skenario' => 'Skenario demonstrasi master baru untuk pakan ternak.',
+                    'peralatan' => 'Mixer pakan, Silo mini, Masker K3',
+                    'waktu' => '150 Menit',
+                ]
+            ],
+            'catatan' => 'Catatan ini tidak boleh masuk master',
+            'ttd_asesi' => 'ttd_tidak_boleh_masuk_master',
+        ];
+
+        $response = $this->actingAs($this->admin)
+            ->post(route('formulir.ia.simpan', [
+                'kodeForm' => 'FR.IA.02',
+                'pendaftaranId' => 0,
+            ]) . '?skema_id=' . $this->skema->id, $payload);
+
+        $response->assertSessionHasNoErrors();
+        $response->assertRedirect();
+
+        $master = SchemeMasterInstrument::where('skema_id', $this->skema->id)
+            ->whereIn('instrument_code', SchemeMasterInstrument::getCodeAliases('ia_02'))
+            ->first();
+
+        $this->assertNotNull($master);
+        $this->assertEquals('Tugas Master Praktik Pakan', $master->title);
+        $this->assertEquals(150, $master->time_limit_minutes);
+        $this->assertEquals('Skenario demonstrasi master baru untuk pakan ternak.', $master->additional_metadata['skenario']);
+        $this->assertEquals('Mixer pakan, Silo mini, Masker K3', $master->additional_metadata['peralatan_bahan']);
+        $this->assertEquals('150 Menit', $master->additional_metadata['durasi_waktu']);
+        $this->assertArrayNotHasKey('catatan', $master->additional_metadata);
+        $this->assertArrayNotHasKey('ttd_asesi', $master->additional_metadata);
+    }
+
+    /**
+     * Test: Asesor and admin see dropdown selects for waktu in FR.IA.04A.
+     */
+    public function test_asesor_and_admin_see_dropdown_jam_in_fr_ia_04a(): void
+    {
+        $responseAsesor = $this->actingAs($this->asesor)
+            ->get(route('formulir.ia04a', $this->pendaftaran->id));
+        $responseAsesor->assertStatus(200);
+        $contentAsesor = $responseAsesor->getContent();
+        $this->assertStringContainsString('name="waktu_menit"', $contentAsesor);
+        $this->assertStringContainsString('<select name="waktu_menit"', $contentAsesor);
+        $this->assertStringContainsString('<select name="waktu_demo"', $contentAsesor);
+        $this->assertStringContainsString('value="2 Jam"', $contentAsesor);
+
+        $responseAdmin = $this->actingAs($this->admin)
+            ->get(route('formulir.ia04a', [
+                'pendaftaranId' => 0,
+                'skema_id' => $this->skema->id,
+            ]));
+        $responseAdmin->assertStatus(200);
+        $contentAdmin = $responseAdmin->getContent();
+        $this->assertStringContainsString('<select name="waktu_menit"', $contentAdmin);
+        $this->assertStringContainsString('<select name="waktu_demo"', $contentAdmin);
+    }
+
+    /**
+     * Test: Asesi sees readonly text inputs in FR.IA.04A.
+     */
+    public function test_asesi_sees_readonly_inputs_in_fr_ia_04a(): void
+    {
+        $responseAsesi = $this->actingAs($this->asesi)
+            ->get(route('formulir.ia04a', $this->pendaftaran->id));
+        $responseAsesi->assertStatus(200);
+        $contentAsesi = $responseAsesi->getContent();
+        $this->assertStringContainsString('name="waktu_menit" id="waktu_menit" class="input-inline-bnsp" value="-" style="max-width: 200px;" readonly', $contentAsesi);
+        $this->assertStringContainsString('name="waktu_demo" id="waktu_demo" class="input-inline-bnsp" value="-" style="max-width: 200px;" readonly', $contentAsesi);
+    }
+
+    /**
+     * Test: Saving FR.IA.04A with hours converts to minutes properly.
+     */
+    public function test_saving_fr_ia_04a_converts_jam_to_minutes(): void
+    {
+        $payload = [
+            'skenario' => 'Buat proyek analisis kelayakan formula pakan.',
+            'waktu_menit' => '3 Jam',
+            'demonstrasi' => 'Demonstrasikan pengujian pH dan kadar air sampel.',
+            'waktu_demo' => '1 Jam',
+            'umpan_balik' => 'Pertahankan akurasi penimbangan bahan baku.',
+        ];
+
+        $response = $this->actingAs($this->asesor)
+            ->post(route('formulir.ia.simpan', [
+                'kodeForm' => 'FR.IA.04A',
+                'pendaftaranId' => $this->pendaftaran->id,
+            ]), $payload);
+
+        $response->assertSessionHasNoErrors();
+        $response->assertRedirect();
+
+        $iaRecord = IaPenilaian::where('pendaftaran_id', $this->pendaftaran->id)
+            ->where('kode_formulir', 'FR.IA.04A')
+            ->first();
+
+        $this->assertNotNull($iaRecord);
+        $this->assertEquals('3 Jam', $iaRecord->data_jawaban['waktu_menit']);
+        $this->assertEquals('1 Jam', $iaRecord->data_jawaban['waktu_demo']);
+
+        // Check SchemeMasterInstrument sync
+        $master = SchemeMasterInstrument::where('skema_id', $this->skema->id)
+            ->whereIn('instrument_code', SchemeMasterInstrument::getCodeAliases('ia_04a'))
+            ->first();
+        $this->assertNotNull($master);
+        $this->assertEquals(180, $master->time_limit_minutes);
+    }
 }
 

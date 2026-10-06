@@ -70,7 +70,7 @@ class SchemeMasterInstrument extends Model
             if (isset($meta['is_saved'])) {
                 return (bool) $meta['is_saved'];
             }
-            if (!empty($meta['scenario']) || !empty($meta['skenario']) || !empty($meta['default_standard']) || !empty($meta['kelompok_skenario']) || !empty($meta['kelompok_soal']) || !empty($meta['standar_elemen']) || !empty($meta['dokumen_portofolio']) || !empty($meta['pertanyaan_wawancara']) || !empty($meta['petunjuk_supervisor'])) {
+            if (!empty($meta['scenario']) || !empty($meta['skenario']) || !empty($meta['default_standard']) || !empty($meta['kelompok_skenario']) || !empty($meta['kelompok_soal']) || !empty($meta['standar_elemen']) || !empty($meta['dokumen_portofolio']) || !empty($meta['pertanyaan_wawancara']) || !empty($meta['petunjuk_supervisor']) || !empty($meta['data_jawaban'])) {
                 return true;
             }
         }
@@ -240,13 +240,13 @@ class SchemeMasterInstrument extends Model
             'ia01', 'ia_01', 'cl', 'clo', 'observasi' => 'ia_01',
             'ia02', 'ia_02', 'tpd', 'praktik' => 'ia_02',
             'ia03', 'ia_03', 'pmo', 'pertanyaanobservasi' => 'ia_03',
-            'ia05', 'ia_05', 'dptpg', 'cbt', 'pilihanganda' => 'ia_05',
-            'ia06', 'ia_06', 'dptesai', 'esai' => 'ia_06',
-            'ia07', 'ia_07', 'dpl', 'lisan' => 'ia_07',
+            'ia05', 'ia_05', 'ia05a', 'ia_05a', 'ia05b', 'ia_05b', 'ia05c', 'ia_05c', 'dptpg', 'cbt', 'pilihanganda' => 'ia_05',
+            'ia06', 'ia_06', 'ia06a', 'ia_06a', 'ia06b', 'ia_06b', 'ia06c', 'ia_06c', 'dptesai', 'esai' => 'ia_06',
+            'ia07', 'ia_07', 'ia07a', 'ia_07a', 'dpl', 'lisan' => 'ia_07',
             'ia08', 'ia_08', 'cvp', 'portofolio', 'verifikasiportofolio' => 'ia_08',
             'ia09', 'ia_09', 'pw', 'wawancara' => 'ia_09',
             'ia10', 'ia_10', 'vpk', 'pihakketiga' => 'ia_10',
-            'ia04a', 'ia_04a', 'ia04', 'ia_04', 'tor', 'proyek' => 'ia_04a',
+            'ia04a', 'ia_04a', 'ia04b', 'ia_04b', 'ia04', 'ia_04', 'tor', 'proyek' => 'ia_04a',
             'ia11', 'ia_11', 'crp', 'mutu', 'produk' => 'ia_11',
             default => str_starts_with($c, 'ia') ? (str_contains($c, '_') ? $c : substr_replace($c, '_', 2, 0)) : 'ia_05'
         };

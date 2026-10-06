@@ -36,8 +36,10 @@
         ])
     @endif
 
-    <form id="form-ia05a" action="{{ route('formulir.ia.simpan', ['kodeForm' => 'FR.IA.05A', 'pendaftaranId' => $pendaftaran->id]) }}" method="POST">
+    <form id="form-ia05a" action="{{ route('formulir.ia.simpan', ['kodeForm' => 'FR.IA.05A', 'pendaftaranId' => $pendaftaran->id ?: 0]) }}" method="POST">
         @csrf
+        <input type="hidden" name="skema_id" value="{{ $pendaftaran->skema_id }}">
+        <input type="hidden" name="pendaftaran_id" value="{{ $pendaftaran->id ?: 0 }}">
         <div class="dokumen-kertas">
             
             <!-- KOP RESMI DOKUMEN STANDAR BNSP -->
@@ -211,7 +213,8 @@
             'nextLabel' => $isAsesi ? 'FR.IA.05C (Ujian PG)' : 'FR.IA.05B (Kunci Jawaban)'
         ])
 
-    </div>
+        </div>
+    </form>
 </div>
 @endsection
 

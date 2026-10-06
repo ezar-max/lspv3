@@ -1799,6 +1799,103 @@
             $demonstrasi = $meta['demonstrasi'] ?? ($meta['deliverables'] ?? '');
             $waktuDemo = $meta['waktu_demo'] ?? '';
             $umpanBalik = $meta['umpan_balik'] ?? '';
+
+            $listPilihanWaktuProyek = [
+                '1 Jam' => '1 Jam',
+                '2 Jam' => '2 Jam',
+                '3 Jam' => '3 Jam',
+                '4 Jam' => '4 Jam',
+                '5 Jam' => '5 Jam',
+                '6 Jam' => '6 Jam',
+                '7 Jam' => '7 Jam',
+                '8 Jam' => '8 Jam',
+            ];
+
+            $valWaktuMenit = old('metadata_waktu_menit', $waktuMenit);
+            $selectedWaktuMenit = '';
+            if (!empty($valWaktuMenit)) {
+                $cleanVal = trim((string)$valWaktuMenit);
+                if (isset($listPilihanWaktuProyek[$cleanVal])) {
+                    $selectedWaktuMenit = $cleanVal;
+                } elseif (is_numeric($cleanVal)) {
+                    $numVal = (int)$cleanVal;
+                    if ($numVal > 0 && $numVal % 60 === 0) {
+                        $candidate = ($numVal / 60) . ' Jam';
+                        if (isset($listPilihanWaktuProyek[$candidate])) {
+                            $selectedWaktuMenit = $candidate;
+                        }
+                    }
+                } elseif (preg_match('/^(\d+(?:\.\d+)?)\s*jam$/i', $cleanVal, $m)) {
+                    $candidate = ((float)$m[1] == (int)$m[1] ? (int)$m[1] : (float)$m[1]) . ' Jam';
+                    if (isset($listPilihanWaktuProyek[$candidate])) {
+                        $selectedWaktuMenit = $candidate;
+                    }
+                } elseif (preg_match('/^(\d+)\s*menit$/i', $cleanVal, $m)) {
+                    $jamVal = ((int)$m[1]) / 60;
+                    $candidate = ($jamVal == (int)$jamVal ? (int)$jamVal : $jamVal) . ' Jam';
+                    if (isset($listPilihanWaktuProyek[$candidate])) {
+                        $selectedWaktuMenit = $candidate;
+                    } else {
+                        $selectedWaktuMenit = $cleanVal;
+                    }
+                } else {
+                    $selectedWaktuMenit = $cleanVal;
+                }
+            }
+
+            $listPilihanWaktuDemo = [
+                '15 Menit' => '15 Menit',
+                '30 Menit' => '30 Menit',
+                '45 Menit' => '45 Menit',
+                '1 Jam' => '1 Jam',
+                '2 Jam' => '2 Jam',
+                '3 Jam' => '3 Jam',
+                '4 Jam' => '4 Jam',
+                '5 Jam' => '5 Jam',
+                '6 Jam' => '6 Jam',
+                '7 Jam' => '7 Jam',
+                '8 Jam' => '8 Jam',
+            ];
+
+            $valWaktuDemo = old('metadata_waktu_demo', $waktuDemo);
+            $selectedWaktuDemo = '';
+            if (!empty($valWaktuDemo)) {
+                $cleanDemo = trim((string)$valWaktuDemo);
+                if (isset($listPilihanWaktuDemo[$cleanDemo])) {
+                    $selectedWaktuDemo = $cleanDemo;
+                } elseif (is_numeric($cleanDemo)) {
+                    $numDemo = (int)$cleanDemo;
+                    if ($numDemo > 0 && $numDemo % 60 === 0) {
+                        $candidate = ($numDemo / 60) . ' Jam';
+                        if (isset($listPilihanWaktuDemo[$candidate])) {
+                            $selectedWaktuDemo = $candidate;
+                        }
+                    } elseif (isset($listPilihanWaktuDemo[$numDemo . ' Menit'])) {
+                        $selectedWaktuDemo = $numDemo . ' Menit';
+                    }
+                } elseif (preg_match('/^(\d+(?:\.\d+)?)\s*jam$/i', $cleanDemo, $m)) {
+                    $candidate = ((float)$m[1] == (int)$m[1] ? (int)$m[1] : (float)$m[1]) . ' Jam';
+                    if (isset($listPilihanWaktuDemo[$candidate])) {
+                        $selectedWaktuDemo = $candidate;
+                    }
+                } elseif (preg_match('/^(\d+)\s*menit$/i', $cleanDemo, $m)) {
+                    $mNum = (int)$m[1];
+                    if ($mNum % 60 === 0) {
+                        $candidate = ($mNum / 60) . ' Jam';
+                        if (isset($listPilihanWaktuDemo[$candidate])) {
+                            $selectedWaktuDemo = $candidate;
+                        } else {
+                            $selectedWaktuDemo = $cleanDemo;
+                        }
+                    } elseif (isset($listPilihanWaktuDemo[$mNum . ' Menit'])) {
+                        $selectedWaktuDemo = $mNum . ' Menit';
+                    } else {
+                        $selectedWaktuDemo = $cleanDemo;
+                    }
+                } else {
+                    $selectedWaktuDemo = $cleanDemo;
+                }
+            }
         @endphp
 
         <div class="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-6 mb-8">
@@ -1831,7 +1928,15 @@
                     <label class="block font-semibold text-xs text-slate-700 mb-1.5">
                         Waktu pengerjaan proyek <span class="text-rose-500">*</span>
                     </label>
-                    <input type="text" name="metadata_waktu_menit" value="{{ old('metadata_waktu_menit', $waktuMenit) }}" class="muk-input-field input-metadata-muk text-xs sm:text-sm" placeholder="Contoh: 90 Menit" required>
+                    <select name="metadata_waktu_menit" class="muk-input-field input-metadata-muk text-xs sm:text-sm bg-white cursor-pointer" required>
+                        <option value="" disabled {{ empty($selectedWaktuMenit) ? 'selected' : '' }}>-- Pilih Durasi Jam --</option>
+                        @foreach($listPilihanWaktuProyek as $valJam => $lblJam)
+                            <option value="{{ $valJam }}" {{ $selectedWaktuMenit === $valJam ? 'selected' : '' }}>{{ $lblJam }}</option>
+                        @endforeach
+                        @if(!empty($valWaktuMenit) && !array_key_exists($selectedWaktuMenit, $listPilihanWaktuProyek))
+                            <option value="{{ $valWaktuMenit }}" selected>{{ $valWaktuMenit }}</option>
+                        @endif
+                    </select>
                 </div>
 
                 <div class="mb-6">
@@ -1845,7 +1950,15 @@
                     <label class="block font-semibold text-xs text-slate-700 mb-1.5">
                         Waktu demonstrasi / presentasi <span class="text-rose-500">*</span>
                     </label>
-                    <input type="text" name="metadata_waktu_demo" value="{{ old('metadata_waktu_demo', $waktuDemo) }}" class="muk-input-field input-metadata-muk text-xs sm:text-sm" placeholder="Contoh: 30 Menit" required>
+                    <select name="metadata_waktu_demo" class="muk-input-field input-metadata-muk text-xs sm:text-sm bg-white cursor-pointer" required>
+                        <option value="" disabled {{ empty($selectedWaktuDemo) ? 'selected' : '' }}>-- Pilih Durasi Waktu --</option>
+                        @foreach($listPilihanWaktuDemo as $valDemo => $lblDemo)
+                            <option value="{{ $valDemo }}" {{ $selectedWaktuDemo === $valDemo ? 'selected' : '' }}>{{ $lblDemo }}</option>
+                        @endforeach
+                        @if(!empty($valWaktuDemo) && !array_key_exists($selectedWaktuDemo, $listPilihanWaktuDemo))
+                            <option value="{{ $valWaktuDemo }}" selected>{{ $valWaktuDemo }}</option>
+                        @endif
+                    </select>
                 </div>
 
                 <div class="mb-6">

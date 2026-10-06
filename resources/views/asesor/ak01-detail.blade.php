@@ -298,6 +298,7 @@
                     <label class="font-bold text-slate-700 block">
                         Metode Pengumpulan Bukti yang Ditetapkan <span class="text-rose-500">*</span>
                     </label>
+                    <p class="text-[10px] text-slate-500">Pilih minimal satu metode pengumpulan bukti.</p>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-0.5">
                         @php $savedBukti = is_array($pendaftaran->bukti_dikumpulkan) ? $pendaftaran->bukti_dikumpulkan : json_decode($pendaftaran->bukti_dikumpulkan ?? '[]', true) ?? []; @endphp
                         <label class="flex items-center gap-2 p-2 rounded-xl bg-slate-50 border border-slate-200/80 text-slate-700 {{ $isSignedByAsesor ? 'cursor-default' : 'cursor-pointer hover:bg-slate-100' }}">
@@ -547,6 +548,19 @@
 
             submitPengesahan(e) {
                 if (this.isSubmitting) return;
+
+                const selectedMethods = e.target.querySelectorAll('input[name="bukti_dikumpulkan[]"]:checked');
+                if (selectedMethods.length === 0) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Metode Bukti Wajib Dipilih',
+                        text: 'Pilih minimal satu metode pengumpulan bukti sebelum mengesahkan FR.AK.01.',
+                        confirmButtonColor: '#4f46e5'
+                    }).then(() => {
+                        e.target.querySelector('input[name="bukti_dikumpulkan[]"]')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    });
+                    return;
+                }
 
                 if (!this.agreedToClause) {
                     Swal.fire({

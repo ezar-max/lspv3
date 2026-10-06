@@ -24,7 +24,7 @@
         'pendaftaranId' => $pendaftaran->id,
         'isAsesi' => $isAsesi,
         'saveLabel' => 'Simpan Formulir',
-        'saveAction' => "alert('Kunci Jawaban FR.IA.06B berhasil disimpan!')"
+        'saveFormId' => 'form-ia06b-kunci'
     ])
 
     @if($isAsesi)
@@ -36,7 +36,12 @@
         ])
     @endif
 
-    <div class="dokumen-kertas">
+    <form id="form-ia06b-kunci" action="{{ route('formulir.ia.simpan', ['kodeForm' => 'FR.IA.06B', 'pendaftaranId' => $pendaftaran->id ?: 0]) }}" method="POST">
+        @csrf
+        <input type="hidden" name="skema_id" value="{{ $pendaftaran->skema_id }}">
+        <input type="hidden" name="pendaftaran_id" value="{{ $pendaftaran->id ?: 0 }}">
+
+        <div class="dokumen-kertas">
         
         <!-- KOP RESMI DOKUMEN STANDAR BNSP -->
         @include('komponen.kop-formulir-bnsp', [
@@ -144,6 +149,19 @@
             </table>
         </div>
 
+        <!-- CATATAN EVALUASI & VALIDASI KUNCI ASESOR -->
+        <div style="margin-top: 1.5rem; margin-bottom: 1.5rem;">
+            <table class="tabel-bnsp">
+                <tr>
+                    <td style="width: 25%; font-weight: 700; background: #f8fafc;">Catatan Asesor / Validasi Kunci</td>
+                    <td style="width: 2%;">:</td>
+                    <td>
+                        <textarea name="catatan" class="input-inline-bnsp" rows="2" placeholder="Tuliskan catatan evaluasi atau validasi kunci jawaban esai...">{{ $iaRecord06b->catatan_asesor ?? '' }}</textarea>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
         <!-- TABEL PENYUSUN DAN VALIDATOR -->
         @include('komponen.tabel-penyusun-validator', [
             'pendaftaran' => $pendaftaran,
@@ -158,7 +176,8 @@
             'nextLabel' => 'FR.IA.06C (Ujian & Penilaian Esai)'
         ])
 
-    </div>
+        </div>
+    </form>
 </div>
 @endsection
 

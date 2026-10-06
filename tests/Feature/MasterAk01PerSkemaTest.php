@@ -126,6 +126,17 @@ class MasterAk01PerSkemaTest extends TestCase
         $this->assertNotNull($master->tanggal_ttd_asesor);
     }
 
+    public function test_master_ak01_requires_at_least_one_evidence_method(): void
+    {
+        $response = $this->actingAs($this->asesor)->post(route('asesor.skema.ak-01.simpan', $this->skema->id), [
+            'tuk_type' => 'Tempat Kerja',
+            'tanda_tangan_asesor' => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+        ]);
+
+        $response->assertSessionHasErrors('bukti_dikumpulkan');
+        $this->assertDatabaseMissing('master_ak01', ['skema_id' => $this->skema->id]);
+    }
+
     /** 4. Data Master FR.AK.01 tersinkronisasi otomatis ke seluruh pendaftaran asesi pada skema */
     public function test_master_ak01_automatically_syncs_to_asesi_registrations(): void
     {

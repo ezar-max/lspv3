@@ -39,4 +39,14 @@ class MasterQuestionBank extends Model
     {
         return $this->belongsTo(KriteriaUnjukKerja::class, 'kuk_id');
     }
+
+    public function setKukIdAttribute($value)
+    {
+        $this->attributes['kuk_id'] = !empty($value) ? (int) $value : null;
+    }
+
+    public function setPointsAttribute($value)
+    {
+        $this->attributes['points'] = !empty($value) ? (int) $value : 1;
+    }
 }

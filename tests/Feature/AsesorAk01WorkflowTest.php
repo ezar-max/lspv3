@@ -184,6 +184,16 @@ class AsesorAk01WorkflowTest extends TestCase
         $this->assertEquals('Tempat Kerja', $this->pendaftaran->tuk_type);
     }
 
+    public function test_asesor_cannot_save_ak01_without_an_evidence_method(): void
+    {
+        $response = $this->actingAs($this->asesorA)->post(route('asesor.ak01.simpan', $this->pendaftaran->id), [
+            'tuk_type' => 'Tempat Kerja',
+        ]);
+
+        $response->assertSessionHasErrors('bukti_dikumpulkan');
+        $this->assertEquals('belum', $this->pendaftaran->fresh()->status_ak01);
+    }
+
     /** 3. Asesor wajib membuat tanda tangan sebelum menyetujui FR.APL.02 */
     public function test_asesor_must_sign_before_approving_apl02(): void
     {
@@ -236,7 +246,8 @@ class AsesorAk01WorkflowTest extends TestCase
         ]);
 
         $response = $this->actingAs($this->asesorA)->post(route('asesor.ak01.simpan', $this->pendaftaran->id), [
-            'tanda_tangan_asesor_ak01' => 'signatures/profil_asesor_a.png'
+            'tanda_tangan_asesor_ak01' => 'signatures/profil_asesor_a.png',
+            'bukti_dikumpulkan' => ['Observasi Praktik Demonstrasi'],
         ]);
 
         $response->assertRedirect(route('asesor.dashboard'));
@@ -263,7 +274,8 @@ class AsesorAk01WorkflowTest extends TestCase
         $dummySignature = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
 
         $response = $this->actingAs($this->asesorA)->post(route('asesor.ak01.simpan', $this->pendaftaran->id), [
-            'tanda_tangan_asesor_ak01' => $dummySignature
+            'tanda_tangan_asesor_ak01' => $dummySignature,
+            'bukti_dikumpulkan' => ['Observasi Praktik Demonstrasi'],
         ]);
 
         $response->assertRedirect(route('asesor.dashboard'));

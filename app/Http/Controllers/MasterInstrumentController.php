@@ -415,13 +415,12 @@ class MasterInstrumentController extends Controller
                 'metadata_waktu_menit' => 'required|string|max:50',
                 'metadata_demonstrasi' => 'required|string',
                 'metadata_waktu_demo' => 'required|string|max:50',
-                'metadata_umpan_balik' => 'required|string',
+                'metadata_umpan_balik' => 'nullable|string',
             ], [
                 'metadata_scenario.required' => 'Skenario proyek singkat wajib diisi.',
                 'metadata_waktu_menit.required' => 'Waktu pengerjaan proyek wajib diisi.',
                 'metadata_demonstrasi.required' => 'Hasil yang perlu didemonstrasikan wajib diisi.',
                 'metadata_waktu_demo.required' => 'Waktu demonstrasi wajib diisi.',
-                'metadata_umpan_balik.required' => 'Umpan balik untuk asesi wajib diisi.',
             ]);
         } elseif (in_array($code, ['ia_07', 'ia07'])) {
             $request->validate([
@@ -537,18 +536,21 @@ class MasterInstrumentController extends Controller
         }
         if ($request->has('metadata_scenario')) {
             $meta['scenario'] = $request->input('metadata_scenario');
+            $meta['skenario'] = $request->input('metadata_scenario');
         }
         if ($request->has('metadata_tools')) {
             $meta['tools_equipment'] = $request->input('metadata_tools');
         }
         if ($request->has('metadata_deliverables')) {
             $meta['deliverables'] = $request->input('metadata_deliverables');
+            $meta['demonstrasi'] = $request->input('metadata_deliverables');
         }
         if ($request->has('metadata_waktu_menit')) {
             $meta['waktu_menit'] = $request->input('metadata_waktu_menit');
         }
         if ($request->has('metadata_demonstrasi')) {
             $meta['demonstrasi'] = $request->input('metadata_demonstrasi');
+            $meta['deliverables'] = $request->input('metadata_demonstrasi');
         }
         if ($request->has('metadata_waktu_demo')) {
             $meta['waktu_demo'] = $request->input('metadata_waktu_demo');

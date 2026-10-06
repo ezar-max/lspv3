@@ -124,6 +124,9 @@ class IaFormIntegrityTest extends TestCase
 
         $payload = [
             'skenario' => 'Ini master skenario',
+            'waktu_menit' => '90 Menit',
+            'demonstrasi' => 'Demonstrasi proyek master',
+            'waktu_demo' => '30 Menit',
             'umpan_balik' => 'Umpan balik asesi leak'
         ];
 
@@ -187,6 +190,37 @@ class IaFormIntegrityTest extends TestCase
         $this->assertArrayHasKey('pertanyaan', $metadata['pertanyaan_wawancara']['E1']);
         $this->assertArrayNotHasKey('tanggapan', $metadata['pertanyaan_wawancara']['E1']);
         $this->assertArrayNotHasKey('kesimpulan', $metadata);
+    }
+
+    public function test_master_mode_ia09_requires_pertanyaan_wawancara(): void
+    {
+        $admin = User::whereIn('peran', ['admin', 'admin_super', 'superadmin'])->first();
+        if (!$admin) { $this->markTestSkipped('Butuh user admin untuk test ini.'); }
+        $skemaId = \App\Models\Skema::first()?->id ?? 1;
+
+        // 1. Submit dengan pertanyaan kosong harus ditolak
+        $emptyPayload = [
+            'pertanyaan_wawancara' => [
+                'E1' => [
+                    'pertanyaan' => '   ', // spasi kosong
+                    'tanggapan' => '',
+                    'keputusan' => 'M'
+                ]
+            ],
+            'rekomendasi' => 'K'
+        ];
+
+        $response = $this->actingAs($admin)->post(route('formulir.ia.simpan', ['kodeForm' => 'FR.IA.09', 'pendaftaranId' => 0]) . '?skema_id=' . $skemaId, $emptyPayload);
+        $response->assertSessionHas('error');
+
+        // 2. Tampilan form FR.IA.09 master baru harus kosong (tidak ada boilerplate otomatis)
+        // Hapus instrumen master terlebih dahulu untuk mensimulasikan pembuatan baru
+        SchemeMasterInstrument::where('skema_id', $skemaId)->whereIn('instrument_code', ['ia_09', 'ia09'])->delete();
+        $viewResp = $this->actingAs($admin)->get(route('formulir.ia09', ['pendaftaranId' => 0, 'skema_id' => $skemaId]));
+        $viewResp->assertStatus(200);
+        $viewResp->assertDontSee('Bagaimana Anda membuktikan penerapan standar');
+        $viewResp->assertSee('placeholder="Tuliskan daftar pertanyaan wawancara untuk elemen ini..."', false);
+        $viewResp->assertSee('required', false);
     }
 
     public function test_execution_final_cannot_be_overwritten(): void

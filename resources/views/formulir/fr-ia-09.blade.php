@@ -17,6 +17,14 @@
             padding: 0.6rem 0.85rem;
             font-size: 0.88rem;
         }
+        .input-inline-bnsp.is-invalid {
+            border-color: #ef4444 !important;
+            box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15) !important;
+        }
+        .input-inline-bnsp:focus {
+            border-color: #0284c7 !important;
+            box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15) !important;
+        }
     </style>
 @endpush
 
@@ -25,9 +33,10 @@
     
     @php
         $isAsesi = auth()->check() && auth()->user()->peran === 'asesi';
+        $isMasterMode = isset($isMasterMode) ? $isMasterMode : (empty($pendaftaran->id) || $pendaftaran->id == 0 || !request()->filled('pendaftaran_id'));
         $asesorNama = $pendaftaran->asesor->nama_lengkap ?? (auth()->user()->peran === 'asesor' ? auth()->user()->nama_lengkap : 'Asesor LSP');
         $asesorMet = $pendaftaran->asesor->nomor_registrasi ?? 'MET.000.004455.2023';
-        $asesiNama = $pendaftaran->asesi->nama_lengkap ?? 'Nama Asesi';
+        $asesiNama = $pendaftaran->asesi->nama_lengkap ?? ($isMasterMode ? '-' : 'Nama Asesi');
         $asesorTtd = $pendaftaran->tanda_tangan_asesor ?? (auth()->user()->tanda_tangan ?? null);
         $asesiTtd = $iaRecord->data_jawaban['ttd_asesi'] ?? ($pendaftaran->tanda_tangan_asesi ?? null);
         $tglTtdAsesi = $iaRecord->data_jawaban['tgl_ttd_asesi'] ?? null;
@@ -51,14 +60,15 @@
         'kodeForm' => 'FR.IA.09',
         'namaForm' => 'FR.IA.09 Pertanyaan Wawancara',
         'pendaftaranId' => $pendaftaran->id,
-        'canSubmit' => !$isAsesi,
+        'isAsesi' => $isAsesi,
+        'showDraft' => false,
         'saveFormId' => 'form-ia-09',
-        'submitLabel' => 'Simpan Formulir',
+        'saveLabel' => 'Simpan Formulir',
         'canSignAsesi' => $isAsesi && !$asesiTtd,
         'signAsesiRoute' => route('formulir.ia.simpan-ttd-asesi', ['kodeForm' => 'FR.IA.09', 'pendaftaranId' => $pendaftaran->id]),
         'isAsesiSigned' => $isAsesi && $asesiTtd,
-        'prevForm' => ['route' => route('formulir.ia08', $pendaftaran->id), 'label' => 'FR.IA.08 Portofolio'],
-        'nextForm' => ['route' => route('formulir.ia10', $pendaftaran->id), 'label' => 'FR.IA.10 Pihak Ketiga']
+        'prevForm' => ['route' => route('formulir.ia08', ['pendaftaranId' => $pendaftaran->id ?: 0, 'skema_id' => $pendaftaran->skema_id]), 'label' => 'FR.IA.08 Portofolio'],
+        'nextForm' => ['route' => route('formulir.ia10', ['pendaftaranId' => $pendaftaran->id ?: 0, 'skema_id' => $pendaftaran->skema_id]), 'label' => 'FR.IA.10 Pihak Ketiga']
     ])
 
     @if($isAsesi)
@@ -126,8 +136,10 @@
             </ul>
         </div>
 
-        <form id="form-ia-09" method="POST" action="{{ route('formulir.ia.simpan', ['kodeForm' => 'FR.IA.09', 'pendaftaranId' => $pendaftaran->id]) }}">
+        <form id="form-ia-09" method="POST" action="{{ route('formulir.ia.simpan', ['kodeForm' => 'FR.IA.09', 'pendaftaranId' => $pendaftaran->id ?: 0]) }}">
             @csrf
+            <input type="hidden" name="skema_id" value="{{ $pendaftaran->skema_id }}">
+            <input type="hidden" name="pendaftaran_id" value="{{ $pendaftaran->id }}">
 
             <!-- DAFTAR PERTANYAAN WAWANCARA PER UNIT & ELEMEN SKEMA -->
             @php $globalNo = 1; @endphp
@@ -142,9 +154,24 @@
                             <tr>
                                 <th style="width: 5%; text-align: center;">No.</th>
                                 <th style="width: 25%;">Elemen Kompetensi</th>
-                                <th style="width: 35%;">Daftar Pertanyaan Wawancara</th>
-                                <th style="width: 23%;">Tanggapan / Jawaban Asesi</th>
-                                <th colspan="2" style="width: 12%; text-align: center;">Keputusan</th>
+                                <th style="width: 35%;">
+                                    Daftar Pertanyaan Wawancara <span style="color: #ef4444;" title="Wajib diisi">*</span>
+                                    @if(!$isAsesi)
+                                        <span style="display: block; font-size: 0.72rem; font-weight: normal; color: #dc2626; font-style: italic;">(Wajib diisi oleh Asesor/Admin)</span>
+                                    @endif
+                                </th>
+                                <th style="width: 23%;">
+                                    Tanggapan / Jawaban Asesi
+                                    @if($isMasterMode)
+                                        <span style="display: block; font-size: 0.72rem; font-weight: normal; color: #64748b; font-style: italic;">(Diisi saat Asesmen)</span>
+                                    @endif
+                                </th>
+                                <th colspan="2" style="width: 12%; text-align: center;">
+                                    Keputusan
+                                    @if($isMasterMode)
+                                        <span style="display: block; font-size: 0.72rem; font-weight: normal; color: #64748b; font-style: italic;">(Saat Asesmen)</span>
+                                    @endif
+                                </th>
                             </tr>
                             <tr style="font-size: 0.78rem; text-align: center; background: #f8fafc;">
                                 <th></th>
@@ -162,8 +189,8 @@
                                     $savedRow = $savedPW[$rowKey] ?? [];
 
                                     $masterTanya = $masterPW[$elem->id]['pertanyaan'] ?? null;
-                                    $defaultTanya = !empty($masterTanya) ? $masterTanya : ('Bagaimana Anda membuktikan penerapan standar dan prosedur kerja pada pelaksanaan ' . $elem->nama_elemen . ' sesuai kriteria unjuk kerja yang berlaku?');
-                                    $tanyaVal = $savedRow['pertanyaan'] ?? $defaultTanya;
+                                    // Default kosong saat pembuatan baru. Hanya terisi jika sudah pernah disimpan sebelumnya.
+                                    $tanyaVal = old("pertanyaan_wawancara.{$rowKey}.pertanyaan", $savedRow['pertanyaan'] ?? ($masterTanya ?? ''));
                                     $tanggapanVal = $savedRow['tanggapan'] ?? ($isAsesi ? 'Asesi memberikan tanggapan secara komprehensif dan sistematis sesuai SOP kejuruan.' : '');
                                     $keputusanVal = $savedRow['keputusan'] ?? ($isAsesi ? 'M' : 'M');
                                 @endphp
@@ -176,16 +203,20 @@
                                         <span style="color: #334155;">{{ $elem->nama_elemen }}</span>
                                     </td>
                                     <td style="vertical-align: top;">
-                                        <textarea name="pertanyaan_wawancara[{{ $rowKey }}][pertanyaan]" class="input-inline-bnsp" rows="3" placeholder="Pertanyaan wawancara klarifikasi..." {{ $isAsesi ? 'readonly' : '' }}>{{ $tanyaVal }}</textarea>
+                                        <textarea name="pertanyaan_wawancara[{{ $rowKey }}][pertanyaan]" class="input-inline-bnsp input-pertanyaan-wawancara" rows="3" placeholder="Tuliskan daftar pertanyaan wawancara untuk elemen ini..." {{ $isAsesi ? 'readonly' : 'required' }}>{{ $tanyaVal }}</textarea>
                                     </td>
                                     <td style="vertical-align: top;">
-                                        <textarea name="pertanyaan_wawancara[{{ $rowKey }}][tanggapan]" class="input-inline-bnsp" rows="3" placeholder="{{ $isAsesi ? 'Tanggapan dicatat oleh asesor...' : 'Catat tanggapan / bukti lisan asesi di sini...' }}" {{ $isAsesi ? 'readonly' : '' }}>{{ $tanggapanVal }}</textarea>
+                                        @if($isMasterMode)
+                                            <textarea class="input-inline-bnsp" rows="3" placeholder="Catatan tanggapan / bukti lisan asesi akan diisi oleh Asesor saat pelaksanaan asesmen dimulai." disabled readonly style="background-color: #f8fafc !important; cursor: not-allowed; color: #64748b; font-style: italic; border-style: dashed;"></textarea>
+                                        @else
+                                            <textarea name="pertanyaan_wawancara[{{ $rowKey }}][tanggapan]" class="input-inline-bnsp" rows="3" placeholder="{{ $isAsesi ? 'Tanggapan dicatat oleh asesor...' : 'Catat tanggapan / bukti lisan asesi di sini...' }}" {{ $isAsesi ? 'readonly' : '' }}>{{ $tanggapanVal }}</textarea>
+                                        @endif
                                     </td>
                                     <td style="text-align: center; vertical-align: middle;">
-                                        <input type="radio" name="pertanyaan_wawancara[{{ $rowKey }}][keputusan]" value="M" {{ $keputusanVal === 'M' ? 'checked' : '' }} class="checkbox-bnsp checkbox-bnsp-hijau" {{ $isAsesi ? 'disabled' : '' }}>
+                                        <input type="radio" name="pertanyaan_wawancara[{{ $rowKey }}][keputusan]" value="M" {{ $keputusanVal === 'M' ? 'checked' : '' }} class="checkbox-bnsp checkbox-bnsp-hijau" {{ ($isAsesi || $isMasterMode) ? 'disabled' : '' }}>
                                     </td>
                                     <td style="text-align: center; vertical-align: middle;">
-                                        <input type="radio" name="pertanyaan_wawancara[{{ $rowKey }}][keputusan]" value="BM" {{ $keputusanVal === 'BM' ? 'checked' : '' }} class="checkbox-bnsp checkbox-bnsp-merah" {{ $isAsesi ? 'disabled' : '' }}>
+                                        <input type="radio" name="pertanyaan_wawancara[{{ $rowKey }}][keputusan]" value="BM" {{ $keputusanVal === 'BM' ? 'checked' : '' }} class="checkbox-bnsp checkbox-bnsp-merah" {{ ($isAsesi || $isMasterMode) ? 'disabled' : '' }}>
                                     </td>
                                 </tr>
                                 @php $globalNo++; @endphp
@@ -209,24 +240,36 @@
             <div style="border: 1px solid #334155; padding: 1rem; border-radius: 4px; margin-bottom: 1.5rem; background: #f8fafc;">
                 <label style="font-weight: 700; font-size: 0.88rem; display: block; margin-bottom: 0.35rem; color: #0f172a;">
                     Kesimpulan & Catatan Klarifikasi Wawancara:
+                    @if($isMasterMode)
+                        <span style="font-size: 0.75rem; font-weight: normal; color: #64748b; font-style: italic;">(Diisi saat Asesmen)</span>
+                    @endif
                 </label>
-                <textarea name="kesimpulan" class="input-inline-bnsp" rows="3" placeholder="Tuliskan catatan kesimpulan klarifikasi wawancara asesi..." {{ $isAsesi ? 'readonly' : '' }}>{{ $kesimpulanVal }}</textarea>
+                @if($isMasterMode)
+                    <textarea class="input-inline-bnsp" rows="3" placeholder="Catatan kesimpulan klarifikasi wawancara akan diisi oleh Asesor saat pelaksanaan asesmen." disabled readonly style="background-color: #f8fafc !important; cursor: not-allowed; color: #64748b; font-style: italic; border-style: dashed;"></textarea>
+                @else
+                    <textarea name="kesimpulan" class="input-inline-bnsp" rows="3" placeholder="Tuliskan catatan kesimpulan klarifikasi wawancara asesi..." {{ $isAsesi ? 'readonly' : '' }}>{{ $kesimpulanVal }}</textarea>
+                @endif
             </div>
 
             <!-- REKOMENDASI ASESOR -->
             <table class="tabel-bnsp" style="margin-bottom: 1.5rem;">
                 <tr>
-                    <td style="width: 25%; font-weight: 700; background: #f8fafc; vertical-align: middle;">Rekomendasi Asesor:</td>
+                    <td style="width: 25%; font-weight: 700; background: #f8fafc; vertical-align: middle;">
+                        Rekomendasi Asesor:
+                        @if($isMasterMode)
+                            <br><span style="font-size: 0.75rem; font-weight: normal; color: #64748b; font-style: italic;">(Ditetapkan saat Asesmen)</span>
+                        @endif
+                    </td>
                     <td>
                         <div style="margin-bottom: 0.75rem;">
-                            <label style="display: flex; align-items: flex-start; gap: 0.5rem; cursor: pointer; font-weight: 600; color: #059669;">
-                                <input type="radio" name="rekomendasi" value="K" {{ $rekomendasiVal === 'K' ? 'checked' : '' }} style="margin-top: 0.2rem; accent-color: #059669;" {{ $isAsesi ? 'disabled' : '' }}>
+                            <label style="display: flex; align-items: flex-start; gap: 0.5rem; {{ $isMasterMode ? 'cursor: not-allowed; opacity: 0.6;' : 'cursor: pointer;' }} font-weight: 600; color: #059669;">
+                                <input type="radio" name="rekomendasi" value="K" {{ $rekomendasiVal === 'K' ? 'checked' : '' }} style="margin-top: 0.2rem; accent-color: #059669;" {{ ($isAsesi || $isMasterMode) ? 'disabled' : '' }}>
                                 <span>Asesi telah memenuhi kriteria klarifikasi wawancara, direkomendasikan <strong>KOMPETEN</strong></span>
                             </label>
                         </div>
                         <div>
-                            <label style="display: flex; align-items: flex-start; gap: 0.5rem; cursor: pointer; font-weight: 600; color: #dc2626;">
-                                <input type="radio" name="rekomendasi" value="BK" {{ $rekomendasiVal === 'BK' ? 'checked' : '' }} style="margin-top: 0.2rem; accent-color: #dc2626;" {{ $isAsesi ? 'disabled' : '' }}>
+                            <label style="display: flex; align-items: flex-start; gap: 0.5rem; {{ $isMasterMode ? 'cursor: not-allowed; opacity: 0.6;' : 'cursor: pointer;' }} font-weight: 600; color: #dc2626;">
+                                <input type="radio" name="rekomendasi" value="BK" {{ $rekomendasiVal === 'BK' ? 'checked' : '' }} style="margin-top: 0.2rem; accent-color: #dc2626;" {{ ($isAsesi || $isMasterMode) ? 'disabled' : '' }}>
                                 <span>Asesi belum memenuhi kriteria wawancara, direkomendasikan <strong>BELUM KOMPETEN</strong></span>
                             </label>
                         </div>
@@ -249,6 +292,80 @@
 
         </form>
 
+        @include('komponen.navigasi-form-bawah', [
+            'prevUrl' => route('formulir.ia08', ['pendaftaranId' => $pendaftaran->id ?: 0, 'skema_id' => $pendaftaran->skema_id]),
+            'prevLabel' => 'FR.IA.08 (Portofolio)',
+            'nextUrl' => route('formulir.ia10', ['pendaftaranId' => $pendaftaran->id ?: 0, 'skema_id' => $pendaftaran->skema_id]),
+            'nextLabel' => 'FR.IA.10 (Pihak Ketiga)'
+        ])
+
     </div>
 </div>
 @endsection
+
+@push('js')
+    <script src="{{ asset('js/formulir/formulir-bnsp.js') }}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var formIa09 = document.getElementById('form-ia-09');
+            if (!formIa09) return;
+
+            window.submitFormulir = function(formId) {
+                var form = document.getElementById(formId);
+                if (!form) return;
+
+                var questionInputs = form.querySelectorAll('textarea.input-pertanyaan-wawancara');
+                var emptyCount = 0;
+                var firstEmpty = null;
+
+                questionInputs.forEach(function(el) {
+                    if (!el.readOnly && !el.disabled) {
+                        if (!el.value || el.value.trim() === '') {
+                            emptyCount++;
+                            el.classList.add('is-invalid');
+                            if (!firstEmpty) {
+                                firstEmpty = el;
+                            }
+                        } else {
+                            el.classList.remove('is-invalid');
+                        }
+                    }
+                });
+
+                if (emptyCount > 0 && firstEmpty) {
+                    firstEmpty.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    firstEmpty.focus();
+
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Pertanyaan Wawancara Wajib Diisi',
+                            text: 'Semua kolom Daftar Pertanyaan Wawancara wajib diisi sebelum menyimpan formulir FR.IA.09! Terdapat ' + emptyCount + ' pertanyaan yang masih kosong.',
+                            confirmButtonColor: '#0284c7',
+                            confirmButtonText: '✓ Mengerti'
+                        });
+                    } else {
+                        alert('Semua kolom Daftar Pertanyaan Wawancara wajib diisi sebelum menyimpan formulir FR.IA.09!');
+                    }
+                    return false;
+                }
+
+                if (typeof form.reportValidity === 'function' && !form.reportValidity()) {
+                    return false;
+                }
+
+                form.submit();
+            };
+
+            // Reset border merah saat user mulai mengetik
+            var inputsToWatch = formIa09.querySelectorAll('textarea.input-pertanyaan-wawancara');
+            inputsToWatch.forEach(function (input) {
+                input.addEventListener('input', function () {
+                    if (this.value.trim() !== '') {
+                        this.classList.remove('is-invalid');
+                    }
+                });
+            });
+        });
+    </script>
+@endpush

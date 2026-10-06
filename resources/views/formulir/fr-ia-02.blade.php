@@ -102,7 +102,14 @@
 
         .textarea-skenario:focus {
             outline: none;
-            border-color: #000000;
+            border-color: #2563eb;
+            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+        }
+
+        .textarea-skenario[readonly] {
+            background-color: #f8fafc;
+            color: #334155;
+            cursor: default;
         }
 
         .input-baris-ia02 {
@@ -117,7 +124,21 @@
 
         .input-baris-ia02:focus {
             outline: none;
-            border-color: #000000;
+            border-color: #2563eb;
+            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+        }
+
+        .input-baris-ia02[readonly] {
+            background-color: #f8fafc;
+            color: #334155;
+            cursor: default;
+        }
+
+        .select-ia02 {
+            cursor: pointer;
+            height: 34px;
+            background-color: #ffffff;
+            color: #000000;
         }
 
         .grup-peralatan-waktu {
@@ -204,8 +225,8 @@
         $tukNama = $pendaftaran->jadwal->nama_tuk ?? ($pendaftaran->tuk_type ?? 'Sewaktu');
         $tglAsesmen = $pendaftaran->jadwal?->tanggal_uji ? \Carbon\Carbon::parse($pendaftaran->jadwal->tanggal_uji)->format('d-m-Y') : date('d-m-Y');
 
-        $savedPV = $iaRecord->data_jawaban['penyusun_validator'] ?? [];
-        $savedKelompok = $iaRecord->data_jawaban['kelompok_skenario'] ?? [];
+        $savedPV = $iaRecord->data_jawaban['penyusun_validator'] ?? ($meta['penyusun_validator'] ?? []);
+        $savedKelompok = $iaRecord->data_jawaban['kelompok_skenario'] ?? ($meta['kelompok_skenario'] ?? ($dataPraktik['kelompok_skenario'] ?? []));
 
         // Data Unit Kompetensi dari Skema Database
         $allUnits = $pendaftaran->skema->unitKompetensi ?? collect();
@@ -253,6 +274,7 @@
         
         <form id="form-ia-02" method="POST" action="{{ route('formulir.ia.simpan', ['kodeForm' => 'FR.IA.02', 'pendaftaranId' => $pendaftaran->id]) }}">
             @csrf
+            <input type="hidden" name="judul_tugas" value="{{ $judulTugasVal }}">
 
             <!-- ====================================================================
                  HALAMAN 1: IDENTITAS, PETUNJUK, & KELOMPOK PEKERJAAN 1
@@ -370,31 +392,67 @@
 
                 <!-- ISIAN SKENARIO TUGAS PRAKTIK DEMONSTRASI (PERSIS GAMBAR) -->
                 <label class="label-skenario">Skenario Tugas Praktik Demonstrasi: <span style="color: #ef4444;">*</span></label>
-                <textarea name="kelompok_skenario[{{ $kIndex }}][skenario]" class="textarea-skenario" rows="4" placeholder="Skenario demonstrasi praktik belum diisi oleh Asesor." readonly>{{ $kSkenario }}</textarea>
-                
-                @if($kIndex === 1)
-                    <!-- Simpan juga ke field root skenario untuk backward compatibility -->
-                    <input type="hidden" name="skenario" value="{{ $kSkenario }}">
-                @endif
+                <textarea name="kelompok_skenario[{{ $kIndex }}][skenario]" class="textarea-skenario" rows="4" placeholder="{{ $isAsesi ? 'Skenario demonstrasi praktik belum diisi oleh Asesor.' : 'Tuliskan skenario tugas praktik demonstrasi...' }}" {{ $isAsesi ? 'readonly' : 'required' }}>{{ $kSkenario }}</textarea>
 
                 <!-- PERLENGKAPAN, PERALATAN, DAN WAKTU (PERSIS GAMBAR) -->
                 <div class="grup-peralatan-waktu">
                     <div class="baris-label-input">
                         <div class="nama-label">Perlengkapan dan Peralatan : <span style="color: #ef4444;">*</span></div>
                         <div class="isi-input">
-                            <textarea name="kelompok_skenario[{{ $kIndex }}][peralatan]" class="textarea-skenario" rows="2" placeholder="Daftar perlengkapan dan peralatan belum diisi." readonly>{{ $kPeralatan }}</textarea>
-                            @if($kIndex === 1)
-                                <input type="hidden" name="peralatan_bahan" value="{{ $kPeralatan }}">
-                            @endif
+                            <textarea name="kelompok_skenario[{{ $kIndex }}][peralatan]" class="textarea-skenario" rows="2" placeholder="{{ $isAsesi ? 'Daftar perlengkapan dan peralatan belum diisi.' : 'Tuliskan daftar perlengkapan dan peralatan...' }}" {{ $isAsesi ? 'readonly' : 'required' }}>{{ $kPeralatan }}</textarea>
                         </div>
                     </div>
 
                     <div class="baris-label-input" style="align-items: center;">
                         <div class="nama-label">{{ $kIndex === 1 ? 'Durasi Waktu :' : 'Waktu :' }} <span style="color: #ef4444;">*</span></div>
                         <div class="isi-input">
-                            <input type="text" name="kelompok_skenario[{{ $kIndex }}][waktu]" class="input-baris-ia02" style="max-width: 250px;" value="{{ $kWaktu }}" placeholder="Contoh: 120 Menit" readonly>
-                            @if($kIndex === 1)
-                                <input type="hidden" name="durasi_waktu" value="{{ $kWaktu }}">
+                            @if($isAsesi)
+                                <input type="text" name="kelompok_skenario[{{ $kIndex }}][waktu]" class="input-baris-ia02" style="max-width: 250px;" value="{{ $kWaktu ?: '-' }}" readonly>
+                            @else
+                                @php
+                                    $listPilihanJam = [
+                                        '1 Jam' => '1 Jam',
+                                        '2 Jam' => '2 Jam',
+                                        '3 Jam' => '3 Jam',
+                                        '4 Jam' => '4 Jam',
+                                        '5 Jam' => '5 Jam',
+                                        '6 Jam' => '6 Jam',
+                                        '7 Jam' => '7 Jam',
+                                        '8 Jam' => '8 Jam',
+                                    ];
+
+                                    $selectedJam = '';
+                                    if (!empty($kWaktu)) {
+                                        $cleanWaktu = trim((string)$kWaktu);
+                                        if (isset($listPilihanJam[$cleanWaktu])) {
+                                            $selectedJam = $cleanWaktu;
+                                        } elseif (preg_match('/^(\d+(?:\.\d+)?)\s*jam$/i', $cleanWaktu, $m)) {
+                                            $candidate = ((float)$m[1] == (int)$m[1] ? (int)$m[1] : (float)$m[1]) . ' Jam';
+                                            if (isset($listPilihanJam[$candidate])) {
+                                                $selectedJam = $candidate;
+                                            }
+                                        } elseif (preg_match('/^(\d+)\s*menit$/i', $cleanWaktu, $m)) {
+                                            $jamVal = ((int)$m[1]) / 60;
+                                            $candidate = ($jamVal == (int)$jamVal ? (int)$jamVal : $jamVal) . ' Jam';
+                                            if (isset($listPilihanJam[$candidate])) {
+                                                $selectedJam = $candidate;
+                                            } else {
+                                                $selectedJam = $cleanWaktu;
+                                            }
+                                        } else {
+                                            $selectedJam = $cleanWaktu;
+                                        }
+                                    }
+                                @endphp
+                                <select name="kelompok_skenario[{{ $kIndex }}][waktu]" class="input-baris-ia02 select-ia02" style="max-width: 250px;" required>
+                                    <option value="" disabled {{ empty($selectedJam) ? 'selected' : '' }}>-- Pilih Durasi Jam --</option>
+                                    @foreach($listPilihanJam as $valJam => $labelJam)
+                                        <option value="{{ $valJam }}" {{ $selectedJam === $valJam ? 'selected' : '' }}>{{ $labelJam }}</option>
+                                    @endforeach
+                                    @if(!empty($kWaktu) && !array_key_exists($selectedJam, $listPilihanJam))
+                                        <option value="{{ $kWaktu }}" selected>{{ $kWaktu }}</option>
+                                    @endif
+                                </select>
                             @endif
                         </div>
                     </div>

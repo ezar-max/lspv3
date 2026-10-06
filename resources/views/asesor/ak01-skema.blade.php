@@ -197,8 +197,9 @@
                 <!-- Metode Pengumpulan Bukti -->
                 <div class="space-y-1.5">
                     <label class="font-bold text-slate-700 block">
-                        Metode Pengumpulan Bukti yang Disepakati
+                        Metode Pengumpulan Bukti yang Disepakati <span class="text-rose-500">*</span>
                     </label>
+                    <p class="text-[10px] text-slate-500">Pilih minimal satu metode pengumpulan bukti.</p>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-0.5">
                         <label class="flex items-center gap-2 p-2 rounded-lg bg-slate-50 border border-slate-100 text-slate-700 cursor-pointer hover:bg-slate-100/70 transition-colors">
                             <input type="checkbox" name="bukti_dikumpulkan[]" value="Observasi Praktik Demonstrasi"
@@ -408,6 +409,19 @@
 
             submitAk01(e) {
                 if (this.isSubmitting) return;
+
+                const selectedMethods = e.target.querySelectorAll('input[name="bukti_dikumpulkan[]"]:checked');
+                if (selectedMethods.length === 0) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Metode Bukti Wajib Dipilih',
+                        text: 'Pilih minimal satu metode pengumpulan bukti sebelum menyimpan.',
+                        confirmButtonColor: '#4f46e5'
+                    }).then(() => {
+                        e.target.querySelector('input[name="bukti_dikumpulkan[]"]')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    });
+                    return;
+                }
 
                 if (!this.agreedToClause) {
                     Swal.fire({

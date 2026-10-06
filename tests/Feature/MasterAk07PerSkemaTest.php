@@ -90,13 +90,10 @@ class MasterAk07PerSkemaTest extends TestCase
             'metode_disepakati' => 'Observasi Praktik & Portofolio',
             'instrumen_disepakati' => 'FR.IA.01, FR.IA.02',
             'catatan_asesor' => 'Disediakan tambahan waktu 15 menit',
-            'items_checklist' => [
-                1 => [
-                    'perlu' => '1',
-                    'opsi' => ['penyesuaian_instruksi_tertulis'],
-                    'keterangan' => 'Menggunakan panduan bahasa yang ringkas',
-                ],
-            ],
+            'items_checklist' => array_fill_keys(
+                array_keys(AssessmentAk07Adjustment::CRITERIA_DEFINITIONS),
+                ['perlu' => '0']
+            ),
             'gunakan_profil' => '1',
             'tanda_tangan_asesor' => 'data:image/png;base64,' . base64_encode('tanda tangan asesor'),
         ];
@@ -114,6 +111,64 @@ class MasterAk07PerSkemaTest extends TestCase
         $this->assertNotEmpty($master->tanda_tangan_asesor);
         $this->assertNotNull($master->tanggal_ttd_asesor);
         $this->assertTrue(Storage::disk('public')->exists(str_replace('storage/', '', $master->tanda_tangan_asesor)));
+    }
+
+    public function test_master_ak07_requires_a_selection_for_each_adjustment_category()
+    {
+        Storage::fake('public');
+        $checklist = array_fill_keys(
+            array_keys(AssessmentAk07Adjustment::CRITERIA_DEFINITIONS),
+            ['perlu' => '0']
+        );
+        unset($checklist[4]);
+
+        $response = $this->actingAs($this->asesor)->post(route('asesor.skema.ak-07.simpan', $this->skema->id), [
+            'potensi_asesi' => 2,
+            'fase_penggunaan' => 'saat_pra_asesmen',
+            'items_checklist' => $checklist,
+            'tanda_tangan_asesor' => 'data:image/png;base64,' . base64_encode('tanda tangan asesor'),
+        ]);
+
+        $response->assertSessionHasErrors('items_checklist.4.perlu');
+        $this->assertDatabaseMissing('master_ak07', ['skema_id' => $this->skema->id]);
+    }
+
+    public function test_master_ak07_requires_checkbox_option_when_category_is_marked_perlu_penyesuaian()
+    {
+        Storage::fake('public');
+        $checklist = array_fill_keys(
+            array_keys(AssessmentAk07Adjustment::CRITERIA_DEFINITIONS),
+            ['perlu' => '0']
+        );
+        // Kategori 1 dipilih "Perlu Penyesuaian" tapi tanpa memilih opsi checkbox
+        $checklist[1] = [
+            'perlu' => '1',
+            'opsi' => [],
+        ];
+
+        $response = $this->actingAs($this->asesor)->post(route('asesor.skema.ak-07.simpan', $this->skema->id), [
+            'potensi_asesi' => 2,
+            'fase_penggunaan' => 'saat_pra_asesmen',
+            'items_checklist' => $checklist,
+            'tanda_tangan_asesor' => 'data:image/png;base64,' . base64_encode('tanda tangan asesor'),
+        ]);
+
+        $response->assertSessionHasErrors('items_checklist.1.opsi');
+        $this->assertDatabaseMissing('master_ak07', ['skema_id' => $this->skema->id]);
+
+        // Sekarang isi dengan opsi checkbox yang dipilih
+        $subOptionKey = array_key_first(AssessmentAk07Adjustment::CRITERIA_DEFINITIONS[1]['sub_options']);
+        $checklist[1]['opsi'] = [$subOptionKey];
+
+        $successResponse = $this->actingAs($this->asesor)->post(route('asesor.skema.ak-07.simpan', $this->skema->id), [
+            'potensi_asesi' => 2,
+            'fase_penggunaan' => 'saat_pra_asesmen',
+            'items_checklist' => $checklist,
+            'tanda_tangan_asesor' => 'data:image/png;base64,' . base64_encode('tanda tangan asesor'),
+        ]);
+
+        $successResponse->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('master_ak07', ['skema_id' => $this->skema->id]);
     }
 
     public function test_asesor_cannot_save_master_ak07_without_signature()

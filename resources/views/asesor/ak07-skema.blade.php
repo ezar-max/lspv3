@@ -59,6 +59,29 @@
         </div>
     </div>
 
+    <!-- NOTIFIKASI SUKSES / ERROR -->
+    @if(session('sukses'))
+        <div class="p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-xs font-semibold flex items-center gap-2.5 shadow-2xs">
+            <span>✅</span>
+            <span>{{ session('sukses') }}</span>
+        </div>
+    @endif
+    @if(session('error') || $errors->any())
+        <div class="p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-xs font-semibold space-y-1 shadow-2xs">
+            <div class="flex items-center gap-2">
+                <span>⚠️</span>
+                <span>{{ session('error') ?? 'Terdapat kesalahan pada isian formulir:' }}</span>
+            </div>
+            @if($errors->any())
+                <ul class="list-disc pl-5 font-normal text-rose-700">
+                    @foreach($errors->all() as $err)
+                        <li>{{ $err }}</li>
+                    @endforeach
+                </ul>
+            @endif
+        </div>
+    @endif
+
     <!-- HEADER CARD -->
     <div class="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-4 sm:p-5 space-y-3">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
@@ -253,21 +276,46 @@
                         $ketSaved = $itemSaved['keterangan'] ?? '';
                         $itemState = $itemSaved['perlu_penyesuaian'] ?? null;
                     @endphp
-                    <div class="border border-slate-200 rounded-xl p-3.5 space-y-3" data-ak07-checklist-category="{{ $cId }}">
+                    <div class="border border-slate-200 rounded-xl p-3.5 space-y-3 transition-all" data-ak07-checklist-category="{{ $cId }}">
                         <h3 class="text-xs font-bold text-slate-800">{{ $cId }}. {{ $crit['title'] }}</h3>
                         <div class="flex flex-wrap gap-3 text-xs">
-                            <label class="flex items-center gap-1.5"><input type="radio" data-ak07-category="{{ $cId }}" name="items_checklist[{{ $cId }}][perlu]" value="0" {{ $itemState === false || $itemState === 0 ? 'checked' : '' }} @change="checklist['{{ $cId }}'] = 'tidak'"> Tidak Perlu</label>
-                            <label class="flex items-center gap-1.5"><input type="radio" data-ak07-category="{{ $cId }}" name="items_checklist[{{ $cId }}][perlu]" value="1" {{ $itemState === true || $itemState === 1 ? 'checked' : '' }} @change="checklist['{{ $cId }}'] = 'perlu'"> Perlu Penyesuaian</label>
+                            <label class="flex items-center gap-1.5 cursor-pointer">
+                                <input type="radio" data-ak07-category="{{ $cId }}" name="items_checklist[{{ $cId }}][perlu]" value="0" {{ $itemState === false || $itemState === 0 ? 'checked' : '' }} @change="setCategoryStatus('{{ $cId }}', 'tidak')"> 
+                                <span class="font-medium text-slate-700">Tidak Perlu</span>
+                            </label>
+                            <label class="flex items-center gap-1.5 cursor-pointer">
+                                <input type="radio" data-ak07-category="{{ $cId }}" name="items_checklist[{{ $cId }}][perlu]" value="1" {{ $itemState === true || $itemState === 1 ? 'checked' : '' }} @change="setCategoryStatus('{{ $cId }}', 'perlu')"> 
+                                <span class="font-medium text-slate-700">Perlu Penyesuaian</span>
+                            </label>
                         </div>
+
+                        <!-- Indikator Peringatan Wajib Pilih Opsi Jika Perlu Penyesuaian -->
+                        <template x-if="checklist['{{ $cId }}'] === 'perlu'">
+                            <div class="text-[11px] font-semibold text-amber-700 bg-amber-50 px-2.5 py-1.5 rounded-lg border border-amber-200 flex items-center gap-1.5">
+                                <span>⚠️</span>
+                                <span>Wajib memilih minimal satu opsi checkbox penyesuaian di bawah ini sebelum formulir dapat disimpan.</span>
+                            </div>
+                        </template>
+
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                             @foreach($crit['sub_options'] as $subKey => $subLabel)
-                                <label class="flex items-start gap-2 p-2 rounded-lg bg-white border border-slate-200 text-[11px]">
-                                    <input type="checkbox" data-ak07-category="{{ $cId }}" name="items_checklist[{{ $cId }}][opsi][]" value="{{ $subKey }}" {{ in_array($subKey, $opsiSaved) ? 'checked' : '' }}>
-                                    <span>{{ $subLabel }}</span>
+                                <label class="flex items-start gap-2 p-2 rounded-lg border text-[11px] transition-all"
+                                       :class="checklist['{{ $cId }}'] === 'perlu' ? 'bg-white border-slate-200 text-slate-800 hover:border-indigo-300 cursor-pointer shadow-2xs' : 'bg-slate-50 border-slate-200/70 text-slate-400 opacity-60 cursor-not-allowed'">
+                                    <input type="checkbox" 
+                                           data-ak07-category="{{ $cId }}" 
+                                           name="items_checklist[{{ $cId }}][opsi][]" 
+                                           value="{{ $subKey }}" 
+                                           {{ in_array($subKey, $opsiSaved) ? 'checked' : '' }}
+                                           :disabled="!isEditMode || checklist['{{ $cId }}'] !== 'perlu'"
+                                           class="rounded text-indigo-600 focus:ring-indigo-500 disabled:opacity-50 mt-0.5">
+                                    <span :class="checklist['{{ $cId }}'] !== 'perlu' ? 'select-none' : ''">{{ $subLabel }}</span>
                                 </label>
                             @endforeach
                         </div>
-                        <input type="text" data-ak07-category="{{ $cId }}" name="items_checklist[{{ $cId }}][keterangan]" value="{{ $ketSaved }}" class="w-full px-3 py-1.5 rounded-lg border border-slate-200 text-xs" placeholder="Catatan khusus penyesuaian">
+                        <input type="text" data-ak07-category="{{ $cId }}" name="items_checklist[{{ $cId }}][keterangan]" value="{{ $ketSaved }}" 
+                               :disabled="!isEditMode || checklist['{{ $cId }}'] !== 'perlu'"
+                               :class="checklist['{{ $cId }}'] === 'perlu' ? 'bg-white border-slate-200 text-slate-800' : 'bg-slate-50 border-slate-200/70 text-slate-400 opacity-60 cursor-not-allowed'"
+                               class="w-full px-3 py-1.5 rounded-lg border text-xs" placeholder="Catatan khusus penyesuaian">
                     </div>
                 @endforeach
             </div>
@@ -531,6 +579,20 @@ function ak07SkemaApp() {
             }
         },
 
+        setCategoryStatus(cId, status) {
+            this.checklist[cId] = status;
+            const category = this.$root.querySelector(`[data-ak07-checklist-category="${cId}"]`);
+            if (!category) return;
+
+            if (status === 'tidak') {
+                category.querySelectorAll('input[type="checkbox"]').forEach((input) => {
+                    input.checked = false;
+                });
+                const note = category.querySelector('input[name$="[keterangan]"]');
+                if (note) note.value = '';
+            }
+        },
+
         toggleEditMode() {
             this.isEditMode = !this.isEditMode;
             if (this.isEditMode) {
@@ -637,6 +699,54 @@ function ak07SkemaApp() {
                 return false;
             }
             if (this.isSubmitting) return;
+
+            const incompleteCategory = Object.entries(this.checklist).find(([, status]) => status !== 'perlu' && status !== 'tidak');
+            if (incompleteCategory) {
+                const [categoryId] = incompleteCategory;
+                const category = this.$root.querySelector(`[data-ak07-checklist-category="${categoryId}"]`);
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Matriks Belum Lengkap',
+                        text: `Pilih "Tidak Perlu" atau "Perlu Penyesuaian" untuk kategori ${categoryId} sebelum mengirim formulir.`,
+                        confirmButtonColor: '#4f46e5'
+                    }).then(() => category?.scrollIntoView({ behavior: 'smooth', block: 'center' }));
+                } else {
+                    alert(`Pilih status kebutuhan penyesuaian untuk kategori ${categoryId} sebelum mengirim formulir.`);
+                    category?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+                return false;
+            }
+
+            // Validasi: Jika kategori memilih "Perlu Penyesuaian", wajib memilih minimal satu opsi checkbox
+            for (const [categoryId, status] of Object.entries(this.checklist)) {
+                if (status === 'perlu') {
+                    const category = this.$root.querySelector(`[data-ak07-checklist-category="${categoryId}"]`);
+                    const checkedBoxes = category ? category.querySelectorAll('input[type="checkbox"]:checked') : [];
+                    if (!checkedBoxes || checkedBoxes.length === 0) {
+                        const titleEl = category ? category.querySelector('h3') : null;
+                        const catTitle = titleEl ? titleEl.textContent.trim() : `Kategori ${categoryId}`;
+
+                        if (typeof Swal !== 'undefined') {
+                            Swal.fire({
+                                icon: 'warning',
+                                title: 'Opsi Penyesuaian Wajib Dipilih',
+                                text: `${catTitle} ditandai "Perlu Penyesuaian". Anda wajib memilih minimal satu opsi checkbox penyesuaian sebelum formulir dapat disimpan!`,
+                                confirmButtonColor: '#4f46e5',
+                                confirmButtonText: '✓ Mengerti'
+                            }).then(() => {
+                                category?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                category?.classList.add('ring-2', 'ring-rose-500', 'border-rose-300');
+                                setTimeout(() => category?.classList.remove('ring-2', 'ring-rose-500', 'border-rose-300'), 5000);
+                            });
+                        } else {
+                            alert(`${catTitle} ditandai "Perlu Penyesuaian". Anda wajib memilih minimal satu opsi checkbox penyesuaian sebelum formulir dapat disimpan!`);
+                            category?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }
+                        return false;
+                    }
+                }
+            }
 
             const signature = document.getElementById('inputSignatureMasterAk07')?.value || '';
             if (!/^data:image\/(png|jpeg);base64,/.test(signature)) {

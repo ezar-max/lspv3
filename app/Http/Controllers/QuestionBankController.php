@@ -19,6 +19,8 @@ class QuestionBankController extends Controller
     public function store(StoreQuestionBankRequest $request)
     {
         $validated = $request->validated();
+        $validated['kuk_id'] = !empty($validated['kuk_id']) ? (int) $validated['kuk_id'] : null;
+        $validated['points'] = !empty($validated['points']) ? (int) $validated['points'] : 1;
 
         // Handle gambar soal jika ada
         if ($request->hasFile('image')) {
@@ -61,6 +63,8 @@ class QuestionBankController extends Controller
     {
         $question = MasterQuestionBank::findOrFail($id);
         $validated = $request->validated();
+        $validated['kuk_id'] = !empty($validated['kuk_id']) ? (int) $validated['kuk_id'] : null;
+        $validated['points'] = !empty($validated['points']) ? (int) $validated['points'] : ($question->points ?? 1);
 
         if ($request->hasFile('image')) {
             if ($question->image_path && file_exists(public_path($question->image_path))) {

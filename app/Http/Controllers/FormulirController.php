@@ -428,6 +428,7 @@ class FormulirController extends Controller
         } else {
             if (is_numeric($requestedId) && (int) $requestedId > 0) {
                 $pendaftaran = $this->frIa01Service->loadAuthorizedRegistration((int) $requestedId, $user);
+                $skema = $pendaftaran->skema;
             } else {
                 $query = PendaftaranAsesi::query()->with(['asesi.profilAsesi', 'skema.unitKompetensi.elemenKompetensi.kriteriaUnjukKerja', 'asesor', 'jadwal.asesor', 'mapa01', 'mapa02', 'iaPenilaian']);
                 if ($user->peran === 'asesi') {
@@ -443,11 +444,22 @@ class FormulirController extends Controller
                 }
                 $pendaftaran = $query->latest()->first();
                 if (!$pendaftaran) {
-                    return $this->redirectFallback('Silakan pilih pendaftaran asesmen FR.IA.01 terlebih dahulu.');
+                    if (in_array($user->peran, ['asesor', 'admin', 'superadmin'], true)) {
+                        $isMasterMode = true;
+                        $skemaId = (int) ($request->input('skema_id') ?: session('active_selected_skema_id') ?: $user->skema_id);
+                        $skema = $skemaId > 0
+                            ? SkemaSertifikasi::with('unitKompetensi.elemenKompetensi.kriteriaUnjukKerja')->find($skemaId)
+                            : SkemaSertifikasi::with('unitKompetensi.elemenKompetensi.kriteriaUnjukKerja')->first();
+                        abort_unless($skema, 404, 'Skema sertifikasi untuk master FR.IA.01 tidak ditemukan.');
+                        $pendaftaran = null;
+                    } else {
+                        return $this->redirectFallback('Silakan pilih pendaftaran asesmen FR.IA.01 terlebih dahulu.');
+                    }
+                } else {
+                    $pendaftaran = $this->frIa01Service->loadAuthorizedRegistration((int) $pendaftaran->id, $user);
+                    $skema = $pendaftaran->skema;
                 }
-                $pendaftaran = $this->frIa01Service->loadAuthorizedRegistration((int) $pendaftaran->id, $user);
             }
-            $skema = $pendaftaran->skema;
         }
 
         $iaRecord = $isMasterMode ? null : IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.01')->first();
@@ -553,16 +565,26 @@ class FormulirController extends Controller
 
         $saved = $iaRecord ? ($iaRecord->data_jawaban ?? []) : [];
         
-        // MASTER DATA (Strictly read from Master Instrument)
         $dataPraktik = [
-            'judul_tugas' => $meta['judul_tugas'] ?? ($masterInst?->title ?? ('Tugas Praktik Demonstrasi ' . $skemaNama)),
-            'skenario' => $meta['scenario'] ?? ($meta['skenario'] ?? ''),
-            'peralatan_bahan' => $meta['tools_equipment'] ?? ($meta['peralatan_bahan'] ?? ''),
-            'durasi_waktu' => $meta['durasi_waktu'] ?? ($masterInst?->time_limit_minutes ? ($masterInst->time_limit_minutes . ' Menit') : ''),
-            'instruksi_kerja' => $meta['instruksi_kerja'] ?? ($masterInst?->instructions ? explode("\n", $masterInst->instructions) : []),
-            'standar_hasil' => $meta['standar_hasil'] ?? [],
+            'judul_tugas' => $saved['judul_tugas'] ?? ($meta['judul_tugas'] ?? ($masterInst?->title ?? ('Tugas Praktik Demonstrasi ' . $skemaNama))),
+            'skenario' => $saved['skenario'] ?? ($meta['scenario'] ?? ($meta['skenario'] ?? '')),
+            'peralatan_bahan' => $saved['peralatan_bahan'] ?? ($meta['tools_equipment'] ?? ($meta['peralatan_bahan'] ?? '')),
+            'durasi_waktu' => $saved['durasi_waktu'] ?? ($meta['durasi_waktu'] ?? ($masterInst?->time_limit_minutes ? ($masterInst->time_limit_minutes . ' Menit') : '')),
+            'instruksi_kerja' => $saved['instruksi_kerja'] ?? ($meta['instruksi_kerja'] ?? ($masterInst?->instructions ? explode("\n", $masterInst->instructions) : [])),
+            'standar_hasil' => $saved['standar_hasil'] ?? ($meta['standar_hasil'] ?? []),
             'catatan' => $iaRecord->catatan_asesor ?? ($saved['catatan'] ?? ''),
+            'kelompok_skenario' => $saved['kelompok_skenario'] ?? ($meta['kelompok_skenario'] ?? []),
         ];
+
+        if (empty($dataPraktik['skenario']) && !empty($dataPraktik['kelompok_skenario'][1]['skenario'])) {
+            $dataPraktik['skenario'] = $dataPraktik['kelompok_skenario'][1]['skenario'];
+        }
+        if (empty($dataPraktik['peralatan_bahan']) && !empty($dataPraktik['kelompok_skenario'][1]['peralatan'])) {
+            $dataPraktik['peralatan_bahan'] = $dataPraktik['kelompok_skenario'][1]['peralatan'];
+        }
+        if (empty($dataPraktik['durasi_waktu']) && !empty($dataPraktik['kelompok_skenario'][1]['waktu'])) {
+            $dataPraktik['durasi_waktu'] = $dataPraktik['kelompok_skenario'][1]['waktu'];
+        }
 
         $isMasterMode = empty($pendaftaran->id) || $pendaftaran->id == 0 || !$request->filled('pendaftaran_id');
         return view('formulir.fr-ia-02', compact('pendaftaran', 'iaRecord', 'masterInst', 'dataPraktik', 'isMasterMode'));
@@ -602,12 +624,12 @@ class FormulirController extends Controller
         if (is_string($meta)) $meta = json_decode($meta, true) ?: [];
         $saved = $iaRecord ? ($iaRecord->data_jawaban ?? []) : [];
         $dataProyek = [
-            'judul_proyek' => $meta['judul_proyek'] ?? ($masterInst?->title ?? 'Penjelasan Proyek Singkat / Kegiatan Terstruktur'),
-            'skenario' => $meta['scenario'] ?? ($meta['skenario'] ?? ''),
-            'waktu_menit' => $meta['waktu_menit'] ?? '',
-            'demonstrasi' => $meta['demonstrasi'] ?? ($meta['deliverables'] ?? ''),
-            'waktu_demo' => $meta['waktu_demo'] ?? '',
-            'umpan_balik' => $meta['umpan_balik'] ?? '',
+            'judul_proyek' => $saved['judul_proyek'] ?? ($meta['judul_proyek'] ?? ($masterInst?->title ?? 'Penjelasan Proyek Singkat / Kegiatan Terstruktur')),
+            'skenario' => $saved['skenario'] ?? ($meta['scenario'] ?? ($meta['skenario'] ?? '')),
+            'waktu_menit' => $saved['waktu_menit'] ?? ($meta['waktu_menit'] ?? ($meta['durasi_waktu'] ?? '')),
+            'demonstrasi' => $saved['demonstrasi'] ?? ($meta['demonstrasi'] ?? ($meta['deliverables'] ?? '')),
+            'waktu_demo' => $saved['waktu_demo'] ?? ($meta['waktu_demo'] ?? ''),
+            'umpan_balik' => $saved['umpan_balik'] ?? ($meta['umpan_balik'] ?? ($iaRecord->catatan_asesor ?? '')),
             'instruksi_terstruktur' => $meta['instruksi_terstruktur'] ?? ($masterInst?->instructions ? explode("\n", $masterInst->instructions) : []),
             'durasi_waktu' => $meta['durasi_waktu'] ?? ($masterInst?->time_limit_minutes ? ($masterInst->time_limit_minutes . ' Menit') : ''),
             'peralatan_bahan' => $meta['tools_equipment'] ?? ($meta['peralatan_bahan'] ?? ''),
@@ -673,6 +695,7 @@ class FormulirController extends Controller
                         'pertanyaan' => $q->question_text,
                         'opsi' => $q->options ?? [],
                         'kunci' => $q->correct_answer,
+                        'kunci_referensi' => $q->correct_answer,
                         'kuk' => $q->kriteriaUnjukKerja ? "KUK {$q->kriteriaUnjukKerja->nomor_kuk} - {$q->kriteriaUnjukKerja->pernyataan_kuk}" : 'Standar Kompetensi Kejuruan',
                         'pembahasan' => $q->rubric_guide ?? '',
                         'gambar' => $q->image_path,
@@ -681,6 +704,11 @@ class FormulirController extends Controller
                 if (!empty($list)) {
                     return $list;
                 }
+            }
+
+            // Fallback ke additional_metadata jika questionBanks belum ada
+            if ($inst && !empty($inst->additional_metadata['data_jawaban']) && is_array($inst->additional_metadata['data_jawaban'])) {
+                return $inst->additional_metadata['data_jawaban'];
             }
 
         } else {
@@ -694,12 +722,16 @@ class FormulirController extends Controller
                         'pertanyaan' => $q->question_text,
                         'opsi' => $q->options ?? [],
                         'kunci' => $q->correct_answer,
+                        'kunci_referensi' => $q->correct_answer,
                         'kuk' => $q->kriteriaUnjukKerja ? "KUK {$q->kriteriaUnjukKerja->nomor_kuk} - {$q->kriteriaUnjukKerja->pernyataan_kuk}" : 'Standar Kompetensi Kejuruan',
                         'pembahasan' => $q->rubric_guide ?? '',
                         'gambar' => $q->image_path,
                     ];
                 }
                 return $list;
+            }
+            if ($inst && !empty($inst->additional_metadata['data_jawaban']) && is_array($inst->additional_metadata['data_jawaban'])) {
+                return $inst->additional_metadata['data_jawaban'];
             }
         }
 
@@ -726,6 +758,7 @@ class FormulirController extends Controller
                     $list[$num] = [
                         'no' => $num,
                         'pertanyaan' => $q->question_text,
+                        'kunci' => $q->correct_answer,
                         'kunci_referensi' => $q->correct_answer,
                         'kuk' => $q->kriteriaUnjukKerja ? "KUK {$q->kriteriaUnjukKerja->nomor_kuk} - {$q->kriteriaUnjukKerja->pernyataan_kuk}" : 'Standar Kompetensi Kejuruan',
                     ];
@@ -733,6 +766,11 @@ class FormulirController extends Controller
                 if (!empty($list)) {
                     return $list;
                 }
+            }
+
+            // Fallback ke additional_metadata jika questionBanks belum ada
+            if ($inst && !empty($inst->additional_metadata['data_jawaban']) && is_array($inst->additional_metadata['data_jawaban'])) {
+                return $inst->additional_metadata['data_jawaban'];
             }
 
         } else {
@@ -744,11 +782,15 @@ class FormulirController extends Controller
                     $list[$num] = [
                         'no' => $num,
                         'pertanyaan' => $q->question_text,
+                        'kunci' => $q->correct_answer,
                         'kunci_referensi' => $q->correct_answer,
                         'kuk' => $q->kriteriaUnjukKerja ? "KUK {$q->kriteriaUnjukKerja->nomor_kuk} - {$q->kriteriaUnjukKerja->pernyataan_kuk}" : 'Standar Kompetensi Kejuruan',
                     ];
                 }
                 return $list;
+            }
+            if ($inst && !empty($inst->additional_metadata['data_jawaban']) && is_array($inst->additional_metadata['data_jawaban'])) {
+                return $inst->additional_metadata['data_jawaban'];
             }
         }
 
@@ -817,6 +859,9 @@ class FormulirController extends Controller
             
         // STRICT MASTER LOADING
         $soalList = self::getSoalIa05($pendaftaran->skema_id);
+        if (empty($soalList) && $iaRecord && !empty($iaRecord->data_jawaban)) {
+            $soalList = $iaRecord->data_jawaban;
+        }
         if (empty($soalList)) {
             $soalList = [
                 1 => [
@@ -883,6 +928,9 @@ class FormulirController extends Controller
             
         // STRICT MASTER LOADING
         $soalList = self::getSoalIa06($pendaftaran->skema_id);
+        if (empty($soalList) && $iaRecord && !empty($iaRecord->data_jawaban)) {
+            $soalList = $iaRecord->data_jawaban;
+        }
         if (empty($soalList)) {
             $soalList = [
                 1 => [
@@ -1182,12 +1230,13 @@ class FormulirController extends Controller
             // Mode Master Blanko / Template Skema (id == 0)
             abort_unless($user, 403, 'Akses Ditolak.');
             
-            if (!in_array($user->peran, ['admin', 'superadmin'])) {
+            if (!in_array($user->peran, ['admin', 'superadmin'], true)) {
                 abort_unless($user->peran === 'asesor', 403, 'Akses Ditolak.');
                 // Validasi bahwa Asesor memiliki hak pada skema ini
-                $hasHakSkema = \App\Models\SkemaAsesor::where('asesor_id', $user->id)
-                    ->where('skema_id', $pendaftaran->skema_id)
-                    ->exists();
+                $skemaId = $pendaftaran->skema_id;
+                $hasHakSkema = ($user->skema_id == $skemaId)
+                    || JadwalAsesmen::where('asesor_id', $user->id)->where('skema_id', $skemaId)->exists()
+                    || PendaftaranAsesi::where('asesor_id', $user->id)->where('skema_id', $skemaId)->exists();
                 abort_unless($hasHakSkema, 403, 'Akses Ditolak: Anda tidak ditugaskan sebagai asesor untuk skema sertifikasi ini.');
             }
         }
@@ -1220,10 +1269,46 @@ class FormulirController extends Controller
         elseif ($kodeForm === 'FR.IA.02') {
             $rekomendasi = $request->input('rekomendasi', 'K');
             $catatan = $request->input('catatan', '');
+            
+            $kelompokSkenario = $request->input('kelompok_skenario', []);
+            $skenario = $request->input('skenario');
+            if (empty($skenario) && isset($kelompokSkenario[1]['skenario'])) {
+                $skenario = $kelompokSkenario[1]['skenario'];
+            }
+            $peralatan = $request->input('peralatan_bahan');
+            if (empty($peralatan) && isset($kelompokSkenario[1]['peralatan'])) {
+                $peralatan = $kelompokSkenario[1]['peralatan'];
+            }
+            $durasiWaktu = $request->input('durasi_waktu');
+            if (empty($durasiWaktu) && isset($kelompokSkenario[1]['waktu'])) {
+                $durasiWaktu = $kelompokSkenario[1]['waktu'];
+            }
+            $judulTugas = $request->input('judul_tugas');
+            $instruksiKerja = $request->input('instruksi_kerja');
+
+            if (empty($kelompokSkenario) && (!empty($skenario) || !empty($peralatan) || !empty($durasiWaktu))) {
+                $kelompokSkenario[1] = [
+                    'skenario' => $skenario ?? '',
+                    'peralatan' => $peralatan ?? '',
+                    'waktu' => $durasiWaktu ?? '',
+                ];
+            }
+
             $dataPayload = [
                 'catatan' => $catatan,
+                'kelompok_skenario' => $kelompokSkenario,
+                'skenario' => $skenario ?? '',
+                'peralatan_bahan' => $peralatan ?? '',
+                'durasi_waktu' => $durasiWaktu ?? '',
                 'saved_at' => now()->toDateTimeString(),
             ];
+
+            if (!empty($judulTugas)) {
+                $dataPayload['judul_tugas'] = $judulTugas;
+            }
+            if (!empty($instruksiKerja)) {
+                $dataPayload['instruksi_kerja'] = $instruksiKerja;
+            }
 
             // TTD Asesor dan Asesi (opsional, jika disubmit form)
             if ($request->filled('ttd_asesi')) {
@@ -1279,24 +1364,66 @@ class FormulirController extends Controller
            4. INSTRUKSI TERSTRUKTUR & PENILAIAN PROYEK (FR.IA.04A & FR.IA.04B)
            --------------------------------------------------------------------- */
         elseif ($kodeForm === 'FR.IA.04A') {
+            $isMasterMode = empty($pendaftaran->id) || $pendaftaran->id == 0 || !$request->filled('pendaftaran_id');
+
+            // Validasi wajib diisi untuk asesor dan admin saat membuat / menyimpan formulir
+            if (!$request->has('simpan_draft')) {
+                $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
+                    'skenario' => 'required|string',
+                    'waktu_menit' => 'required',
+                    'demonstrasi' => 'required|string',
+                    'waktu_demo' => 'required',
+                ], [
+                    'skenario.required' => 'Skenario proyek singkat / kegiatan terstruktur lainnya wajib diisi.',
+                    'waktu_menit.required' => 'Waktu pengerjaan proyek singkat wajib diisi.',
+                    'demonstrasi.required' => 'Hasil proyek singkat yang perlu didemonstrasikan / dipresentasikan wajib diisi.',
+                    'waktu_demo.required' => 'Waktu demonstrasi / presentasi proyek wajib diisi.',
+                ]);
+
+                if ($validator->fails()) {
+                    return back()->withInput()->withErrors($validator)->with('error', $validator->errors()->first());
+                }
+            }
+
+            $rawWaktuMenit = $request->input('waktu_menit', '90 Menit');
+            $cleanWaktuMenit = 0;
+            if (preg_match('/(\d+(?:\.\d+)?)\s*jam/i', (string)$rawWaktuMenit, $mJam)) {
+                $cleanWaktuMenit = (int) round(((float)$mJam[1]) * 60);
+            } elseif (preg_match('/(\d+)\s*menit/i', (string)$rawWaktuMenit, $mMenit)) {
+                $cleanWaktuMenit = (int)$mMenit[1];
+            } else {
+                $cleanWaktuMenit = (int) preg_replace('/[^0-9]/', '', (string)$rawWaktuMenit);
+            }
+            $waktuMenitFinal = $cleanWaktuMenit > 0 ? $cleanWaktuMenit : 90;
+
+            $rawWaktuDemo = $request->input('waktu_demo', '30 Menit');
+            $cleanWaktuDemo = 0;
+            if (preg_match('/(\d+(?:\.\d+)?)\s*jam/i', (string)$rawWaktuDemo, $mJam)) {
+                $cleanWaktuDemo = (int) round(((float)$mJam[1]) * 60);
+            } elseif (preg_match('/(\d+)\s*menit/i', (string)$rawWaktuDemo, $mMenit)) {
+                $cleanWaktuDemo = (int)$mMenit[1];
+            } else {
+                $cleanWaktuDemo = (int) preg_replace('/[^0-9]/', '', (string)$rawWaktuDemo);
+            }
+            $waktuDemoFinal = $cleanWaktuDemo > 0 ? $cleanWaktuDemo : 30;
+
             $rekomendasi = $request->input('rekomendasi', 'K');
             $catatan = $request->input('umpan_balik', $request->input('catatan', ''));
             $dataPayload = [
                 'skenario' => $request->input('skenario'),
-                'waktu_menit' => $request->input('waktu_menit', 90),
+                'waktu_menit' => $rawWaktuMenit,
                 'demonstrasi' => $request->input('demonstrasi'),
-                'waktu_demo' => $request->input('waktu_demo', 30),
+                'waktu_demo' => $rawWaktuDemo,
                 'umpan_balik' => $catatan,
                 'saved_at' => now()->toDateTimeString(),
             ];
 
-            // Sinkronkan ke SchemeMasterInstrument (ia_04a) hanya pada Master Mode
-            $isMasterMode = empty($pendaftaran->id) || $pendaftaran->id == 0 || !$request->filled('pendaftaran_id');
-            if ($isMasterMode && $pendaftaran->skema_id) {
+            // Sinkronkan ke SchemeMasterInstrument (ia_04a) pada Master Mode atau jika master instrument ada
+            if ($pendaftaran->skema_id) {
                 $inst = \App\Models\SchemeMasterInstrument::where('skema_id', $pendaftaran->skema_id)
                     ->whereIn('instrument_code', \App\Models\SchemeMasterInstrument::getCodeAliases('ia_04a'))
                     ->first();
-                if (!$inst) {
+                if (!$inst && $isMasterMode) {
                     $inst = \App\Models\SchemeMasterInstrument::create([
                         'skema_id' => $pendaftaran->skema_id,
                         'instrument_code' => 'ia_04a',
@@ -1305,17 +1432,31 @@ class FormulirController extends Controller
                         'created_by' => auth()->id() ?? $pendaftaran->asesor_id,
                     ]);
                 }
-                $meta = $inst->additional_metadata ?? [];
-                if (!is_array($meta)) $meta = json_decode($meta, true) ?: [];
-                if ($request->filled('skenario')) $meta['skenario'] = $request->input('skenario');
-                if ($request->filled('waktu_menit')) $meta['waktu_menit'] = (int) preg_replace('/[^0-9]/', '', (string)$request->input('waktu_menit'));
-                if ($request->filled('demonstrasi')) $meta['demonstrasi'] = $request->input('demonstrasi');
-                if ($request->filled('waktu_demo')) $meta['waktu_demo'] = (int) preg_replace('/[^0-9]/', '', (string)$request->input('waktu_demo'));
-                $inst->additional_metadata = $meta;
-                $inst->save();
+                if ($inst && ($isMasterMode || in_array($user?->peran, ['admin', 'superadmin'], true))) {
+                    $meta = $inst->additional_metadata ?? [];
+                    if (!is_array($meta)) $meta = json_decode($meta, true) ?: [];
+                    if ($request->filled('skenario')) {
+                        $meta['skenario'] = $request->input('skenario');
+                        $meta['scenario'] = $request->input('skenario');
+                    }
+                    if ($request->filled('waktu_menit')) {
+                        $meta['waktu_menit'] = $waktuMenitFinal;
+                        $inst->time_limit_minutes = $waktuMenitFinal;
+                    }
+                    if ($request->filled('demonstrasi')) {
+                        $meta['demonstrasi'] = $request->input('demonstrasi');
+                        $meta['deliverables'] = $request->input('demonstrasi');
+                    }
+                    if ($request->filled('waktu_demo')) {
+                        $meta['waktu_demo'] = $waktuDemoFinal;
+                    }
+                    $meta['is_saved'] = true;
+                    $inst->additional_metadata = $meta;
+                    $inst->save();
+                }
             }
 
-            $suksesMsg = 'Penjelasan Proyek Singkat (FR.IA.04A) berhasil disimpan dan disinkronkan ke bank instrumen skema.';
+            $suksesMsg = 'Penjelasan Proyek Singkat (FR.IA.04A) berhasil disimpan.';
         }
         elseif ($kodeForm === 'FR.IA.04B') {
             $rekomendasi = $request->input('rekomendasi', 'K');
@@ -1333,12 +1474,41 @@ class FormulirController extends Controller
         /* ---------------------------------------------------------------------
            4.5. SIMPAN SOAL CUSTOM (FR.IA.05A & FR.IA.06A)
            --------------------------------------------------------------------- */
-        elseif ($kodeForm === 'FR.IA.05A' || $kodeForm === 'FR.IA.06A') {
+        elseif ($kodeForm === 'FR.IA.05A') {
             $status = $request->has('simpan_draft') ? 'draft' : 'completed';
             $rekomendasi = $request->input('rekomendasi', 'K');
             $catatan = $request->input('catatan', '');
             $dataPayload = $request->input('data_jawaban', []);
-            $suksesMsg = 'Daftar Pertanyaan ('.$kodeForm.') berhasil disimpan.';
+            $suksesMsg = 'Daftar Pertanyaan Pilihan Ganda (FR.IA.05A) berhasil disimpan ke Bank Soal.';
+        }
+        elseif ($kodeForm === 'FR.IA.06A') {
+            $status = $request->has('simpan_draft') ? 'draft' : 'completed';
+            $rekomendasi = $request->input('rekomendasi', 'K');
+            $catatan = $request->input('catatan', '');
+            $dataPayload = $request->input('data_jawaban', []);
+            $suksesMsg = 'Daftar Pertanyaan Esai (FR.IA.06A) berhasil disimpan ke Bank Soal.';
+        }
+        elseif ($kodeForm === 'FR.IA.05B') {
+            $status = $request->has('simpan_draft') ? 'draft' : 'completed';
+            $rekomendasi = $request->input('rekomendasi', 'K');
+            $catatan = $request->input('catatan', $request->input('catatan_asesor', ''));
+            $dataPayload = [
+                'rekomendasi' => $rekomendasi,
+                'catatan_asesor' => $catatan,
+                'evaluasi_at' => now()->toDateTimeString(),
+            ];
+            $suksesMsg = 'Evaluasi & Kunci Jawaban Pilihan Ganda (FR.IA.05B) berhasil disimpan.';
+        }
+        elseif ($kodeForm === 'FR.IA.06B') {
+            $status = $request->has('simpan_draft') ? 'draft' : 'completed';
+            $rekomendasi = $request->input('rekomendasi', 'K');
+            $catatan = $request->input('catatan', $request->input('catatan_asesor', ''));
+            $dataPayload = [
+                'rekomendasi' => $rekomendasi,
+                'catatan_asesor' => $catatan,
+                'evaluasi_at' => now()->toDateTimeString(),
+            ];
+            $suksesMsg = 'Lembar Kunci Jawaban Esai (FR.IA.06B) berhasil disimpan.';
         }
 
         /* ---------------------------------------------------------------------
@@ -1534,10 +1704,28 @@ class FormulirController extends Controller
            --------------------------------------------------------------------- */
         elseif ($kodeForm === 'FR.IA.09') {
             $status = $request->has('simpan_draft') ? 'draft' : 'completed';
+            $pertanyaanWawancara = $request->input('pertanyaan_wawancara', []);
+
+            // Asesor / Admin wajib mengisi pertanyaan wawancara pada setiap elemen saat membuat/menyimpan formulir
+            if ($role !== 'asesi' && !$request->has('simpan_draft')) {
+                if (empty($pertanyaanWawancara) || !is_array($pertanyaanWawancara)) {
+                    return redirect()->back()
+                        ->withInput()
+                        ->with('error', 'Semua kolom Daftar Pertanyaan Wawancara wajib diisi sebelum menyimpan formulir FR.IA.09.');
+                }
+                foreach ($pertanyaanWawancara as $row) {
+                    if (empty(trim($row['pertanyaan'] ?? ''))) {
+                        return redirect()->back()
+                            ->withInput()
+                            ->with('error', 'Semua kolom Daftar Pertanyaan Wawancara wajib diisi sebelum menyimpan formulir FR.IA.09.');
+                    }
+                }
+            }
+
             $rekomendasi = $request->input('rekomendasi', 'K');
             $catatan = $request->input('catatan', $request->input('kesimpulan', ''));
             $dataPayload = [
-                'pertanyaan_wawancara' => $request->input('pertanyaan_wawancara', []),
+                'pertanyaan_wawancara' => $pertanyaanWawancara,
                 'kesimpulan' => $request->input('kesimpulan'),
                 'rekomendasi' => $rekomendasi,
                 'catatan' => $catatan,
@@ -1638,18 +1826,19 @@ class FormulirController extends Controller
             $catatan = $request->catatan ?? ($request->umpan_balik ?? null);
         }
 
-        // Sinkronkan ke SchemeMasterInstrument HANYA JIKA MODE MASTER (pendaftaran_id == 0)
-        if ($pendaftaran->id == 0 && $pendaftaran->skema_id) {
+        // Sinkronkan ke SchemeMasterInstrument untuk mode master (pendaftaran_id == 0) atau sinkronisasi IA.02, IA.05A, IA.06A
+        if ($pendaftaran->skema_id && ($pendaftaran->id == 0 || in_array($kodeForm, ['FR.IA.02', 'FR.IA.05A', 'FR.IA.06A'], true) || in_array($user?->peran, ['admin', 'superadmin'], true))) {
             $rawCode = strtolower(str_replace(['FR.', 'fr.', '.'], '', $kodeForm));
             $instCode = \App\Models\SchemeMasterInstrument::normalizeCode($rawCode);
             $inst = \App\Models\SchemeMasterInstrument::where('skema_id', $pendaftaran->skema_id)
                 ->whereIn('instrument_code', \App\Models\SchemeMasterInstrument::getCodeAliases($instCode))
                 ->first();
             if (!$inst) {
+                $bnspInfo = \App\Models\SchemeMasterInstrument::getBnspInfo($instCode);
                 $inst = \App\Models\SchemeMasterInstrument::create([
                     'skema_id' => $pendaftaran->skema_id,
                     'instrument_code' => $instCode,
-                    'title' => $kodeForm,
+                    'title' => !empty($dataPayload['judul_tugas']) ? $dataPayload['judul_tugas'] : ($bnspInfo['full_name'] ?? $kodeForm),
                     'is_active' => true,
                     'created_by' => auth()->id(),
                 ]);
@@ -1658,17 +1847,157 @@ class FormulirController extends Controller
             if (!is_array($meta)) $meta = json_decode($meta, true) ?: [];
 
             // FILTER PAYLOAD: Cegah Master Data Leak
-            // Kita filter $dataPayload agar data execution (nama asesi, supervisor, jawaban) 
-            // tidak masuk ke additional_metadata master.
             $masterPayload = [];
             
             if ($kodeForm === 'FR.IA.02') {
-                // Tidak ada form input master di IA.02 saat ini
+                if (!empty($dataPayload['judul_tugas'])) {
+                    $inst->title = $dataPayload['judul_tugas'];
+                }
+                if (!empty($dataPayload['durasi_waktu'])) {
+                    $durasiStr = (string)$dataPayload['durasi_waktu'];
+                    $menit = 0;
+                    if (preg_match('/(\d+(?:\.\d+)?)\s*jam/i', $durasiStr, $mJam)) {
+                        $menit = (int) round(((float)$mJam[1]) * 60);
+                    } elseif (preg_match('/(\d+)\s*menit/i', $durasiStr, $mMenit)) {
+                        $menit = (int)$mMenit[1];
+                    } elseif (preg_match('/(\d+)/', $durasiStr, $mFallback)) {
+                        $menit = (int)$mFallback[1];
+                    }
+                    if ($menit > 0) {
+                        $inst->time_limit_minutes = $menit;
+                    }
+                    $masterPayload['durasi_waktu'] = $dataPayload['durasi_waktu'];
+                }
+                if (isset($dataPayload['skenario'])) {
+                    $masterPayload['scenario'] = $dataPayload['skenario'];
+                    $masterPayload['skenario'] = $dataPayload['skenario'];
+                }
+                if (isset($dataPayload['peralatan_bahan'])) {
+                    $masterPayload['tools_equipment'] = $dataPayload['peralatan_bahan'];
+                    $masterPayload['peralatan_bahan'] = $dataPayload['peralatan_bahan'];
+                }
+                if (isset($dataPayload['kelompok_skenario'])) {
+                    $masterPayload['kelompok_skenario'] = $dataPayload['kelompok_skenario'];
+                }
+                if (isset($dataPayload['instruksi_kerja'])) {
+                    $masterPayload['instruksi_kerja'] = $dataPayload['instruksi_kerja'];
+                }
             } elseif ($kodeForm === 'FR.IA.03') {
                 if (isset($dataPayload['pertanyaan'])) $masterPayload['pertanyaan'] = $dataPayload['pertanyaan'];
                 if (isset($dataPayload['kelompok_soal'])) $masterPayload['kelompok_soal'] = $dataPayload['kelompok_soal'];
             } elseif ($kodeForm === 'FR.IA.04A' || $kodeForm === 'FR.IA.04B') {
                 // IA.04A sudah disave manual sebelumnya. IA.04B tidak memiliki input master.
+            } elseif ($kodeForm === 'FR.IA.05A') {
+                // Sinkronkan butir soal PG ke master_question_banks
+                if (is_array($dataPayload) && !empty($dataPayload)) {
+                    $order = 1;
+                    $existingQIds = [];
+                    foreach ($dataPayload as $item) {
+                        $pertanyaan = trim($item['pertanyaan'] ?? '');
+                        if (empty($pertanyaan)) {
+                            continue;
+                        }
+                        $opsi = $item['opsi'] ?? [];
+                        $kunci = strtoupper(trim($item['kunci'] ?? 'A'));
+                        $kukNomor = trim($item['kuk'] ?? '');
+                        
+                        $kukId = null;
+                        if (!empty($kukNomor)) {
+                            $kukRow = \App\Models\KriteriaUnjukKerja::whereHas('elemenKompetensi.unitKompetensi', function ($q) use ($pendaftaran) {
+                                $q->where('skema_id', $pendaftaran->skema_id);
+                            })->where('nomor_kuk', $kukNomor)->first();
+                            $kukId = $kukRow?->id;
+                        }
+
+                        $qb = \App\Models\MasterQuestionBank::where('scheme_master_instrument_id', $inst->id)
+                            ->where('order', $order)
+                            ->first();
+
+                        if ($qb) {
+                            $qb->update([
+                                'question_type' => 'multiple_choice',
+                                'question_text' => $pertanyaan,
+                                'options' => $opsi,
+                                'correct_answer' => $kunci,
+                                'kuk_id' => $kukId,
+                                'points' => 1,
+                            ]);
+                        } else {
+                            $qb = \App\Models\MasterQuestionBank::create([
+                                'scheme_master_instrument_id' => $inst->id,
+                                'question_type' => 'multiple_choice',
+                                'question_text' => $pertanyaan,
+                                'options' => $opsi,
+                                'correct_answer' => $kunci,
+                                'kuk_id' => $kukId,
+                                'points' => 1,
+                                'order' => $order,
+                            ]);
+                        }
+                        $existingQIds[] = $qb->id;
+                        $order++;
+                    }
+                    if (!empty($existingQIds)) {
+                        \App\Models\MasterQuestionBank::where('scheme_master_instrument_id', $inst->id)
+                            ->whereNotIn('id', $existingQIds)
+                            ->delete();
+                    }
+                }
+                $masterPayload['data_jawaban'] = $dataPayload;
+            } elseif ($kodeForm === 'FR.IA.06A') {
+                // Sinkronkan butir soal Esai ke master_question_banks
+                if (is_array($dataPayload) && !empty($dataPayload)) {
+                    $order = 1;
+                    $existingQIds = [];
+                    foreach ($dataPayload as $item) {
+                        $pertanyaan = trim($item['pertanyaan'] ?? '');
+                        if (empty($pertanyaan)) {
+                            continue;
+                        }
+                        $kunci = trim($item['kunci'] ?? ($item['kunci_referensi'] ?? ''));
+                        $kukNomor = trim($item['kuk'] ?? '');
+                        
+                        $kukId = null;
+                        if (!empty($kukNomor)) {
+                            $kukRow = \App\Models\KriteriaUnjukKerja::whereHas('elemenKompetensi.unitKompetensi', function ($q) use ($pendaftaran) {
+                                $q->where('skema_id', $pendaftaran->skema_id);
+                            })->where('nomor_kuk', $kukNomor)->first();
+                            $kukId = $kukRow?->id;
+                        }
+
+                        $qb = \App\Models\MasterQuestionBank::where('scheme_master_instrument_id', $inst->id)
+                            ->where('order', $order)
+                            ->first();
+
+                        if ($qb) {
+                            $qb->update([
+                                'question_type' => 'essay',
+                                'question_text' => $pertanyaan,
+                                'correct_answer' => $kunci,
+                                'kuk_id' => $kukId,
+                                'points' => 10,
+                            ]);
+                        } else {
+                            $qb = \App\Models\MasterQuestionBank::create([
+                                'scheme_master_instrument_id' => $inst->id,
+                                'question_type' => 'essay',
+                                'question_text' => $pertanyaan,
+                                'correct_answer' => $kunci,
+                                'kuk_id' => $kukId,
+                                'points' => 10,
+                                'order' => $order,
+                            ]);
+                        }
+                        $existingQIds[] = $qb->id;
+                        $order++;
+                    }
+                    if (!empty($existingQIds)) {
+                        \App\Models\MasterQuestionBank::where('scheme_master_instrument_id', $inst->id)
+                            ->whereNotIn('id', $existingQIds)
+                            ->delete();
+                    }
+                }
+                $masterPayload['data_jawaban'] = $dataPayload;
             } elseif ($kodeForm === 'FR.IA.05C' || $kodeForm === 'FR.IA.06C') {
                 // Ujian Asesi tidak untuk master
             } elseif ($kodeForm === 'FR.IA.07') {
@@ -1690,12 +2019,12 @@ class FormulirController extends Controller
                 // FR.IA.11 menyimpan nama validator di master
                 if (isset($dataPayload['validator'])) $masterPayload['validator'] = $dataPayload['validator'];
             } else {
-                // Untuk FR.IA.05A, FR.IA.06A, FR.IA.05B, dsb
                 $masterPayload = $dataPayload;
             }
 
             $meta = array_merge($meta, $masterPayload);
             $meta['is_saved'] = true;
+            $meta['saved_at'] = now()->toDateTimeString();
             $inst->additional_metadata = $meta;
             $inst->save();
         }

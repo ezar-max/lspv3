@@ -598,8 +598,13 @@
                                 $kelolaUrl = '#';
                             }
 
-                            // Link Pratinjau / Cetak
-                            $cetakUrl = route('formulir.' . $item['route_view'], ['skema_id' => $selectedSkema?->id, 'pendaftaran_id' => $samplePendaftaran?->id]);
+                            // Link Pratinjau / Cetak (Gunakan 0 sebagai Master Blanko jika belum ada pendaftaran asesi)
+                            $targetPendaftaranId = $samplePendaftaran ? $samplePendaftaran->id : 0;
+                            $cetakUrl = route('formulir.' . $item['route_view'], [
+                                'skema_id' => $selectedSkema?->id,
+                                'pendaftaran_id' => $targetPendaftaranId,
+                                'pendaftaranId' => $targetPendaftaranId,
+                            ]);
 
                             // FR.IA.04 diisi langsung pada lembar formulirnya agar
                             // tampilan "Tambah Form" sama dengan tampilan pratinjau.
