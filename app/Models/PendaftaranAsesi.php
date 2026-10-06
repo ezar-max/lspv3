@@ -634,7 +634,10 @@ class PendaftaranAsesi extends Model
             $aktif[] = 'FR.IA.06B';
             $aktif[] = 'FR.IA.06C';
         }
-        if ($hasIa07) $aktif[] = 'FR.IA.07';
+        if ($hasIa07) {
+            $aktif[] = 'FR.IA.07';
+            $aktif[] = 'FR.IA.07A';
+        }
         if ($hasIa08) $aktif[] = 'FR.IA.08';
         if ($hasIa09) $aktif[] = 'FR.IA.09';
         if ($hasIa10) $aktif[] = 'FR.IA.10';
@@ -673,7 +676,12 @@ class PendaftaranAsesi extends Model
         $info = $this->instrumen_aktif;
         $cleanKode = strtoupper(trim($kodeForm));
         
-        return in_array($cleanKode, $info['daftar_kode']);
+        if (in_array($cleanKode, $info['daftar_kode'], true)) {
+            return true;
+        }
+
+        $baseKode = preg_replace('/[A-Z]$/', '', $cleanKode);
+        return in_array($baseKode, $info['daftar_kode'], true);
     }
 
     /**

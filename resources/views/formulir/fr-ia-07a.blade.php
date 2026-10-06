@@ -21,7 +21,7 @@
     @include('komponen.action-bar-formulir', [
         'kodeForm' => 'FR.IA.07A',
         'namaForm' => 'Daftar Pertanyaan Lisan',
-        'pendaftaranId' => $pendaftaran->id,
+        'pendaftaranId' => $pendaftaran->id ?: 0,
         'isAsesi' => $isAsesi,
         'saveLabel' => 'Simpan Formulir',
         'saveFormId' => 'form-ia07a'
@@ -36,8 +36,10 @@
         ])
     @endif
 
-    <form id="form-ia07a" action="{{ route('formulir.ia.simpan', ['kodeForm' => 'FR.IA.07A', 'pendaftaranId' => $pendaftaran->id]) }}" method="POST">
+    <form id="form-ia07a" action="{{ route('formulir.ia.simpan', ['kodeForm' => 'FR.IA.07A', 'pendaftaranId' => $pendaftaran->id ?: 0]) }}" method="POST">
         @csrf
+        <input type="hidden" name="skema_id" value="{{ $pendaftaran->skema_id }}">
+        <input type="hidden" name="pendaftaran_id" value="{{ $pendaftaran->id ?: 0 }}">
         <div class="dokumen-kertas">
             
             <!-- KOP RESMI DOKUMEN STANDAR BNSP -->
@@ -184,11 +186,12 @@
         ])
 
         @include('komponen.navigasi-form-bawah', [
-            'nextUrl' => route('formulir.ia07', $pendaftaran->id),
+            'nextUrl' => route('formulir.ia07', $pendaftaran->id ?: 0),
             'nextLabel' => 'FR.IA.07 (Uji Lisan & Pencatatan)'
         ])
 
-    </div>
+        </div>
+    </form>
 </div>
 @endsection
 

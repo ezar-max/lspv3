@@ -874,7 +874,6 @@
                                     @foreach($uData->elemenKompetensi as $eData)
                                         @php
                                             $jwn = $jawabanMap->get($eData->id);
-                                            $valSaved = $jwn ? $jwn->nilai_kompetensi : 'K';
                                             $valSaved = $jwn ? $jwn->nilai_kompetensi : null;
                                         @endphp
                                         @if($eData->kriteriaUnjukKerja && $eData->kriteriaUnjukKerja->count() > 0)
@@ -891,11 +890,9 @@
                                                         $kukStatusVal = $valSaved;
                                                     }
                                                 @endphp
-                                                '{{ $kData->id }}': '{{ $kukStatusVal }}',
                                                 '{{ $kData->id }}': '{{ $kukStatusVal ?? '' }}',
                                             @endforeach
                                         @else
-                                            'elem_{{ $eData->id }}': '{{ $valSaved }}',
                                             'elem_{{ $eData->id }}': '{{ $valSaved ?? '' }}',
                                         @endif
                                     @endforeach
@@ -922,7 +919,6 @@
                         totalElemen: {{ $totalElemen ?? 0 }},
                         getElemenVal(elemenId, kukIds) {
                             if (!kukIds || kukIds.length === 0) {
-                                return this.penilaianKuk['elem_' + elemenId] || 'K';
                                 return this.penilaianKuk['elem_' + elemenId] || '';
                             }
                             for (let id of kukIds) {
@@ -943,7 +939,6 @@
                             @endif
                         },
                         get totalTerisi() {
-                            return this.totalElemen;
                             let count = 0;
                             for (let elemId in this.elemenKuks) {
                                 let kukKeys = this.elemenKuks[elemId];
@@ -953,7 +948,6 @@
                             return count;
                         },
                         get isComplete() {
-                            return true;
                             return this.totalElemen > 0 && this.totalTerisi === this.totalElemen;
                         },
                         setAllKGlobal() {
@@ -1256,7 +1250,11 @@
                                                 }
                                             }
                                         @endphp
-                                        <div class="border rounded-xl overflow-hidden bg-white shadow-2xs {{ $catatanKukElemen->isNotEmpty() ? 'border-rose-300' : 'border-slate-200/90' }}">
+                                        <div id="elemen-card-{{ $elemen->id }}" 
+                                             data-elemen-id="{{ $elemen->id }}" 
+                                             data-elemen-nomor="{{ $elemen->nomor_elemen ?? ($idxElem + 1) }}" 
+                                             data-elemen-nama="{{ $elemen->nama_elemen }}"
+                                             class="border rounded-xl overflow-hidden bg-white shadow-2xs {{ $catatanKukElemen->isNotEmpty() ? 'border-rose-300' : 'border-slate-200/90' }}">
                                             <!-- Elemen Header Separator Row -->
                                             <div class="px-4 py-2.5 border-b flex items-center justify-between gap-2 {{ $catatanKukElemen->isNotEmpty() ? 'bg-rose-50/60 border-rose-200' : 'bg-slate-100/80 border-slate-200/70' }}">
                                                 <div class="flex items-center gap-2">
@@ -1291,7 +1289,10 @@
                                                             $vKuk = $verifikasiKukMap->get($kuk->id);
                                                             $isKukNeedRev = ($isApl02Revision && $vKuk && (!$vKuk->is_verified || !empty($vKuk->catatan_asesor) || $vKuk->nilai_kompetensi === 'BK'));
                                                         @endphp
-                                                        <div class="px-4 py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-colors {{ $isKukNeedRev ? 'bg-rose-50/30' : 'hover:bg-slate-50/50' }}">
+                                                        <div id="kuk-row-{{ $kuk->id }}"
+                                                             data-kuk-id="{{ $kuk->id }}"
+                                                             data-kuk-nomor="{{ $kuk->nomor_kuk ?: ($elemen->nomor_elemen . '.' . ($idxKuk + 1)) }}"
+                                                             class="px-4 py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-colors {{ $isKukNeedRev ? 'bg-rose-50/30' : 'hover:bg-slate-50/50' }}">
                                                             <div class="flex items-start gap-2.5 flex-1 min-w-0">
                                                                 <span class="font-mono font-bold text-xs shrink-0 px-1.5 py-0.5 rounded text-[11px] {{ $isKukNeedRev ? 'bg-rose-100 text-rose-800 border border-rose-200' : 'bg-blue-50/70 text-blue-600 border border-blue-100' }}">
                                                                     {{ $kuk->nomor_kuk ?: ($elemen->nomor_elemen . '.' . ($idxKuk + 1)) }}{{ $isKukNeedRev ? ' • BK' : '' }}
@@ -1370,7 +1371,6 @@
                                                                    @change="updateKuk('elem_{{ $elemen->id }}', 'K')"
                                                                    :checked="penilaianKuk['elem_{{ $elemen->id }}'] === 'K'" 
                                                                    {{ $isLockedForm ? 'disabled' : '' }}
-                                                                   class="peer hidden apl02-radio-k" required>
                                                                    class="peer hidden apl02-radio-k">
                                                             <span class="inline-flex items-center justify-center px-3 py-1 rounded-md text-xs transition-all duration-150 select-none border"
                                                                   :class="penilaianKuk['elem_{{ $elemen->id }}'] === 'K' 
@@ -1389,7 +1389,6 @@
                                                                    @change="updateKuk('elem_{{ $elemen->id }}', 'BK')"
                                                                    :checked="penilaianKuk['elem_{{ $elemen->id }}'] === 'BK'" 
                                                                    {{ $isLockedForm ? 'disabled' : '' }}
-                                                                   class="peer hidden custom-radio-bk" required>
                                                                    class="peer hidden custom-radio-bk">
                                                             <span class="inline-flex items-center justify-center px-3 py-1 rounded-md text-xs transition-all duration-150 select-none border"
                                                                   :class="penilaianKuk['elem_{{ $elemen->id }}'] === 'BK' 
@@ -2635,25 +2634,181 @@
 <script>
     let targetElemenIdForApl01 = null;
 
-    function bukaModalSubmitApl02() {
+    /**
+     * SISTEM VALIDASI KELENGKAPAN FR.APL.02
+     * Memastikan seluruh pilihan K/BK terisi dan seluruh elemen memiliki bukti pendukung
+     */
+    function validasiKelengkapanApl02() {
         const form = document.getElementById('form-apl02-asesmen');
-        if (form && form._x_dataStack && form._x_dataStack[0]) {
-            const alpineData = form._x_dataStack[0];
-            if (!alpineData.isComplete) {
-                const sisa = (alpineData.totalElemen || 0) - (alpineData.totalTerisi || 0);
-                if (typeof Swal !== 'undefined') {
-                    Swal.fire({
-                        icon: 'warning',
-                        title: 'Formulir Belum Lengkap',
-                        text: `Masih ada ${sisa} elemen kompetensi yang belum dinilai. Harap lengkapi penilaian mandiri (K / BK) pada seluruh butir KUK terlebih dahulu sebelum mengirim.`,
-                        confirmButtonColor: '#2563eb'
-                    });
-                } else {
-                    alert(`Masih ada ${sisa} elemen kompetensi yang belum dinilai. Harap lengkapi penilaian mandiri terlebih dahulu.`);
-                }
-                return;
-            }
+        if (!form) {
+            return { valid: false, errorsKuk: ['Formulir FR.APL.02 tidak ditemukan.'], errorsBukti: [], firstEl: null };
         }
+
+        const alpineData = (form._x_dataStack && form._x_dataStack[0]) ? form._x_dataStack[0] : null;
+        const errorsKuk = [];
+        const errorsBukti = [];
+        let firstEl = null;
+
+        // 1. Validasi Radio K / BK untuk seluruh butir KUK
+        const kukRadios = form.querySelectorAll('input[type="radio"][name^="penilaian_kuk["]');
+        const kukKeysSet = new Set();
+        kukRadios.forEach(r => {
+            const m = r.name.match(/\[(\d+)\]/);
+            if (m) kukKeysSet.add(m[1]);
+        });
+
+        kukKeysSet.forEach(kukId => {
+            let val = '';
+            if (alpineData && alpineData.penilaianKuk && alpineData.penilaianKuk[kukId]) {
+                val = alpineData.penilaianKuk[kukId];
+            } else {
+                const checked = form.querySelector(`input[name="penilaian_kuk[${kukId}]"]:checked`);
+                val = checked ? checked.value : '';
+            }
+
+            if (!val || (val !== 'K' && val !== 'BK')) {
+                const kukRow = document.getElementById(`kuk-row-${kukId}`) || form.querySelector(`input[name="penilaian_kuk[${kukId}]"]`)?.closest('.flex');
+                let labelKuk = 'KUK #' + kukId;
+                if (kukRow) {
+                    labelKuk = kukRow.getAttribute('data-kuk-nomor') || labelKuk;
+                    const badge = kukRow.querySelector('.font-mono');
+                    if (badge) {
+                        labelKuk = badge.textContent.trim().replace(/\s*•\s*BK/g, '');
+                    }
+                    if (!firstEl) firstEl = kukRow;
+                }
+                errorsKuk.push(labelKuk);
+            }
+        });
+
+        // Cek elemen yang tidak memiliki KUK (langsung dinilai pada elemen)
+        const elemRadios = form.querySelectorAll('input[type="radio"][name^="penilaian["]');
+        const elemKeysSet = new Set();
+        elemRadios.forEach(r => {
+            const m = r.name.match(/\[(\d+)\]/);
+            if (m) elemKeysSet.add(m[1]);
+        });
+
+        elemKeysSet.forEach(elemId => {
+            let val = '';
+            if (alpineData && alpineData.penilaianKuk && alpineData.penilaianKuk['elem_' + elemId]) {
+                val = alpineData.penilaianKuk['elem_' + elemId];
+            } else {
+                const checked = form.querySelector(`input[name="penilaian[${elemId}]"]:checked`);
+                val = checked ? checked.value : '';
+            }
+
+            if (!val || (val !== 'K' && val !== 'BK')) {
+                const elemCard = document.getElementById(`elemen-card-${elemId}`) || form.querySelector(`input[name="penilaian[${elemId}]"]`)?.closest('.border.rounded-xl');
+                let namaElem = 'Elemen #' + elemId;
+                if (elemCard) {
+                    const nomor = elemCard.getAttribute('data-elemen-nomor') || '';
+                    const nama = elemCard.getAttribute('data-elemen-nama') || '';
+                    namaElem = nomor ? `Elemen ${nomor}: ${nama}` : (nama || namaElem);
+                    if (!firstEl) firstEl = elemCard;
+                }
+                errorsKuk.push(namaElem);
+            }
+        });
+
+        // 2. Validasi Bukti Pendukung pada seluruh Elemen Kompetensi
+        const buktiContainers = form.querySelectorAll('[id^="bukti-list-elem-"]');
+        buktiContainers.forEach(container => {
+            const elemId = container.id.replace('bukti-list-elem-', '');
+            const items = container.querySelectorAll('[id^="bukti-item-"]');
+            
+            if (items.length === 0) {
+                const elemCard = document.getElementById(`elemen-card-${elemId}`) || container.closest('.border.rounded-xl');
+                let namaElem = 'Elemen #' + elemId;
+                if (elemCard) {
+                    const nomor = elemCard.getAttribute('data-elemen-nomor') || '';
+                    const nama = elemCard.getAttribute('data-elemen-nama') || '';
+                    namaElem = nomor ? `Elemen ${nomor}: ${nama}` : (nama || namaElem);
+                    if (!firstEl) firstEl = container;
+                }
+                errorsBukti.push(namaElem);
+            }
+        });
+
+        return {
+            valid: errorsKuk.length === 0 && errorsBukti.length === 0,
+            errorsKuk,
+            errorsBukti,
+            firstEl
+        };
+    }
+
+    function bukaModalSubmitApl02() {
+        const cek = validasiKelengkapanApl02();
+
+        if (!cek.valid) {
+            let htmlPesan = '<div class="text-left text-xs space-y-3 pt-1">';
+            htmlPesan += '<p class="text-slate-600 font-medium leading-relaxed">Formulir FR.APL.02 tidak dapat dikirim karena masih ada isian atau bukti yang belum lengkap:</p>';
+
+            if (cek.errorsKuk.length > 0) {
+                htmlPesan += '<div class="bg-rose-50 border border-rose-200 rounded-xl p-3 space-y-1.5 shadow-2xs">';
+                htmlPesan += '<div class="font-bold text-rose-800 flex items-center gap-1.5">';
+                htmlPesan += `<span>⚠️ Pilihan K / BK Belum Diisi (${cek.errorsKuk.length} butir)</span>`;
+                htmlPesan += '</div>';
+                htmlPesan += '<div class="text-rose-700 max-h-36 overflow-y-auto pl-1 space-y-0.5 text-[11px]">';
+                htmlPesan += '<ul class="list-disc list-inside space-y-0.5">';
+                cek.errorsKuk.slice(0, 15).forEach(k => {
+                    htmlPesan += `<li><strong>${k}</strong> belum dipilih K atau BK</li>`;
+                });
+                if (cek.errorsKuk.length > 15) {
+                    htmlPesan += `<li class="italic font-semibold text-rose-600">...dan ${cek.errorsKuk.length - 15} butir lainnya.</li>`;
+                }
+                htmlPesan += '</ul></div></div>';
+            }
+
+            if (cek.errorsBukti.length > 0) {
+                htmlPesan += '<div class="bg-amber-50 border border-amber-200 rounded-xl p-3 space-y-1.5 shadow-2xs">';
+                htmlPesan += '<div class="font-bold text-amber-800 flex items-center gap-1.5">';
+                htmlPesan += `<span>📁 Bukti Pendukung Belum Dilampirkan (${cek.errorsBukti.length} elemen)</span>`;
+                htmlPesan += '</div>';
+                htmlPesan += '<div class="text-amber-800 max-h-36 overflow-y-auto pl-1 space-y-0.5 text-[11px]">';
+                htmlPesan += '<ul class="list-disc list-inside space-y-0.5">';
+                cek.errorsBukti.slice(0, 10).forEach(b => {
+                    htmlPesan += `<li><strong>${b}</strong> belum memiliki berkas bukti</li>`;
+                });
+                if (cek.errorsBukti.length > 10) {
+                    htmlPesan += `<li class="italic font-semibold text-amber-700">...dan ${cek.errorsBukti.length - 10} elemen lainnya.</li>`;
+                }
+                htmlPesan += '</ul>';
+                htmlPesan += '<p class="text-[10px] text-amber-700 font-medium italic mt-1">* Unggah file melalui "Upload Bukti" atau gunakan dokumen dari APL.01 pada setiap elemen.</p>';
+                htmlPesan += '</div></div>';
+            }
+
+            htmlPesan += '<p class="text-[11px] text-slate-500 italic">Harap lengkapi seluruh penilaian mandiri (K/BK) dan lampirkan bukti pendukung terlebih dahulu sebelum mengirim formulir ke Asesor.</p>';
+            htmlPesan += '</div>';
+
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Formulir FR.APL.02 Belum Lengkap!',
+                    html: htmlPesan,
+                    confirmButtonColor: '#2563eb',
+                    confirmButtonText: '✓ Saya Mengerti, Lengkapi Sekarang',
+                    customClass: {
+                        popup: 'swal2-modern-popup'
+                    }
+                }).then(() => {
+                    if (cek.firstEl) {
+                        const unitParent = cek.firstEl.closest('[x-data*="openUnit"]');
+                        if (unitParent && unitParent._x_dataStack && unitParent._x_dataStack[0]) {
+                            unitParent._x_dataStack[0].openUnit = true;
+                        }
+                        setTimeout(() => {
+                            cek.firstEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }, 200);
+                    }
+                });
+            } else {
+                alert(`Formulir FR.APL.02 belum lengkap!\n- Pilihan K/BK belum diisi: ${cek.errorsKuk.length} butir\n- Bukti belum diisi: ${cek.errorsBukti.length} elemen\nHarap lengkapi semua sebelum submit.`);
+            }
+            return;
+        }
+
         const modal = document.getElementById('modal-konfirmasi-submit-apl02');
         if (modal) {
             modal.classList.remove('hidden');
@@ -2671,11 +2826,33 @@
 
     function eksekusiSubmitApl02() {
         const form = document.getElementById('form-apl02-asesmen');
-        if (form) {
+        if (!form) return;
+
+        const cek = validasiKelengkapanApl02();
+        if (!cek.valid) {
             tutupModalSubmitApl02();
-            form.submit();
+            bukaModalSubmitApl02();
+            return;
         }
+
+        tutupModalSubmitApl02();
+        form.submit();
     }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('form-apl02-asesmen');
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                const cek = validasiKelengkapanApl02();
+                if (!cek.valid) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    bukaModalSubmitApl02();
+                    return false;
+                }
+            });
+        }
+    });
 
     function triggerUploadBukti(elemenId) {
         const input = document.getElementById(`file-input-elem-${elemenId}`);

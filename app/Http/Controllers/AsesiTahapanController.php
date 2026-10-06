@@ -761,25 +761,42 @@ class AsesiTahapanController extends Controller
                     ->with('error', 'Masih ada data yang wajib diisi. Silakan lengkapi penilaian seluruh butir KUK terlebih dahulu.');
             }
 
-            foreach ($request->penilaian as $elemenId => $nilai) {
-                if ($nilai === 'K') {
-                    $hasBukti = BuktiApl02::where('pendaftaran_id', $pendaftaran->id)
-                        ->where('elemen_id', $elemenId)
-                        ->exists();
+            // Cek kelengkapan seluruh butir KUK (tidak boleh ada KUK yang belum dipilih K/BK)
+            $allKukIds = $pendaftaran->skema->unitKompetensi->flatMap->elemenKompetensi->flatMap->kriteriaUnjukKerja->pluck('id')->toArray();
+            if (!empty($allKukIds)) {
+                $submittedKuk = array_filter($request->input('penilaian_kuk', []), fn($v) => in_array($v, ['K', 'BK']));
+                $diffKuk = array_diff($allKukIds, array_keys($submittedKuk));
+                if (!empty($diffKuk)) {
+                    return redirect()->route('asesi.tahapan', ['step' => 2, 'pendaftaran_id' => $pendaftaran->id])
+                        ->withInput()
+                        ->with('error', 'Masih terdapat ' . count($diffKuk) . ' butir KUK yang belum dipilih (K atau BK). Silakan lengkapi seluruh penilaian mandiri terlebih dahulu.');
+                }
+            }
 
-                    if (!$hasBukti) {
-                        $buktiRelevan = $request->input("bukti_relevan.{$elemenId}");
-                        $uploadedFiles = $request->file("bukti_foto.{$elemenId}");
-                        $hasDirectFile = $uploadedFiles ? (is_array($uploadedFiles) ? !empty(array_filter($uploadedFiles)) : !empty($uploadedFiles)) : false;
+            // Cek kelengkapan bukti pendukung untuk seluruh elemen kompetensi
+            $elemenTanpaBukti = [];
+            foreach ($allElemenIds as $elemId) {
+                $hasBukti = BuktiApl02::where('pendaftaran_id', $pendaftaran->id)
+                    ->where('elemen_id', $elemId)
+                    ->exists();
 
-                        if (!$buktiRelevan && !$hasDirectFile) {
-                            return redirect()->route('asesi.tahapan', ['step' => 2, 'pendaftaran_id' => $pendaftaran->id])
-                                ->withInput()
-                                ->with('error', 'Anda menyatakan Kompeten (K) pada elemen tertentu, namun belum melampirkan Bukti. Harap lengkapi bukti untuk seluruh elemen yang Anda nyatakan Kompeten.');
-                        }
+                if (!$hasBukti) {
+                    $hasDirectFile = $request->hasFile("bukti_foto.{$elemId}");
+                    $hasDirectText = $request->filled("bukti_relevan.{$elemId}");
+                    if (!$hasDirectFile && !$hasDirectText) {
+                        $elemObj = ElemenKompetensi::find($elemId);
+                        $elemenTanpaBukti[] = $elemObj ? ($elemObj->nama_elemen ?? "Elemen #{$elemId}") : "Elemen #{$elemId}";
                     }
                 }
+            }
 
+            if (!empty($elemenTanpaBukti)) {
+                return redirect()->route('asesi.tahapan', ['step' => 2, 'pendaftaran_id' => $pendaftaran->id])
+                    ->withInput()
+                    ->with('error', 'Terdapat ' . count($elemenTanpaBukti) . ' elemen kompetensi yang belum memiliki bukti pendukung. Harap unggah atau lampirkan bukti untuk seluruh elemen sebelum mengirim formulir.');
+            }
+
+            foreach ($request->penilaian as $elemenId => $nilai) {
                 $files = $request->file("bukti_foto.{$elemenId}");
                 $files = is_array($files) ? $files : ($files ? [$files] : []);
 
@@ -834,12 +851,38 @@ class AsesiTahapanController extends Controller
         }
 
         $isWasRevision = $pendaftaran->isApl02Revision();
+
+        $ttdAsesi = $request->input('tanda_tangan_asesi') ?: ($pendaftaran->tanda_tangan_asesi ?: $pengguna->tanda_tangan);
+        $pendaftaran->update([
+            'status_apl02' => 'submitted',
+            'tanggal_submit_apl02' => now(),
+            'rekomendasi_asesor_status' => null,
+            'tanda_tangan_asesi' => $ttdAsesi,
+            'tanggal_ttd_asesi' => $ttdAsesi ? now() : null,
+        ]);
+
         if ($isWasRevision) {
             LogAktivitas::catat('Pengajuan Ulang FR.APL.02', 'Asesi mengajukan ulang FR.APL.02 #' . $pendaftaran->nomor_pendaftaran . ' setelah perbaikan revisi.');
             $pesanSukses = 'Formulir FR.APL.02 berhasil diajukan ulang ke Asesor setelah perbaikan. Mohon tunggu pemeriksaan ulang dari Asesor.';
         } else {
             LogAktivitas::catat('Pengajuan FR.APL.02', 'Asesi mengirim Asesmen Mandiri #' . $pendaftaran->nomor_pendaftaran . ' untuk diperiksa asesor.');
             $pesanSukses = 'Formulir FR.APL.02 berhasil dikirim untuk diperiksa oleh Asesor. Mohon tunggu hasil pemeriksaan asesor sebelum melanjutkan ke FR.AK.01.';
+        }
+
+        // Notifikasi ke Asesor jika sudah ditugaskan
+        $asesorTarget = $pendaftaran->asesor ?? ($pendaftaran->jadwal ? $pendaftaran->jadwal->asesor : null);
+        if ($asesorTarget) {
+            $skemaNama = $pendaftaran->skema ? $pendaftaran->skema->nama_skema : 'Skema Sertifikasi';
+            $asesorTarget->notify(new SystemAlert(
+                'Pengajuan FR.APL.02: ' . $pengguna->nama_lengkap,
+                "Asesi {$pengguna->nama_lengkap} telah mengirimkan formulir FR.APL.02 ({$skemaNama}) untuk diverifikasi.",
+                route('asesor.input-penilaian', $pendaftaran->id),
+                'apl02_submission',
+                [
+                    'pendaftaran_id' => $pendaftaran->id,
+                    'asesi_id' => $pengguna->id,
+                ]
+            ));
         }
 
         return redirect()->route('asesi.tahapan', ['pendaftaran_id' => $pendaftaran->id, 'step' => 2])

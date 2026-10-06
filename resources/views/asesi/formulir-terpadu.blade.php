@@ -1393,7 +1393,7 @@
                             </div>
 
                             <div style="display: flex; justify-content: flex-end; margin-top: 2rem; border-top: 1px solid #e2e8f0; padding-top: 1.5rem;">
-                                <button type="submit" class="tombol tombol-utama" onclick="return confirm('Apakah Anda yakin ingin mengirim Formulir Asesmen Mandiri FR.APL.02? Data yang telah dikirim akan dikunci.')">
+                                <button type="submit" class="tombol tombol-utama" onclick="return validasiFormApl02Terpadu(event);">
                                     Simpan FR.APL.02 & Lanjut ke FR.AK.01 &rarr;
                                 </button>
                             </div>
@@ -2483,6 +2483,91 @@
                 if (el && el.parentNode) el.remove();
             }, 500);
         }
+    }
+
+    function validasiFormApl02Terpadu(e) {
+        const form = document.getElementById('form-apl02-terpadu');
+        if (!form) return true;
+
+        const errorsKuk = [];
+        const errorsBukti = [];
+
+        // 1. Cek radio K/BK per butir KUK
+        const kukRadios = form.querySelectorAll('input[type="radio"][name^="penilaian_kuk["]');
+        const kukKeys = new Set();
+        kukRadios.forEach(r => {
+            const m = r.name.match(/\[(\d+)\]/);
+            if (m) kukKeys.add(m[1]);
+        });
+
+        kukKeys.forEach(kukId => {
+            const checked = form.querySelector(`input[name="penilaian_kuk[${kukId}]"]:checked`);
+            if (!checked || (checked.value !== 'K' && checked.value !== 'BK')) {
+                errorsKuk.push('KUK #' + kukId);
+            }
+        });
+
+        // Cek elemen tanpa KUK
+        const elemRadios = form.querySelectorAll('input[type="radio"][name^="penilaian["]');
+        const elemKeys = new Set();
+        elemRadios.forEach(r => {
+            const m = r.name.match(/\[(\d+)\]/);
+            if (m) elemKeys.add(m[1]);
+        });
+
+        elemKeys.forEach(elemId => {
+            const checked = form.querySelector(`input[name="penilaian[${elemId}]"]:checked`);
+            if (!checked || (checked.value !== 'K' && checked.value !== 'BK')) {
+                errorsKuk.push('Elemen #' + elemId);
+            }
+        });
+
+        // 2. Cek bukti pendukung pada setiap elemen
+        const buktiContainers = form.querySelectorAll('[id^="bukti-list-elem-"]');
+        buktiContainers.forEach(container => {
+            const elemId = container.id.replace('bukti-list-elem-', '');
+            const items = container.querySelectorAll('[id^="bukti-item-"]');
+            const fileInput = form.querySelector(`input[name="bukti_foto[${elemId}]"]`);
+            const hasFile = fileInput && fileInput.value;
+            if (items.length === 0 && !hasFile) {
+                errorsBukti.push('Elemen #' + elemId);
+            }
+        });
+
+        if (errorsKuk.length > 0 || errorsBukti.length > 0) {
+            e.preventDefault();
+            let htmlPesan = '<div style="text-align: left; font-size: 0.85rem; line-height: 1.5;">';
+            htmlPesan += '<p style="color: #475569; margin-bottom: 0.75rem;">Formulir FR.APL.02 tidak dapat dikirim karena masih ada isian atau berkas bukti yang belum lengkap:</p>';
+            if (errorsKuk.length > 0) {
+                htmlPesan += '<div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 0.75rem; margin-bottom: 0.5rem; color: #991b1b;">';
+                htmlPesan += '<strong>⚠️ Pilihan K / BK Belum Dipilih (' + errorsKuk.length + ' butir):</strong><br>';
+                htmlPesan += '<span style="font-size: 0.8rem;">' + errorsKuk.slice(0, 10).join(', ') + (errorsKuk.length > 10 ? ' dan lainnya' : '') + '</span>';
+                htmlPesan += '</div>';
+            }
+            if (errorsBukti.length > 0) {
+                htmlPesan += '<div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 0.75rem; color: #92400e;">';
+                htmlPesan += '<strong>📁 Bukti Pendukung Belum Diunggah (' + errorsBukti.length + ' elemen):</strong><br>';
+                htmlPesan += '<span style="font-size: 0.8rem;">' + errorsBukti.slice(0, 10).join(', ') + (errorsBukti.length > 10 ? ' dan lainnya' : '') + '</span>';
+                htmlPesan += '</div>';
+            }
+            htmlPesan += '<p style="font-size: 0.8rem; color: #64748b; margin-top: 0.5rem; font-style: italic;">Harap pilih seluruh K/BK dan unggah bukti pendukung untuk seluruh elemen sebelum mengirim.</p>';
+            htmlPesan += '</div>';
+
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Formulir FR.APL.02 Belum Lengkap',
+                    html: htmlPesan,
+                    confirmButtonColor: '#2563eb',
+                    confirmButtonText: 'Lengkapi Sekarang'
+                });
+            } else {
+                alert('Harap lengkapi seluruh pilihan K/BK dan unggah bukti pendukung sebelum mengirim.');
+            }
+            return false;
+        }
+
+        return confirm('Apakah Anda yakin ingin mengirim Formulir Asesmen Mandiri FR.APL.02? Data yang telah dikirim akan dikunci.');
     }
 
     // Auto initialize on DOM loaded

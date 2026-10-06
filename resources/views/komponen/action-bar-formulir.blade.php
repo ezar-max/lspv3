@@ -6,10 +6,10 @@
     $showSave = $showSave ?? !$isAsesi;
     $showDraft = $showDraft ?? $showSave; // Secara default, jika bisa simpan, bisa simpan draft
     $showPrint = $showPrint ?? true;
-    $saveLabel = $saveLabel ?? 'Simpan Formulir';
+    $saveLabel = $saveLabel ?? ($submitLabel ?? 'Simpan Formulir');
     $draftLabel = $draftLabel ?? 'Simpan Draft';
     $saveAction = $saveAction ?? "document.querySelector('form').submit()";
-    $saveFormId = $saveFormId ?? null;
+    $saveFormId = $saveFormId ?? ($submitFormId ?? null);
     $signed = $signed ?? false;
     $signedLabel = $signedLabel ?? 'Telah Ditandatangani';
     $signRoute = $signRoute ?? null;

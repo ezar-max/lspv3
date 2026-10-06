@@ -66,33 +66,149 @@ class AsesorPenilaianController extends Controller
         $panduanPraktik = AsesiUjianController::getPanduanPraktikIa02($pendaftaran->skema);
         $daftarLisan = AsesiUjianController::getDaftarPertanyaanLisan($pendaftaran->skema);
 
-        // Ambil lembar jawaban ujian yang telah dikerjakan oleh asesi
+        // Ambil seluruh rekor penilaian IA asesi
+        $recordIa01 = IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.01')->first();
+        $recordIa02 = IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.02')->first();
+        $recordIa03 = IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.03')->first();
+        $recordIa04a = IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.04A')->first();
         $recordIa05 = IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.05')->first();
         $recordIa06 = IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.06')->first();
-        $recordIa02 = IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.02')->first();
-
-        // Ambil penilaian asesor yang sudah tersimpan sebelumnya (jika ada)
-        $recordIa01 = IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.01')->first();
-        $recordIa07 = IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.07')->first();
         $recordIa06b = IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.06B')->first();
+        $recordIa07 = IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.07')->first();
+        $recordIa11 = IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.11')->first();
 
-        $savedJawabanPg = $recordIa05 ? ($recordIa05->data_jawaban['jawaban_pg'] ?? []) : [];
-        $savedSkorCbt = $recordIa05 ? ($recordIa05->data_jawaban['skor_cbt'] ?? null) : null;
-        $savedJawabanEsai = $recordIa06 ? ($recordIa06->data_jawaban['jawaban_esai'] ?? []) : [];
-        $savedPraktik = $recordIa02 ? ($recordIa02->data_jawaban ?? []) : [];
-
-        $savedPenilaianIa01 = $recordIa01 ? ($recordIa01->data_jawaban['penilaian_kuk'] ?? []) : [];
-        $savedCatatanIa01 = $recordIa01 ? ($recordIa01->catatan_asesor ?? '') : '';
-
-        $savedResponLisan = $recordIa07 ? ($recordIa07->data_jawaban['respon_lisan'] ?? []) : [];
-        $savedPenilaianLisan = $recordIa07 ? ($recordIa07->data_jawaban['penilaian_lisan'] ?? []) : [];
-        $savedCatatanLisan = $recordIa07 ? ($recordIa07->catatan_asesor ?? '') : '';
-
+        // Data CBT (FR.IA.05) & Esai (FR.IA.06 / 06B)
+        $savedJawabanPg = $recordIa05 ? ($recordIa05->data_jawaban['jawaban_pg'] ?? ($recordIa05->data_jawaban['jawaban'] ?? [])) : [];
+        $savedSkorCbt = $recordIa05 ? ($recordIa05->data_jawaban['skor_cbt'] ?? ($recordIa05->data_jawaban['skor'] ?? null)) : null;
+        $savedJawabanEsai = $recordIa06 ? ($recordIa06->data_jawaban['jawaban_esai'] ?? ($recordIa06->data_jawaban['jawaban'] ?? [])) : [];
         $savedPenilaianEsai = $recordIa06b ? ($recordIa06b->data_jawaban['penilaian_esai'] ?? []) : [];
+        $savedCatatanEsai = $recordIa06b ? ($recordIa06b->catatan_asesor ?? '') : '';
+
+        // Data Praktik (FR.IA.02)
+        $savedPraktik = $recordIa02 ? ($recordIa02->data_jawaban ?? []) : [];
+        $savedCatatanPraktik = $recordIa02 ? ($recordIa02->catatan_asesor ?? ($recordIa02->data_jawaban['catatan_praktik'] ?? '')) : '';
+        $savedRekomendasiPraktik = $recordIa02 ? ($recordIa02->rekomendasi ?? 'K') : 'K';
+
+        // Data Observasi (FR.IA.01)
+        $savedPenilaianIa01 = $recordIa01 ? ($recordIa01->data_jawaban['penilaian_kuk'] ?? ($recordIa01->data_jawaban['pencapaian'] ?? [])) : [];
+        $savedCatatanIa01 = $recordIa01 ? ($recordIa01->catatan_asesor ?? ($recordIa01->data_jawaban['catatan_observasi'] ?? ($recordIa01->data_jawaban['umpan_balik'] ?? ''))) : '';
+        $savedLanjutIa01 = $recordIa01 ? ($recordIa01->data_jawaban['penilaian_lanjut'] ?? []) : [];
+        $savedRekomendasiIa01 = $recordIa01 ? ($recordIa01->rekomendasi ?? 'K') : 'K';
+
+        // Data Pertanyaan Lisan (FR.IA.03 / FR.IA.07)
+        $recordLisan = $recordIa03 ?: $recordIa07;
+        $savedResponLisan = $recordLisan ? ($recordLisan->data_jawaban['respon_lisan'] ?? ($recordLisan->data_jawaban['respon'] ?? [])) : [];
+        $savedPenilaianLisan = $recordLisan ? ($recordLisan->data_jawaban['penilaian_lisan'] ?? ($recordLisan->data_jawaban['pencapaian'] ?? [])) : [];
+        $savedCatatanLisan = $recordLisan ? ($recordLisan->catatan_asesor ?? '') : '';
+        $savedRekomendasiLisan = $recordLisan ? ($recordLisan->rekomendasi ?? 'K') : 'K';
+
+        // Data Proyek (FR.IA.04A) & Mutu (FR.IA.11)
+        $savedIa04a = $recordIa04a ? ($recordIa04a->data_jawaban ?? []) : [];
+        $savedCatatanIa04a = $recordIa04a ? ($recordIa04a->catatan_asesor ?? ($recordIa04a->data_jawaban['catatan_proyek'] ?? '')) : '';
+        $savedRekomendasiIa04a = $recordIa04a ? ($recordIa04a->rekomendasi ?? 'K') : 'K';
+
+        $savedIa11 = $recordIa11 ? ($recordIa11->data_jawaban ?? []) : [];
+        $savedCatatanIa11 = $recordIa11 ? ($recordIa11->catatan_asesor ?? ($recordIa11->data_jawaban['catatan_mutu'] ?? '')) : '';
+        $savedRekomendasiIa11 = $recordIa11 ? ($recordIa11->rekomendasi ?? 'K') : 'K';
+
+        // Master Standards untuk IA-01 dari SchemeMasterInstrument jika tersedia
+        $masterIa01 = \App\Models\SchemeMasterInstrument::where('skema_id', $pendaftaran->skema_id)
+            ->whereIn('instrument_code', \App\Models\SchemeMasterInstrument::getCodeAliases('ia_01'))
+            ->first();
+        $masterStandardsIa01 = $masterIa01?->additional_metadata['published_standards'] 
+            ?? $masterIa01?->additional_metadata['standar_industri'] 
+            ?? $masterIa01?->additional_metadata['draft_standards']
+            ?? [];
 
         $dokumenPraktik = $pendaftaran->dokumen->where('jenis_dokumen', 'Hasil Proyek / Laporan Praktik FR.IA.02')->first();
-
         $isFinalized = ($pendaftaran->status_pendaftaran === 'selesai' && !empty($pendaftaran->rekomendasi));
+
+        // Rangkuman Agregat Hasil Bukti Asesmen (Bahan Rekap & Rekomendasi FR.AK.02)
+        $ringkasanBukti = [
+            'ia01' => [
+                'exists' => !empty($recordIa01),
+                'total_kuk' => 0,
+                'k_count' => 0,
+                'bk_count' => 0,
+                'rekomendasi' => $savedRekomendasiIa01,
+                'catatan' => $savedCatatanIa01,
+            ],
+            'ia02' => [
+                'exists' => !empty($recordIa02) || !empty($savedCatatanPraktik),
+                'rekomendasi' => $savedRekomendasiPraktik,
+                'catatan' => $savedCatatanPraktik,
+                'has_dokumen' => !empty($dokumenPraktik),
+            ],
+            'ia03' => [
+                'exists' => !empty($recordLisan) || !empty($savedPenilaianLisan),
+                'total_pertanyaan' => count($daftarLisan),
+                'k_count' => collect($savedPenilaianLisan)->filter(fn($v) => $v === 'K')->count(),
+                'bk_count' => collect($savedPenilaianLisan)->filter(fn($v) => $v === 'BK')->count(),
+                'rekomendasi' => $savedRekomendasiLisan,
+                'catatan' => $savedCatatanLisan,
+            ],
+            'ia05' => [
+                'exists' => !empty($recordIa05),
+                'skor' => $savedSkorCbt,
+                'status' => ($savedSkorCbt !== null ? ($savedSkorCbt >= 70 ? 'K' : 'BK') : 'belum'),
+            ],
+            'ia06' => [
+                'exists' => !empty($recordIa06),
+                'is_graded' => !empty($recordIa06b),
+                'rekomendasi' => $recordIa06b?->rekomendasi ?? 'belum',
+                'catatan' => $savedCatatanEsai,
+            ],
+            'ia04a' => [
+                'exists' => !empty($recordIa04a) || !empty($savedCatatanIa04a),
+                'rekomendasi' => $savedRekomendasiIa04a,
+                'catatan' => $savedCatatanIa04a,
+            ],
+            'ia11' => [
+                'exists' => !empty($recordIa11) || !empty($savedCatatanIa11),
+                'rekomendasi' => $savedRekomendasiIa11,
+                'catatan' => $savedCatatanIa11,
+            ],
+        ];
+
+        // Analisis Status Per Unit Kompetensi berdasarkan Observasi KUK FR.IA.01
+        $statusPerUnit = [];
+        $hasAnyBk = false;
+        if ($pendaftaran->skema && $pendaftaran->skema->unitKompetensi) {
+            foreach ($pendaftaran->skema->unitKompetensi as $unit) {
+                $unitKukIds = [];
+                foreach ($unit->elemenKompetensi as $elemen) {
+                    foreach ($elemen->kriteriaUnjukKerja as $kuk) {
+                        $unitKukIds[] = $kuk->id;
+                        $ringkasanBukti['ia01']['total_kuk']++;
+                        $eval = $savedPenilaianIa01[$kuk->id] ?? null;
+                        if ($eval === 'K') {
+                            $ringkasanBukti['ia01']['k_count']++;
+                        } elseif ($eval === 'BK') {
+                            $ringkasanBukti['ia01']['bk_count']++;
+                            $hasAnyBk = true;
+                        }
+                    }
+                }
+
+                $unitEvaluations = collect($unitKukIds)->map(fn($id) => $savedPenilaianIa01[$id] ?? null)->filter();
+                if ($unitEvaluations->contains('BK')) {
+                    $statusPerUnit[$unit->id] = 'belum_kompeten';
+                } elseif ($unitEvaluations->isNotEmpty() && $unitEvaluations->count() === count($unitKukIds) && $unitEvaluations->every(fn($v) => $v === 'K')) {
+                    $statusPerUnit[$unit->id] = 'kompeten';
+                } else {
+                    $statusPerUnit[$unit->id] = 'belum_dinilai';
+                }
+            }
+        }
+
+        // Cek juga indikasi BK pada instrumen lisan, CBT, atau praktik
+        if ($ringkasanBukti['ia03']['bk_count'] > 0 
+            || ($savedSkorCbt !== null && $savedSkorCbt < 70) 
+            || ($savedRekomendasiPraktik === 'BK' && !empty($savedCatatanPraktik))) {
+            $hasAnyBk = true;
+        }
+
+        $saranRekomendasi = $hasAnyBk ? 'belum_kompeten' : 'kompeten';
 
         return view('asesor.penilaian-live', compact(
             'pendaftaran',
@@ -100,19 +216,41 @@ class AsesorPenilaianController extends Controller
             'soalEsai',
             'panduanPraktik',
             'daftarLisan',
+            'recordIa01',
+            'recordIa02',
+            'recordIa03',
+            'recordIa04a',
             'recordIa05',
             'recordIa06',
-            'recordIa02',
+            'recordIa06b',
+            'recordIa07',
+            'recordIa11',
             'savedJawabanPg',
             'savedSkorCbt',
             'savedJawabanEsai',
             'savedPraktik',
+            'savedCatatanPraktik',
+            'savedRekomendasiPraktik',
             'savedPenilaianIa01',
             'savedCatatanIa01',
+            'savedLanjutIa01',
+            'savedRekomendasiIa01',
             'savedResponLisan',
             'savedPenilaianLisan',
             'savedCatatanLisan',
+            'savedRekomendasiLisan',
             'savedPenilaianEsai',
+            'savedCatatanEsai',
+            'savedIa04a',
+            'savedCatatanIa04a',
+            'savedRekomendasiIa04a',
+            'savedIa11',
+            'savedCatatanIa11',
+            'savedRekomendasiIa11',
+            'masterStandardsIa01',
+            'ringkasanBukti',
+            'statusPerUnit',
+            'saranRekomendasi',
             'dokumenPraktik',
             'isFinalized'
         ));
@@ -142,11 +280,6 @@ class AsesorPenilaianController extends Controller
         }
 
         $tabAction = $request->input('tab_action', 'rekap');
-        if ($tabAction === 'observasi') {
-            return redirect()
-                ->route('formulir.ia01', $pendaftaran->id)
-                ->with('info', 'FR.IA.01 diisi melalui formulir resmi saat sesi asesmen berlangsung.');
-        }
         $isFinal = ($tabAction === 'rekap_final' && $request->filled('keputusan'));
 
         $request->validate([
@@ -155,6 +288,7 @@ class AsesorPenilaianController extends Controller
             'tanda_tangan_asesor' => 'nullable|string',
             'penilaian_kuk' => 'nullable|array',
             'catatan_observasi' => 'nullable|string',
+            'penilaian_lanjut' => 'nullable|array',
             'catatan_praktik' => 'nullable|string',
             'respon_lisan' => 'nullable|array',
             'penilaian_lisan' => 'nullable|array',
@@ -163,9 +297,50 @@ class AsesorPenilaianController extends Controller
 
         $ttdAsesor = $request->tanda_tangan_asesor ?: ($user->tanda_tangan ?? $pendaftaran->tanda_tangan_asesor);
 
-        // 1. Simpan Tugas Praktik Demonstrasi (FR.IA.02) jika ada catatan
-        if ($pendaftaran->isInstrumenAktif('FR.IA.02') && $request->has('catatan_praktik')) {
+        // 1. Simpan Ceklis Observasi Praktik (FR.IA.01) jika instrumen aktif di MAPA.02 atau dikirimkan
+        $penilaianKuk = $request->input('penilaian_kuk', $request->input('pencapaian', []));
+        $catatanObservasi = $request->input('catatan_observasi', $request->input('umpan_balik', ''));
+        $penilaianLanjut = $request->input('penilaian_lanjut', []);
+        $standarIndustri = $request->input('standar_industri', []);
+        $rekomendasiIa01 = $request->input('rekomendasi_ia01', in_array('BK', $penilaianKuk) ? 'BK' : 'K');
+
+        if ($pendaftaran->isInstrumenAktif('FR.IA.01') && (!empty($penilaianKuk) || $request->has('catatan_observasi') || $tabAction === 'observasi')) {
+            $existingIa01 = IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.01')->first();
+            $existingDataIa01 = $existingIa01 ? ($existingIa01->data_jawaban ?? []) : [];
+
+            $dataPayloadIa01 = array_merge($existingDataIa01, [
+                'penilaian_kuk' => $penilaianKuk,
+                'pencapaian' => $penilaianKuk,
+                'penilaian_lanjut' => $penilaianLanjut,
+                'standar_industri' => $standarIndustri,
+                'catatan_observasi' => $catatanObservasi,
+                'umpan_balik' => $catatanObservasi,
+                'total_kuk_dinilai' => count($penilaianKuk),
+                'evaluated_at' => now()->toDateTimeString(),
+                'saved_at' => now()->toDateTimeString(),
+            ]);
+
+            IaPenilaian::updateOrCreate(
+                ['pendaftaran_id' => $pendaftaran->id, 'kode_formulir' => 'FR.IA.01'],
+                [
+                    'user_id' => $user->id,
+                    'role' => 'asesor',
+                    'data_jawaban' => $dataPayloadIa01,
+                    'rekomendasi' => $rekomendasiIa01,
+                    'catatan_asesor' => $catatanObservasi ?: 'Seluruh kriteria unjuk kerja telah diobservasi secara langsung di TUK.',
+                    'status' => 'completed',
+                    'tanda_tangan' => $ttdAsesor,
+                    'tanda_tangan_asesor' => $ttdAsesor,
+                    'tanggal_tanda_tangan' => now(),
+                    'tanggal_ttd_asesor' => now(),
+                ]
+            );
+        }
+
+        // 2. Simpan Tugas Praktik Demonstrasi (FR.IA.02) jika ada catatan atau aksi praktik
+        if ($pendaftaran->isInstrumenAktif('FR.IA.02') && ($request->has('catatan_praktik') || $tabAction === 'praktik')) {
             $catatanPraktik = $request->input('catatan_praktik', '');
+            $rekomendasiPraktik = $request->input('rekomendasi_praktik', 'K');
             $existingIa02 = IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.02')->first();
             IaPenilaian::updateOrCreate(
                 ['pendaftaran_id' => $pendaftaran->id, 'kode_formulir' => 'FR.IA.02'],
@@ -174,9 +349,14 @@ class AsesorPenilaianController extends Controller
                     'role' => 'asesor',
                     'data_jawaban' => array_merge(
                         $existingIa02 ? ($existingIa02->data_jawaban ?? []) : [],
-                        ['catatan_praktik' => $catatanPraktik, 'updated_at' => now()->toDateTimeString()]
+                        [
+                            'catatan_praktik' => $catatanPraktik,
+                            'rekomendasi' => $rekomendasiPraktik,
+                            'updated_at' => now()->toDateTimeString()
+                        ]
                     ),
-                    'catatan_asesor' => $catatanPraktik,
+                    'rekomendasi' => $rekomendasiPraktik,
+                    'catatan_asesor' => $catatanPraktik ?: 'Tugas praktik demonstrasi telah diverifikasi.',
                     'status' => 'completed',
                     'tanda_tangan' => $ttdAsesor,
                     'tanggal_tanda_tangan' => now(),
@@ -185,21 +365,40 @@ class AsesorPenilaianController extends Controller
         }
 
         // 3. Simpan Tanya Jawab Lisan (FR.IA.07 / FR.IA.03) jika instrumen aktif di MAPA.02
-        $responLisan = $request->input('respon_lisan', []);
-        $penilaianLisan = $request->input('penilaian_lisan', []);
-        if (($pendaftaran->isInstrumenAktif('FR.IA.07') || $pendaftaran->isInstrumenAktif('FR.IA.03')) && (!empty($responLisan) || !empty($penilaianLisan) || $request->has('respon_lisan'))) {
+        $responLisan = $request->input('respon_lisan', $request->input('respon', []));
+        $penilaianLisan = $request->input('penilaian_lisan', $request->input('penilaian_lisan_kuk', []));
+        $catatanLisan = $request->input('catatan_lisan', 'Asesi mampu menjawab pertanyaan lisan pendukung dengan baik.');
+        $rekomendasiLisan = $request->input('rekomendasi_lisan', in_array('BK', $penilaianLisan) ? 'BK' : 'K');
+
+        if (($pendaftaran->isInstrumenAktif('FR.IA.07') || $pendaftaran->isInstrumenAktif('FR.IA.03')) && (!empty($responLisan) || !empty($penilaianLisan) || $tabAction === 'lisan')) {
+            $dataLisanPayload = [
+                'respon_lisan' => $responLisan,
+                'penilaian_lisan' => $penilaianLisan,
+                'evaluated_at' => now()->toDateTimeString()
+            ];
+
             IaPenilaian::updateOrCreate(
                 ['pendaftaran_id' => $pendaftaran->id, 'kode_formulir' => 'FR.IA.07'],
                 [
                     'user_id' => $user->id,
                     'role' => 'asesor',
-                    'data_jawaban' => [
-                        'respon_lisan' => $responLisan,
-                        'penilaian_lisan' => $penilaianLisan,
-                        'evaluated_at' => now()->toDateTimeString()
-                    ],
-                    'rekomendasi' => in_array('BK', $penilaianLisan) ? 'BK' : 'K',
-                    'catatan_asesor' => $request->input('catatan_lisan', 'Asesi mampu menjawab pertanyaan lisan pendukung dengan baik.'),
+                    'data_jawaban' => $dataLisanPayload,
+                    'rekomendasi' => $rekomendasiLisan,
+                    'catatan_asesor' => $catatanLisan,
+                    'status' => 'completed',
+                    'tanda_tangan' => $ttdAsesor,
+                    'tanggal_tanda_tangan' => now(),
+                ]
+            );
+
+            IaPenilaian::updateOrCreate(
+                ['pendaftaran_id' => $pendaftaran->id, 'kode_formulir' => 'FR.IA.03'],
+                [
+                    'user_id' => $user->id,
+                    'role' => 'asesor',
+                    'data_jawaban' => $dataLisanPayload,
+                    'rekomendasi' => $rekomendasiLisan,
+                    'catatan_asesor' => $catatanLisan,
                     'status' => 'completed',
                     'tanda_tangan' => $ttdAsesor,
                     'tanggal_tanda_tangan' => now(),
@@ -227,6 +426,52 @@ class AsesorPenilaianController extends Controller
             );
         }
 
+        // 5. Simpan Proyek / TOR (FR.IA.04A) jika ada
+        if ($pendaftaran->isInstrumenAktif('FR.IA.04A') && ($request->has('catatan_proyek') || $tabAction === 'proyek')) {
+            $catatanProyek = $request->input('catatan_proyek', 'Hasil proyek asesi telah diperiksa.');
+            $rekomendasiProyek = $request->input('rekomendasi_proyek', 'K');
+            IaPenilaian::updateOrCreate(
+                ['pendaftaran_id' => $pendaftaran->id, 'kode_formulir' => 'FR.IA.04A'],
+                [
+                    'user_id' => $user->id,
+                    'role' => 'asesor',
+                    'data_jawaban' => [
+                        'catatan_proyek' => $catatanProyek,
+                        'rekomendasi' => $rekomendasiProyek,
+                        'evaluated_at' => now()->toDateTimeString(),
+                    ],
+                    'rekomendasi' => $rekomendasiProyek,
+                    'catatan_asesor' => $catatanProyek,
+                    'status' => 'completed',
+                    'tanda_tangan' => $ttdAsesor,
+                    'tanggal_tanda_tangan' => now(),
+                ]
+            );
+        }
+
+        // 6. Simpan Ceklis Mutu (FR.IA.11) jika ada
+        if ($pendaftaran->isInstrumenAktif('FR.IA.11') && ($request->has('catatan_mutu') || $tabAction === 'mutu')) {
+            $catatanMutu = $request->input('catatan_mutu', 'Ceklis mutu dan spesifikasi produk telah diverifikasi.');
+            $rekomendasiMutu = $request->input('rekomendasi_mutu', 'K');
+            IaPenilaian::updateOrCreate(
+                ['pendaftaran_id' => $pendaftaran->id, 'kode_formulir' => 'FR.IA.11'],
+                [
+                    'user_id' => $user->id,
+                    'role' => 'asesor',
+                    'data_jawaban' => [
+                        'catatan_mutu' => $catatanMutu,
+                        'rekomendasi' => $rekomendasiMutu,
+                        'evaluated_at' => now()->toDateTimeString(),
+                    ],
+                    'rekomendasi' => $rekomendasiMutu,
+                    'catatan_asesor' => $catatanMutu,
+                    'status' => 'completed',
+                    'tanda_tangan' => $ttdAsesor,
+                    'tanggal_tanda_tangan' => now(),
+                ]
+            );
+        }
+
         if ($isFinal) {
             $keputusan = $request->input('keputusan');
             $catatanRekomendasi = $request->input('catatan_rekomendasi', 'Asesi telah menyelesaikan seluruh tahapan asesmen dan dinyatakan ' . strtoupper($keputusan) . '.');
@@ -236,8 +481,6 @@ class AsesorPenilaianController extends Controller
                 ['pendaftaran_id' => $pendaftaran->id],
                 [
                     'asesor_id' => $user->id,
-                    'keputusan' => $request->input('keputusan'),
-                    'catatan_rekomendasi' => $request->input('catatan_rekomendasi', 'Asesi telah menyelesaikan seluruh tahapan asesmen dan dinyatakan ' . strtoupper($request->input('keputusan')) . '.'),
                     'keputusan' => $keputusan,
                     'catatan_rekomendasi' => $catatanRekomendasi,
                     'tanggal_rekomendasi' => now(),
@@ -248,8 +491,6 @@ class AsesorPenilaianController extends Controller
             // Update status pendaftaran menjadi selesai
             $pendaftaran->update([
                 'status_pendaftaran' => 'selesai',
-                'rekomendasi_asesor_status' => ($request->input('keputusan') === 'kompeten' ? 'dapat_dilanjutkan' : 'tidak_dapat_dilanjutkan'),
-                'catatan_peninjauan_asesor' => $request->input('catatan_rekomendasi'),
                 'rekomendasi_asesor_status' => ($keputusan === 'kompeten' ? 'dapat_dilanjutkan' : 'tidak_dapat_dilanjutkan'),
                 'catatan_peninjauan_asesor' => $catatanRekomendasi,
                 'tanda_tangan_asesor' => $ttdAsesor,
@@ -257,10 +498,27 @@ class AsesorPenilaianController extends Controller
                 'asesor_id' => $pendaftaran->asesor_id ?: $user->id,
             ]);
 
-            LogAktivitas::catat('Penilaian Live Disahkan', "Asesor {$user->nama_lengkap} menetapkan keputusan " . strtoupper($request->input('keputusan')) . " pada asesi {$pendaftaran->asesi->nama_lengkap} (Reg #{$pendaftaran->nomor_pendaftaran})");
             // Sinkronkan seluruh unit kompetensi dalam skema ke tabel penilaian_asesmen
             if ($pendaftaran->skema && $pendaftaran->skema->unitKompetensi) {
+                $ia01Record = IaPenilaian::where('pendaftaran_id', $pendaftaran->id)->where('kode_formulir', 'FR.IA.01')->first();
+                $penilaianKukMap = $ia01Record ? ($ia01Record->data_jawaban['penilaian_kuk'] ?? ($ia01Record->data_jawaban['pencapaian'] ?? [])) : [];
+
                 foreach ($pendaftaran->skema->unitKompetensi as $unit) {
+                    $hasUnitBk = false;
+                    foreach ($unit->elemenKompetensi as $elemen) {
+                        foreach ($elemen->kriteriaUnjukKerja as $kuk) {
+                            if (($penilaianKukMap[$kuk->id] ?? null) === 'BK') {
+                                $hasUnitBk = true;
+                                break 2;
+                            }
+                        }
+                    }
+
+                    $unitNilai = ($keputusan === 'kompeten' && !$hasUnitBk) ? 'K' : 'BK';
+                    $unitCatatan = ($unitNilai === 'K')
+                        ? 'Kompeten sesuai hasil observasi langsung, uji teori, dan praktik demonstrasi.'
+                        : 'Belum memenuhi kriteria unjuk kerja yang dipersyaratkan pada unit ini.';
+
                     PenilaianAsesmen::updateOrCreate(
                         [
                             'pendaftaran_id' => $pendaftaran->id,
@@ -268,10 +526,8 @@ class AsesorPenilaianController extends Controller
                         ],
                         [
                             'asesor_id' => $user->id,
-                            'nilai_kompetensi' => ($keputusan === 'kompeten' ? 'K' : 'BK'),
-                            'catatan_asesor' => ($keputusan === 'kompeten' 
-                                ? 'Kompeten sesuai hasil observasi langsung, uji teori, dan praktik demonstrasi.' 
-                                : 'Belum memenuhi kriteria unjuk kerja yang dipersyaratkan.')
+                            'nilai_kompetensi' => $unitNilai,
+                            'catatan_asesor' => $unitCatatan
                         ]
                     );
                 }

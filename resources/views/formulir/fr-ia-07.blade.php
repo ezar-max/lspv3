@@ -93,12 +93,11 @@
     @include('komponen.action-bar-formulir', [
         'kodeForm' => 'FR.IA.07',
         'namaForm' => 'FR.IA.07 Pertanyaan Lisan',
-        'pendaftaranId' => $pendaftaran->id,
-        'canSubmit' => !$isAsesi,
-        'submitFormId' => 'form-ia-07',
-        'submitLabel' => 'Simpan & Selesaikan Uji Lisan',
+        'pendaftaranId' => $pendaftaran->id ?: 0,
+        'saveLabel' => 'Simpan & Selesaikan Uji Lisan',
+        'saveFormId' => 'form-ia-07',
         'canSignAsesi' => $isAsesi && $isCompleted && !$asesiTtd,
-        'signAsesiRoute' => route('formulir.ia.simpan-ttd-asesi', ['kodeForm' => 'FR.IA.07', 'pendaftaranId' => $pendaftaran->id]),
+        'signAsesiRoute' => route('formulir.ia.simpan-ttd-asesi', ['kodeForm' => 'FR.IA.07', 'pendaftaranId' => $pendaftaran->id ?: 0]),
         'isAsesiSigned' => $isAsesi && $asesiTtd
     ])
 
@@ -125,8 +124,10 @@
         @endif
     @endif
 
-    <form id="form-ia-07" action="{{ route('formulir.ia.simpan', ['kodeForm' => 'FR.IA.07', 'pendaftaranId' => $pendaftaran->id]) }}" method="POST">
+    <form id="form-ia-07" action="{{ route('formulir.ia.simpan', ['kodeForm' => 'FR.IA.07', 'pendaftaranId' => $pendaftaran->id ?: 0]) }}" method="POST">
         @csrf
+        <input type="hidden" name="skema_id" value="{{ $pendaftaran->skema_id }}">
+        <input type="hidden" name="pendaftaran_id" value="{{ $pendaftaran->id ?: 0 }}">
 
         <div class="dokumen-kertas">
             
@@ -335,9 +336,9 @@
             ])
 
             @include('komponen.navigasi-form-bawah', [
-                'pendaftaranId' => $pendaftaran->id,
-                'prevForm' => ['route' => route('formulir.ia.index', ['kodeForm' => 'FR.IA.06C', 'pendaftaranId' => $pendaftaran->id]), 'label' => 'FR.IA.06.C Ujian Esai'],
-                'nextForm' => ['route' => route('formulir.ia.index', ['kodeForm' => 'FR.IA.08', 'pendaftaranId' => $pendaftaran->id]), 'label' => 'FR.IA.08 Portofolio']
+                'pendaftaranId' => $pendaftaran->id ?: 0,
+                'prevForm' => ['route' => route('formulir.ia.index', ['kodeForm' => 'FR.IA.06C', 'pendaftaranId' => $pendaftaran->id ?: 0]), 'label' => 'FR.IA.06.C Ujian Esai'],
+                'nextForm' => ['route' => route('formulir.ia.index', ['kodeForm' => 'FR.IA.08', 'pendaftaranId' => $pendaftaran->id ?: 0]), 'label' => 'FR.IA.08 Portofolio']
             ])
 
         </div>

@@ -514,59 +514,60 @@
             const radioK = document.querySelectorAll('input[type="radio"][value="K"]');
             let adaYangBelumDiisi = false;
             let adaBuktiBelumDiisi = false;
-            let elemenBelumDiisiNama = "";
-            let elemenBuktiKosongNama = "";
+            let elemenBelumDiisiNama = [];
+            let elemenBuktiKosongNama = [];
 
             // Loop setiap elemen
             for (let i = 0; i < radioK.length; i++) {
                 const radio = radioK[i];
-                const elemenId = radio.name.match(/\[(.*?)\]/)[1];
+                const match = radio.name.match(/\[(.*?)\]/);
+                if (!match) continue;
+                const elemenId = match[1];
                 const radioBk = document.querySelector('input[type="radio"][value="BK"][name="penilaian[' + elemenId + ']"]');
                 
                 if (!radio.checked && (!radioBk || !radioBk.checked)) {
                     adaYangBelumDiisi = true;
-                    elemenBelumDiisiNama = "Elemen kompetensi ke-" + (i + 1);
-                    break;
+                    elemenBelumDiisiNama.push("Elemen ke-" + (i + 1));
                 }
 
-                if (radio.checked) {
-                    const fileInput = document.querySelector('input[type="file"][name="bukti_foto[' + elemenId + ']"]');
-                    const hasExistingPreview = fileInput && fileInput.parentElement.querySelector('.preview-bukti-foto');
-                    
-                    if (fileInput && !fileInput.value && !hasExistingPreview) {
-                        adaBuktiBelumDiisi = true;
-                        elemenBuktiKosongNama = "Elemen kompetensi ke-" + (i + 1);
-                        break;
-                    }
+                const fileInput = document.querySelector('input[type="file"][name="bukti_foto[' + elemenId + ']"]');
+                const hasExistingPreview = fileInput && fileInput.parentElement.querySelector('.preview-bukti-foto');
+                
+                if (fileInput && !fileInput.value && !hasExistingPreview) {
+                    adaBuktiBelumDiisi = true;
+                    elemenBuktiKosongNama.push("Elemen ke-" + (i + 1));
                 }
             }
 
-            if (adaYangBelumDiisi) {
+            if (adaYangBelumDiisi || adaBuktiBelumDiisi) {
                 e.preventDefault();
-                if(typeof Swal !== 'undefined') {
-                    Swal.fire({
-                        icon: 'warning',
-                        title: 'Data Belum Lengkap',
-                        text: 'Anda wajib mengisi seluruh pilihan Kompeten (K) atau Belum Kompeten (BK). ' + elemenBelumDiisiNama + ' belum dipilih.',
-                        confirmButtonColor: '#2563eb'
-                    });
-                } else {
-                    alert('Anda wajib mengisi seluruh pilihan Kompeten (K) atau Belum Kompeten (BK). ' + elemenBelumDiisiNama + ' belum dipilih.');
+                let htmlPesan = '<div style="text-align: left; font-size: 0.85rem; line-height: 1.5;">';
+                htmlPesan += '<p style="color: #475569; margin-bottom: 0.75rem;">Formulir FR.APL.02 tidak dapat dikirim karena masih ada isian atau berkas bukti yang belum lengkap:</p>';
+                if (adaYangBelumDiisi) {
+                    htmlPesan += '<div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 0.75rem; margin-bottom: 0.5rem; color: #991b1b;">';
+                    htmlPesan += '<strong>⚠️ Pilihan K / BK Belum Dipilih (' + elemenBelumDiisiNama.length + ' elemen):</strong><br>';
+                    htmlPesan += '<span style="font-size: 0.8rem;">' + elemenBelumDiisiNama.slice(0, 10).join(', ') + (elemenBelumDiisiNama.length > 10 ? ' dan lainnya' : '') + '</span>';
+                    htmlPesan += '</div>';
                 }
-                return false;
-            }
+                if (adaBuktiBelumDiisi) {
+                    htmlPesan += '<div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 0.75rem; color: #92400e;">';
+                    htmlPesan += '<strong>📁 Bukti Pendukung Belum Diunggah (' + elemenBuktiKosongNama.length + ' elemen):</strong><br>';
+                    htmlPesan += '<span style="font-size: 0.8rem;">' + elemenBuktiKosongNama.slice(0, 10).join(', ') + (elemenBuktiKosongNama.length > 10 ? ' dan lainnya' : '') + '</span>';
+                    htmlPesan += '</div>';
+                }
+                htmlPesan += '<p style="font-size: 0.8rem; color: #64748b; margin-top: 0.5rem; font-style: italic;">Harap pilih seluruh K/BK dan unggah bukti pendukung untuk seluruh elemen sebelum mengirim.</p>';
+                htmlPesan += '</div>';
 
-            if (adaBuktiBelumDiisi) {
-                e.preventDefault();
-                if(typeof Swal !== 'undefined') {
+                if (typeof Swal !== 'undefined') {
                     Swal.fire({
                         icon: 'warning',
-                        title: 'Bukti Belum Lengkap',
-                        text: 'Anda memilih Kompeten (K) pada ' + elemenBuktiKosongNama + ', namun belum mengunggah foto/file bukti. Harap unggah bukti pendukung.',
-                        confirmButtonColor: '#2563eb'
+                        title: 'Formulir FR.APL.02 Belum Lengkap',
+                        html: htmlPesan,
+                        confirmButtonColor: '#2563eb',
+                        confirmButtonText: 'Lengkapi Sekarang'
                     });
                 } else {
-                    alert('Harap unggah bukti pendukung untuk elemen yang dinyatakan Kompeten (K).');
+                    alert('Harap lengkapi seluruh pilihan K/BK dan unggah bukti pendukung untuk seluruh elemen sebelum mengirim.');
                 }
                 return false;
             }

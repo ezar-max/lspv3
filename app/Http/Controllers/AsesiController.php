@@ -1532,22 +1532,38 @@ class AsesiController extends Controller
             if (!empty($diff)) {
                 return redirect()->route('asesi.formulir', ['pendaftaran_id' => $pendaftaran->id, 'tab' => 'apl02'])
                     ->withInput()
-                    ->with('error', 'Masih ada data yang wajib diisi. Silakan lengkapi penilaian seluruh butir KUK terlebih dahulu.');
+                    ->with('error', 'Masih ada elemen kompetensi yang belum dinilai. Silakan lengkapi penilaian seluruh butir KUK terlebih dahulu.');
             }
 
-            // Memastikan bahwa setiap 'K' memiliki bukti pendukung
-            foreach ($request->penilaian as $elemenId => $nilai) {
-                if ($nilai === 'K') {
-                    $hasBukti = \App\Models\BuktiApl02::where('pendaftaran_id', $pendaftaran->id)
-                        ->where('elemen_id', $elemenId)
-                        ->exists() || $request->hasFile("bukti_foto.{$elemenId}") || $request->has("bukti_relevan.{$elemenId}");
-                    
-                    if (!$hasBukti) {
-                        return redirect()->route('asesi.formulir', ['pendaftaran_id' => $pendaftaran->id, 'tab' => 'apl02'])
-                            ->withInput()
-                            ->with('error', 'Anda menyatakan Kompeten (K) pada elemen tertentu, namun belum melampirkan Bukti. Harap lengkapi bukti untuk seluruh elemen yang Anda nyatakan Kompeten.');
-                    }
+            // Cek kelengkapan seluruh butir KUK (tidak boleh ada KUK yang belum dipilih K/BK)
+            $allKukIds = $pendaftaran->skema->unitKompetensi->flatMap->elemenKompetensi->flatMap->kriteriaUnjukKerja->pluck('id')->toArray();
+            if (!empty($allKukIds)) {
+                $submittedKuk = array_filter($request->input('penilaian_kuk', []), fn($v) => in_array($v, ['K', 'BK']));
+                $diffKuk = array_diff($allKukIds, array_keys($submittedKuk));
+                if (!empty($diffKuk)) {
+                    return redirect()->route('asesi.formulir', ['pendaftaran_id' => $pendaftaran->id, 'tab' => 'apl02'])
+                        ->withInput()
+                        ->with('error', 'Masih terdapat ' . count($diffKuk) . ' butir KUK yang belum dipilih (K atau BK). Silakan lengkapi seluruh penilaian mandiri terlebih dahulu.');
                 }
+            }
+
+            // Memastikan bahwa setiap elemen memiliki bukti pendukung
+            $elemenTanpaBukti = [];
+            foreach ($allElemenIds as $elemId) {
+                $hasBukti = \App\Models\BuktiApl02::where('pendaftaran_id', $pendaftaran->id)
+                    ->where('elemen_id', $elemId)
+                    ->exists() || $request->hasFile("bukti_foto.{$elemId}") || $request->filled("bukti_relevan.{$elemId}");
+
+                if (!$hasBukti) {
+                    $elemObj = \App\Models\ElemenKompetensi::find($elemId);
+                    $elemenTanpaBukti[] = $elemObj ? ($elemObj->nama_elemen ?? "Elemen #{$elemId}") : "Elemen #{$elemId}";
+                }
+            }
+
+            if (!empty($elemenTanpaBukti)) {
+                return redirect()->route('asesi.formulir', ['pendaftaran_id' => $pendaftaran->id, 'tab' => 'apl02'])
+                    ->withInput()
+                    ->with('error', 'Terdapat ' . count($elemenTanpaBukti) . ' elemen kompetensi yang belum memiliki bukti pendukung. Harap lengkapi bukti untuk seluruh elemen sebelum mengirim formulir.');
             }
         }
 
@@ -1597,6 +1613,22 @@ class AsesiController extends Controller
         }
 
         LogAktivitas::catat('Pengajuan FR.APL.02', 'Asesi mengirim Formulir Asesmen Mandiri FR.APL.02 #' . $pendaftaran->nomor_pendaftaran . ' untuk diperiksa asesor.');
+
+        // Notifikasi ke Asesor jika sudah ditugaskan
+        $asesorTarget = $pendaftaran->asesor ?? ($pendaftaran->jadwal ? $pendaftaran->jadwal->asesor : null);
+        if ($asesorTarget) {
+            $skemaNama = $pendaftaran->skema ? $pendaftaran->skema->nama_skema : 'Skema Sertifikasi';
+            $asesorTarget->notify(new SystemAlert(
+                'Pengajuan FR.APL.02: ' . $pengguna->nama_lengkap,
+                "Asesi {$pengguna->nama_lengkap} telah mengirimkan formulir FR.APL.02 ({$skemaNama}) untuk diverifikasi.",
+                route('asesor.input-penilaian', $pendaftaran->id),
+                'apl02_submission',
+                [
+                    'pendaftaran_id' => $pendaftaran->id,
+                    'asesi_id' => $pengguna->id,
+                ]
+            ));
+        }
 
         return redirect()->route('asesi.formulir', ['pendaftaran_id' => $pendaftaran->id, 'tab' => 'apl02'])
             ->with('sukses', 'Formulir FR.APL.02 berhasil dikirim untuk diperiksa oleh Asesor. Mohon tunggu proses verifikasi sebelum melanjutkan ke FR.AK.01.');

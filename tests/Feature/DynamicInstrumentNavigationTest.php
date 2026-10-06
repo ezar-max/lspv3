@@ -264,4 +264,47 @@ class DynamicInstrumentNavigationTest extends TestCase
 
         $response->assertRedirect(route('asesi.tahapan', ['step' => 5, 'pendaftaran_id' => $this->pendaftaran->id]));
     }
+
+    public function test_asesor_can_fill_and_save_ia01_and_see_evidence_rekap()
+    {
+        // 1. Asesor membuka halaman penilaian live dan formulir FR.IA.01 langsung tampil
+        $response = $this->actingAs($this->asesor)
+            ->get(route('asesor.penilaian-live', $this->pendaftaran->id));
+
+        $response->assertStatus(200);
+        $response->assertSee('Ceklis Observasi Aktivitas di Tempat Kerja / TUK');
+        $response->assertSee('Set Semua KUK Kompeten (K)');
+        $response->assertSee('Simpan FR.IA.01 (Ceklis Observasi)');
+
+        $kukId = $this->skema->unitKompetensi->first()->elemenKompetensi->first()->kriteriaUnjukKerja->first()->id;
+
+        // 2. Asesor mengisi dan menyimpan penilaian FR.IA.01 untuk asesi
+        $saveResponse = $this->actingAs($this->asesor)
+            ->post(route('asesor.penilaian-live.simpan', $this->pendaftaran->id), [
+                'tab_action' => 'observasi',
+                'penilaian_kuk' => [$kukId => 'K'],
+                'catatan_observasi' => 'Demonstrasi unjuk kerja asesi sangat baik dan mematuhi SOP.',
+                'rekomendasi_ia01' => 'K',
+            ]);
+
+        $saveResponse->assertRedirect(route('asesor.penilaian-live', ['pendaftaranId' => $this->pendaftaran->id, 'tab' => 'observasi']));
+
+        $this->assertDatabaseHas('ia_penilaian', [
+            'pendaftaran_id' => $this->pendaftaran->id,
+            'kode_formulir' => 'FR.IA.01',
+            'status' => 'completed',
+            'rekomendasi' => 'K',
+        ]);
+
+        // 3. Tab Rekapitulasi FR.AK.02 memuat rangkuman bukti dan status KUK yang telah diisi
+        $rekapResponse = $this->actingAs($this->asesor)
+            ->get(route('asesor.penilaian-live', ['pendaftaranId' => $this->pendaftaran->id, 'tab' => 'rekap']));
+
+        $rekapResponse->assertStatus(200);
+        $rekapResponse->assertSee('Rangkuman Bukti Hasil Asesmen yang Dikerjakan Asesi');
+        $rekapResponse->assertSee('1. FR.IA.01 Observasi');
+        $rekapResponse->assertSee('Daftar Unit Kompetensi Teruji');
+        $rekapResponse->assertSee('Status KUK');
+    }
 }
+

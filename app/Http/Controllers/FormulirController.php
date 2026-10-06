@@ -817,6 +817,7 @@ class FormulirController extends Controller
                     $list[$num] = [
                         'no' => $num,
                         'pertanyaan' => $q->question_text,
+                        'kunci' => $q->correct_answer,
                         'kunci_rujukan' => $q->correct_answer,
                         'kuk' => $q->kriteriaUnjukKerja ? "KUK {$q->kriteriaUnjukKerja->nomor_kuk} - {$q->kriteriaUnjukKerja->pernyataan_kuk}" : 'Standar Kompetensi Kejuruan',
                     ];
@@ -824,6 +825,36 @@ class FormulirController extends Controller
                 if (!empty($list)) {
                     return $list;
                 }
+            }
+
+            // Fallback ke additional_metadata jika questionBanks belum ada
+            if ($inst && !empty($inst->additional_metadata['data_jawaban']) && is_array($inst->additional_metadata['data_jawaban'])) {
+                $list = [];
+                foreach ($inst->additional_metadata['data_jawaban'] as $idx => $item) {
+                    $num = $item['no'] ?? ($idx + 1);
+                    $list[$num] = [
+                        'no' => $num,
+                        'pertanyaan' => $item['pertanyaan'] ?? '',
+                        'kunci' => $item['kunci'] ?? ($item['kunci_rujukan'] ?? ''),
+                        'kunci_rujukan' => $item['kunci_rujukan'] ?? ($item['kunci'] ?? ''),
+                        'kuk' => $item['kuk'] ?? 'Standar Kompetensi Kejuruan',
+                    ];
+                }
+                return $list;
+            }
+            if ($inst && !empty($inst->additional_metadata['pertanyaan_lisan']) && is_array($inst->additional_metadata['pertanyaan_lisan'])) {
+                $list = [];
+                foreach ($inst->additional_metadata['pertanyaan_lisan'] as $idx => $item) {
+                    $num = $item['no'] ?? ($idx + 1);
+                    $list[$num] = [
+                        'no' => $num,
+                        'pertanyaan' => $item['pertanyaan'] ?? '',
+                        'kunci' => $item['kunci'] ?? ($item['kunci_rujukan'] ?? ''),
+                        'kunci_rujukan' => $item['kunci_rujukan'] ?? ($item['kunci'] ?? ''),
+                        'kuk' => $item['kuk'] ?? 'Standar Kompetensi Kejuruan',
+                    ];
+                }
+                return $list;
             }
 
         } else {
@@ -835,8 +866,23 @@ class FormulirController extends Controller
                     $list[$num] = [
                         'no' => $num,
                         'pertanyaan' => $q->question_text,
+                        'kunci' => $q->correct_answer,
                         'kunci_rujukan' => $q->correct_answer,
                         'kuk' => $q->kriteriaUnjukKerja ? "KUK {$q->kriteriaUnjukKerja->nomor_kuk} - {$q->kriteriaUnjukKerja->pernyataan_kuk}" : 'Standar Kompetensi Kejuruan',
+                    ];
+                }
+                return $list;
+            }
+            if ($inst && !empty($inst->additional_metadata['data_jawaban']) && is_array($inst->additional_metadata['data_jawaban'])) {
+                $list = [];
+                foreach ($inst->additional_metadata['data_jawaban'] as $idx => $item) {
+                    $num = $item['no'] ?? ($idx + 1);
+                    $list[$num] = [
+                        'no' => $num,
+                        'pertanyaan' => $item['pertanyaan'] ?? '',
+                        'kunci' => $item['kunci'] ?? ($item['kunci_rujukan'] ?? ''),
+                        'kunci_rujukan' => $item['kunci_rujukan'] ?? ($item['kunci'] ?? ''),
+                        'kuk' => $item['kuk'] ?? 'Standar Kompetensi Kejuruan',
                     ];
                 }
                 return $list;
@@ -997,12 +1043,17 @@ class FormulirController extends Controller
             
         // STRICT MASTER LOADING
         $soalList = self::getSoalIa07($pendaftaran->skema_id);
+        if (empty($soalList) && $iaRecord && !empty($iaRecord->data_jawaban)) {
+            $soalList = $iaRecord->data_jawaban;
+        }
         if (empty($soalList)) {
             $soalList = [
                 1 => [
                     'no' => 1,
                     'pertanyaan' => '',
-                    'kunci' => ''
+                    'kunci' => '',
+                    'kunci_rujukan' => '',
+                    'kuk' => ''
                 ]
             ];
         }
@@ -1186,7 +1237,7 @@ class FormulirController extends Controller
             'FR.IA.01', 'FR.IA.02', 'FR.IA.03', 'FR.IA.04', 'FR.IA.04A', 'FR.IA.04B',
             'FR.IA.05', 'FR.IA.05A', 'FR.IA.05B', 'FR.IA.05C',
             'FR.IA.06', 'FR.IA.06A', 'FR.IA.06B', 'FR.IA.06C',
-            'FR.IA.07', 'FR.IA.08', 'FR.IA.09', 'FR.IA.10', 'FR.IA.11',
+            'FR.IA.07', 'FR.IA.07A', 'FR.IA.08', 'FR.IA.09', 'FR.IA.10', 'FR.IA.11',
         ];
         abort_unless(in_array($kodeForm, $kodeFormValid, true), 422, 'Kode formulir IA tidak valid.');
         $role = $user ? $user->peran : 'asesor';
@@ -1651,7 +1702,7 @@ class FormulirController extends Controller
         }
 
         /* ---------------------------------------------------------------------
-           7. WORKFLOW PERTANYAAN LISAN / DPL (FR.IA.07)
+           7. WORKFLOW PERTANYAAN LISAN / DPL (FR.IA.07 & FR.IA.07A)
            --------------------------------------------------------------------- */
         elseif ($kodeForm === 'FR.IA.07') {
             $status = $request->has('simpan_draft') ? 'draft' : 'completed';
@@ -1664,6 +1715,13 @@ class FormulirController extends Controller
                 'evaluated_at' => now()->toDateTimeString()
             ];
             $suksesMsg = 'Penilaian Pertanyaan Lisan (FR.IA.07) berhasil disimpan dan dikirimkan ke Asesi untuk diverifikasi.';
+        }
+        elseif ($kodeForm === 'FR.IA.07A') {
+            $status = $request->has('simpan_draft') ? 'draft' : 'completed';
+            $rekomendasi = $request->input('rekomendasi', 'K');
+            $catatan = $request->input('catatan', '');
+            $dataPayload = $request->input('data_jawaban', []);
+            $suksesMsg = 'Daftar Pertanyaan Lisan (FR.IA.07A) berhasil disimpan ke Bank Soal.';
         }
 
         /* ---------------------------------------------------------------------
@@ -1826,8 +1884,8 @@ class FormulirController extends Controller
             $catatan = $request->catatan ?? ($request->umpan_balik ?? null);
         }
 
-        // Sinkronkan ke SchemeMasterInstrument untuk mode master (pendaftaran_id == 0) atau sinkronisasi IA.02, IA.05A, IA.06A
-        if ($pendaftaran->skema_id && ($pendaftaran->id == 0 || in_array($kodeForm, ['FR.IA.02', 'FR.IA.05A', 'FR.IA.06A'], true) || in_array($user?->peran, ['admin', 'superadmin'], true))) {
+        // Sinkronkan ke SchemeMasterInstrument untuk mode master (pendaftaran_id == 0) atau sinkronisasi IA.02, IA.05A, IA.06A, IA.07A
+        if ($pendaftaran->skema_id && ($pendaftaran->id == 0 || in_array($kodeForm, ['FR.IA.02', 'FR.IA.05A', 'FR.IA.06A', 'FR.IA.07A'], true) || in_array($user?->peran, ['admin', 'superadmin'], true))) {
             $rawCode = strtolower(str_replace(['FR.', 'fr.', '.'], '', $kodeForm));
             $instCode = \App\Models\SchemeMasterInstrument::normalizeCode($rawCode);
             $inst = \App\Models\SchemeMasterInstrument::where('skema_id', $pendaftaran->skema_id)
@@ -2000,8 +2058,62 @@ class FormulirController extends Controller
                 $masterPayload['data_jawaban'] = $dataPayload;
             } elseif ($kodeForm === 'FR.IA.05C' || $kodeForm === 'FR.IA.06C') {
                 // Ujian Asesi tidak untuk master
+            } elseif ($kodeForm === 'FR.IA.07A') {
+                // Sinkronkan butir soal Lisan ke master_question_banks
+                if (is_array($dataPayload) && !empty($dataPayload)) {
+                    $order = 1;
+                    $existingQIds = [];
+                    foreach ($dataPayload as $item) {
+                        $pertanyaan = trim($item['pertanyaan'] ?? '');
+                        if (empty($pertanyaan)) {
+                            continue;
+                        }
+                        $kunci = trim($item['kunci'] ?? ($item['kunci_rujukan'] ?? ''));
+                        $kukNomor = trim($item['kuk'] ?? '');
+                        
+                        $kukId = null;
+                        if (!empty($kukNomor)) {
+                            $kukRow = \App\Models\KriteriaUnjukKerja::whereHas('elemenKompetensi.unitKompetensi', function ($q) use ($pendaftaran) {
+                                $q->where('skema_id', $pendaftaran->skema_id);
+                            })->where('nomor_kuk', $kukNomor)->first();
+                            $kukId = $kukRow?->id;
+                        }
+
+                        $qb = \App\Models\MasterQuestionBank::where('scheme_master_instrument_id', $inst->id)
+                            ->where('order', $order)
+                            ->first();
+
+                        if ($qb) {
+                            $qb->update([
+                                'question_type' => 'oral',
+                                'question_text' => $pertanyaan,
+                                'correct_answer' => $kunci,
+                                'kuk_id' => $kukId,
+                                'points' => 1,
+                            ]);
+                        } else {
+                            $qb = \App\Models\MasterQuestionBank::create([
+                                'scheme_master_instrument_id' => $inst->id,
+                                'question_type' => 'oral',
+                                'question_text' => $pertanyaan,
+                                'correct_answer' => $kunci,
+                                'kuk_id' => $kukId,
+                                'points' => 1,
+                                'order' => $order,
+                            ]);
+                        }
+                        $existingQIds[] = $qb->id;
+                        $order++;
+                    }
+                    if (!empty($existingQIds)) {
+                        \App\Models\MasterQuestionBank::where('scheme_master_instrument_id', $inst->id)
+                            ->whereNotIn('id', $existingQIds)
+                            ->delete();
+                    }
+                }
+                $masterPayload['data_jawaban'] = $dataPayload;
             } elseif ($kodeForm === 'FR.IA.07') {
-                // Pertanyaan lisan diambil dari skema/unit, tidak ada payload tambahan
+                // Pertanyaan lisan evaluasi tidak mengubah master soal secara langsung
             } elseif ($kodeForm === 'FR.IA.08') {
                 if (isset($dataPayload['bukti_tambahan'])) $masterPayload['bukti_tambahan'] = $dataPayload['bukti_tambahan'];
             } elseif ($kodeForm === 'FR.IA.09') {
