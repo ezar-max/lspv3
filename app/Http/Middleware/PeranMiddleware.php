@@ -22,6 +22,11 @@ class PeranMiddleware
 
         $pengguna = auth()->user();
 
+        // Superadmin memiliki hak akses tingkat tertinggi ke seluruh sistem
+        if ($pengguna->peran === 'superadmin') {
+            return $next($request);
+        }
+
         if (in_array($pengguna->peran, $peran)) {
             return $next($request);
         }

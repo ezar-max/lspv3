@@ -403,12 +403,31 @@ class AdminController extends Controller
         $tab = $request->get('tab', 'data-asesi');
         $kataKunci = $request->get('q');
         $statusVerifikasi = $request->get('status', 'diajukan');
+        $skemaFilter = $request->get('skema');
+
+        $daftarSkema = SkemaSertifikasi::select('id', 'nama_skema', 'kode_skema')
+            ->orderBy('nama_skema')
+            ->get();
 
         $asesiList = Pengguna::where('peran', 'asesi')
             ->with(['profilAsesi', 'pendaftaranAsesi.skema'])
             ->when($kataKunci, function($q) use ($kataKunci) {
-                $q->where('nama_lengkap', 'like', "%{$kataKunci}%")
-                  ->orWhere('email', 'like', "%{$kataKunci}%");
+                $q->where(function($sub) use ($kataKunci) {
+                    $sub->where('nama_lengkap', 'like', "%{$kataKunci}%")
+                        ->orWhere('email', 'like', "%{$kataKunci}%")
+                        ->orWhereHas('profilAsesi', function($p) use ($kataKunci) {
+                            $p->where('nik', 'like', "%{$kataKunci}%");
+                        });
+                });
+            })
+            ->when($skemaFilter, function($q) use ($skemaFilter) {
+                if ($skemaFilter === 'belum_daftar') {
+                    $q->doesntHave('pendaftaranAsesi');
+                } elseif ($skemaFilter !== 'semua') {
+                    $q->whereHas('pendaftaranAsesi', function($sq) use ($skemaFilter) {
+                        $sq->where('skema_id', $skemaFilter);
+                    });
+                }
             })
             ->latest()
             ->paginate(10, ['*'], 'asesi_page');
@@ -417,11 +436,16 @@ class AdminController extends Controller
             ->when($statusVerifikasi !== 'semua' && $statusVerifikasi, function($q) use ($statusVerifikasi) {
                 $q->where('status_pendaftaran', $statusVerifikasi);
             })
+            ->when($skemaFilter && $skemaFilter !== 'belum_daftar' && $skemaFilter !== 'semua', function($q) use ($skemaFilter) {
+                $q->where('skema_id', $skemaFilter);
+            })
             ->when($kataKunci, function($q) use ($kataKunci) {
-                $q->whereHas('asesi', function($sq) use ($kataKunci) {
-                    $sq->where('nama_lengkap', 'like', "%{$kataKunci}%")
-                       ->orWhere('email', 'like', "%{$kataKunci}%");
-                })->orWhere('nomor_pendaftaran', 'like', "%{$kataKunci}%");
+                $q->where(function($sub) use ($kataKunci) {
+                    $sub->whereHas('asesi', function($sq) use ($kataKunci) {
+                        $sq->where('nama_lengkap', 'like', "%{$kataKunci}%")
+                           ->orWhere('email', 'like', "%{$kataKunci}%");
+                    })->orWhere('nomor_pendaftaran', 'like', "%{$kataKunci}%");
+                });
             })
             ->latest()
             ->paginate(10, ['*'], 'verifikasi_page');
@@ -429,10 +453,11 @@ class AdminController extends Controller
         $totalPendingVerifikasi = PendaftaranAsesi::where('status_pendaftaran', 'diajukan')->count();
         $totalTerverifikasi = PendaftaranAsesi::where('status_pendaftaran', 'diverifikasi')->count();
         $totalAsesi = Pengguna::where('peran', 'asesi')->count();
+        $totalBelumDaftar = Pengguna::where('peran', 'asesi')->doesntHave('pendaftaranAsesi')->count();
 
         return view('admin.manajemen-asesi', compact(
-            'asesiList', 'pendaftaranList', 'kataKunci', 'tab', 'statusVerifikasi',
-            'totalPendingVerifikasi', 'totalTerverifikasi', 'totalAsesi'
+            'asesiList', 'pendaftaranList', 'daftarSkema', 'kataKunci', 'tab', 'statusVerifikasi',
+            'skemaFilter', 'totalPendingVerifikasi', 'totalTerverifikasi', 'totalAsesi', 'totalBelumDaftar'
         ));
     }
 

@@ -182,7 +182,7 @@ Route::middleware(['auth', 'peran:asesor,admin,superadmin'])->prefix('asesor')->
 | 4. ROLE: ADMIN (ADMINISTRATOR)
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth', 'peran:admin'])->prefix('admin')->as('admin.')->group(function () {
+Route::middleware(['auth', 'peran:admin,superadmin'])->prefix('admin')->as('admin.')->group(function () {
     Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
     Route::get('/dasbor', [AdminController::class, 'dashboard'])->name('dasbor');
     Route::get('/api/cek-pendaftaran-terbaru', [AdminController::class, 'cekPendaftaranTerbaru'])->name('cek-pendaftaran-terbaru');

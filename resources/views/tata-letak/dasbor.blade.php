@@ -32,7 +32,7 @@
 @php
     $user = auth()->user();
     $peran = $user ? $user->peran : null;
-    $isNavbarPortal = true;
+    $isNavbarPortal = ($peran !== 'superadmin');
 
     $brandRoute = match($peran) {
         'asesi' => route('asesi.dashboard'),
@@ -1284,180 +1284,255 @@
 
 @else
     <!-- =========================================================================
-         LAYOUT MODE: SIDEBAR (UNTUK ADMIN & SUPERADMIN)
+         LAYOUT MODE: SIDEBAR MODERN (UNTUK SUPER ADMIN)
+         - Tampilan Sidebar Profesional, Modern, Elegan & Tidak Norak
+         - Akses Penuh ke Seluruh Fitur Superadmin & Admin
          ========================================================================= -->
-    <div class="wadah-dasbor">
-        <!-- SIDEBAR ROLE -->
-        <aside class="sidebar-dasbor">
-            <div>
-                <a href="{{ route('beranda') }}" class="brand-lsp" style="margin-bottom: 1.5rem; padding-left: 0.5rem;">
-                    <img src="{{ asset('images/logo-lsp.jpeg') }}" alt="Logo LSP" style="height: 36px; width: 36px; object-fit: contain; border-radius: 6px;">
-                    <div>
-                        <div style="font-size: 0.95rem; font-weight: 800; color: var(--biru-malam);">LSP SMKN 1 Gunungputri</div>
-                        <div style="font-size: 0.72rem; color: var(--biru-muda); text-transform: uppercase; font-weight: 700;">
-                            PORTAL {{ strtoupper($peran ?? 'ADMIN') }}
+    <style>
+        .custom-sidebar-scroll::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-sidebar-scroll::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-sidebar-scroll::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.12);
+            border-radius: 9999px;
+        }
+        .custom-sidebar-scroll::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.25);
+        }
+    </style>
+
+    <div class="min-h-screen bg-slate-50 flex flex-col lg:flex-row font-sans" x-data="{ sidebarOpen: false }">
+        
+        <!-- BACKDROP OVERLAY FOR MOBILE -->
+        <div x-show="sidebarOpen" 
+             x-transition:enter="transition-opacity ease-linear duration-200"
+             x-transition:enter-start="opacity-0"
+             x-transition:enter-end="opacity-100"
+             x-transition:leave="transition-opacity ease-linear duration-200"
+             x-transition:leave-start="opacity-100"
+             x-transition:leave-end="opacity-0"
+             @click="sidebarOpen = false" 
+             class="fixed inset-0 bg-slate-900/30 backdrop-blur-xs z-40 lg:hidden"
+             style="display: none;"></div>
+
+        <!-- SIDEBAR (BRIGHT PROFESSIONAL THEME, NO ICONS) -->
+        <aside class="fixed inset-y-0 left-0 z-50 w-72 bg-white text-slate-700 border-r border-slate-200/90 flex flex-col justify-between transform transition-transform duration-200 ease-in-out lg:translate-x-0 shadow-xs"
+               :class="sidebarOpen ? 'translate-x-0 shadow-xl' : '-translate-x-full lg:translate-x-0'">
+            
+            <!-- TOP BRAND HEADER -->
+            <div class="p-5 border-b border-slate-100 bg-white">
+                <div class="flex items-center justify-between">
+                    <a href="{{ route('superadmin.dashboard') }}" class="flex items-center gap-3">
+                        <img src="{{ asset('images/logo-lsp.jpeg') }}" alt="Logo LSP" class="h-9 w-9 object-contain rounded-xl border border-slate-200 p-0.5 bg-white shadow-2xs">
+                        <div>
+                            <div class="font-bold text-slate-900 text-sm tracking-tight leading-tight">
+                                LSP SMKN 1 Gunungputri
+                            </div>
+                            <div class="inline-block mt-1 px-2 py-0.5 rounded-md bg-blue-50 border border-blue-200 text-[10px] font-extrabold text-blue-700 uppercase tracking-wider">
+                                Super Admin Console
+                            </div>
                         </div>
-                    </div>
-                </a>
-
-                <ul class="menu-sidebar">
-                    @if($peran === 'admin')
-                        <!-- 1. Dashboard -->
-                        <li class="item-menu-sidebar {{ request()->routeIs('admin.dashboard') ? 'aktif' : '' }}">
-                            <a href="{{ route('admin.dashboard') }}">Dashboard</a>
-                        </li>
-
-                        <!-- 2. Asesi (Data & Verifikasi) -->
-                        <li class="grup-sidebar-dropdown {{ (request()->routeIs('admin.manajemen-asesi*') || request()->routeIs('admin.verifikasi*') || request()->routeIs('admin.detail-asesi')) ? 'terbuka' : '' }}">
-                            <div class="header-sidebar-dropdown" onclick="this.parentElement.classList.toggle('terbuka')">
-                                <span>Asesi</span>
-                            </div>
-                            <div class="konten-sidebar-dropdown">
-                                <div class="inner-sidebar-dropdown">
-                                    <div class="item-menu-sidebar {{ (request()->routeIs('admin.manajemen-asesi*') || request()->routeIs('admin.verifikasi*') || request()->routeIs('admin.detail-asesi')) ? 'aktif' : '' }}">
-                                        <a href="{{ route('admin.manajemen-asesi') }}">Data & Verifikasi</a>
-                                    </div>
-                                </div>
-                            </div>
-                        </li>
-
-                        <!-- 3. Skema & Asesmen (Skema, Jadwal Asesmen, Bank Soal & MUK) -->
-                        <li class="grup-sidebar-dropdown {{ (request()->routeIs('admin.manajemen-skema*') || request()->routeIs('admin.manajemen-jadwal*') || request()->routeIs('admin.master-muk*')) ? 'terbuka' : '' }}">
-                            <div class="header-sidebar-dropdown" onclick="this.parentElement.classList.toggle('terbuka')">
-                                <span>Skema</span>
-                            </div>
-                            <div class="konten-sidebar-dropdown">
-                                <div class="inner-sidebar-dropdown">
-                                    <div class="item-menu-sidebar {{ request()->routeIs('admin.manajemen-skema*') ? 'aktif' : '' }}">
-                                        <a href="{{ route('admin.manajemen-skema') }}">Skema</a>
-                                    </div>
-                                    <div class="item-menu-sidebar {{ request()->routeIs('admin.manajemen-jadwal*') ? 'aktif' : '' }}">
-                                        <a href="{{ route('admin.manajemen-jadwal') }}">Jadwal Asesmen</a>
-                                    </div>
-                                    <div class="item-menu-sidebar {{ request()->routeIs('admin.master-muk*') ? 'aktif' : '' }}">
-                                        <a href="{{ route('admin.master-muk.index') }}">Formulir</a>
-                                    </div>
-                                </div>
-                            </div>
-                        </li>
-
-                        <!-- 4. Dokumen -->
-                        <li class="item-menu-sidebar {{ (request()->routeIs('admin.dokumen*') || request()->routeIs('formulir.*')) ? 'aktif' : '' }}">
-                            <a href="{{ route('admin.dokumen.index') }}">Dokumen</a>
-                        </li>
-
-                        <!-- 5. Informasi -->
-                        <li class="item-menu-sidebar {{ request()->routeIs('admin.manajemen-pengumuman*') ? 'aktif' : '' }}">
-                            <a href="{{ route('admin.manajemen-pengumuman') }}">Informasi</a>
-                        </li>
-
-                        <!-- 6. Laporan -->
-                        <li class="item-menu-sidebar {{ request()->routeIs('admin.laporan-kelulusan*') ? 'aktif' : '' }}">
-                            <a href="{{ route('admin.laporan-kelulusan') }}">Laporan</a>
-                        </li>
-
-                        <!-- 7. Data Asesor -->
-                        <li class="item-menu-sidebar {{ request()->routeIs('admin.manajemen-asesor*') ? 'aktif' : '' }}">
-                            <a href="{{ route('admin.manajemen-asesor') }}">Asesor</a>
-                        </li>
-                    @elseif($peran === 'superadmin')
-                        <li class="item-menu-sidebar {{ request()->routeIs('superadmin.dashboard') ? 'aktif' : '' }}">
-                            <a href="{{ route('superadmin.dashboard') }}">Control Panel</a>
-                        </li>
-
-                        <li class="grup-sidebar-dropdown {{ (request()->routeIs('superadmin.manajemen-pengguna*') || request()->routeIs('superadmin.log-aktivitas*') || request()->routeIs('superadmin.pengaturan-sistem*') || request()->routeIs('formulir.*')) ? 'terbuka' : '' }}">
-                            <div class="header-sidebar-dropdown" onclick="this.parentElement.classList.toggle('terbuka')">
-                                <span>Sistem & Keamanan</span>
-                            </div>
-                            <div class="konten-sidebar-dropdown">
-                                <div class="inner-sidebar-dropdown">
-                                    <div class="item-menu-sidebar {{ request()->routeIs('superadmin.manajemen-pengguna*') ? 'aktif' : '' }}">
-                                        <a href="{{ route('superadmin.manajemen-pengguna') }}">Manajemen Akun</a>
-                                    </div>
-                                    <div class="item-menu-sidebar {{ request()->routeIs('superadmin.log-aktivitas*') ? 'aktif' : '' }}">
-                                        <a href="{{ route('superadmin.log-aktivitas') }}">Audit Log Aktivitas</a>
-                                    </div>
-                                    <div class="item-menu-sidebar {{ request()->routeIs('superadmin.pengaturan-sistem*') ? 'aktif' : '' }}">
-                                        <a href="{{ route('superadmin.pengaturan-sistem') }}">Pengaturan Global</a>
-                                    </div>
-                                </div>
-                            </div>
-                        </li>
-                    @endif
-                </ul>
+                    </a>
+                    <button type="button" @click="sidebarOpen = false" class="lg:hidden text-slate-400 hover:text-slate-700 px-2 py-1 text-xs font-semibold rounded-lg hover:bg-slate-100">
+                        Tutup
+                    </button>
+                </div>
             </div>
 
-            <!-- PROFIL PENGGUNA & SIDEBAR BOTTOM -->
-            <div style="padding-top: 1rem; border-top: 1px solid var(--biru-soft);">
-                <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.85rem;">
-                    <div style="width: 38px; height: 38px; border-radius: 50%; background: var(--biru-soft); display: flex; align-items: center; justify-content: center; color: var(--biru-utama); font-weight: 700; flex-shrink: 0;">
-                        {{ strtoupper(substr($user?->nama_lengkap ?? 'A', 0, 2)) }}
+            <!-- NAVIGATION MENU (SCROLLABLE, NO ICONS) -->
+            <div class="flex-1 overflow-y-auto px-4 py-4 space-y-5 custom-sidebar-scroll">
+                
+                <!-- GRUP 1: RINGKASAN & KONTROL -->
+                <div>
+                    <div class="text-[10px] uppercase font-extrabold tracking-wider text-slate-400 px-3 mb-1.5">
+                        Ringkasan & Kontrol
                     </div>
-                    <div style="overflow: hidden; flex: 1;">
-                        <div style="font-weight: 700; font-size: 0.88rem; color: var(--biru-malam); text-overflow: ellipsis; white-space: nowrap; overflow: hidden;" title="{{ $user?->nama_lengkap }}">
-                            {{ $user?->nama_lengkap ?? 'Administrator' }}
-                        </div>
-                        <div style="font-size: 0.72rem; color: var(--abu-teks); text-transform: capitalize;">
-                            {{ $user?->peran ?? 'Admin' }}
-                        </div>
+                    <div class="space-y-1 text-xs">
+                        <a href="{{ route('superadmin.dashboard') }}" 
+                           class="block px-3.5 py-2.5 rounded-xl transition-all {{ request()->routeIs('superadmin.dashboard*') ? 'bg-blue-600 text-white font-bold shadow-xs' : 'hover:bg-slate-100 hover:text-slate-900 text-slate-600 font-medium' }}">
+                            Control Panel Super Admin
+                        </a>
+                        <a href="{{ route('admin.dashboard') }}" 
+                           class="block px-3.5 py-2.5 rounded-xl transition-all {{ request()->routeIs('admin.dashboard*') ? 'bg-slate-900 text-white font-bold shadow-xs' : 'hover:bg-slate-100 hover:text-slate-900 text-slate-600 font-medium' }}">
+                            Dashboard Operasional Admin
+                        </a>
                     </div>
                 </div>
 
-                <form action="{{ route('keluar') }}" method="POST" style="margin-bottom: 0.85rem;">
-                    @csrf
-                    <button type="submit" class="tombol tombol-sekunder tombol-sm" style="width: 100%; font-size: 0.8rem; padding: 0.4rem 0.75rem;">
-                        Keluar
-                    </button>
-                </form>
+                <!-- GRUP 2: MANAJEMEN PENGGUNA -->
+                <div>
+                    <div class="text-[10px] uppercase font-extrabold tracking-wider text-slate-400 px-3 mb-1.5 flex items-center justify-between">
+                        <span>Manajemen Pengguna</span>
+                        <span class="text-[9px] px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 font-bold">CRUD</span>
+                    </div>
+                    <div class="space-y-1 text-xs">
+                        <a href="{{ route('superadmin.manajemen-pengguna') }}" 
+                           class="flex items-center justify-between px-3.5 py-2.5 rounded-xl transition-all {{ request()->routeIs('superadmin.manajemen-pengguna*') ? 'bg-blue-600 text-white font-bold shadow-xs' : 'hover:bg-slate-100 hover:text-slate-900 text-slate-600 font-medium' }}">
+                            <span>Kelola Seluruh Pengguna</span>
+                            <span class="text-[9px] px-1.5 py-0.5 rounded {{ request()->routeIs('superadmin.manajemen-pengguna*') ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600' }} font-bold">Master</span>
+                        </a>
+                        <a href="{{ route('admin.manajemen-asesi') }}" 
+                           class="block px-3.5 py-2.5 rounded-xl transition-all {{ (request()->routeIs('admin.manajemen-asesi*') || request()->routeIs('admin.verifikasi*') || request()->routeIs('admin.detail-asesi')) ? 'bg-blue-600 text-white font-bold shadow-xs' : 'hover:bg-slate-100 hover:text-slate-900 text-slate-600 font-medium' }}">
+                            Data & Verifikasi Asesi
+                        </a>
+                        <a href="{{ route('admin.manajemen-asesor') }}" 
+                           class="block px-3.5 py-2.5 rounded-xl transition-all {{ request()->routeIs('admin.manajemen-asesor*') ? 'bg-blue-600 text-white font-bold shadow-xs' : 'hover:bg-slate-100 hover:text-slate-900 text-slate-600 font-medium' }}">
+                            Data Master Asesor
+                        </a>
+                    </div>
+                </div>
+
+                <!-- GRUP 3: SKEMA & PERANGKAT UJI -->
+                <div>
+                    <div class="text-[10px] uppercase font-extrabold tracking-wider text-slate-400 px-3 mb-1.5">
+                        Skema & Perangkat Uji
+                    </div>
+                    <div class="space-y-1 text-xs">
+                        <a href="{{ route('admin.manajemen-skema') }}" 
+                           class="block px-3.5 py-2.5 rounded-xl transition-all {{ request()->routeIs('admin.manajemen-skema*') ? 'bg-blue-600 text-white font-bold shadow-xs' : 'hover:bg-slate-100 hover:text-slate-900 text-slate-600 font-medium' }}">
+                            Skema & Unit Kompetensi
+                        </a>
+                        <a href="{{ route('admin.manajemen-jadwal') }}" 
+                           class="block px-3.5 py-2.5 rounded-xl transition-all {{ request()->routeIs('admin.manajemen-jadwal*') ? 'bg-blue-600 text-white font-bold shadow-xs' : 'hover:bg-slate-100 hover:text-slate-900 text-slate-600 font-medium' }}">
+                            Jadwal Uji Asesmen
+                        </a>
+                        <a href="{{ route('admin.master-muk.index') }}" 
+                           class="block px-3.5 py-2.5 rounded-xl transition-all {{ request()->routeIs('admin.master-muk*') ? 'bg-blue-600 text-white font-bold shadow-xs' : 'hover:bg-slate-100 hover:text-slate-900 text-slate-600 font-medium' }}">
+                            Master MUK & Bank Soal
+                        </a>
+                    </div>
+                </div>
+
+                <!-- GRUP 4: DOKUMEN & MUTU BNSP -->
+                <div>
+                    <div class="text-[10px] uppercase font-extrabold tracking-wider text-slate-400 px-3 mb-1.5">
+                        Dokumen & Mutu BNSP
+                    </div>
+                    <div class="space-y-1 text-xs">
+                        <a href="{{ route('admin.dokumen.index') }}" 
+                           class="block px-3.5 py-2.5 rounded-xl transition-all {{ request()->routeIs('admin.dokumen*') ? 'bg-blue-600 text-white font-bold shadow-xs' : 'hover:bg-slate-100 hover:text-slate-900 text-slate-600 font-medium' }}">
+                            Pusat Dokumen & Legalitas
+                        </a>
+                        <a href="{{ route('dokumen-asesmen.index') }}" 
+                           class="block px-3.5 py-2.5 rounded-xl transition-all {{ request()->routeIs('dokumen-asesmen*') ? 'bg-blue-600 text-white font-bold shadow-xs' : 'hover:bg-slate-100 hover:text-slate-900 text-slate-600 font-medium' }}">
+                            Dokumen Asesmen Hub
+                        </a>
+                        <a href="{{ route('admin.laporan-kelulusan') }}" 
+                           class="block px-3.5 py-2.5 rounded-xl transition-all {{ request()->routeIs('admin.laporan-kelulusan*') ? 'bg-blue-600 text-white font-bold shadow-xs' : 'hover:bg-slate-100 hover:text-slate-900 text-slate-600 font-medium' }}">
+                            Laporan & Rekap Kelulusan
+                        </a>
+                        <a href="{{ route('admin.manajemen-pengumuman') }}" 
+                           class="block px-3.5 py-2.5 rounded-xl transition-all {{ request()->routeIs('admin.manajemen-pengumuman*') ? 'bg-blue-600 text-white font-bold shadow-xs' : 'hover:bg-slate-100 hover:text-slate-900 text-slate-600 font-medium' }}">
+                            Informasi & Pengumuman
+                        </a>
+                    </div>
+                </div>
+
+                <!-- GRUP 5: SISTEM & AUDIT -->
+                <div>
+                    <div class="text-[10px] uppercase font-extrabold tracking-wider text-slate-400 px-3 mb-1.5">
+                        Sistem & Keamanan
+                    </div>
+                    <div class="space-y-1 text-xs">
+                        <a href="{{ route('superadmin.log-aktivitas') }}" 
+                           class="block px-3.5 py-2.5 rounded-xl transition-all {{ request()->routeIs('superadmin.log-aktivitas*') ? 'bg-blue-600 text-white font-bold shadow-xs' : 'hover:bg-slate-100 hover:text-slate-900 text-slate-600 font-medium' }}">
+                            Audit Log Aktivitas
+                        </a>
+                        <a href="{{ route('superadmin.pengaturan-sistem') }}" 
+                           class="block px-3.5 py-2.5 rounded-xl transition-all {{ request()->routeIs('superadmin.pengaturan-sistem*') ? 'bg-blue-600 text-white font-bold shadow-xs' : 'hover:bg-slate-100 hover:text-slate-900 text-slate-600 font-medium' }}">
+                            Pengaturan Global LSP
+                        </a>
+                    </div>
+                </div>
+
             </div>
+
+            <!-- SIDEBAR FOOTER (USER PROFILE & LOGOUT, NO ICONS) -->
+            <div class="p-4 border-t border-slate-200/80 bg-slate-50/80">
+                <div class="flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-2.5 min-w-0">
+                        <div class="w-9 h-9 rounded-xl bg-blue-100 text-blue-800 font-extrabold text-xs flex items-center justify-center shrink-0 border border-blue-200">
+                            {{ strtoupper(substr($user?->nama_lengkap ?? 'SA', 0, 2)) }}
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <div class="font-bold text-xs text-slate-900 truncate" title="{{ $user?->nama_lengkap }}">
+                                {{ $user?->nama_lengkap ?? 'Super Admin' }}
+                            </div>
+                            <div class="text-[10px] text-blue-700 font-semibold">
+                                Super Administrator
+                            </div>
+                        </div>
+                    </div>
+                    <form action="{{ route('keluar') }}" method="POST">
+                        @csrf
+                        <button type="submit" class="px-2.5 py-1.5 rounded-lg text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition-colors" title="Keluar dari Akun">
+                            Keluar
+                        </button>
+                    </form>
+                </div>
+            </div>
+
         </aside>
 
-        <!-- KONTEN UTAMA DASBOR (ADMIN / SUPERADMIN) -->
-        <main class="konten-utama-dasbor animasi-fade">
-            <!-- TOPBAR GLOBAL -->
-            <header class="topbar-dasbor-global no-print flex items-center justify-between gap-4 mb-4 pb-3 border-b border-slate-200/80">
+        <!-- MAIN CONTENT WRAPPER -->
+        <div class="flex-1 lg:pl-72 flex flex-col min-h-screen">
+            
+            <!-- TOPBAR DESKTOP & MOBILE (NO ICONS) -->
+            <header class="sticky top-0 z-30 h-16 bg-white/95 backdrop-blur-md border-b border-slate-200 px-4 sm:px-6 lg:px-8 flex items-center justify-between no-print transition-all">
                 <div class="flex items-center gap-3">
-                    <button type="button" class="lg:hidden p-2 rounded-xl text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer" onclick="toggleSidebar()" aria-label="Buka Menu Sidebar">
-                        <i class="fa-solid fa-bars text-lg"></i>
+                    <button type="button" @click="sidebarOpen = true" class="lg:hidden px-3 py-1.5 rounded-xl border border-slate-200 text-slate-700 font-bold text-xs hover:bg-slate-100 transition-colors cursor-pointer">
+                        Menu
                     </button>
-                    <div class="flex items-center gap-2.5">
-                        <span class="font-bold text-slate-800 text-xs sm:text-sm">Control Panel LSP SMKN 1 Gunungputri</span>
-                        <span class="text-[10px] uppercase font-bold text-blue-600 bg-blue-50 px-1.5 py-0.2 rounded-md border border-blue-100">
-                            {{ $peran ?? 'Admin' }}
+                    <div class="flex items-center gap-2">
+                        <span class="font-bold text-slate-900 text-xs sm:text-sm">LSP SMKN 1 Gunungputri</span>
+                        <span class="text-slate-300 hidden sm:inline">&bull;</span>
+                        <span class="hidden sm:inline-block px-2.5 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200 text-[11px] font-bold">
+                            Super Admin Console &bull; Akses Penuh Sistem
                         </span>
                     </div>
                 </div>
 
-                <div class="flex items-center gap-2 sm:gap-3">
+                <div class="flex items-center gap-3">
+                    <a href="{{ route('beranda') }}" target="_blank" class="hidden sm:inline-block px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-600 hover:text-blue-700 hover:bg-blue-50 border border-slate-200 transition-colors">
+                        Website Publik
+                    </a>
+
                     <x-notification-bell />
 
-                    <div class="flex items-center gap-2 pl-2 border-l border-slate-200">
-                        <div class="w-8 h-8 rounded-full bg-blue-50 text-blue-700 border border-blue-200/70 flex items-center justify-center font-bold text-xs shrink-0">
-                            {{ strtoupper(substr($user?->nama_lengkap ?? 'A', 0, 2)) }}
+                    <div class="flex items-center gap-2.5 pl-3 border-l border-slate-200">
+                        <div class="w-8 h-8 rounded-xl bg-blue-50 text-blue-700 border border-blue-200 flex items-center justify-center font-bold text-xs shrink-0">
+                            {{ strtoupper(substr($user?->nama_lengkap ?? 'SA', 0, 2)) }}
                         </div>
-                        <div class="hidden md:block text-left leading-tight max-w-[150px]">
-                            <div class="font-semibold text-xs text-slate-800 truncate" title="{{ $user?->nama_lengkap }}">
-                                {{ $user?->nama_lengkap ?? 'Administrator' }}
+                        <div class="hidden md:block text-left leading-tight">
+                            <div class="font-bold text-xs text-slate-900 truncate max-w-[140px]" title="{{ $user?->nama_lengkap }}">
+                                {{ $user?->nama_lengkap ?? 'Super Admin' }}
                             </div>
-                            <div class="text-[10px] text-slate-500 capitalize">
-                                {{ $user?->peran ?? 'Admin' }}
-                            </div>
+                            <div class="text-[10px] text-blue-700 font-semibold">Super Administrator</div>
                         </div>
                     </div>
                 </div>
             </header>
 
-            <x-assessment-alert-banner />
+            <!-- MAIN CONTAINER -->
+            <main class="flex-1 p-4 sm:p-6 lg:p-8">
+                <x-assessment-alert-banner />
+                @yield('konten')
+            </main>
 
-            @yield('konten')
-
-            <!-- FOOTER DASBOR RESMI (NO-PRINT) -->
-            <footer class="footer-dasbor no-print" style="margin-top: 3.5rem; padding: 1.5rem 0 0.5rem 0; border-top: 1px solid var(--biru-soft); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; font-size: 0.82rem; color: var(--abu-teks);">
+            <!-- FOOTER -->
+            <footer class="no-print py-4 px-6 border-t border-slate-200 bg-white text-xs text-slate-500 flex flex-col sm:flex-row justify-between items-center gap-2">
                 <div>
-                    &copy; {{ date('Y') }} <strong>{{ config('lsp.nama_lsp', 'LSP-P1 SMKN 1 Gunungputri') }}</strong> &bull; Lisensi BNSP: <strong style="color: var(--biru-malam);">{{ config('lsp.nomor_lisensi', 'BNSP-LSP-2629-ID') }}</strong> (SK: {{ config('lsp.no_sk_lisensi', 'KEP.1215/BNSP/V/2025') }})
+                    &copy; {{ date('Y') }} <strong>{{ config('lsp.nama_lsp', 'LSP SMKN 1 Gunungputri') }}</strong> &bull; Lisensi BNSP: <strong class="text-slate-700">{{ config('lsp.nomor_lisensi', 'BNSP-LSP-2629-ID') }}</strong>
+                </div>
+                <div class="text-[11px] text-slate-400">
+                    Sistem Manajemen Sertifikasi Terakreditasi BNSP
                 </div>
             </footer>
-        </main>
+        </div>
+
     </div>
 @endif
 
