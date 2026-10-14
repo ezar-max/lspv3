@@ -44,80 +44,49 @@
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <!-- 1. Total Asesi -->
         <a href="{{ route('admin.manajemen-asesi', ['tab' => 'data-asesi']) }}" 
-           class="group bg-white rounded-2xl border p-4.5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md cursor-pointer block {{ ($tab ?? 'data-asesi') === 'data-asesi' && empty($skemaFilter) ? 'border-blue-400 ring-2 ring-blue-500/10 shadow-xs' : 'border-slate-200/90 shadow-2xs' }}">
-            <div class="flex items-center justify-between">
-                <div>
-                    <div class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Total Asesi Terdaftar</div>
-                    <div class="text-2xl sm:text-3xl font-black text-slate-900 mt-1 group-hover:text-blue-600 transition-colors">
-                        {{ number_format($totalAsesi ?? 0) }}
-                    </div>
-                    <div class="text-[11px] text-slate-400 mt-1 flex items-center gap-1">
-                        <span>Database master akun</span>
-                    </div>
-                </div>
-                <div class="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center text-xl font-bold group-hover:scale-105 group-hover:bg-blue-600 group-hover:text-white transition-all">
-                    <i class="fa-solid fa-users"></i>
-                </div>
+           class="bg-white p-4 rounded-xl border {{ ($tab ?? 'data-asesi') === 'data-asesi' && empty($skemaFilter) ? 'border-blue-500 ring-1 ring-blue-500/20 bg-blue-50/10' : 'border-slate-200/80 hover:border-slate-300' }} shadow-xs flex items-center justify-between transition-all block group cursor-pointer">
+            <div>
+                <span class="text-xs text-slate-500 font-medium block">Total Asesi Terdaftar</span>
+                <div class="text-2xl font-bold text-slate-800 mt-1">{{ number_format($totalAsesi ?? 0) }}</div>
+            </div>
+            <div class="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                <i class="fa-solid fa-users text-base"></i>
             </div>
         </a>
 
         <!-- 2. Belum Mendaftar Skema -->
         <a href="{{ route('admin.manajemen-asesi', ['tab' => 'data-asesi', 'skema' => 'belum_daftar']) }}" 
-           class="group bg-white rounded-2xl border p-4.5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md cursor-pointer block {{ ($skemaFilter ?? '') === 'belum_daftar' ? 'border-amber-400 ring-2 ring-amber-500/10 shadow-xs' : 'border-slate-200/90 shadow-2xs' }}">
-            <div class="flex items-center justify-between">
-                <div>
-                    <div class="text-[11px] font-bold text-amber-700 uppercase tracking-wider">Belum Daftar Skema</div>
-                    <div class="text-2xl sm:text-3xl font-black text-amber-600 mt-1">
-                        {{ number_format($totalBelumDaftar ?? 0) }}
-                    </div>
-                    <div class="text-[11px] text-slate-400 mt-1">
-                        <span>Belum ajukan APL-01</span>
-                    </div>
-                </div>
-                <div class="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 border border-amber-100 flex items-center justify-center text-xl font-bold group-hover:scale-105 group-hover:bg-amber-500 group-hover:text-white transition-all">
-                    <i class="fa-solid fa-user-clock"></i>
-                </div>
+           class="bg-white p-4 rounded-xl border {{ ($skemaFilter ?? '') === 'belum_daftar' ? 'border-amber-500 ring-1 ring-amber-500/20 bg-amber-50/10' : 'border-slate-200/80 hover:border-slate-300' }} shadow-xs flex items-center justify-between transition-all block group cursor-pointer">
+            <div>
+                <span class="text-xs text-amber-700 font-medium block">Belum Daftar Skema</span>
+                <div class="text-2xl font-bold text-amber-600 mt-1">{{ number_format($totalBelumDaftar ?? 0) }}</div>
+            </div>
+            <div class="w-10 h-10 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                <i class="fa-solid fa-user-clock text-base"></i>
             </div>
         </a>
 
         <!-- 3. Menunggu Verifikasi -->
         <a href="{{ route('admin.manajemen-asesi', ['tab' => 'verifikasi', 'status' => 'diajukan']) }}" 
-           class="group bg-white rounded-2xl border p-4.5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md cursor-pointer block {{ ($tab ?? '') === 'verifikasi' && ($statusVerifikasi ?? '') === 'diajukan' ? 'border-amber-400 ring-2 ring-amber-500/10 shadow-xs' : 'border-slate-200/90 shadow-2xs' }}">
-            <div class="flex items-center justify-between">
-                <div>
-                    <div class="text-[11px] font-bold text-amber-700 uppercase tracking-wider">Menunggu Verifikasi</div>
-                    <div class="text-2xl sm:text-3xl font-black text-amber-600 mt-1 flex items-center gap-2">
-                        <span>{{ number_format($totalPendingVerifikasi ?? 0) }}</span>
-                        @if(($totalPendingVerifikasi ?? 0) > 0)
-                            <span class="w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping inline-block"></span>
-                        @endif
-                    </div>
-                    <div class="text-[11px] text-slate-400 mt-1">
-                        <span>Berkas permohonan baru</span>
-                    </div>
-                </div>
-                <div class="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 border border-amber-100 flex items-center justify-center text-xl font-bold group-hover:scale-105 group-hover:bg-amber-500 group-hover:text-white transition-all">
-                    <i class="fa-solid fa-hourglass-half"></i>
-                </div>
+           class="bg-white p-4 rounded-xl border {{ ($tab ?? '') === 'verifikasi' && ($statusVerifikasi ?? '') === 'diajukan' ? 'border-amber-500 ring-1 ring-amber-500/20 bg-amber-50/10' : 'border-slate-200/80 hover:border-slate-300' }} shadow-xs flex items-center justify-between transition-all block group cursor-pointer">
+            <div>
+                <span class="text-xs text-amber-700 font-medium block">Menunggu Verifikasi</span>
+                <div class="text-2xl font-bold text-amber-600 mt-1">{{ number_format($totalPendingVerifikasi ?? 0) }}</div>
+            </div>
+            <div class="w-10 h-10 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                <i class="fa-solid fa-hourglass-half text-base"></i>
             </div>
         </a>
 
         <!-- 4. Berkas Terverifikasi -->
         <a href="{{ route('admin.manajemen-asesi', ['tab' => 'verifikasi', 'status' => 'diverifikasi']) }}" 
-           class="group bg-white rounded-2xl border p-4.5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md cursor-pointer block {{ ($tab ?? '') === 'verifikasi' && ($statusVerifikasi ?? '') === 'diverifikasi' ? 'border-emerald-400 ring-2 ring-emerald-500/10 shadow-xs' : 'border-slate-200/90 shadow-2xs' }}">
-            <div class="flex items-center justify-between">
-                <div>
-                    <div class="text-[11px] font-bold text-emerald-700 uppercase tracking-wider">Berkas Terverifikasi</div>
-                    <div class="text-2xl sm:text-3xl font-black text-emerald-600 mt-1">
-                        {{ number_format($totalTerverifikasi ?? 0) }}
-                    </div>
-                    <div class="text-[11px] text-slate-400 mt-1">
-                        <span>Memenuhi syarat APL-01</span>
-                    </div>
-                </div>
-                <div class="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center text-xl font-bold group-hover:scale-105 group-hover:bg-emerald-600 group-hover:text-white transition-all">
-                    <i class="fa-solid fa-circle-check"></i>
-                </div>
+           class="bg-white p-4 rounded-xl border {{ ($tab ?? '') === 'verifikasi' && ($statusVerifikasi ?? '') === 'diverifikasi' ? 'border-emerald-500 ring-1 ring-emerald-500/20 bg-emerald-50/10' : 'border-slate-200/80 hover:border-slate-300' }} shadow-xs flex items-center justify-between transition-all block group cursor-pointer">
+            <div>
+                <span class="text-xs text-emerald-700 font-medium block">Berkas Terverifikasi</span>
+                <div class="text-2xl font-bold text-emerald-600 mt-1">{{ number_format($totalTerverifikasi ?? 0) }}</div>
+            </div>
+            <div class="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                <i class="fa-solid fa-circle-check text-base"></i>
             </div>
         </a>
     </div>

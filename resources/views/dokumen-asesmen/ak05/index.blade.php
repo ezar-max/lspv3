@@ -74,7 +74,7 @@
                                 {{ $rep->skema ? $rep->skema->nama_skema : '-' }}
                             </td>
                             <td class="py-2.5 px-3 text-slate-600">
-                                {{ $rep->jadwal ? $rep->jadwal->kode_jadwal . ' (' . $rep->jadwal->tanggal_uji->format('d/m/Y') . ')' : 'Seluruh Sesi' }}
+                                {{ $rep->jadwal ? $rep->jadwal->kode_jadwal . ' (' . ($rep->jadwal->tanggal_uji ? \Carbon\Carbon::parse($rep->jadwal->tanggal_uji)->format('d/m/Y') : '-') . ')' : 'Seluruh Sesi' }}
                             </td>
                             <td class="py-2.5 px-3 text-slate-800">
                                 {{ $rep->asesor ? $rep->asesor->nama_lengkap : '-' }}
@@ -89,7 +89,7 @@
                                 <span class="text-slate-400 text-[10px] ml-1">/ {{ $rep->total_asesi }} Total</span>
                             </td>
                             <td class="py-2.5 px-3 text-slate-500 whitespace-nowrap">
-                                {{ $rep->tanggal_laporan ? $rep->tanggal_laporan->format('d/m/Y') : '-' }}
+                                {{ $rep->tanggal_laporan ? \Carbon\Carbon::parse($rep->tanggal_laporan)->format('d/m/Y') : '-' }}
                             </td>
                             <td class="py-2.5 px-3 whitespace-nowrap">
                                 <span class="px-2 py-0.5 rounded-full border text-[10px] font-bold uppercase tracking-wider {{ $rep->isFinalized() ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200' }}">
@@ -144,7 +144,7 @@
                         <option value="">Semua Jadwal / Peserta Skema Saya</option>
                         @foreach($jadwals as $jd)
                             <option value="{{ $jd->id }}">
-                                {{ $jd->kode_jadwal }} &bull; {{ $jd->tanggal_uji->format('d/m/Y') }} ({{ $jd->nama_tuk }})
+                                {{ $jd->kode_jadwal }} &bull; {{ $jd->tanggal_uji ? \Carbon\Carbon::parse($jd->tanggal_uji)->format('d/m/Y') : '-' }} ({{ $jd->nama_tuk }})
                             </option>
                         @endforeach
                     </select>

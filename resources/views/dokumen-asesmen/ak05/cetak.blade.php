@@ -106,7 +106,7 @@
             </tr>
             <tr>
                 <td style="font-weight: bold; background: #f8fafc;">Tanggal Pelaksanaan Laporan</td>
-                <td>{{ $ak05->tanggal_laporan ? $ak05->tanggal_laporan->format('d/m/Y') : date('d/m/Y') }}</td>
+                <td>{{ $ak05->tanggal_laporan ? \Carbon\Carbon::parse($ak05->tanggal_laporan)->format('d/m/Y') : date('d/m/Y') }}</td>
             </tr>
         </table>
 
@@ -220,7 +220,7 @@
                     </div>
                     <div style="font-size: 7pt; color: #475569;">
                         No. Reg: {{ $ak05->asesor->nomor_registrasi ?? 'MET.000.004455' }} &bull;
-                        {{ $ak05->tanggal_ttd_asesor ? $ak05->tanggal_ttd_asesor->format('d/m/Y') : date('d/m/Y') }}
+                        {{ $ak05->tanggal_ttd_asesor ? \Carbon\Carbon::parse($ak05->tanggal_ttd_asesor)->format('d/m/Y') : date('d/m/Y') }}
                     </div>
                 </td>
             </tr>

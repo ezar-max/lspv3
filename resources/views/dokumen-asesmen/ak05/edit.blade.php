@@ -298,7 +298,7 @@
                     <div class="text-xs space-y-0.5">
                         <div class="font-bold text-slate-800">{{ $ak05->asesor->nama_lengkap ?? '-' }}</div>
                         <div class="text-slate-500 font-mono text-[11px]">No. Reg: {{ $ak05->asesor->nomor_registrasi ?? 'MET.000.004455' }}</div>
-                        <div class="text-slate-400 text-[10px]">Tgl TTD: {{ $ak05->tanggal_ttd_asesor ? $ak05->tanggal_ttd_asesor->format('d/m/Y H:i') : '-' }}</div>
+                        <div class="text-slate-400 text-[10px]">Tgl TTD: {{ $ak05->tanggal_ttd_asesor ? \Carbon\Carbon::parse($ak05->tanggal_ttd_asesor)->format('d/m/Y H:i') : '-' }}</div>
                     </div>
                 </div>
 
