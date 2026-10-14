@@ -186,30 +186,28 @@
     $isWaitingForAdmin = ($mapa02->status_mapa ?? '') === 'menunggu_validasi';
     $isAdminCompleted = $isConfirmed && $isSignedByAdmin && empty($asesorTtd);
 
-    if (($isAdminAuthoring || $isAdminReviewing) && auth()->check()) {
+    if ($isAdmin) {
         $pengesahUser = auth()->user();
         $pengesahNama = $pengesahUser->nama_lengkap ?? 'Administrator LSP';
         $asesorMet = $pengesahUser->nomor_registrasi ?? '-';
         $profileTtd = null;
-    } elseif ($isAdminCompleted && $mapa02?->asesor) {
-        $pengesahUser = $mapa02->asesor;
-        $pengesahNama = $pengesahUser->nama_lengkap ?? 'Administrator LSP';
-        $asesorMet = $pengesahUser->nomor_registrasi ?? '-';
-        $profileTtd = null;
+        $asesorUser = $mapa02?->asesor ?? (isset($pendaftaran) ? $pendaftaran->asesor : null);
+        $asesorNama = $asesorUser?->nama_lengkap ?? 'Asesor Penguji';
     } else {
         // Mode Asesor (tetap gunakan data Asesor, jangan diubah)
         $pengesahUser = $pendaftaran->asesor ?? auth()->user();
         $pengesahNama = $pengesahUser->nama_lengkap ?? auth()->user()->nama_lengkap;
         $asesorMet = $pengesahUser->nomor_registrasi ?? auth()->user()->nomor_registrasi ?? 'MET.000.001234';
         $profileTtd = $pendaftaran->tanda_tangan_asesor ?? null;
+        $asesorNama = $pengesahNama;
     }
 
     $savedPeta = $mapa02->matriks_peta ?? [];
     $isConfigured = !empty($mapa02->exists) && $isConfirmed;
     $displayTtd = $isConfirmed ? ($adminTtd ?: $asesorTtd) : ($asesorTtd ?: null);
-    $signatureCanvasId = ($isAdminAuthoring || $isAdminReviewing) ? 'canvasMapa02Admin' : 'canvasMapa02Asesor';
-    $signatureInputId = ($isAdminAuthoring || $isAdminReviewing) ? 'inputTtdAdmin' : 'inputTtdAsesor';
-    $signatureTimeId = ($isAdminAuthoring || $isAdminReviewing) ? 'adminSignatureTime' : 'asesorSignatureTime';
+    $signatureCanvasId = $isAdmin ? 'canvasMapa02Admin' : 'canvasMapa02Asesor';
+    $signatureInputId = $isAdmin ? 'inputTtdAdmin' : 'inputTtdAsesor';
+    $signatureTimeId = $isAdmin ? 'adminSignatureTime' : 'asesorSignatureTime';
 @endphp
 
 <div class="max-w-6xl mx-auto px-3 sm:px-6 lg:px-8 py-3.5 space-y-4 mapa02-container" x-data="mapa02App()" x-cloak>
@@ -577,7 +575,7 @@
             <div class="bg-white rounded-xl border border-slate-200/90 shadow-2xs p-3.5 sm:p-4 space-y-2.5">
                 <div class="flex items-center justify-between border-b border-slate-100 pb-1.5">
                     <h2 class="font-bold text-xs sm:text-sm text-slate-800">
-                        {{ $isAdminAuthoring ? 'Pengesahan Administrator LSP' : ($isAdminReviewing ? 'Tinjauan dan Pengesahan Administrator LSP' : ($isAdminCompleted ? 'Tanda Tangan Administrator LSP' : 'Pengesahan Asesor Penguji')) }}
+                        {{ $isAdmin ? ($isAdminReviewing ? 'Tinjauan dan Pengesahan Administrator LSP' : 'Pengesahan Administrator LSP') : 'Pengesahan Asesor Penguji' }}
                     </h2>
                     @if($isConfirmed)
                         <span class="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 font-bold text-[10px]">✓ Telah Disahkan</span>
@@ -586,68 +584,289 @@
                     @endif
                 </div>
 
-                @if($isAdminReviewing)
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div class="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                            <div class="text-xs font-bold text-slate-700 mb-2">Tanda Tangan Asesor · {{ $pengesahNama }}</div>
-                            <img src="{{ asset($asesorTtd) }}" alt="Tanda tangan asesor" class="max-h-24 max-w-full object-contain mx-auto">
-                            @if($mapa02->tanggal_ttd_asesor)
-                                <div class="text-center text-[10px] text-slate-500 mt-1">{{ $mapa02->tanggal_ttd_asesor->timezone('Asia/Jakarta')->format('d/m/Y H:i:s') }} WIB</div>
+                @if($isAdmin)
+                    {{-- ================= MODE ADMIN (ADMINISTRATOR LSP) ================= --}}
+                    @if(!empty($asesorTtd))
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <!-- Kolom TTD Asesor (Read-only) -->
+                            <div class="rounded-xl border border-slate-200 bg-slate-50/70 p-3.5 space-y-2 flex flex-col justify-between">
+                                <div class="flex items-center justify-between border-b border-slate-200/60 pb-1.5">
+                                    <span class="text-xs font-bold text-slate-700">Tanda Tangan Asesor</span>
+                                    <span class="px-2 py-0.5 rounded-md bg-slate-200 text-slate-700 text-[10px] font-semibold">Tervalidasi</span>
+                                </div>
+                                <div class="p-2 bg-white rounded-lg border border-slate-200 text-center flex items-center justify-center min-h-[95px]">
+                                    <img src="{{ asset($asesorTtd) }}" alt="Tanda tangan asesor" class="max-h-20 max-w-full object-contain mx-auto">
+                                </div>
+                                <div class="text-[10px] text-slate-500">
+                                    <span class="font-semibold text-slate-700 block">{{ $asesorNama }}</span>
+                                    @if($mapa02->tanggal_ttd_asesor)
+                                        <span class="text-slate-400">{{ $mapa02->tanggal_ttd_asesor->timezone('Asia/Jakarta')->format('d/m/Y H:i:s') }} WIB</span>
+                                    @endif
+                                </div>
+                                <input type="hidden" name="tanda_tangan_asesor" id="inputTtdAsesor" value="{{ $asesorTtd }}">
+                            </div>
+
+                            <!-- Kolom TTD Admin -->
+                            <div class="rounded-xl border border-emerald-200/80 bg-emerald-50/30 p-3.5 space-y-2.5 flex flex-col justify-between">
+                                <div class="space-y-2">
+                                    <div class="flex items-center justify-between border-b border-emerald-200/60 pb-1.5">
+                                        <span class="text-xs font-bold text-slate-700">Tanda Tangan Admin · {{ auth()->user()->nama_lengkap }}</span>
+                                        @if(!empty($adminTtd))
+                                            <span class="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-[10px] font-bold" x-show="!isRedrawingAdminSig">✓ Tersimpan</span>
+                                        @endif
+                                    </div>
+
+                                    <!-- Tampilan Tanda Tangan Tersimpan -->
+                                    @if(!empty($adminTtd))
+                                        <div x-show="!isRedrawingAdminSig" class="space-y-2">
+                                            <div class="p-2 bg-white rounded-lg border border-emerald-200 text-center flex items-center justify-center min-h-[95px] shadow-2xs">
+                                                <img src="{{ asset($adminTtd) }}" alt="Tanda tangan admin tersimpan" class="max-h-20 max-w-full object-contain mx-auto">
+                                            </div>
+                                            <div class="flex items-center justify-between pt-0.5">
+                                                <span class="text-[10px] text-slate-500">
+                                                    {{ $mapa02->tanggal_ttd_admin ? 'Disahkan: ' . $mapa02->tanggal_ttd_admin->timezone('Asia/Jakarta')->format('d/m/Y H:i:s') . ' WIB' : 'Tanda tangan tersimpan' }}
+                                                </span>
+                                                <button type="button" @click="startRedrawAdmin()" x-show="isEditMode" class="px-2.5 py-1 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold cursor-pointer transition shadow-2xs flex items-center gap-1">
+                                                    <svg class="w-3 h-3 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                                                    <span>Ubah TTD</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    @endif
+
+                                    <!-- Canvas Pad saat Ubah / Belum Ada TTD -->
+                                    <div x-show="isRedrawingAdminSig" class="space-y-2" style="display: none;">
+                                        <div class="flex items-center justify-between text-[11px] text-slate-600">
+                                            <span>Goreskan tanda tangan pada area di bawah:</span>
+                                            <span class="text-[10px] text-slate-400">Mouse / Sentuh</span>
+                                        </div>
+                                        <div class="relative rounded-lg border-2 border-dashed border-emerald-300 bg-white overflow-hidden shadow-2xs group focus-within:border-emerald-500 transition-colors">
+                                            <canvas id="canvasMapa02Admin" class="w-full h-28 touch-none cursor-crosshair block bg-transparent"></canvas>
+                                            <div x-show="!hasDrawn" class="absolute inset-0 pointer-events-none flex items-center justify-center text-slate-300 text-xs italic select-none">
+                                                Area Gores Tanda Tangan
+                                            </div>
+                                        </div>
+                                        <div class="flex items-center justify-between pt-0.5">
+                                            <span id="adminSignatureTime" class="text-[10px]">
+                                                <span x-show="hasDrawn" class="text-emerald-700 font-medium">✓ Siap disimpan</span>
+                                                <span x-show="!hasDrawn" class="text-slate-400 italic">Belum digoreskan</span>
+                                            </span>
+                                            <div class="flex items-center gap-1.5">
+                                                <button type="button" @click="clearAdminCanvas()" class="px-2.5 py-1 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold cursor-pointer transition shadow-2xs">
+                                                    Bersihkan
+                                                </button>
+                                                @if(!empty($adminTtd))
+                                                    <button type="button" @click="cancelRedrawAdmin()" class="px-2.5 py-1 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-600 text-xs font-semibold cursor-pointer transition shadow-2xs">
+                                                        Batal
+                                                    </button>
+                                                @endif
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <input type="hidden" name="tanda_tangan_admin" id="inputTtdAdmin" value="{{ $adminTtd ?? '' }}">
+                                </div>
+
+                                @if($isAdminReviewing)
+                                    <label class="flex items-start gap-2 text-[11px] text-emerald-900 pt-2 border-t border-emerald-200/60">
+                                        <input type="checkbox" id="konfirmasiPemeriksaanMapa02" name="konfirmasi_pemeriksaan" value="1" class="mt-0.5 rounded border-emerald-300">
+                                        <span>Saya telah memeriksa isi FR.MAPA.02 dan menyatakan pemetaan instrumen sesuai.</span>
+                                    </label>
+                                @endif
+                            </div>
+                        </div>
+                    @else
+                        {{-- Mode Admin Mandiri (Tanpa Asesor) --}}
+                        <div class="rounded-xl border border-emerald-200/80 bg-emerald-50/30 p-3.5 space-y-2.5">
+                            <div class="flex items-center justify-between border-b border-emerald-200/60 pb-1.5">
+                                <span class="text-xs font-bold text-slate-700">Tanda Tangan Admin · {{ auth()->user()->nama_lengkap }}</span>
+                                @if(!empty($adminTtd))
+                                    <span class="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-[10px] font-bold" x-show="!isRedrawingAdminSig">✓ Tersimpan</span>
+                                @endif
+                            </div>
+
+                            <!-- Tampilan Tanda Tangan Tersimpan -->
+                            @if(!empty($adminTtd))
+                                <div x-show="!isRedrawingAdminSig" class="space-y-2">
+                                    <div class="p-2 bg-white rounded-lg border border-emerald-200 text-center flex items-center justify-center min-h-[95px] shadow-2xs">
+                                        <img src="{{ asset($adminTtd) }}" alt="Tanda tangan admin tersimpan" class="max-h-24 max-w-full object-contain mx-auto">
+                                    </div>
+                                    <div class="flex items-center justify-between pt-0.5">
+                                        <span class="text-[10px] text-slate-500">
+                                            {{ $mapa02->tanggal_ttd_admin ? 'Disahkan: ' . $mapa02->tanggal_ttd_admin->timezone('Asia/Jakarta')->format('d/m/Y H:i:s') . ' WIB' : 'Tanda tangan tersimpan' }}
+                                        </span>
+                                        <button type="button" @click="startRedrawAdmin()" x-show="isEditMode" class="px-2.5 py-1 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold cursor-pointer transition shadow-2xs flex items-center gap-1">
+                                            <svg class="w-3 h-3 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                                            <span>Ubah TTD</span>
+                                        </button>
+                                    </div>
+                                </div>
                             @endif
-                        </div>
-                        <div class="rounded-lg border border-emerald-200 bg-emerald-50/50 p-3 space-y-2">
-                            <div class="text-xs font-bold text-slate-700">Tanda Tangan Admin · {{ auth()->user()->nama_lengkap }}</div>
-                            <canvas id="canvasMapa02Admin" width="900" height="220" class="w-full h-28 rounded-md border border-dashed border-slate-300 bg-white touch-none"></canvas>
-                            <div id="adminSignatureTime" class="text-[10px] text-slate-500">{{ $adminTtd && $mapa02->tanggal_ttd_admin ? 'Tersimpan: ' . $mapa02->tanggal_ttd_admin->timezone('Asia/Jakarta')->format('d/m/Y H:i:s') . ' WIB' : 'Belum ditandatangani.' }}</div>
+
+                            <!-- Canvas Pad saat Ubah / Belum Ada TTD -->
+                            <div x-show="isRedrawingAdminSig" class="space-y-2" style="display: none;">
+                                <div class="flex items-center justify-between text-[11px] text-slate-600">
+                                    <span>Goreskan tanda tangan pada area di bawah:</span>
+                                    <span class="text-[10px] text-slate-400">Mouse / Sentuh</span>
+                                </div>
+                                <div class="relative rounded-lg border-2 border-dashed border-emerald-300 bg-white overflow-hidden shadow-2xs group focus-within:border-emerald-500 transition-colors">
+                                    <canvas id="canvasMapa02Admin" class="w-full h-28 touch-none cursor-crosshair block bg-transparent"></canvas>
+                                    <div x-show="!hasDrawn" class="absolute inset-0 pointer-events-none flex items-center justify-center text-slate-300 text-xs italic select-none">
+                                        Area Gores Tanda Tangan
+                                    </div>
+                                </div>
+                                <div class="flex items-center justify-between pt-0.5">
+                                    <span id="adminSignatureTime" class="text-[10px]">
+                                        <span x-show="hasDrawn" class="text-emerald-700 font-medium">✓ Siap disimpan</span>
+                                        <span x-show="!hasDrawn" class="text-slate-400 italic">Belum digoreskan</span>
+                                    </span>
+                                    <div class="flex items-center gap-1.5">
+                                        <button type="button" @click="clearAdminCanvas()" class="px-2.5 py-1 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold cursor-pointer transition shadow-2xs">
+                                            Bersihkan
+                                        </button>
+                                        @if(!empty($adminTtd))
+                                            <button type="button" @click="cancelRedrawAdmin()" class="px-2.5 py-1 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-600 text-xs font-semibold cursor-pointer transition shadow-2xs">
+                                                Batal
+                                            </button>
+                                        @endif
+                                    </div>
+                                </div>
+                            </div>
+
                             <input type="hidden" name="tanda_tangan_admin" id="inputTtdAdmin" value="{{ $adminTtd ?? '' }}">
-                            <input type="hidden" name="tanda_tangan_asesor" value="{{ $asesorTtd }}">
-                            <label class="flex items-start gap-2 text-[11px] text-emerald-900">
-                                <input type="checkbox" id="konfirmasiPemeriksaanMapa02" name="konfirmasi_pemeriksaan" value="1" class="mt-0.5 rounded border-emerald-300">
-                                <span>Saya telah memeriksa isi FR.MAPA.02 dan menyatakan pemetaan instrumen sesuai.</span>
-                            </label>
-                            <button type="button" @click="clearCanvas()" class="px-3 py-1.5 rounded-md border border-slate-300 bg-white text-xs font-semibold">Hapus TTD Admin</button>
+                            <input type="hidden" name="tanda_tangan_asesor" id="inputTtdAsesor" value="">
                         </div>
-                    </div>
-                @elseif($isAdminAuthoring)
-                    <div class="max-w-2xl rounded-lg border border-emerald-200 bg-emerald-50/50 p-3 space-y-2">
-                        <div class="text-xs font-bold text-slate-700">Tanda Tangan Admin · {{ auth()->user()->nama_lengkap }}</div>
-                        <canvas id="canvasMapa02Admin" width="900" height="220" class="w-full h-28 rounded-md border border-dashed border-slate-300 bg-white touch-none"></canvas>
-                        <div id="adminSignatureTime" class="text-[10px] text-slate-500">{{ $adminTtd && $mapa02->tanggal_ttd_admin ? 'Tersimpan: ' . $mapa02->tanggal_ttd_admin->timezone('Asia/Jakarta')->format('d/m/Y H:i:s') . ' WIB' : 'Belum ditandatangani.' }}</div>
-                        <input type="hidden" name="tanda_tangan_admin" id="inputTtdAdmin" value="{{ $adminTtd ?? '' }}">
-                        <button type="button" @click="clearCanvas()" class="px-3 py-1.5 rounded-md border border-slate-300 bg-white text-xs font-semibold">Hapus TTD Admin</button>
-                    </div>
-                @elseif($isAdminCompleted)
-                    <div class="rounded-lg border border-emerald-200 bg-emerald-50/50 p-3">
-                        <div class="text-xs font-bold text-slate-700 mb-2">Administrator · {{ $pengesahNama }}</div>
-                        <img src="{{ asset($adminTtd) }}" alt="Tanda tangan admin" class="max-h-24 max-w-full object-contain">
-                        @if($mapa02->tanggal_ttd_admin)
-                            <div class="text-[10px] text-slate-500 mt-1">{{ $mapa02->tanggal_ttd_admin->timezone('Asia/Jakarta')->format('d/m/Y H:i:s') }} WIB</div>
-                        @endif
-                    </div>
-                @elseif($isConfirmed && $asesorTtd && $adminTtd)
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div class="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                            <div class="text-xs font-bold text-slate-700 mb-2">Tanda Tangan Asesor · {{ $pengesahNama }}</div>
-                            <img src="{{ asset($asesorTtd) }}" alt="Tanda tangan asesor" class="max-h-24 max-w-full object-contain mx-auto">
-                            @if($mapa02->tanggal_ttd_asesor)<div class="text-center text-[10px] text-slate-500 mt-1">{{ $mapa02->tanggal_ttd_asesor->timezone('Asia/Jakarta')->format('d/m/Y H:i:s') }} WIB</div>@endif
-                        </div>
-                        <div class="rounded-lg border border-emerald-200 bg-emerald-50/50 p-3">
-                            <div class="text-xs font-bold text-slate-700 mb-2">Tanda Tangan Admin</div>
-                            <img src="{{ asset($adminTtd) }}" alt="Tanda tangan admin" class="max-h-24 max-w-full object-contain mx-auto">
-                            @if($mapa02->tanggal_ttd_admin)<div class="text-center text-[10px] text-slate-500 mt-1">{{ $mapa02->tanggal_ttd_admin->timezone('Asia/Jakarta')->format('d/m/Y H:i:s') }} WIB</div>@endif
-                        </div>
-                    </div>
+                    @endif
                 @else
-                    <div class="max-w-2xl rounded-lg border border-indigo-200 bg-indigo-50/50 p-3 space-y-2">
-                        <div class="text-xs font-bold text-slate-700">Tanda Tangan Asesor · {{ $pengesahNama }} · {{ $asesorMet }}</div>
-                        @if($asesorTtd)
-                            <img src="{{ asset($asesorTtd) }}" alt="Tanda tangan asesor tersimpan" class="max-h-16 max-w-full object-contain">
-                        @endif
-                        <canvas id="canvasMapa02Asesor" width="900" height="220" class="w-full h-28 rounded-md border border-dashed border-slate-300 bg-white touch-none"></canvas>
-                        <div id="asesorSignatureTime" class="text-[10px] text-slate-500">{{ $asesorTtd && $mapa02->tanggal_ttd_asesor ? 'Tersimpan: ' . $mapa02->tanggal_ttd_asesor->timezone('Asia/Jakarta')->format('d/m/Y H:i:s') . ' WIB' : 'Belum ditandatangani.' }}</div>
-                        <input type="hidden" name="tanda_tangan_asesor" id="inputTtdAsesor" value="{{ $asesorTtd ?? '' }}">
-                        <button type="button" @click="clearCanvas()" class="px-3 py-1.5 rounded-md border border-slate-300 bg-white text-xs font-semibold">Hapus TTD Asesor</button>
-                    </div>
+                    {{-- ================= MODE ASESOR ================= --}}
+                    @if($isConfirmed && $asesorTtd && $adminTtd)
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <!-- Kolom TTD Asesor -->
+                            <div class="rounded-xl border border-indigo-200/80 bg-indigo-50/30 p-3.5 space-y-2.5">
+                                <div class="flex items-center justify-between border-b border-indigo-200/60 pb-1.5">
+                                    <span class="text-xs font-bold text-slate-700">Tanda Tangan Asesor · {{ $pengesahNama }}</span>
+                                    <span class="px-2 py-0.5 rounded-md bg-indigo-100 text-indigo-800 text-[10px] font-bold" x-show="!isRedrawingAsesorSig">✓ Tersimpan</span>
+                                </div>
+
+                                <div x-show="!isRedrawingAsesorSig" class="space-y-2">
+                                    <div class="p-2 bg-white rounded-lg border border-indigo-200 text-center flex items-center justify-center min-h-[95px] shadow-2xs">
+                                        <img src="{{ asset($asesorTtd) }}" alt="Tanda tangan asesor tersimpan" class="max-h-20 max-w-full object-contain mx-auto">
+                                    </div>
+                                    <div class="flex items-center justify-between pt-0.5">
+                                        <span class="text-[10px] text-slate-500">
+                                            {{ $mapa02->tanggal_ttd_asesor ? 'Ditandatangani: ' . $mapa02->tanggal_ttd_asesor->timezone('Asia/Jakarta')->format('d/m/Y H:i:s') . ' WIB' : 'Tanda tangan tersimpan' }}
+                                        </span>
+                                        <button type="button" @click="startRedrawAsesor()" x-show="isEditMode" class="px-2.5 py-1 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold cursor-pointer transition shadow-2xs flex items-center gap-1">
+                                            <svg class="w-3 h-3 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                                            <span>Ubah TTD</span>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div x-show="isRedrawingAsesorSig" class="space-y-2" style="display: none;">
+                                    <div class="flex items-center justify-between text-[11px] text-slate-600">
+                                        <span>Goreskan tanda tangan pada area di bawah:</span>
+                                        <span class="text-[10px] text-slate-400">Mouse / Sentuh</span>
+                                    </div>
+                                    <div class="relative rounded-lg border-2 border-dashed border-indigo-300 bg-white overflow-hidden shadow-2xs group focus-within:border-indigo-500 transition-colors">
+                                        <canvas id="canvasMapa02Asesor" class="w-full h-28 touch-none cursor-crosshair block bg-transparent"></canvas>
+                                        <div x-show="!hasDrawn" class="absolute inset-0 pointer-events-none flex items-center justify-center text-slate-300 text-xs italic select-none">
+                                            Area Gores Tanda Tangan
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center justify-between pt-0.5">
+                                        <span id="asesorSignatureTime" class="text-[10px]">
+                                            <span x-show="hasDrawn" class="text-indigo-700 font-medium">✓ Siap disimpan</span>
+                                            <span x-show="!hasDrawn" class="text-slate-400 italic">Belum digoreskan</span>
+                                        </span>
+                                        <div class="flex items-center gap-1.5">
+                                            <button type="button" @click="clearAsesorCanvas()" class="px-2.5 py-1 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold cursor-pointer transition shadow-2xs">
+                                                Bersihkan
+                                            </button>
+                                            <button type="button" @click="cancelRedrawAsesor()" class="px-2.5 py-1 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-600 text-xs font-semibold cursor-pointer transition shadow-2xs">
+                                                Batal
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <input type="hidden" name="tanda_tangan_asesor" id="inputTtdAsesor" value="{{ $asesorTtd ?? '' }}">
+                            </div>
+
+                            <!-- Kolom TTD Admin (Read-only) -->
+                            <div class="rounded-xl border border-slate-200 bg-slate-50/70 p-3.5 space-y-2 flex flex-col justify-between">
+                                <div class="flex items-center justify-between border-b border-slate-200/60 pb-1.5">
+                                    <span class="text-xs font-bold text-slate-700">Tanda Tangan Admin</span>
+                                    <span class="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-[10px] font-bold">✓ Telah Disahkan</span>
+                                </div>
+                                <div class="p-2 bg-white rounded-lg border border-slate-200 text-center flex items-center justify-center min-h-[95px] shadow-2xs">
+                                    <img src="{{ asset($adminTtd) }}" alt="Tanda tangan admin" class="max-h-20 max-w-full object-contain mx-auto">
+                                </div>
+                                <div class="text-[10px] text-slate-500">
+                                    @if($mapa02->tanggal_ttd_admin)
+                                        <span>{{ $mapa02->tanggal_ttd_admin->timezone('Asia/Jakarta')->format('d/m/Y H:i:s') }} WIB</span>
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
+                    @else
+                        <div class="rounded-xl border border-indigo-200/80 bg-indigo-50/30 p-3.5 space-y-2.5">
+                            <div class="flex items-center justify-between border-b border-indigo-200/60 pb-1.5">
+                                <span class="text-xs font-bold text-slate-700">Tanda Tangan Asesor · {{ $pengesahNama }} · {{ $asesorMet }}</span>
+                                @if(!empty($asesorTtd))
+                                    <span class="px-2 py-0.5 rounded-md bg-indigo-100 text-indigo-800 text-[10px] font-bold" x-show="!isRedrawingAsesorSig">✓ Tersimpan</span>
+                                @endif
+                            </div>
+
+                            @if(!empty($asesorTtd))
+                                <div x-show="!isRedrawingAsesorSig" class="space-y-2">
+                                    <div class="p-2 bg-white rounded-lg border border-indigo-200 text-center flex items-center justify-center min-h-[95px] shadow-2xs">
+                                        <img src="{{ asset($asesorTtd) }}" alt="Tanda tangan asesor tersimpan" class="max-h-24 max-w-full object-contain mx-auto">
+                                    </div>
+                                    <div class="flex items-center justify-between pt-0.5">
+                                        <span class="text-[10px] text-slate-500">
+                                            {{ $mapa02->tanggal_ttd_asesor ? 'Ditandatangani: ' . $mapa02->tanggal_ttd_asesor->timezone('Asia/Jakarta')->format('d/m/Y H:i:s') . ' WIB' : 'Tanda tangan tersimpan' }}
+                                        </span>
+                                        <button type="button" @click="startRedrawAsesor()" x-show="isEditMode" class="px-2.5 py-1 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold cursor-pointer transition shadow-2xs flex items-center gap-1">
+                                            <svg class="w-3 h-3 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                                            <span>Ubah TTD</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            @endif
+
+                            <div x-show="isRedrawingAsesorSig" class="space-y-2" style="display: none;">
+                                <div class="flex items-center justify-between text-[11px] text-slate-600">
+                                    <span>Goreskan tanda tangan pada area di bawah:</span>
+                                    <span class="text-[10px] text-slate-400">Mouse / Sentuh</span>
+                                </div>
+                                <div class="relative rounded-lg border-2 border-dashed border-indigo-300 bg-white overflow-hidden shadow-2xs group focus-within:border-indigo-500 transition-colors">
+                                    <canvas id="canvasMapa02Asesor" class="w-full h-28 touch-none cursor-crosshair block bg-transparent"></canvas>
+                                    <div x-show="!hasDrawn" class="absolute inset-0 pointer-events-none flex items-center justify-center text-slate-300 text-xs italic select-none">
+                                        Area Gores Tanda Tangan
+                                    </div>
+                                </div>
+                                <div class="flex items-center justify-between pt-0.5">
+                                    <span id="asesorSignatureTime" class="text-[10px]">
+                                        <span x-show="hasDrawn" class="text-indigo-700 font-medium">✓ Siap disimpan</span>
+                                        <span x-show="!hasDrawn" class="text-slate-400 italic">Belum digoreskan</span>
+                                    </span>
+                                    <div class="flex items-center gap-1.5">
+                                        <button type="button" @click="clearAsesorCanvas()" class="px-2.5 py-1 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold cursor-pointer transition shadow-2xs">
+                                            Bersihkan
+                                        </button>
+                                        @if(!empty($asesorTtd))
+                                            <button type="button" @click="cancelRedrawAsesor()" class="px-2.5 py-1 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-600 text-xs font-semibold cursor-pointer transition shadow-2xs">
+                                                Batal
+                                            </button>
+                                        @endif
+                                    </div>
+                                </div>
+                            </div>
+
+                            <input type="hidden" name="tanda_tangan_asesor" id="inputTtdAsesor" value="{{ $asesorTtd ?? '' }}">
+                        </div>
+                    @endif
                 @endif
             </div>
         </div>
@@ -678,7 +897,13 @@
                 <!-- Tombol Konfirmasi & Sahkan -->
                 <button type="button" @click="openConfirmModal()" :disabled="isSubmitting" class="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer">
                     <template x-if="!isSubmitting">
-                        <span>{{ $isAdminAuthoring ? 'Sahkan & Selesaikan FR.MAPA.02' : ($isAdminReviewing ? 'Validasi & Selesaikan FR.MAPA.02' : 'Kirim FR.MAPA.02 untuk Validasi Admin') }}</span>
+                        <span>
+                            @if($isAdmin)
+                                {{ $isAdminReviewing ? 'Validasi & Selesaikan FR.MAPA.02' : ($isConfirmed ? 'Simpan & Sahkan Perubahan FR.MAPA.02' : 'Sahkan & Selesaikan FR.MAPA.02') }}
+                            @else
+                                {{ $isConfirmed ? 'Simpan Perubahan FR.MAPA.02' : 'Kirim FR.MAPA.02 untuk Validasi Admin' }}
+                            @endif
+                        </span>
                     </template>
                     <template x-if="isSubmitting">
                         <span>Memproses...</span>
@@ -701,8 +926,20 @@
                         MAPA.02
                     </div>
                     <div>
-                        <h3 class="text-sm sm:text-base font-bold">{{ $isAdminReviewing ? 'Validasi FR.MAPA.02?' : ($isAdminAuthoring ? 'Selesaikan FR.MAPA.02?' : 'Kirim FR.MAPA.02?') }}</h3>
-                        <p class="text-xs text-slate-500">{{ $isAdminReviewing ? 'Dokumen akan selesai setelah isi diperiksa dan TTD admin dibubuhkan.' : 'Peta instrumen ini akan menjadi acuan instrumen aktif pelaksanaan asesmen.' }}</p>
+                        <h3 class="text-sm sm:text-base font-bold">
+                            @if($isAdmin)
+                                {{ $isAdminReviewing ? 'Validasi FR.MAPA.02?' : ($isConfirmed ? 'Simpan Perubahan FR.MAPA.02?' : 'Sahkan & Selesaikan FR.MAPA.02?') }}
+                            @else
+                                {{ $isConfirmed ? 'Simpan Perubahan FR.MAPA.02?' : 'Kirim FR.MAPA.02?' }}
+                            @endif
+                        </h3>
+                        <p class="text-xs text-slate-500">
+                            @if($isAdmin)
+                                {{ $isAdminReviewing ? 'Dokumen akan selesai setelah isi diperiksa dan TTD admin dibubuhkan.' : 'Perubahan peta instrumen akan disimpan dan disahkan sebagai acuan asesmen.' }}
+                            @else
+                                Peta instrumen ini akan menjadi acuan instrumen aktif pelaksanaan asesmen.
+                            @endif
+                        </p>
                     </div>
                 </div>
 
@@ -716,7 +953,11 @@
                         Batal
                     </button>
                     <button type="button" @click="submitAsConfirmed()" class="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs transition">
-                        {{ $isAdminReviewing ? 'Validasi & Selesaikan' : ($isAdminAuthoring ? 'Selesaikan Formulir' : 'Kirim untuk Validasi') }}
+                        @if($isAdmin)
+                            {{ $isAdminReviewing ? 'Validasi & Selesaikan' : ($isConfirmed ? 'Simpan Perubahan' : 'Selesaikan Formulir') }}
+                        @else
+                            {{ $isConfirmed ? 'Simpan Perubahan' : 'Kirim untuk Validasi' }}
+                        @endif
                     </button>
                 </div>
             </div>
@@ -726,7 +967,90 @@
 </div>
 
 <!-- Alpine.js & Signature Pad Component -->
+<script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
 <script>
+    if (!window.SignaturePad) {
+        window.SignaturePad = class NativeSignaturePad {
+            constructor(canvas, options = {}) {
+                this.canvas = canvas;
+                this.context = canvas.getContext('2d');
+                this.penColor = options.penColor || '#0f172a';
+                this.empty = true;
+                this.drawing = false;
+                this.listeners = new Map();
+                this.canvas.style.touchAction = 'none';
+
+                this._onPointerDown = (e) => this.start(e);
+                this._onPointerMove = (e) => this.move(e);
+                this._onPointerUp = (e) => this.stop(e);
+
+                this.canvas.addEventListener('pointerdown', this._onPointerDown);
+                this.canvas.addEventListener('pointermove', this._onPointerMove);
+                this.canvas.addEventListener('pointerup', this._onPointerUp);
+                this.canvas.addEventListener('pointercancel', this._onPointerUp);
+            }
+
+            getPos(e) {
+                const rect = this.canvas.getBoundingClientRect();
+                return {
+                    x: e.clientX - rect.left,
+                    y: e.clientY - rect.top
+                };
+            }
+
+            start(e) {
+                e.preventDefault();
+                this.drawing = true;
+                this.empty = false;
+                this.canvas.setPointerCapture?.(e.pointerId);
+                const pos = this.getPos(e);
+                this.context.strokeStyle = this.penColor;
+                this.context.lineWidth = 2.2;
+                this.context.lineCap = 'round';
+                this.context.lineJoin = 'round';
+                this.context.beginPath();
+                this.context.moveTo(pos.x, pos.y);
+            }
+
+            move(e) {
+                if (!this.drawing) return;
+                e.preventDefault();
+                const pos = this.getPos(e);
+                this.context.lineTo(pos.x, pos.y);
+                this.context.stroke();
+            }
+
+            stop(e) {
+                if (!this.drawing) return;
+                e?.preventDefault?.();
+                this.drawing = false;
+                this.context.closePath();
+                (this.listeners.get('endStroke') || []).forEach(cb => cb());
+                if (typeof this.onEnd === 'function') this.onEnd();
+            }
+
+            clear() {
+                this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                this.empty = true;
+                this.drawing = false;
+            }
+
+            isEmpty() { return this.empty; }
+            toDataURL(type = 'image/png') { return this.canvas.toDataURL(type); }
+            addEventListener(event, cb) {
+                const list = this.listeners.get(event) || [];
+                list.push(cb);
+                this.listeners.set(event, list);
+            }
+            off() {
+                this.canvas.removeEventListener('pointerdown', this._onPointerDown);
+                this.canvas.removeEventListener('pointermove', this._onPointerMove);
+                this.canvas.removeEventListener('pointerup', this._onPointerUp);
+                this.canvas.removeEventListener('pointercancel', this._onPointerUp);
+            }
+        };
+    }
+
     function formatMapa02WibDateTime() {
         return new Intl.DateTimeFormat('id-ID', {
             timeZone: 'Asia/Jakarta',
@@ -742,11 +1066,19 @@
 
     function mapa02App() {
         return {
+            adminPad: null,
+            asesorPad: null,
             isEditMode: {{ (!$isAsesi && $isConfigured) ? 'false' : 'true' }},
+            isAdmin: @json($isAdmin),
+            isAdminReviewing: @json($isAdminReviewing),
+            isConfirmed: @json($isConfirmed),
             signatureCanvasId: @json($signatureCanvasId),
             signatureInputId: @json($signatureInputId),
             signatureTimeId: @json($signatureTimeId),
-            isAdminReviewing: @json($isAdminReviewing),
+            savedAdminTtd: @json($adminTtd ?? ''),
+            savedAsesorTtd: @json($asesorTtd ?? ''),
+            isRedrawingAdminSig: {{ empty($adminTtd) ? 'true' : 'false' }},
+            isRedrawingAsesorSig: {{ empty($asesorTtd) ? 'true' : 'false' }},
             canvasSignatureData: '',
             hasDrawn: false,
             isSubmitting: false,
@@ -758,116 +1090,222 @@
                 });
                 setTimeout(() => {
                     this.initSignaturePad();
-                }, 300);
+                }, 250);
+
+                window.addEventListener('resize', () => {
+                    if (!this.hasDrawn) {
+                        this.initSignaturePad();
+                    }
+                });
             },
 
             toggleEditMode() {
                 this.isEditMode = !this.isEditMode;
+                if (!this.isEditMode) {
+                    if (this.savedAdminTtd) this.cancelRedrawAdmin();
+                    if (this.savedAsesorTtd) this.cancelRedrawAsesor();
+                } else {
+                    this.$nextTick(() => {
+                        this.initSignaturePad();
+                    });
+                    setTimeout(() => {
+                        this.initSignaturePad();
+                    }, 150);
+                }
+            },
+
+            startRedrawAdmin() {
+                this.isRedrawingAdminSig = true;
+                this.hasDrawn = false;
+                const hiddenInput = document.getElementById('inputTtdAdmin');
+                if (hiddenInput) hiddenInput.value = '';
                 this.$nextTick(() => {
-                    this.initSignaturePad();
+                    this.initAdminSignaturePad();
                 });
                 setTimeout(() => {
-                    this.initSignaturePad();
-                }, 200);
+                    this.initAdminSignaturePad();
+                }, 100);
             },
 
-            initSignaturePad() {
-                const canvas = document.getElementById(this.signatureCanvasId);
-                if (!canvas) return;
-
-                const parent = canvas.parentElement;
-                const width = (parent && parent.clientWidth > 50) ? parent.clientWidth : 280;
-                const height = 112;
-                const ratio = Math.max(window.devicePixelRatio || 1, 1);
-
-                canvas.width = Math.round(width * ratio);
-                canvas.height = Math.round(height * ratio);
-
-                const ctx = canvas.getContext('2d');
-                ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
-                ctx.lineWidth = 1.8;
-                ctx.lineCap = 'round';
-                ctx.lineJoin = 'round';
-                ctx.strokeStyle = '#0f172a';
-                canvas.style.touchAction = 'none';
-
-                let isDrawing = false;
-
-                const getPos = (e) => {
-                    const rect = canvas.getBoundingClientRect();
-                    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-                    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-                    return {
-                        x: (clientX - rect.left) * (canvas.width / rect.width),
-                        y: (clientY - rect.top) * (canvas.height / rect.height)
-                    };
-                };
-
-                const start = (e) => {
-                    e.preventDefault();
-                    isDrawing = true;
-                    this.hasDrawn = true;
-                    canvas.setPointerCapture?.(e.pointerId);
-                    const pos = getPos(e);
-                    ctx.beginPath();
-                    ctx.moveTo(pos.x, pos.y);
-                };
-
-                const draw = (e) => {
-                    if (!isDrawing) return;
-                    e.preventDefault();
-                    const pos = getPos(e);
-                    ctx.lineTo(pos.x, pos.y);
-                    ctx.stroke();
-                };
-
-                const stop = (e) => {
-                    if (!isDrawing) return;
-                    e?.preventDefault?.();
-                    isDrawing = false;
-                    ctx.closePath();
-                    const dataUrl = canvas.toDataURL('image/png');
-                    this.canvasSignatureData = dataUrl;
-                    const hiddenInput = document.getElementById(this.signatureInputId);
-                    if (hiddenInput) {
-                        hiddenInput.value = dataUrl;
-                    }
-                    const timeLabel = document.getElementById(this.signatureTimeId);
-                    if (timeLabel) timeLabel.textContent = `Ditandatangani: ${formatMapa02WibDateTime()}`;
-                };
-
-                // Remove existing listeners if any
-                if (canvas._sigStart) {
-                    canvas.removeEventListener('pointerdown', canvas._sigStart);
-                    canvas.removeEventListener('pointermove', canvas._sigDraw);
-                    canvas.removeEventListener('pointerup', canvas._sigStop);
-                    canvas.removeEventListener('pointercancel', canvas._sigStop);
-                }
-
-                canvas._sigStart = start;
-                canvas._sigDraw = draw;
-                canvas._sigStop = stop;
-
-                canvas.addEventListener('pointerdown', start);
-                canvas.addEventListener('pointermove', draw);
-                canvas.addEventListener('pointerup', stop);
-                canvas.addEventListener('pointercancel', stop);
+            cancelRedrawAdmin() {
+                this.isRedrawingAdminSig = false;
+                this.hasDrawn = false;
+                const hiddenInput = document.getElementById('inputTtdAdmin');
+                if (hiddenInput) hiddenInput.value = this.savedAdminTtd;
             },
 
-            clearCanvas() {
-                const canvas = document.getElementById(this.signatureCanvasId);
-                if (canvas) {
-                    const ctx = canvas.getContext('2d');
-                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+            clearAdminCanvas() {
+                if (this.adminPad) {
+                    this.adminPad.clear();
                 }
                 this.canvasSignatureData = '';
                 this.hasDrawn = false;
-                const hiddenInput = document.getElementById(this.signatureInputId);
-                if (hiddenInput) {
-                    hiddenInput.value = '';
+                const hiddenInput = document.getElementById('inputTtdAdmin');
+                if (hiddenInput) hiddenInput.value = '';
+                const timeLabel = document.getElementById('adminSignatureTime');
+                if (timeLabel) timeLabel.textContent = 'Belum digoreskan';
+            },
+
+            startRedrawAsesor() {
+                this.isRedrawingAsesorSig = true;
+                this.hasDrawn = false;
+                const hiddenInput = document.getElementById('inputTtdAsesor');
+                if (hiddenInput) hiddenInput.value = '';
+                this.$nextTick(() => {
+                    this.initAsesorSignaturePad();
+                });
+                setTimeout(() => {
+                    this.initAsesorSignaturePad();
+                }, 100);
+            },
+
+            cancelRedrawAsesor() {
+                this.isRedrawingAsesorSig = false;
+                this.hasDrawn = false;
+                const hiddenInput = document.getElementById('inputTtdAsesor');
+                if (hiddenInput) hiddenInput.value = this.savedAsesorTtd;
+            },
+
+            clearAsesorCanvas() {
+                if (this.asesorPad) {
+                    this.asesorPad.clear();
                 }
-                const timeLabel = document.getElementById(this.signatureTimeId);
-                if (timeLabel) timeLabel.textContent = 'Belum ditandatangani.';
+                this.canvasSignatureData = '';
+                this.hasDrawn = false;
+                const hiddenInput = document.getElementById('inputTtdAsesor');
+                if (hiddenInput) hiddenInput.value = '';
+                const timeLabel = document.getElementById('asesorSignatureTime');
+                if (timeLabel) timeLabel.textContent = 'Belum digoreskan';
+            },
+
+            clearCanvas() {
+                if (this.isAdmin) {
+                    this.clearAdminCanvas();
+                } else {
+                    this.clearAsesorCanvas();
+                }
+            },
+
+            initAdminSignaturePad() {
+                const canvas = document.getElementById('canvasMapa02Admin');
+                if (!canvas) return;
+                if (canvas.offsetParent === null) return;
+
+                const ratio = Math.max(window.devicePixelRatio || 1, 1);
+                const displayWidth = canvas.offsetWidth || canvas.clientWidth || 320;
+                const displayHeight = canvas.offsetHeight || canvas.clientHeight || 112;
+
+                if (canvas.width !== Math.round(displayWidth * ratio) || canvas.height !== Math.round(displayHeight * ratio)) {
+                    canvas.width = Math.round(displayWidth * ratio);
+                    canvas.height = Math.round(displayHeight * ratio);
+                    const ctx = canvas.getContext('2d');
+                    ctx.scale(ratio, ratio);
+                }
+
+                if (this.adminPad) {
+                    try {
+                        if (typeof this.adminPad.off === 'function') this.adminPad.off();
+                    } catch (e) {}
+                    this.adminPad = null;
+                }
+
+                const PadClass = (typeof window.SignaturePad === 'function')
+                    ? window.SignaturePad
+                    : window.NativeSignaturePad;
+
+                if (!PadClass) return;
+
+                this.adminPad = new PadClass(canvas, {
+                    backgroundColor: 'rgba(255, 255, 255, 0)',
+                    penColor: '#0f172a',
+                    minWidth: 1.2,
+                    maxWidth: 2.8,
+                    velocityFilterWeight: 0.7
+                });
+
+                const onEnd = () => {
+                    this.hasDrawn = !this.adminPad.isEmpty();
+                    if (this.hasDrawn) {
+                        const dataUrl = this.adminPad.toDataURL('image/png');
+                        this.canvasSignatureData = dataUrl;
+                        const hiddenInput = document.getElementById('inputTtdAdmin');
+                        if (hiddenInput) hiddenInput.value = dataUrl;
+                        const timeLabel = document.getElementById('adminSignatureTime');
+                        if (timeLabel) timeLabel.textContent = `Ditandatangani: ${formatMapa02WibDateTime()}`;
+                    }
+                };
+
+                if (typeof this.adminPad.addEventListener === 'function') {
+                    this.adminPad.addEventListener("endStroke", onEnd);
+                }
+                this.adminPad.onEnd = onEnd;
+            },
+
+            initAsesorSignaturePad() {
+                const canvas = document.getElementById('canvasMapa02Asesor');
+                if (!canvas) return;
+                if (canvas.offsetParent === null) return;
+
+                const ratio = Math.max(window.devicePixelRatio || 1, 1);
+                const displayWidth = canvas.offsetWidth || canvas.clientWidth || 320;
+                const displayHeight = canvas.offsetHeight || canvas.clientHeight || 112;
+
+                if (canvas.width !== Math.round(displayWidth * ratio) || canvas.height !== Math.round(displayHeight * ratio)) {
+                    canvas.width = Math.round(displayWidth * ratio);
+                    canvas.height = Math.round(displayHeight * ratio);
+                    const ctx = canvas.getContext('2d');
+                    ctx.scale(ratio, ratio);
+                }
+
+                if (this.asesorPad) {
+                    try {
+                        if (typeof this.asesorPad.off === 'function') this.asesorPad.off();
+                    } catch (e) {}
+                    this.asesorPad = null;
+                }
+
+                const PadClass = (typeof window.SignaturePad === 'function')
+                    ? window.SignaturePad
+                    : window.NativeSignaturePad;
+
+                if (!PadClass) return;
+
+                this.asesorPad = new PadClass(canvas, {
+                    backgroundColor: 'rgba(255, 255, 255, 0)',
+                    penColor: '#0f172a',
+                    minWidth: 1.2,
+                    maxWidth: 2.8,
+                    velocityFilterWeight: 0.7
+                });
+
+                const onEnd = () => {
+                    this.hasDrawn = !this.asesorPad.isEmpty();
+                    if (this.hasDrawn) {
+                        const dataUrl = this.asesorPad.toDataURL('image/png');
+                        this.canvasSignatureData = dataUrl;
+                        const hiddenInput = document.getElementById('inputTtdAsesor');
+                        if (hiddenInput) hiddenInput.value = dataUrl;
+                        const timeLabel = document.getElementById('asesorSignatureTime');
+                        if (timeLabel) timeLabel.textContent = `Ditandatangani: ${formatMapa02WibDateTime()}`;
+                    }
+                };
+
+                if (typeof this.asesorPad.addEventListener === 'function') {
+                    this.asesorPad.addEventListener("endStroke", onEnd);
+                }
+                this.asesorPad.onEnd = onEnd;
+            },
+
+            initSignaturePad() {
+                if (this.isAdmin) {
+                    if (this.isRedrawingAdminSig) {
+                        this.initAdminSignaturePad();
+                    }
+                } else {
+                    if (this.isRedrawingAsesorSig) {
+                        this.initAsesorSignaturePad();
+                    }
+                }
             },
 
             toggleInstrumentForUnit(unitId, instrumentKey) {
@@ -881,23 +1319,49 @@
             },
 
             prepareSignature() {
-                const canvas = document.getElementById(this.signatureCanvasId);
-                if (canvas && this.hasDrawn) {
-                    this.canvasSignatureData = canvas.toDataURL('image/png');
-                }
-                const hiddenInput = document.getElementById(this.signatureInputId);
-                if (hiddenInput && this.canvasSignatureData) {
-                    hiddenInput.value = this.canvasSignatureData;
+                if (this.isAdmin) {
+                    if (this.isRedrawingAdminSig && this.adminPad && !this.adminPad.isEmpty()) {
+                        const dataUrl = this.adminPad.toDataURL('image/png');
+                        const hiddenInput = document.getElementById('inputTtdAdmin');
+                        if (hiddenInput) hiddenInput.value = dataUrl;
+                    }
+                } else {
+                    if (this.isRedrawingAsesorSig && this.asesorPad && !this.asesorPad.isEmpty()) {
+                        const dataUrl = this.asesorPad.toDataURL('image/png');
+                        const hiddenInput = document.getElementById('inputTtdAsesor');
+                        if (hiddenInput) hiddenInput.value = dataUrl;
+                    }
                 }
             },
 
             validateSignature() {
-                const hiddenInput = document.getElementById(this.signatureInputId);
-                if (!hiddenInput || !hiddenInput.value || hiddenInput.value.trim() === '') {
-                    alert(this.isAdminReviewing || this.signatureInputId === 'inputTtdAdmin'
-                        ? 'Silakan bubuhkan tanda tangan Admin sebelum menyelesaikan FR.MAPA.02.'
-                        : 'Silakan bubuhkan tanda tangan Asesor sebelum mengirim FR.MAPA.02.');
-                    const canvasEl = document.getElementById(this.signatureCanvasId);
+                // Role Admin / Superadmin: TIDAK BOLEH menuntut tanda tangan asesor!
+                if (this.isAdmin) {
+                    const adminInput = document.getElementById('inputTtdAdmin');
+                    const hasAdminSig = (adminInput && adminInput.value && adminInput.value.trim() !== '') || this.hasDrawn;
+                    if (!hasAdminSig) {
+                        alert('Silakan bubuhkan tanda tangan Admin sebelum menyelesaikan FR.MAPA.02.');
+                        if (!this.isRedrawingAdminSig) {
+                            this.startRedrawAdmin();
+                        }
+                        const canvasEl = document.getElementById('canvasMapa02Admin');
+                        if (canvasEl) {
+                            canvasEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }
+                        return false;
+                    }
+                    return true;
+                }
+
+                // Role Asesor: WAJIB tanda tangan asesor
+                const asesorInput = document.getElementById('inputTtdAsesor');
+                const hasAsesorSig = (asesorInput && asesorInput.value && asesorInput.value.trim() !== '') || this.hasDrawn;
+                if (!hasAsesorSig) {
+                    alert('Silakan bubuhkan tanda tangan Asesor sebelum mengirim FR.MAPA.02.');
+                    if (!this.isRedrawingAsesorSig) {
+                        this.startRedrawAsesor();
+                    }
+                    const canvasEl = document.getElementById('canvasMapa02Asesor');
                     if (canvasEl) {
                         canvasEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
                     }
@@ -916,7 +1380,8 @@
             openConfirmModal() {
                 this.prepareSignature();
                 if (!this.validateSignature()) return;
-                if (this.isAdminReviewing && !document.getElementById('konfirmasiPemeriksaanMapa02')?.checked) {
+                const konfirmasiCheck = document.getElementById('konfirmasiPemeriksaanMapa02');
+                if (this.isAdminReviewing && konfirmasiCheck && !konfirmasiCheck.checked) {
                     alert('Admin harus mengonfirmasi bahwa isi FR.MAPA.02 telah diperiksa.');
                     return;
                 }
@@ -927,7 +1392,8 @@
                 this.showConfirmModal = false;
                 this.prepareSignature();
                 if (!this.validateSignature()) return;
-                if (this.isAdminReviewing && !document.getElementById('konfirmasiPemeriksaanMapa02')?.checked) {
+                const konfirmasiCheck = document.getElementById('konfirmasiPemeriksaanMapa02');
+                if (this.isAdminReviewing && konfirmasiCheck && !konfirmasiCheck.checked) {
                     alert('Admin harus mengonfirmasi bahwa isi FR.MAPA.02 telah diperiksa.');
                     return;
                 }
@@ -941,93 +1407,5 @@
             }
         };
     }
-</script>
-
-<!-- MODAL POPUP CANVAS SIGNATURE PAD -->
-<div class="modal-overlay" id="modalCanvasTtd" style="display:none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 99999; justify-content: center; align-items: center;">
-    <div class="modal-konten" style="background: white; border-radius: 12px; padding: 1.75rem; width: 100%; max-width: 500px; text-align: center; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-            <h3 style="color: #0f172a; margin: 0; font-weight: 800; font-size: 1.15rem;">Tanda Tangan Digital</h3>
-            <button type="button" onclick="document.getElementById('modalCanvasTtd').style.display = 'none'" style="background: none; border: none; font-size: 1.4rem; cursor: pointer; color: #64748b; line-height: 1;">&times;</button>
-        </div>
-
-        <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 1rem; text-align: left;">
-            Gunakan kursor atau layar sentuh untuk menggambar tanda tangan Anda secara presisi pada bidang di bawah:
-        </p>
-
-        <canvas id="canvas-ttd-modal" width="440" height="180" class="canvas-signature-pad" style="border: 2px dashed #94a3b8; border-radius: 8px; background: #ffffff; cursor: crosshair; touch-action: none; display: block; margin: 0 auto; width: 100%; max-width: 440px;"></canvas>
-
-        <div style="margin-top: 1.25rem; display: flex; gap: 0.75rem; justify-content: center;">
-            <button type="button" class="tombol tombol-sekunder tombol-sm px-4 py-2 bg-slate-100 text-slate-700 font-semibold rounded border border-slate-200 shadow-sm" onclick="if(window.signaturePadModal) window.signaturePadModal.clear();">
-                Bersihkan
-            </button>
-            <button type="button" class="tombol tombol-utama tombol-sm px-4 py-2 text-white font-semibold rounded shadow-sm" style="background: #059669; border: 1px solid #059669;" onclick="window.saveTtdAsesor()">
-                Gunakan Tanda Tangan
-            </button>
-        </div>
-    </div>
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
-<script>
-    window.signaturePadModal = null;
-
-    window.bukaModalTtd = function() {
-        const modal = document.getElementById('modalCanvasTtd');
-        if (modal) {
-            modal.style.display = 'flex';
-            
-            if (!window.signaturePadModal) {
-                const canvas = document.getElementById('canvas-ttd-modal');
-                if (canvas && window.SignaturePad) {
-                    window.signaturePadModal = new SignaturePad(canvas, {
-                        backgroundColor: 'rgb(255, 255, 255)'
-                    });
-                    
-                    const ratio = Math.max(window.devicePixelRatio || 1, 1);
-                    canvas.width = canvas.offsetWidth * ratio;
-                    canvas.height = canvas.offsetHeight * ratio;
-                    canvas.getContext("2d").scale(ratio, ratio);
-                    window.signaturePadModal.clear();
-                }
-            } else {
-                window.signaturePadModal.clear();
-            }
-        }
-    };
-
-    window.saveTtdAsesor = function() {
-        if (window.signaturePadModal && !window.signaturePadModal.isEmpty()) {
-            const dataUrl = window.signaturePadModal.toDataURL('image/png');
-            
-            const hiddenInput = document.getElementById('inputTtdAsesor');
-            if(hiddenInput) hiddenInput.value = dataUrl;
-            
-            const previewImg = document.getElementById('preview-ttd-asesor');
-            if(previewImg) {
-                previewImg.src = dataUrl;
-                previewImg.classList.remove('hidden');
-            }
-            
-            const btnTrigger = document.getElementById('btn-trigger-modal');
-            if(btnTrigger) {
-                btnTrigger.classList.add('hidden');
-            }
-
-            document.getElementById('modalCanvasTtd').style.display = 'none';
-        } else {
-            if (typeof Swal !== 'undefined') {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Canvas Kosong',
-                    text: 'Silakan gambar tanda tangan Anda terlebih dahulu.',
-                    confirmButtonText: 'Mengerti',
-                    confirmButtonColor: '#059669'
-                });
-            } else {
-                alert('Silakan gambar tanda tangan Anda terlebih dahulu.');
-            }
-        }
-    };
 </script>
 @endsection

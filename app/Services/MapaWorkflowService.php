@@ -719,7 +719,7 @@ class MapaWorkflowService
                 }
             }
 
-            $isAdminReviewing = $isAdmin && !empty($asesorSignature);
+            $isAdminReviewing = $isAdmin && !empty($asesorSignature) && ($existing?->status_mapa !== 'selesai');
             if ($isConfirm && $isAdmin && empty($adminSignature)) {
                 throw ValidationException::withMessages([
                     'tanda_tangan_admin' => 'Tanda tangan Admin wajib dibubuhkan untuk menyelesaikan FR.MAPA.02.',
@@ -953,7 +953,7 @@ class MapaWorkflowService
                 }
             }
 
-            $isAdminReviewing = $isAdmin && !empty($asesorSignature);
+            $isAdminReviewing = $isAdmin && !empty($asesorSignature) && ($existing?->status_mapa !== 'selesai');
             if ($isConfirm && $isAdmin && empty($adminSignature)) {
                 throw ValidationException::withMessages([
                     'tanda_tangan_admin' => 'Tanda tangan Admin wajib dibubuhkan untuk menyelesaikan FR.MAPA.02.',
@@ -979,7 +979,7 @@ class MapaWorkflowService
                     'pendaftaran_id' => null,
                 ],
                 [
-                    'asesor_id' => $asesorId,
+                    'asesor_id' => ($existing && $existing->tanda_tangan_asesor && $existing->asesor_id) ? $existing->asesor_id : $asesorId,
                     'matriks_peta' => $sanitizedMatrix,
                     'catatan_asesor' => $catatan,
                     'tanda_tangan_asesor' => $asesorSignature,

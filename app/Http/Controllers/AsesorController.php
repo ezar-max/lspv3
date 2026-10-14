@@ -1000,7 +1000,10 @@ class AsesorController extends Controller
             $sukses = $isAdmin
                 ? 'Master FR.MAPA.02 berhasil ditandatangani dan diselesaikan Administrator.'
                 : 'Master FR.MAPA.02 berhasil dikirim dan menunggu tanda tangan serta validasi Administrator.';
-            return redirect()->route('asesor.mapa', ['skema_id' => $skema->id])
+            $targetUrl = $isAdmin 
+                ? route('asesor.skema.mapa-02', $skema->id)
+                : route('asesor.mapa', ['skema_id' => $skema->id]);
+            return redirect($targetUrl)
                 ->with('sukses', $sukses);
         }
 
