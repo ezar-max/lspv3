@@ -179,7 +179,7 @@
                 </div>
             @endif
 
-            @if($isReadOnlyApl01)
+            @if($isAccAdmin)
                 <div class="bg-emerald-50/90 border border-emerald-200/90 rounded-2xl p-5 sm:p-6 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                     <div class="flex items-start gap-3.5">
                         <div class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
@@ -211,6 +211,35 @@
                         <span>&rarr;</span>
                     </button>
                 </div>
+            @elseif($isDiajukan)
+                <div class="bg-amber-50/90 border border-amber-200/90 rounded-2xl p-5 sm:p-6 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div class="flex items-start gap-3.5">
+                        <div class="w-10 h-10 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center shrink-0 mt-0.5">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                        <div class="space-y-1">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200 uppercase tracking-wider">
+                                    <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                                    Menunggu Verifikasi Admin &bull; Read-Only
+                                </span>
+                                @if($pendaftaran?->nomor_pendaftaran)
+                                    <span class="text-xs text-slate-500 font-mono font-semibold">No. Reg: {{ $pendaftaran->nomor_pendaftaran }}</span>
+                                @endif
+                            </div>
+                            <h3 class="text-base font-bold text-amber-950">Formulir FR.APL.01 Telah Diajukan & Menunggu Verifikasi</h3>
+                            <p class="text-xs text-amber-900 leading-relaxed max-w-2xl">
+                                Data permohonan sertifikasi dan seluruh berkas persyaratan Anda telah diajukan dan saat ini sedang menunggu verifikasi (ACC) oleh Admin LSP. Data dikunci (read-only) untuk mencegah perubahan selama proses pemeriksaan.
+                            </p>
+                        </div>
+                    </div>
+                    <button type="button" @click="setStep(2)" class="shrink-0 w-full sm:w-auto px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-xs transition-colors flex items-center justify-center gap-2 cursor-pointer">
+                        <span>Lihat Formulir FR.APL.02</span>
+                        <span>&rarr;</span>
+                    </button>
+                </div>
             @endif
 
             <form action="{{ route('asesi.tahapan.apl01') }}" method="POST" enctype="multipart/form-data" class="space-y-6">
@@ -220,7 +249,7 @@
                 <!-- Card Container -->
                 <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-6 sm:p-8 space-y-8">
                     <!-- Section Header -->
-                    <div class="border-b border-slate-200/80 pb-4 flex items-start justify-between gap-4">
+                    <div class="border-b border-slate-200/80 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                         <div>
                             <div class="text-blue-600 font-bold text-xs uppercase tracking-wider">
                                 Bagian 1 &bull; Rincian Data Pemohon
@@ -228,25 +257,29 @@
                             <h2 class="text-xl font-bold text-slate-900 mt-1">Data Pribadi & Kontak Asesi</h2>
                             <p class="text-slate-500 text-xs mt-0.5">Pastikan NIK dan data identitas sesuai dengan data kependudukan resmi (KTP/Kartu Pelajar).</p>
                         </div>
-                        @if($isReadOnlyApl01)
-                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-600 border border-slate-200 shrink-0">
-                                <svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"/></svg>
-                                Terkunci (Read-Only)
-                            </span>
-                        @endif
-                        
-                        @if($isReadOnlyApl01 && $pendaftaran && !$pendaftaran->request_perbaikan)
-                            <button type="button" onclick="document.getElementById('modalRequestEdit').classList.remove('hidden'); document.getElementById('modalRequestEdit').style.display='flex';" class="px-4 py-1.5 rounded-lg border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-700 font-bold text-xs shadow-sm flex items-center justify-center gap-1.5 cursor-pointer mt-3 transition-colors w-full sm:w-auto">
-                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
-                                Ajukan Izin Ubah Data
-                            </button>
-                        @elseif($pendaftaran && $pendaftaran->request_perbaikan)
-                            <div class="px-4 py-2 rounded-lg border border-slate-200 bg-slate-50 text-slate-500 font-semibold text-xs mt-3 w-full sm:w-auto text-center inline-flex items-center justify-center gap-1.5">
-                                <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                                Menunggu Persetujuan Ubah Data...
-                            </div>
-                        @endif
-
+                        <div class="flex flex-wrap items-center gap-2 shrink-0">
+                            @if($isReadOnlyApl01)
+                                <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-slate-100 text-slate-600 border border-slate-200 shrink-0">
+                                    <svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"/></svg>
+                                    Terkunci (Read-Only)
+                                </span>
+                            @endif
+                            
+                            @if($isReadOnlyApl01 && $pendaftaran && !$pendaftaran->request_perbaikan)
+                                <button type="button" onclick="bukaModalRequestEdit()" class="px-3.5 py-1.5 rounded-lg border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-700 font-bold text-xs shadow-xs flex items-center justify-center gap-1.5 cursor-pointer transition-colors">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                                    Ajukan Izin Ubah Data
+                                </button>
+                            @elseif($pendaftaran && $pendaftaran->request_perbaikan)
+                                <div class="px-3.5 py-1.5 rounded-lg border border-amber-200 bg-amber-50 text-amber-700 font-semibold text-xs text-center inline-flex items-center justify-center gap-1.5 shadow-2xs">
+                                    <svg class="w-3.5 h-3.5 text-amber-600 animate-spin" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                                    </svg>
+                                    Menunggu Persetujuan Ubah Data...
+                                </div>
+                            @endif
+                        </div>
                     </div>
 
                     <!-- Grid Form Data Pribadi -->
@@ -454,7 +487,7 @@
                         <div id="dokumen-ktp" class="bg-slate-50 border border-slate-200/80 rounded-xl p-4 space-y-2.5 transition-all duration-300">
                             <div class="flex items-center justify-between">
                                 <label class="text-xs font-bold text-slate-800 uppercase tracking-wider">1. KTP / Kartu Pelajar</label>
-                                @if($isReadOnlyApl01)
+                                @if($isAccAdmin)
                                     <span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 font-bold flex items-center gap-1">
                                         <svg class="w-3 h-3 text-emerald-600" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg>
                                         Terverifikasi Valid
@@ -464,7 +497,9 @@
                                         Perlu Revisi
                                     </span>
                                 @elseif($dokumenKtp)
-                                    <span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold">Terunggah</span>
+                                    <span class="text-[10px] px-2 py-0.5 rounded-full {{ $isDiajukan ? 'bg-amber-100 text-amber-800 border border-amber-200 font-semibold' : 'bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold' }}">
+                                        {{ $isDiajukan ? 'Menunggu Verifikasi' : 'Terunggah' }}
+                                    </span>
                                 @endif
                             </div>
 
@@ -478,7 +513,7 @@
                                 </div>
                             @endif
 
-                            @if(!$isAccAdmin)
+                            @if(!$isReadOnlyApl01 || ($pendaftaran && $pendaftaran->status_pendaftaran === 'revisi'))
                                 <input type="file" name="file_ktp" id="input_file_ktp" accept=".pdf,.jpg,.jpeg,.png,.webp"
                                        class="w-full text-xs text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
                             @endif
@@ -504,7 +539,7 @@
                         <div id="dokumen-rapor" class="bg-slate-50 border border-slate-200/80 rounded-xl p-4 space-y-2.5 transition-all duration-300">
                             <div class="flex items-center justify-between">
                                 <label class="text-xs font-bold text-slate-800 uppercase tracking-wider">2. Rapor / Ijazah Terakhir</label>
-                                @if($isReadOnlyApl01)
+                                @if($isAccAdmin)
                                     <span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 font-bold flex items-center gap-1">
                                         <svg class="w-3 h-3 text-emerald-600" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg>
                                         Terverifikasi Valid
@@ -514,7 +549,9 @@
                                         Perlu Revisi
                                     </span>
                                 @elseif($dokumenRapor)
-                                    <span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold">Terunggah</span>
+                                    <span class="text-[10px] px-2 py-0.5 rounded-full {{ $isDiajukan ? 'bg-amber-100 text-amber-800 border border-amber-200 font-semibold' : 'bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold' }}">
+                                        {{ $isDiajukan ? 'Menunggu Verifikasi' : 'Terunggah' }}
+                                    </span>
                                 @endif
                             </div>
 
@@ -528,7 +565,7 @@
                                 </div>
                             @endif
 
-                            @if(!$isAccAdmin)
+                            @if(!$isReadOnlyApl01 || ($pendaftaran && $pendaftaran->status_pendaftaran === 'revisi'))
                                 <input type="file" name="file_rapor" id="input_file_rapor" accept=".pdf,.jpg,.jpeg,.png,.webp"
                                        class="w-full text-xs text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
                             @endif
@@ -554,7 +591,7 @@
                         <div id="dokumen-pkl" class="bg-slate-50 border border-slate-200/80 rounded-xl p-4 space-y-2.5 transition-all duration-300">
                             <div class="flex items-center justify-between">
                                 <label class="text-xs font-bold text-slate-800 uppercase tracking-wider">3. Sertifikat PKL / Pelatihan</label>
-                                @if($isReadOnlyApl01)
+                                @if($isAccAdmin)
                                     <span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 font-bold flex items-center gap-1">
                                         <svg class="w-3 h-3 text-emerald-600" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg>
                                         Terverifikasi Valid
@@ -564,7 +601,9 @@
                                         Perlu Revisi
                                     </span>
                                 @elseif($dokumenPkl)
-                                    <span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold">Terunggah</span>
+                                    <span class="text-[10px] px-2 py-0.5 rounded-full {{ $isDiajukan ? 'bg-amber-100 text-amber-800 border border-amber-200 font-semibold' : 'bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold' }}">
+                                        {{ $isDiajukan ? 'Menunggu Verifikasi' : 'Terunggah' }}
+                                    </span>
                                 @endif
                             </div>
 
@@ -578,7 +617,7 @@
                                 </div>
                             @endif
 
-                            @if(!$isAccAdmin)
+                            @if(!$isReadOnlyApl01 || ($pendaftaran && $pendaftaran->status_pendaftaran === 'revisi'))
                                 <input type="file" name="file_pkl" id="input_file_pkl" accept=".pdf,.jpg,.jpeg,.png,.webp"
                                        class="w-full text-xs text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
                             @endif
@@ -604,7 +643,7 @@
                         <div id="dokumen-foto" class="bg-slate-50 border border-slate-200/80 rounded-xl p-4 space-y-2.5 transition-all duration-300">
                             <div class="flex items-center justify-between">
                                 <label class="text-xs font-bold text-slate-800 uppercase tracking-wider">4. Pasfoto 3x4 (Background Merah)</label>
-                                @if($isReadOnlyApl01)
+                                @if($isAccAdmin)
                                     <span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 font-bold flex items-center gap-1">
                                         <svg class="w-3 h-3 text-emerald-600" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg>
                                         Terverifikasi Valid
@@ -614,7 +653,9 @@
                                         Perlu Revisi
                                     </span>
                                 @elseif($dokumenFoto)
-                                    <span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold">Terunggah</span>
+                                    <span class="text-[10px] px-2 py-0.5 rounded-full {{ $isDiajukan ? 'bg-amber-100 text-amber-800 border border-amber-200 font-semibold' : 'bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold' }}">
+                                        {{ $isDiajukan ? 'Menunggu Verifikasi' : 'Terunggah' }}
+                                    </span>
                                 @endif
                             </div>
 
@@ -628,7 +669,7 @@
                                 </div>
                             @endif
 
-                            @if(!$isAccAdmin)
+                            @if(!$isReadOnlyApl01 || ($pendaftaran && $pendaftaran->status_pendaftaran === 'revisi'))
                                 <input type="file" name="file_foto" id="input_file_foto" accept=".jpg,.jpeg,.png,.webp"
                                        class="w-full text-xs text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
                             @endif
@@ -657,11 +698,15 @@
                             <div class="flex items-center justify-between mb-3">
                                 <div>
                                     <label class="text-xs font-bold text-slate-800 uppercase tracking-wider block">Tanda Tangan Digital Asesi</label>
-                                    <span class="text-xs text-slate-500">Tanda tangan telah disahkan dan diverifikasi secara resmi.</span>
+                                    <span class="text-xs text-slate-500">{{ $isAccAdmin ? 'Tanda tangan telah disahkan dan diverifikasi secara resmi.' : 'Tanda tangan digital telah dibubuhkan pada formulir permohonan.' }}</span>
                                 </div>
-                                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                    <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg>
-                                    Terverifikasi Sah
+                                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold {{ $isAccAdmin ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-blue-50 text-blue-700 border border-blue-200' }}">
+                                    @if($isAccAdmin)
+                                        <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg>
+                                        Terverifikasi Sah
+                                    @else
+                                        Tersimpan & Diajukan
+                                    @endif
                                 </span>
                             </div>
 
@@ -706,7 +751,7 @@
                         </div>
                     @endif
 
-                    @if($isReadOnlyApl01)
+                    @if($isAccAdmin)
                         <!-- Pengesahan & Tanda Tangan Admin LSP -->
                         <div class="border-t border-emerald-200/90 pt-6 bg-emerald-50/40 -mx-6 sm:-mx-8 px-6 sm:px-8 pb-4 rounded-b-2xl">
                             <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-emerald-200/70 pb-4 mb-4">
@@ -758,21 +803,46 @@
                                 </div>
                             </div>
                         </div>
+                    @elseif($isDiajukan)
+                        <!-- Status Verifikasi & Pengesahan Admin LSP (Menunggu Verifikasi) -->
+                        <div class="border-t border-amber-200/90 pt-6 bg-amber-50/40 -mx-6 sm:-mx-8 px-6 sm:px-8 pb-4 rounded-b-2xl">
+                            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-amber-200/70 pb-4 mb-4">
+                                <div>
+                                    <div class="text-amber-800 font-bold text-xs uppercase tracking-wider">
+                                        Status Verifikasi & Pengesahan Admin LSP
+                                    </div>
+                                    <h3 class="text-base font-bold text-slate-900 mt-0.5">Rekomendasi Permohonan Sertifikasi (FR.APL.01)</h3>
+                                </div>
+                                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200 shadow-2xs">
+                                    <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                                    Menunggu Verifikasi Admin
+                                </span>
+                            </div>
+
+                            <div class="bg-white p-4 rounded-xl border border-amber-200/80 text-xs space-y-2">
+                                <p class="text-slate-600 leading-relaxed">
+                                    Berkas permohonan sertifikasi dan bukti kelengkapan dokumen persyaratan Anda telah berhasil diajukan dan saat ini berada dalam antrean pemeriksaan oleh Admin LSP SMKN 1 Gunungputri.
+                                </p>
+                                <p class="text-slate-500 text-[11px] italic">
+                                    Catatan verifikator, tanda tangan pengesahan, serta penetapan Asesor dan Jadwal Asesmen akan terbit secara otomatis di bagian ini setelah permohonan disetujui (ACC).
+                                </p>
+                            </div>
+                        </div>
                     @endif
                 </div>
 
                 <!-- Bottom Action Buttons Step 1 -->
                 @if($isReadOnlyApl01)
                     <div class="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
-                        <div class="flex items-center gap-2 text-xs text-emerald-800 font-medium">
-                            <svg class="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                        <div class="flex items-center gap-2 text-xs {{ $isAccAdmin ? 'text-emerald-800' : 'text-amber-800' }} font-medium">
+                            <svg class="w-4 h-4 {{ $isAccAdmin ? 'text-emerald-600' : 'text-amber-600' }} shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
                             </svg>
                             <span>Data FR.APL.01 telah dikunci (Read-Only) karena {{ $isAccAdmin ? 'telah disetujui oleh Admin LSP' : 'sedang menunggu verifikasi Admin LSP' }}.</span>
                         </div>
-                        <button type="button" @click="setStep({{ $isApl02Approved ? 3 : 2 }})" 
-                                class="w-full sm:w-auto px-7 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-sm transition-all duration-150 flex items-center justify-center gap-2">
-                            <span>Lanjut ke Formulir {{ $isApl02Approved ? 'FR.AK.01' : 'FR.APL.02' }}</span>
+                        <button type="button" @click="setStep({{ $isAk01Selesai ? 4 : ($isApl02Approved ? 3 : 2) }})" 
+                                class="w-full sm:w-auto px-7 py-2.5 rounded-xl {{ $isAccAdmin ? 'bg-blue-600 hover:bg-blue-700' : 'bg-amber-600 hover:bg-amber-700' }} text-white font-bold text-sm shadow-sm transition-all duration-150 flex items-center justify-center gap-2 cursor-pointer">
+                            <span>{{ $isAccAdmin ? 'Lanjut ke Formulir ' . ($isAk01Selesai ? 'FR.AK.07' : ($isApl02Approved ? 'FR.AK.01' : 'FR.APL.02')) : 'Lihat Formulir FR.APL.02' }}</span>
                             <span>&rarr;</span>
                         </button>
                     </div>
@@ -2627,12 +2697,72 @@
             </div>
         </div>
     </div>
+
+    <!-- =========================================================================
+         MODAL REQUEST IZIN UBAH DATA (PERMOHONAN REVISI / PERBAIKAN DATA APL.01)
+         ========================================================================= -->
+    <div id="modalRequestEdit" class="fixed inset-0 items-center justify-center bg-slate-900/70 backdrop-blur-xs p-4 hidden" style="display: none; z-index: 99999;" onclick="if(event.target === this) tutupModalRequestEdit()">
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-lg w-full p-6 space-y-4 relative transform transition-all animate-scale-up">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center font-bold text-lg shrink-0 shadow-inner">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-slate-900 text-base">Permohonan Izin Ubah Data</h3>
+                        <p class="text-[11px] sm:text-xs text-slate-500">Minta akses ke Admin LSP untuk memperbaiki data APL.01 / Skema.</p>
+                    </div>
+                </div>
+                <button type="button" onclick="tutupModalRequestEdit()" class="text-slate-400 hover:text-slate-700 bg-slate-50 hover:bg-slate-100 rounded-full w-8 h-8 flex items-center justify-center transition-colors cursor-pointer text-xl font-bold">&times;</button>
+            </div>
+
+            <div class="text-xs sm:text-sm text-slate-600 leading-relaxed bg-blue-50/60 p-3.5 rounded-xl border border-blue-100/80">
+                Data permohonan sertifikasi Anda saat ini sedang dikunci. Jika ada perubahan skema, salah ketik identitas, atau perbaikan berkas, silakan jelaskan secara rinci. Admin LSP akan mengevaluasi dan membuka kunci data permohonan Anda.
+            </div>
+
+            <form action="{{ $pendaftaran ? route('asesi.request-perbaikan', $pendaftaran->id) : '#' }}" method="POST">
+                @csrf
+                <div class="space-y-1.5 mb-4">
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                        Alasan & Bagian yang Ingin Diubah <span class="text-rose-500">*</span>
+                    </label>
+                    <textarea name="catatan_request_perbaikan" rows="3" required placeholder="Contoh: Saya ingin mengubah pilihan skema sertifikasi / salah ketik NIK..." class="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-sm text-slate-800 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none leading-relaxed transition-all shadow-xs"></textarea>
+                </div>
+
+                <div class="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100 mt-2">
+                    <button type="button" onclick="tutupModalRequestEdit()" class="px-4 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 font-semibold text-xs sm:text-sm transition-colors cursor-pointer">
+                        Batal
+                    </button>
+                    <button type="submit" class="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs sm:text-sm shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+                        Kirim Permohonan
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
 @endsection
 
 @push('js')
 <script>
     let targetElemenIdForApl01 = null;
+
+    window.bukaModalRequestEdit = function() {
+        const modal = document.getElementById('modalRequestEdit');
+        if (modal) {
+            modal.classList.remove('hidden');
+            modal.style.display = 'flex';
+        }
+    };
+
+    window.tutupModalRequestEdit = function() {
+        const modal = document.getElementById('modalRequestEdit');
+        if (modal) {
+            modal.classList.add('hidden');
+            modal.style.display = 'none';
+        }
+    };
 
     /**
      * SISTEM VALIDASI KELENGKAPAN FR.APL.02

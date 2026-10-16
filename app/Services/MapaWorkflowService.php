@@ -235,20 +235,10 @@ class MapaWorkflowService
             return $existing;
         }
 
-        // Buat default unit matriks jika ada unit kompetensi
+        // Ambil default unit matriks dari master jika ada
         $defaultMatriks = [];
         if ($master && !empty($master->rencana_unit_matriks)) {
             $defaultMatriks = $master->rencana_unit_matriks;
-        } else {
-            foreach ($pendaftaran->skema->unitKompetensi as $unit) {
-                $defaultMatriks[$unit->id] = [
-                    'l' => 1,
-                    'tl' => 0,
-                    't' => 1,
-                    'methods' => ['CL', 'DPT', 'PW'],
-                    'bukti' => 'Bukti hasil demonstrasi praktik langsung unjuk kerja dan portofolio unit ' . $unit->judul_unit,
-                ];
-            }
         }
 
         $adminDb = Pengguna::where('peran', 'admin')->first() ?: Pengguna::where('peran', 'superadmin')->first();
@@ -278,38 +268,38 @@ class MapaWorkflowService
             $defaultPenyusunValidatorTabel['validator_1']['nomor_met'] = $defaultAdminMet;
         }
 
-        // Buat record default awal dengan meng-clone dari master jika ada
+        // Buat record awal dengan meng-clone dari master jika ada, atau kosong jika belum dibuat
         return Mapa01::create([
             'pendaftaran_id' => $pendaftaran->id,
             'skema_id' => $pendaftaran->skema_id,
             'asesor_id' => $asesorId,
-            'pendekatan_asesi' => $master ? ($master->pendekatan_asesi ?: []) : ['Hasil pelatihan dan / atau pendidikan:'],
-            'tujuan_asesmen' => $pendaftaran->tujuan_asesmen ?: ($master?->tujuan_asesmen ?: 'Sertifikasi'),
+            'pendekatan_asesi' => $master ? ($master->pendekatan_asesi ?: []) : [],
+            'tujuan_asesmen' => $master?->tujuan_asesmen ?: null,
             'tujuan_asesmen_lainnya' => $master?->tujuan_asesmen_lainnya,
-            'konteks_lingkungan' => $master?->konteks_lingkungan ?: 'Tempat kerja simulasi',
-            'konteks_peluang_bukti' => $master?->konteks_peluang_bukti ?: 'Tersedia',
-            'hubungan_standar_bukti' => $master?->hubungan_standar_bukti ?: 'senang',
-            'hubungan_standar_aktivitas' => $master?->hubungan_standar_aktivitas ?: 'senang',
-            'hubungan_standar_pembelajaran' => $master?->hubungan_standar_pembelajaran ?: 'senang',
-            'pelaksana_asesmen' => $master ? ($master->pelaksana_asesmen ?: ['Lembaga Sertifikasi']) : ['Lembaga Sertifikasi'],
-            'konfirmasi_orang_relevan' => $master ? ($master->konfirmasi_orang_relevan ?: ['Manajer sertifikasi LSP']) : ['Manajer sertifikasi LSP'],
+            'konteks_lingkungan' => $master?->konteks_lingkungan ?: null,
+            'konteks_peluang_bukti' => $master?->konteks_peluang_bukti ?: null,
+            'hubungan_standar_bukti' => $master?->hubungan_standar_bukti ?: null,
+            'hubungan_standar_aktivitas' => $master?->hubungan_standar_aktivitas ?: null,
+            'hubungan_standar_pembelajaran' => $master?->hubungan_standar_pembelajaran ?: null,
+            'pelaksana_asesmen' => $master ? ($master->pelaksana_asesmen ?: []) : [],
+            'konfirmasi_orang_relevan' => $master ? ($master->konfirmasi_orang_relevan ?: []) : [],
             'konfirmasi_pihak_relevan_tabel' => $master?->konfirmasi_pihak_relevan_tabel,
             'penyusun_validator_tabel' => $defaultPenyusunValidatorTabel,
             'tanda_tangan_asesor' => null,
             'tanggal_ttd_asesor' => null,
             'tanda_tangan_admin' => $master?->tanda_tangan_admin,
             'tanggal_ttd_admin' => $master?->tanggal_ttd_admin,
-            'standar_industri' => $master ? ($master->standar_industri ?: ['Standar Kompetensi:']) : ['Standar Kompetensi:'],
+            'standar_industri' => $master ? ($master->standar_industri ?: []) : [],
             'rencana_unit_matriks' => $defaultMatriks,
-            'karakteristik_kandidat_status' => $master?->karakteristik_kandidat_status ?: 'tidak_ada',
+            'karakteristik_kandidat_status' => $master?->karakteristik_kandidat_status ?: null,
             'karakteristik_kandidat_teks' => $master?->karakteristik_kandidat_teks,
-            'kebutuhan_kontekstualisasi_status' => $master?->kebutuhan_kontekstualisasi_status ?: 'tidak_ada',
+            'kebutuhan_kontekstualisasi_status' => $master?->kebutuhan_kontekstualisasi_status ?: null,
             'kebutuhan_kontekstualisasi_teks' => $master?->kebutuhan_kontekstualisasi_teks,
-            'saran_pelatihan_status' => $master?->saran_pelatihan_status ?: 'tidak_ada',
+            'saran_pelatihan_status' => $master?->saran_pelatihan_status ?: null,
             'saran_pelatihan_teks' => $master?->saran_pelatihan_teks,
-            'penyesuaian_perangkat_status' => $master?->penyesuaian_perangkat_status ?: 'tidak_ada',
+            'penyesuaian_perangkat_status' => $master?->penyesuaian_perangkat_status ?: null,
             'penyesuaian_perangkat_teks' => $master?->penyesuaian_perangkat_teks,
-            'peluang_terintegrasi_status' => $master?->peluang_terintegrasi_status ?: 'tidak_ada',
+            'peluang_terintegrasi_status' => $master?->peluang_terintegrasi_status ?: null,
             'peluang_terintegrasi_teks' => $master?->peluang_terintegrasi_teks,
             'status_mapa' => ($isMasterValidated && $master?->status_mapa === 'selesai') ? 'selesai' : 'draft',
         ]);
@@ -364,11 +354,11 @@ class MapaWorkflowService
             ],
             'standar_industri' => [],
             'rencana_unit_matriks' => [],
-            'karakteristik_kandidat_status' => 'tidak_ada',
-            'kebutuhan_kontekstualisasi_status' => 'tidak_ada',
-            'saran_pelatihan_status' => 'tidak_ada',
-            'penyesuaian_perangkat_status' => 'tidak_ada',
-            'peluang_terintegrasi_status' => 'tidak_ada',
+            'karakteristik_kandidat_status' => null,
+            'kebutuhan_kontekstualisasi_status' => null,
+            'saran_pelatihan_status' => null,
+            'penyesuaian_perangkat_status' => null,
+            'peluang_terintegrasi_status' => null,
             'status_mapa' => 'draft',
         ]);
     }

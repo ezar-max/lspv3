@@ -237,14 +237,7 @@ class AsesiTahapanController extends Controller
             $penilaianUnitMap = $pendaftaran->penilaian->keyBy('unit_id');
         }
 
-        $progressPersen = 0;
-        if ($isDraft && !$isDiajukan) $progressPersen = 0;
-        elseif ($isDiajukan && !$isAccAdmin) $progressPersen = 25;
-        elseif ($isAccAdmin && ($statusApl02 === 'draft' || $statusApl02 === 'revision')) $progressPersen = 40;
-        elseif ($statusApl02 === 'submitted' || $statusApl02 === 'under_review') $progressPersen = 60;
-        elseif ($isApl02Approved && !$isAk01Selesai) $progressPersen = 75;
-        elseif ($isAk01Selesai && !$isAk07Selesai) $progressPersen = 90;
-        elseif ($isAk07Selesai) $progressPersen = 100;
+        $progressPersen = $pendaftaran ? $pendaftaran->hitungProgressTahapan() : 0;
 
         $dokumenList = $pendaftaran ? $pendaftaran->dokumen : collect();
         $dokumenTeknis = collect($dokumenList)->filter(function ($dok) {

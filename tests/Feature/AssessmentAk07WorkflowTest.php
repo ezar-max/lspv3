@@ -241,10 +241,9 @@ class AssessmentAk07WorkflowTest extends TestCase
         $response = $this->actingAs($this->asesi)
             ->get(route('asesi.ak07', $this->pendaftaran->id));
 
-        $response->assertRedirect(route('asesi.tahapan', [
-            'pendaftaran_id' => $this->pendaftaran->id,
-            'step' => 4,
-        ]));
+        $response->assertStatus(200);
+        $response->assertViewIs('asesi.ak07-detail');
+        $response->assertSee('Formulir FR.AK.07 Belum Dibuat');
     }
 
     /**
@@ -424,13 +423,12 @@ class AssessmentAk07WorkflowTest extends TestCase
         $respDash->assertSee('FR.AK.07');
         $respDash->assertSee(route('asesi.ak07', ['pendaftaranId' => $this->pendaftaran->id]));
 
-        // 2. Tanpa Master FR.AK.07 bertanda tangan, asesi dikembalikan ke tahap formulir yang kosong.
+        // 2. Tanpa Master FR.AK.07 bertanda tangan, asesi tetap dapat membuka halaman FR.AK.07 dan melihat status formulir belum dibuat.
         $respDetail = $this->actingAs($this->asesi)
             ->get(route('asesi.ak07', ['pendaftaranId' => $this->pendaftaran->id]));
-        $respDetail->assertRedirect(route('asesi.tahapan', [
-            'pendaftaran_id' => $this->pendaftaran->id,
-            'step' => 4,
-        ]));
+        $respDetail->assertStatus(200);
+        $respDetail->assertViewIs('asesi.ak07-detail');
+        $respDetail->assertSee('Formulir Belum Dibuat');
     }
 
     /**
@@ -522,5 +520,19 @@ class AssessmentAk07WorkflowTest extends TestCase
         $respTahapan = $this->actingAs($this->asesi)->get(route('asesi.tahapan', ['pendaftaran_id' => $this->pendaftaran->id]));
         $respTahapan->assertStatus(200);
         $respTahapan->assertSee('FR.AK.07 Belum Diisi Asesor');
+    }
+
+    public function test_asesi_without_pendaftaran_redirects_to_dashboard_with_warning(): void
+    {
+        $asesiBaru = Pengguna::create([
+            'peran' => 'asesi',
+            'nama_lengkap' => 'Asesi Baru Tanpa Skema',
+            'email' => 'asesi.baru.unique@lsp.test',
+            'kata_sandi' => bcrypt('secret'),
+        ]);
+
+        $response = $this->actingAs($asesiBaru)->get(route('asesi.ak07'));
+        $response->assertRedirect(route('asesi.dashboard'));
+        $response->assertSessionHas('warning');
     }
 }

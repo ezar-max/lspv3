@@ -12,7 +12,7 @@
     $profileTtd = null;
     $isConfirmed = $ak07 && $ak07->isConfirmed() && !empty($ak07->asesor_signature);
     $isSignedByAsesi = $isConfirmed;
-    $savedChecklist = (array) ($ak07->items_checklist ?? []);
+    $savedChecklist = (array) ($ak07?->items_checklist ?? []);
     $selectedPotensi = $ak07?->potensi_asesi !== null ? (int) $ak07->potensi_asesi : null;
     $selectedFase = $ak07?->fase_penggunaan;
     $asesorSigToShow = $ak07?->asesor_signature;
@@ -67,7 +67,12 @@
 
             <!-- Status Pill Header -->
             <div class="flex items-center gap-2">
-                @if($isConfirmed)
+                @if($formBelumDibuat ?? false)
+                    <span class="px-3 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-xs font-bold flex items-center gap-1.5 shadow-2xs">
+                        <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+                        Belum Dibuat Asesor / Admin
+                    </span>
+                @elseif($isConfirmed)
                     <span class="px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold flex items-center gap-1.5 shadow-2xs">
                         <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                         CONFIRMED &bull; Terkonfirmasi & Terkunci
@@ -118,6 +123,20 @@
             </div>
         </div>
     </div>
+
+    @if($formBelumDibuat ?? false)
+        <div class="p-4 bg-amber-50 border border-amber-200/90 rounded-2xl flex items-start gap-3.5 shadow-2xs">
+            <div class="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 font-bold text-sm">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <div class="space-y-1">
+                <h2 class="text-sm font-bold text-amber-900 leading-tight">Formulir FR.AK.07 Belum Dibuat oleh Asesor / Admin</h2>
+                <p class="text-xs text-amber-800 leading-relaxed">
+                    Formulir Penyesuaian yang Wajar dan Beralasan (FR.AK.07) untuk skema <strong>{{ $pendaftaran->skema->nama_skema ?? '-' }}</strong> belum dibuat atau belum disahkan oleh Asesor Penguji atau Admin LSP. Anda tetap dapat meninjau format formulir di bawah ini, namun pengesahan tanda tangan akan dibuka setelah formulir dilengkapi oleh pihak Asesor / Admin.
+                </p>
+            </div>
+        </div>
+    @endif
 
     <!-- 1. BAGIAN POTENSI ASESI (1 s.d. 5) -->
     <div class="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-4 sm:p-5 space-y-3">
@@ -297,7 +316,7 @@
                     Acuan Pembanding Disepakati:
                 </span>
                 <div class="p-2.5 rounded-xl border border-slate-200 bg-slate-50/60 text-xs text-slate-800 font-medium">
-                    {{ $ak07->acuan_pembanding_disepakati }}
+                    {{ $ak07?->acuan_pembanding_disepakati ?: 'Belum ditentukan' }}
                 </div>
             </div>
 
@@ -306,7 +325,7 @@
                     Metode Asesmen Disepakati:
                 </span>
                 <div class="p-2.5 rounded-xl border border-slate-200 bg-slate-50/60 text-xs text-slate-800 font-medium">
-                    {{ $ak07->metode_disepakati }}
+                    {{ $ak07?->metode_disepakati ?: 'Belum ditentukan' }}
                 </div>
             </div>
 
@@ -315,7 +334,7 @@
                     Instrumen Pengganti / Penyesuaian:
                 </span>
                 <div class="p-2.5 rounded-xl border border-slate-200 bg-slate-50/60 text-xs text-slate-800 font-medium">
-                    {{ $ak07->instrumen_disepakati }}
+                    {{ $ak07?->instrumen_disepakati ?: 'Belum ditentukan' }}
                 </div>
             </div>
         </div>
@@ -325,7 +344,7 @@
                 Catatan Tambahan Asesor:
             </span>
             <div class="p-2.5 rounded-xl border border-slate-200 bg-slate-50/60 text-xs text-slate-700 italic">
-                {{ $ak07->catatan_asesor }}
+                {{ $ak07?->catatan_asesor ?: 'Tidak ada catatan tambahan.' }}
             </div>
         </div>
     </div>
@@ -335,7 +354,7 @@
             <div>
                 <h3 class="text-sm font-bold text-slate-900">Disahkan Asesor untuk Seluruh Asesi Skema</h3>
                 <p class="text-xs text-slate-500 mt-1">
-                    {{ $asesorNama }}{{ $ak07->asesor_signed_at ? ' · ' . $ak07->asesor_signed_at->format('d/m/Y H:i') : '' }}
+                    {{ $asesorNama }}{{ $ak07?->asesor_signed_at ? ' · ' . \Carbon\Carbon::parse($ak07->asesor_signed_at)->format('d/m/Y H:i') : '' }}
                 </p>
             </div>
             <img src="{{ $asesorSigUrl }}" alt="Tanda tangan Asesor FR.AK.07" class="max-h-16 max-w-40 object-contain">
@@ -357,7 +376,7 @@
                     <span class="font-bold text-slate-800">Asesor Penguji</span>
                     @if($asesorSigToShow)
                         <span class="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold">
-                            Tertera TTD ({{ $ak07->asesor_signed_at ? \Carbon\Carbon::parse($ak07->asesor_signed_at)->format('d/m/Y H:i') : 'Tersimpan' }})
+                            Tertera TTD ({{ $ak07?->asesor_signed_at ? \Carbon\Carbon::parse($ak07->asesor_signed_at)->format('d/m/Y H:i') : 'Tersimpan' }})
                         </span>
                     @else
                         <span class="px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-bold">
@@ -384,9 +403,13 @@
             <div class="border border-slate-200 rounded-xl p-3.5 space-y-3 bg-slate-50/50">
                 <div class="flex items-center justify-between border-b border-slate-200 pb-2">
                     <span class="font-bold text-slate-800">Asesi (Kandidat)</span>
-                    @if($isSignedByAsesi)
+                    @if($formBelumDibuat ?? false)
+                        <span class="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200 text-[10px] font-bold">
+                            Belum Tersedia
+                        </span>
+                    @elseif($isSignedByAsesi)
                         <span class="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold">
-                            Disetujui Asesi ({{ $ak07->asesi_signed_at ? \Carbon\Carbon::parse($ak07->asesi_signed_at)->format('d/m/Y H:i') : 'Tersimpan' }})
+                            Disetujui Asesi ({{ $ak07?->asesi_signed_at ? \Carbon\Carbon::parse($ak07->asesi_signed_at)->format('d/m/Y H:i') : 'Tersimpan' }})
                         </span>
                     @else
                         <span class="px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-bold">
@@ -399,11 +422,21 @@
                     <strong>{{ $pendaftaran->asesi->nama_lengkap ?? auth()->user()->nama_lengkap }}</strong>
                 </div>
 
-                @if($isSignedByAsesi)
+                @if($formBelumDibuat ?? false)
+                    <div class="p-3 border border-slate-200 bg-white rounded-xl flex flex-col items-center justify-center h-36 text-center space-y-1.5">
+                        <div class="w-8 h-8 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center text-xs">
+                            <i class="fa-solid fa-lock"></i>
+                        </div>
+                        <span class="text-[11px] font-bold text-slate-700">Tanda Tangan Terkunci</span>
+                        <span class="text-[10px] text-slate-500 max-w-xs">
+                            Formulir belum dibuat/ditandatangani Asesor atau Admin.
+                        </span>
+                    </div>
+                @elseif($isSignedByAsesi)
                     <div class="p-3 border border-emerald-200 bg-emerald-50/30 rounded-xl flex flex-col items-center justify-center h-36 text-center space-y-1">
                         <img src="{{ asset($ak07->asesi_signature) }}" alt="TTD Asesi" class="max-h-20 object-contain mb-1">
                         <span class="text-[10px] text-emerald-700 font-bold">
-                            Telah Ditandatangani & Disetujui ({{ $ak07->asesi_signed_at ? \Carbon\Carbon::parse($ak07->asesi_signed_at)->format('d/m/Y H:i') : '' }})
+                            Telah Ditandatangani & Disetujui ({{ $ak07?->asesi_signed_at ? \Carbon\Carbon::parse($ak07->asesi_signed_at)->format('d/m/Y H:i') : '' }})
                         </span>
                     </div>
                 @else
@@ -533,4 +566,23 @@
         };
     }
 </script>
+
+@if($formBelumDibuat ?? false)
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                icon: 'info',
+                title: 'Formulir Belum Dibuat',
+                text: 'Formulir FR.AK.07 (Penyesuaian yang Wajar dan Beralasan) untuk skema sertifikasi ini belum dibuat atau belum ditandatangani oleh Asesor / Admin.',
+                confirmButtonColor: '#2563eb',
+                confirmButtonText: 'Saya Mengerti',
+                customClass: {
+                    popup: 'swal2-modern-popup'
+                }
+            });
+        }
+    });
+</script>
+@endif
 @endsection

@@ -204,22 +204,20 @@
                 }
 
                 // ==========================================
-                // PERSENTASE PROGRESS AKURAT SESUAI REAL-TIME
+                // PERSENTASE PROGRESS SINKRON (SINGLE SOURCE OF TRUTH DARI MODEL)
                 // ==========================================
+                $persentase = $p->hitungProgressTahapan();
+
                 if ($isDitolak) {
-                    $persentase = 0;
                     $badgeClass = 'background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5;';
                     $statusHeader = 'Pendaftaran Ditolak';
                 } elseif ($hasRekomendasi) {
-                    $persentase = 100;
                     $badgeClass = $isKompeten ? 'background: #dcfce7; color: #15803d; border: 1px solid #86efac;' : 'background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5;';
                     $statusHeader = 'Selesai (' . ($isKompeten ? 'KOMPETEN' : 'BELUM KOMPETEN') . ')';
                 } elseif ($p->isApl02Revision() || $statusPendaftaran === 'revisi' || $isRevisi) {
-                    $persentase = ($statusPendaftaran === 'revisi') ? 20 : 40;
                     $badgeClass = 'background: #fef3c7; color: #b45309; border: 1px solid #fde68a;';
                     $statusHeader = 'Revisi';
                 } elseif ($tahap4['state'] === 'selesai') {
-                    $persentase = 85;
                     if ($isUjianBerlangsung) {
                         $badgeClass = 'background: #ecfdf5; color: #047857; border: 1.5px solid #10b981; font-weight: 800; box-shadow: 0 0 10px rgba(16, 185, 129, 0.25);';
                         $statusHeader = 'Sesi Asesmen Telah Dimulai!';
@@ -231,27 +229,21 @@
                         $statusHeader = 'Menunggu Asesmen Dimulai';
                     }
                 } elseif ($rekomAsesor === 'dapat_dilanjutkan' && $asesiTtdAk01) {
-                    $persentase = 75;
                     $badgeClass = 'background: #fef3c7; color: #b45309; border: 1px solid #fde68a;';
                     $statusHeader = 'AK-01 Ditandatangani (Menunggu Asesor)';
                 } elseif ($rekomAsesor === 'dapat_dilanjutkan') {
-                    $persentase = 70;
                     $badgeClass = 'background: #fef3c7; color: #b45309; border: 1px solid #fde68a;';
                     $statusHeader = 'APL-02 Di-ACC (Wajib TTD FR.AK.01)';
-                } elseif ($hasJawabanApl02) {
-                    $persentase = 60;
+                } elseif ($p->isApl02Submitted() || $p->isApl02UnderReview() || $hasJawabanApl02) {
                     $badgeClass = 'background: #fef3c7; color: #b45309; border: 1px solid #fde68a;';
                     $statusHeader = 'APL-02 Dikirim (Diverifikasi Asesor)';
                 } elseif ($tahap2['state'] === 'selesai') {
-                    $persentase = 45;
                     $badgeClass = 'background: #dcfce7; color: #15803d; border: 1px solid #86efac;' ;
                     $statusHeader = 'APL-01 Disetujui (Wajib Isi APL-02)';
                 } elseif ($statusPendaftaran === 'diajukan') {
-                    $persentase = 30;
                     $badgeClass = 'background: #fef3c7; color: #b45309; border: 1px solid #fde68a;';
                     $statusHeader = 'APL-01 Dikirim (Diverifikasi Admin)';
                 } else {
-                    $persentase = 15;
                     $badgeClass = 'background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1;';
                     $statusHeader = 'Draft (Belum Dikirim)';
                 }
@@ -271,6 +263,9 @@
                         {{ $statusHeader }}
                     </span>
                     <span style="font-size: 0.78rem; color: #64748b; font-weight: 700;">Progress: {{ $persentase }}%</span>
+                    <div style="width: 110px; height: 5px; background: #e2e8f0; border-radius: 9999px; overflow: hidden; margin-top: 1px;">
+                        <div style="width: {{ $persentase }}%; height: 100%; background: {{ $persentase == 100 ? '#10b981' : '#2563eb' }}; border-radius: 9999px; transition: width 0.4s ease;"></div>
+                    </div>
                 </div>
             </div>
 
@@ -769,7 +764,7 @@
                     <span>Portal Formulir Terpadu</span>
                     <i class="fa-solid fa-arrow-right" style="color: #94a3b8; font-size: 0.75rem;"></i>
                 </a>
-                <a href="{{ route('asesi.ak07') }}" style="display: flex; align-items: center; justify-content: space-between; padding: 0.6rem 0.85rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; color: #1e293b; font-size: 0.85rem; font-weight: 700; text-decoration: none; transition: all 0.2s;">
+                <a href="{{ !empty($pendaftaranTerakhir) ? route('asesi.ak07', ['pendaftaranId' => $pendaftaranTerakhir->id]) : route('asesi.ak07') }}" style="display: flex; align-items: center; justify-content: space-between; padding: 0.6rem 0.85rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; color: #1e293b; font-size: 0.85rem; font-weight: 700; text-decoration: none; transition: all 0.2s;">
                     <span>Penyesuaian Asesmen (FR.AK.07)</span>
                     <i class="fa-solid fa-arrow-right" style="color: #94a3b8; font-size: 0.75rem;"></i>
                 </a>

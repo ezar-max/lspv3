@@ -79,7 +79,6 @@ Route::middleware(['auth', 'peran:asesi'])->prefix('asesi')->as('asesi.')->group
     
     Route::get('/jadwal', [AsesiController::class, 'jadwal'])->name('jadwal');
     Route::post('/pilih-asesor/{id}', [AsesiController::class, 'pilihAsesor'])->name('pilih-asesor');
-    Route::post('/request-perbaikan/{id}', [AsesiController::class, 'requestPerbaikan'])->name('request-perbaikan');
     Route::get('/apl-02', [AsesiController::class, 'apl02'])->name('apl02');
     Route::post('/apl-02', [AsesiController::class, 'simpanApl02'])->name('apl02.simpan');
     Route::get('/ak-01/{id?}', [AsesiController::class, 'ak01Detail'])->name('ak01');

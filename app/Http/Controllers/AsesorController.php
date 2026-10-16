@@ -784,7 +784,7 @@ class AsesorController extends Controller
             'id' => 0,
             'nomor_pendaftaran' => 'MASTER-' . $skema->kode_skema,
             'skema_id' => $skema->id,
-            'tujuan_asesmen' => 'Sertifikasi',
+            'tujuan_asesmen' => null,
             'kebangsaan' => 'Indonesia',
         ]);
         $pendaftaran->setRelation('skema', $skema);

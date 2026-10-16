@@ -281,6 +281,89 @@ class PendaftaranAsesi extends Model
     }
 
     /**
+     * Hitung Persentase Progres Tahapan Pendaftaran & Asesmen (0 - 100%)
+     * Single Source of Truth untuk Dashboard Asesi dan Halaman Tahapan Formulir.
+     */
+    public function hitungProgressTahapan(): int
+    {
+        // 1. Pendaftaran Ditolak oleh Admin atau Asesor
+        if ($this->status_pendaftaran === 'ditolak' 
+            || $this->rekomendasi_admin_status === 'tidak_diterima'
+            || $this->isApl02Rejected()) {
+            return 0;
+        }
+
+        // 2. Asesmen Telah Selesai Dinilai (Sudah ada rekomendasi akhir Kompeten / Belum Kompeten)
+        if ($this->status_pendaftaran === 'selesai' || !empty($this->rekomendasi)) {
+            return 100;
+        }
+
+        // 3. Revisi Berkas APL-01 oleh Admin
+        if ($this->status_pendaftaran === 'revisi') {
+            return 20;
+        }
+
+        // 4. Revisi Formulir FR.APL.02 oleh Asesor
+        if ($this->isApl02Revision()) {
+            return 45;
+        }
+
+        // 5. Cek Status Pelaksanaan Ujian (Tahap 5)
+        $isAk01Selesai = $this->isAk01Selesai();
+        $ak07 = $this->ak07Adjustment ?? $this->ak07;
+        $isAk07Selesai = $ak07 && !empty($ak07->asesor_signature) && $ak07->isConfirmed();
+
+        // Jika AK.01 dan AK.07 sudah beres, cek sesi ujian
+        if ($isAk01Selesai) {
+            $isRuangUjiOpen = $this->isRuangUjiOpen();
+            if ($isRuangUjiOpen) {
+                return 95; // Sedang Ujian / Ruang Uji Aktif
+            }
+            if ($isAk07Selesai) {
+                return 90; // AK.07 Selesai, Menunggu Jadwal Ujian
+            }
+            return 85; // AK.01 Lengkap (Asesi & Asesor), Menuju AK.07
+        }
+
+        // 6. FR.AK.01 Baru Ditandatangani Asesi (Menunggu TTD Asesor)
+        if (!empty($this->tanda_tangan_asesi_ak01) || $this->status_ak01 === 'disetujui_asesi') {
+            return 80;
+        }
+
+        // 7. FR.APL.02 Disetujui (ACC Asesor / Approved)
+        if ($this->isApl02Approved() || $this->rekomendasi_asesor_status === 'dapat_dilanjutkan') {
+            return 75;
+        }
+
+        // 8. FR.APL.02 Telah Diajukan ke Asesor (Submitted / Under Review)
+        if ($this->isApl02Submitted() || $this->isApl02UnderReview() || (($this->relationLoaded('jawabanApl02') ? $this->jawabanApl02->count() > 0 : $this->jawabanApl02()->exists()) && in_array($this->status_apl02, ['submitted', 'waiting_reverification']))) {
+            return 60;
+        }
+
+        // 9. FR.APL.01 Disetujui Admin (ACC Admin) -> Menunggu Asesi Mengisi FR.APL.02
+        if ($this->isApprovedByAdmin()) {
+            $hasJawaban = $this->relationLoaded('jawabanApl02') ? ($this->jawabanApl02->count() > 0) : $this->jawabanApl02()->exists();
+            if ($hasJawaban) {
+                return 50; // Asesi sudah mulai mengisi butir APL.02 draft
+            }
+            return 40; // Baru di-ACC Admin, APL.02 masih kosong
+        }
+
+        // 10. FR.APL.01 Telah Diajukan (Menunggu Verifikasi Admin LSP)
+        if ($this->status_pendaftaran === 'diajukan') {
+            return 25;
+        }
+
+        // 11. Masih Draft Baru (Belum Diajukan)
+        return 10;
+    }
+
+    public function getPersentaseProgressAttribute(): int
+    {
+        return $this->hitungProgressTahapan();
+    }
+
+    /**
      * Evaluasi Time-Lock & Kesiapan Ruang Uji (AK.01 + MAPA + Jadwal Waktu)
      */
     public function getAssessmentTimeStatusAttribute(): array

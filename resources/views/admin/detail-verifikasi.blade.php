@@ -822,9 +822,13 @@
                 <div>
                     <div class="flex items-center gap-2 flex-wrap">
                         <h4 class="font-bold text-slate-900 text-sm">FR.MAPA.01 &bull; Perencanaan Aktivitas dan Proses Asesmen</h4>
-                        @if($isMapa01PesertaValidated)
+                        @if($isMasterValidated)
                             <span class="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold">
                                 ✓ Tervalidasi Admin
+                            </span>
+                        @elseif(!$mapa01Master)
+                            <span class="px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-bold">
+                                Belum Dibuat
                             </span>
                         @else
                             <span class="px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-bold">
@@ -833,17 +837,19 @@
                         @endif
                     </div>
                     <p class="text-xs text-slate-500 mt-0.5">
-                        @if($isMapa01PesertaValidated)
+                        @if($isMasterValidated)
                             Dokumen acuan perencanaan asesmen BNSP untuk skema ini telah resmi divalidasi oleh Validator Admin LSP.
+                        @elseif(!$mapa01Master)
+                            Dokumen acuan perencanaan asesmen BNSP untuk skema ini belum dibuat/dikonfigurasi. Klik tombol di samping untuk menyusun formulir sesuai skema.
                         @else
-                            Dokumen acuan perencanaan asesmen BNSP untuk peserta ini. Validator Admin LSP dapat meninjau dan mengesahkan secara digital.
+                            Dokumen acuan perencanaan asesmen BNSP untuk skema ini telah dibuat dan menunggu validasi/pengesahan Validator Admin LSP.
                         @endif
                     </p>
                 </div>
             </div>
             <div class="flex items-center gap-2 shrink-0">
-                <a href="{{ route('asesor.mapa-01', $pendaftaran->id) }}" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl {{ !$isMapa01PesertaValidated ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-2xs' : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300' }} text-xs font-bold transition">
-                    <span>{{ !$isMapa01PesertaValidated ? 'Validasi FR.MAPA.01' : 'Lihat Dokumen FR.MAPA.01' }} &rarr;</span>
+                <a href="{{ route('asesor.skema.mapa-01', $pendaftaran->skema_id) }}" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl {{ !$isMasterValidated ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-2xs' : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300' }} text-xs font-bold transition">
+                    <span>{{ !$isMasterValidated ? (!$mapa01Master ? 'Buat FR.MAPA.01' : 'Validasi FR.MAPA.01') : 'Lihat Dokumen FR.MAPA.01' }} &rarr;</span>
                 </a>
             </div>
         </div>

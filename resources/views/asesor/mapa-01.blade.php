@@ -753,7 +753,7 @@
 
                 if ($isAsesi) {
                     $targetKembali = route('asesi.tahapan', ['step' => 2, 'pendaftaran_id' => $pendaftaran->id]);
-                } elseif (!$isInvalidPrev && (str_contains($prevUrl, 'daftar-peserta') || str_contains($prevUrl, 'penilaian'))) {
+                } elseif (!$isInvalidPrev && (str_contains($prevUrl, 'daftar-peserta') || str_contains($prevUrl, 'penilaian') || str_contains($prevUrl, 'verifikasi'))) {
                     $targetKembali = $prevUrl;
                 } else {
                     $targetKembali = $halamanFormulir;
@@ -1422,7 +1422,7 @@
                             </label>
                             <label class="toggle-segment-btn">
                                 <input type="radio" name="karakteristik_kandidat_status" value="tidak_ada" 
-                                    {{ ($mapa01->karakteristik_kandidat_status ?? 'tidak_ada') == 'tidak_ada' ? 'checked' : '' }}>
+                                    {{ ($mapa01->karakteristik_kandidat_status ?? '') == 'tidak_ada' ? 'checked' : '' }}>
                                 <span>Tidak Ada*</span>
                             </label>
                         </div>
@@ -1432,13 +1432,13 @@
                         </div>
                         <input type="text" name="karakteristik_kandidat_teks" 
                             value="{{ ($mapa01->karakteristik_kandidat_status ?? '') == 'ada' ? ($mapa01->karakteristik_kandidat_teks ?? '') : '' }}" 
-                            class="input-inline-modern {{ ($mapa01->karakteristik_kandidat_status ?? 'tidak_ada') !== 'ada' ? 'is-disabled' : '' }}" 
+                            class="input-inline-modern {{ ($mapa01->karakteristik_kandidat_status ?? '') !== 'ada' ? 'is-disabled' : '' }}" 
                             data-status-field="karakteristik_kandidat_status" 
                             data-validation-label="Karakteristik Kandidat" 
                             data-placeholder-default="Tuliskan spesifikasi karakteristik khusus jika ada..." 
                             data-placeholder-disabled="Tidak perlu diisi (Memilih Tidak Ada)" 
                             placeholder="{{ ($mapa01->karakteristik_kandidat_status ?? '') == 'ada' ? 'Tuliskan spesifikasi karakteristik khusus jika ada...' : 'Tidak perlu diisi (Memilih Tidak Ada)' }}"
-                            {{ ($mapa01->karakteristik_kandidat_status ?? 'tidak_ada') !== 'ada' ? 'disabled' : '' }}>
+                            {{ ($mapa01->karakteristik_kandidat_status ?? '') !== 'ada' ? 'disabled' : '' }}>
                     </td>
                 </tr>
 
@@ -1456,7 +1456,7 @@
                             </label>
                             <label class="toggle-segment-btn">
                                 <input type="radio" name="kebutuhan_kontekstualisasi_status" value="tidak_ada" 
-                                    {{ ($mapa01->kebutuhan_kontekstualisasi_status ?? 'tidak_ada') == 'tidak_ada' ? 'checked' : '' }}>
+                                    {{ ($mapa01->kebutuhan_kontekstualisasi_status ?? '') == 'tidak_ada' ? 'checked' : '' }}>
                                 <span>Tidak Ada*</span>
                             </label>
                         </div>
@@ -1466,13 +1466,13 @@
                         </div>
                         <input type="text" name="kebutuhan_kontekstualisasi_teks" 
                             value="{{ ($mapa01->kebutuhan_kontekstualisasi_status ?? '') == 'ada' ? ($mapa01->kebutuhan_kontekstualisasi_teks ?? '') : '' }}" 
-                            class="input-inline-modern {{ ($mapa01->kebutuhan_kontekstualisasi_status ?? 'tidak_ada') !== 'ada' ? 'is-disabled' : '' }}" 
+                            class="input-inline-modern {{ ($mapa01->kebutuhan_kontekstualisasi_status ?? '') !== 'ada' ? 'is-disabled' : '' }}" 
                             data-status-field="kebutuhan_kontekstualisasi_status" 
                             data-validation-label="Kebutuhan Kontekstualisasi" 
                             data-placeholder-default="Tuliskan kebutuhan kontekstualisasi jika ada..." 
                             data-placeholder-disabled="Tidak perlu diisi (Memilih Tidak Ada)" 
                             placeholder="{{ ($mapa01->kebutuhan_kontekstualisasi_status ?? '') == 'ada' ? 'Tuliskan kebutuhan kontekstualisasi jika ada...' : 'Tidak perlu diisi (Memilih Tidak Ada)' }}"
-                            {{ ($mapa01->kebutuhan_kontekstualisasi_status ?? 'tidak_ada') !== 'ada' ? 'disabled' : '' }}>
+                            {{ ($mapa01->kebutuhan_kontekstualisasi_status ?? '') !== 'ada' ? 'disabled' : '' }}>
                     </td>
                 </tr>
 
@@ -1490,7 +1490,7 @@
                             </label>
                             <label class="toggle-segment-btn">
                                 <input type="radio" name="saran_pelatihan_status" value="tidak_ada" 
-                                    {{ ($mapa01->saran_pelatihan_status ?? 'tidak_ada') == 'tidak_ada' ? 'checked' : '' }}>
+                                    {{ ($mapa01->saran_pelatihan_status ?? '') == 'tidak_ada' ? 'checked' : '' }}>
                                 <span>Tidak Ada*</span>
                             </label>
                         </div>
@@ -1500,13 +1500,13 @@
                         </div>
                         <input type="text" name="saran_pelatihan_teks" 
                             value="{{ ($mapa01->saran_pelatihan_status ?? '') == 'ada' ? ($mapa01->saran_pelatihan_teks ?? '') : '' }}" 
-                            class="input-inline-modern {{ ($mapa01->saran_pelatihan_status ?? 'tidak_ada') !== 'ada' ? 'is-disabled' : '' }}" 
+                            class="input-inline-modern {{ ($mapa01->saran_pelatihan_status ?? '') !== 'ada' ? 'is-disabled' : '' }}" 
                             data-status-field="saran_pelatihan_status" 
                             data-validation-label="Saran Pelatihan" 
                             data-placeholder-default="Tuliskan saran paket pelatihan jika ada..." 
                             data-placeholder-disabled="Tidak perlu diisi (Memilih Tidak Ada)" 
                             placeholder="{{ ($mapa01->saran_pelatihan_status ?? '') == 'ada' ? 'Tuliskan saran paket pelatihan jika ada...' : 'Tidak perlu diisi (Memilih Tidak Ada)' }}"
-                            {{ ($mapa01->saran_pelatihan_status ?? 'tidak_ada') !== 'ada' ? 'disabled' : '' }}>
+                            {{ ($mapa01->saran_pelatihan_status ?? '') !== 'ada' ? 'disabled' : '' }}>
                     </td>
                 </tr>
 
@@ -1524,7 +1524,7 @@
                             </label>
                             <label class="toggle-segment-btn">
                                 <input type="radio" name="penyesuaian_perangkat_status" value="tidak_ada" 
-                                    {{ ($mapa01->penyesuaian_perangkat_status ?? 'tidak_ada') == 'tidak_ada' ? 'checked' : '' }}>
+                                    {{ ($mapa01->penyesuaian_perangkat_status ?? '') == 'tidak_ada' ? 'checked' : '' }}>
                                 <span>Tidak Ada*</span>
                             </label>
                         </div>
@@ -1534,13 +1534,13 @@
                         </div>
                         <input type="text" name="penyesuaian_perangkat_teks" 
                             value="{{ ($mapa01->penyesuaian_perangkat_status ?? '') == 'ada' ? ($mapa01->penyesuaian_perangkat_teks ?? '') : '' }}" 
-                            class="input-inline-modern {{ ($mapa01->penyesuaian_perangkat_status ?? 'tidak_ada') !== 'ada' ? 'is-disabled' : '' }}" 
+                            class="input-inline-modern {{ ($mapa01->penyesuaian_perangkat_status ?? '') !== 'ada' ? 'is-disabled' : '' }}" 
                             data-status-field="penyesuaian_perangkat_status" 
                             data-validation-label="Penyesuaian Perangkat" 
                             data-placeholder-default="Tuliskan penyesuaian perangkat jika ada..." 
                             data-placeholder-disabled="Tidak perlu diisi (Memilih Tidak Ada)" 
                             placeholder="{{ ($mapa01->penyesuaian_perangkat_status ?? '') == 'ada' ? 'Tuliskan penyesuaian perangkat jika ada...' : 'Tidak perlu diisi (Memilih Tidak Ada)' }}"
-                            {{ ($mapa01->penyesuaian_perangkat_status ?? 'tidak_ada') !== 'ada' ? 'disabled' : '' }}>
+                            {{ ($mapa01->penyesuaian_perangkat_status ?? '') !== 'ada' ? 'disabled' : '' }}>
                     </td>
                 </tr>
 
@@ -1558,7 +1558,7 @@
                             </label>
                             <label class="toggle-segment-btn">
                                 <input type="radio" name="peluang_terintegrasi_status" value="tidak_ada" 
-                                    {{ ($mapa01->peluang_terintegrasi_status ?? 'tidak_ada') == 'tidak_ada' ? 'checked' : '' }}>
+                                    {{ ($mapa01->peluang_terintegrasi_status ?? '') == 'tidak_ada' ? 'checked' : '' }}>
                                 <span>Tidak Ada*</span>
                             </label>
                         </div>
@@ -1568,13 +1568,13 @@
                         </div>
                         <input type="text" name="peluang_terintegrasi_teks" 
                             value="{{ ($mapa01->peluang_terintegrasi_status ?? '') == 'ada' ? ($mapa01->peluang_terintegrasi_teks ?? '') : '' }}" 
-                            class="input-inline-modern {{ ($mapa01->peluang_terintegrasi_status ?? 'tidak_ada') !== 'ada' ? 'is-disabled' : '' }}" 
+                            class="input-inline-modern {{ ($mapa01->peluang_terintegrasi_status ?? '') !== 'ada' ? 'is-disabled' : '' }}" 
                             data-status-field="peluang_terintegrasi_status" 
                             data-validation-label="Peluang Kegiatan Terintegrasi" 
                             data-placeholder-default="Tuliskan peluang asesmen terintegrasi jika ada..." 
                             data-placeholder-disabled="Tidak perlu diisi (Memilih Tidak Ada)" 
                             placeholder="{{ ($mapa01->peluang_terintegrasi_status ?? '') == 'ada' ? 'Tuliskan peluang asesmen terintegrasi jika ada...' : 'Tidak perlu diisi (Memilih Tidak Ada)' }}"
-                            {{ ($mapa01->peluang_terintegrasi_status ?? 'tidak_ada') !== 'ada' ? 'disabled' : '' }}>
+                            {{ ($mapa01->peluang_terintegrasi_status ?? '') !== 'ada' ? 'disabled' : '' }}>
                     </td>
                 </tr>
             </table>

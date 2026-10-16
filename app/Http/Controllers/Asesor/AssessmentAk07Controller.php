@@ -183,7 +183,7 @@ class AssessmentAk07Controller extends Controller
                 'asesor',
                 'jadwal',
                 'ak07Adjustment'
-            ])->findOrFail($pendaftaranId);
+            ])->find($pendaftaranId);
         } else {
             $pendaftaran = PendaftaranAsesi::with([
                 'asesi.profilAsesi',
@@ -194,7 +194,12 @@ class AssessmentAk07Controller extends Controller
             ])->where('asesi_id', $user->id)
               ->whereNotIn('status_pendaftaran', ['ditolak'])
               ->latest()
-              ->firstOrFail();
+              ->first();
+        }
+
+        if (!$pendaftaran) {
+            return redirect()->route('asesi.dashboard')
+                ->with('warning', 'Formulir FR.AK.07 belum tersedia karena Anda belum memiliki pendaftaran skema sertifikasi aktif.');
         }
 
         $this->authorizeAsesi($pendaftaran);
@@ -203,22 +208,18 @@ class AssessmentAk07Controller extends Controller
         $hasSignedMaster = $pendaftaran->syncFromMasterAk07IfAvailable();
         $pendaftaran->refresh();
 
-        if (!$hasSignedMaster) {
-            return redirect()->route('asesi.tahapan', [
-                'pendaftaran_id' => $pendaftaran->id,
-                'step' => 4,
-            ])->with('info', 'FR.AK.07 belum diisi dan ditandatangani Asesor untuk skema ini.');
-        }
-
         $ak07 = $pendaftaran->ak07Adjustment;
         $criteriaDefinitions = AssessmentAk07Adjustment::CRITERIA_DEFINITIONS;
         $potensiDefinitions = AssessmentAk07Adjustment::POTENSI_DEFINITIONS;
+
+        $formBelumDibuat = (!$hasSignedMaster || !$ak07 || empty($ak07->asesor_signature));
 
         return view('asesi.ak07-detail', compact(
             'pendaftaran',
             'ak07',
             'criteriaDefinitions',
-            'potensiDefinitions'
+            'potensiDefinitions',
+            'formBelumDibuat'
         ));
     }
 
@@ -253,7 +254,8 @@ class AssessmentAk07Controller extends Controller
         }
 
         if (!$ak07) {
-            abort(404, 'Formulir FR.AK.07 belum dibuat.');
+            return redirect()->route('asesi.ak07', ['pendaftaranId' => $pendaftaran->id])
+                ->with('info', 'Formulir FR.AK.07 belum dibuat oleh Asesor atau Admin.');
         }
 
         $criteriaDefinitions = AssessmentAk07Adjustment::CRITERIA_DEFINITIONS;
