@@ -364,10 +364,6 @@ class AsesiController extends Controller
         }
 
         $dokumenList = $pendaftaran ? $pendaftaran->dokumen : collect();
-        $dokumenTeknis = collect($dokumenList)->filter(function ($dok) {
-            $jenis = strtolower($dok->jenis_dokumen ?? '');
-            return !str_contains($jenis, 'ktp') && !str_contains($jenis, 'pasfoto') && !str_contains($jenis, 'foto');
-        });
 
         return view('asesi.formulir-terpadu', compact(
             'pengguna',
@@ -399,8 +395,7 @@ class AsesiController extends Controller
             'draftData',
             'jawabanMap',
             'buktiApl02Map',
-            'dokumenList',
-            'dokumenTeknis'
+            'dokumenList'
         ));
     }
 

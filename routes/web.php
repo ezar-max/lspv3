@@ -53,7 +53,6 @@ Route::middleware(['auth', 'peran:asesi'])->prefix('asesi')->as('asesi.')->group
     Route::post('/tahapan/apl01', [AsesiTahapanController::class, 'storeApl01'])->name('tahapan.apl01');
     Route::post('/tahapan/apl02', [AsesiTahapanController::class, 'storeApl02'])->name('tahapan.apl02');
     Route::post('/tahapan/apl02/upload-bukti', [AsesiTahapanController::class, 'uploadBuktiApl02'])->name('apl02.upload_bukti');
-    Route::post('/tahapan/apl02/pilih-bukti-apl01', [AsesiTahapanController::class, 'pilihBuktiApl01'])->name('apl02.pilih_bukti_apl01');
     Route::delete('/tahapan/apl02/hapus-bukti/{id}', [AsesiTahapanController::class, 'hapusBuktiApl02'])->name('apl02.hapus_bukti');
     Route::post('/tahapan/ak01', [AsesiTahapanController::class, 'storeAk01'])->name('tahapan.ak01');
     

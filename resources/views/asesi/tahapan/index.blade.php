@@ -1501,14 +1501,6 @@
                                                                     class="px-2.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs shadow-2xs transition-colors flex items-center gap-1.5 cursor-pointer">
                                                                 <span>Upload Bukti</span>
                                                             </button>
-
-                                                            <!-- Tombol Pilih Bukti dari APL.01 -->
-                                                            <button type="button" 
-                                                                    id="btn-apl01-elem-{{ $elemen->id }}"
-                                                                    onclick="bukaModalPilihApl01('{{ $elemen->id }}')"
-                                                                    class="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 font-semibold text-xs shadow-2xs transition-colors flex items-center gap-1.5 cursor-pointer">
-                                                                <span>Gunakan Bukti dari APL.01</span>
-                                                            </button>
                                                         </div>
                                                     @endif
                                                 </div>
@@ -2569,50 +2561,6 @@
         </div>
     </div>
 
-    <!-- =========================================================================
-         MODAL PILIH BUKTI DARI APL.01
-         ========================================================================= -->
-    <div id="modal-pilih-apl01" class="fixed inset-0 items-center justify-center bg-slate-900/70 backdrop-blur-xs p-4 hidden" style="z-index: 99999; display: none;">
-        <div class="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-md w-full p-5 space-y-4 animate-scale-up relative">
-            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-                <div class="flex items-center gap-2.5">
-                    <span class="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-xs">
-                        DOK
-                    </span>
-                    <div>
-                        <h3 class="font-bold text-slate-800 text-sm">Pilih Bukti dari APL.01</h3>
-                        <p class="text-[11px] text-slate-400">Pilih berkas APL.01 yang ingin ditautkan pada elemen ini</p>
-                    </div>
-                </div>
-                <button type="button" onclick="tutupModalApl01()" class="text-slate-400 hover:text-slate-600 text-xl font-bold p-1 cursor-pointer">&times;</button>
-            </div>
-
-            <div class="space-y-2 max-h-64 overflow-y-auto pr-1">
-                @forelse($dokumenTeknis as $dok)
-                    <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer transition-colors">
-                        <input type="radio" name="pilih_dokumen_apl01" value="{{ $dok->id }}" class="text-blue-600 focus:ring-blue-500">
-                        <div class="min-w-0 flex-1 text-xs">
-                            <div class="font-bold text-slate-800">{{ $dok->jenis_dokumen }}</div>
-                            <div class="text-slate-500 text-[11px] truncate">{{ $dok->nama_dokumen }}</div>
-                        </div>
-                    </label>
-                @empty
-                    <div class="text-center py-6 text-xs text-slate-400 italic">
-                        Tidak ada berkas teknis APL.01 yang tersedia.
-                    </div>
-                @endforelse
-            </div>
-
-            <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
-                <button type="button" onclick="tutupModalApl01()" class="px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 font-semibold text-xs cursor-pointer">
-                    Batal
-                </button>
-                <button type="button" id="btn-submit-taut-apl01" onclick="submitTautkanApl01('{{ $pendaftaran ? $pendaftaran->id : '' }}')" class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs shadow-xs flex items-center gap-1.5 cursor-pointer">
-                    Gunakan Bukti
-                </button>
-            </div>
-        </div>
-    </div>
 
     <!-- =========================================================================
          MODAL PRATINJAU PDF (UNIVERSAL VIEWER)
@@ -2746,7 +2694,6 @@
 
 @push('js')
 <script>
-    let targetElemenIdForApl01 = null;
 
     window.bukaModalRequestEdit = function() {
         const modal = document.getElementById('modalRequestEdit');
@@ -3019,10 +2966,8 @@
         // Loading state
         const loadingEl = document.getElementById(`upload-loading-elem-${elemenId}`);
         const btnUpload = document.getElementById(`btn-upload-elem-${elemenId}`);
-        const btnApl01 = document.getElementById(`btn-apl01-elem-${elemenId}`);
         if (loadingEl) loadingEl.classList.remove('hidden');
         if (btnUpload) btnUpload.disabled = true;
-        if (btnApl01) btnApl01.disabled = true;
 
         fetch('{{ route("asesi.apl02.upload_bukti") }}', {
             method: 'POST',
@@ -3035,7 +2980,6 @@
         .then(data => {
             if (loadingEl) loadingEl.classList.add('hidden');
             if (btnUpload) btnUpload.disabled = false;
-            if (btnApl01) btnApl01.disabled = false;
             input.value = '';
 
             if (data.success) {
@@ -3048,81 +2992,8 @@
         .catch(err => {
             if (loadingEl) loadingEl.classList.add('hidden');
             if (btnUpload) btnUpload.disabled = false;
-            if (btnApl01) btnApl01.disabled = false;
             input.value = '';
             alert('Terjadi kesalahan jaringan atau server saat mengupload file.');
-        });
-    }
-
-    function bukaModalPilihApl01(elemenId) {
-        targetElemenIdForApl01 = elemenId;
-        const modal = document.getElementById('modal-pilih-apl01');
-        if (modal) {
-            modal.classList.remove('hidden');
-            modal.style.display = 'flex';
-        }
-    }
-
-    function tutupModalApl01() {
-        targetElemenIdForApl01 = null;
-        const modal = document.getElementById('modal-pilih-apl01');
-        if (modal) {
-            modal.classList.add('hidden');
-            modal.style.display = 'none';
-        }
-    }
-
-    function submitTautkanApl01(pendaftaranId) {
-        if (!targetElemenIdForApl01) return;
-        const selected = document.querySelector('input[name="pilih_dokumen_apl01"]:checked');
-        if (!selected) {
-            alert('Silakan pilih salah satu dokumen APL.01.');
-            return;
-        }
-
-        const elemenId = targetElemenIdForApl01;
-        const dokumenId = selected.value;
-
-        const btnSubmit = document.getElementById('btn-submit-taut-apl01');
-        if (btnSubmit) {
-            btnSubmit.disabled = true;
-            btnSubmit.innerHTML = 'Menautkan...';
-        }
-
-        fetch('{{ route("asesi.apl02.pilih_bukti_apl01") }}', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                'X-Requested-With': 'XMLHttpRequest'
-            },
-            body: JSON.stringify({
-                pendaftaran_id: pendaftaranId,
-                elemen_id: elemenId,
-                dokumen_id: dokumenId
-            })
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (btnSubmit) {
-                btnSubmit.disabled = false;
-                btnSubmit.innerHTML = 'Gunakan Bukti';
-            }
-            tutupModalApl01();
-
-            if (data.success) {
-                tambahKartuBuktiKeDom(elemenId, data.data);
-                tampilkanToast(data.message || 'Bukti dari APL.01 berhasil ditautkan.');
-            } else {
-                alert(data.message || 'Gagal menautkan dokumen APL.01.');
-            }
-        })
-        .catch(err => {
-            if (btnSubmit) {
-                btnSubmit.disabled = false;
-                btnSubmit.innerHTML = 'Gunakan Bukti';
-            }
-            alert('Terjadi kesalahan saat memproses permintaan.');
         });
     }
 

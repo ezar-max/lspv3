@@ -240,10 +240,6 @@ class AsesiTahapanController extends Controller
         $progressPersen = $pendaftaran ? $pendaftaran->hitungProgressTahapan() : 0;
 
         $dokumenList = $pendaftaran ? $pendaftaran->dokumen : collect();
-        $dokumenTeknis = collect($dokumenList)->filter(function ($dok) {
-            $jenis = strtolower($dok->jenis_dokumen ?? '');
-            return !str_contains($jenis, 'ktp') && !str_contains($jenis, 'pasfoto') && !str_contains($jenis, 'foto');
-        });
 
         $totalElemen = ($pendaftaran && $pendaftaran->skema) 
             ? $pendaftaran->skema->unitKompetensi->sum(fn($u) => $u->elemenKompetensi->count()) 
@@ -411,7 +407,6 @@ class AsesiTahapanController extends Controller
             'verifikasiKukMap',
             'penilaianUnitMap',
             'dokumenList',
-            'dokumenTeknis',
             'progressPersen',
             'totalElemen',
             'statusSesi',
@@ -961,81 +956,6 @@ class AsesiTahapanController extends Controller
         ]);
     }
 
-    /**
-     * AJAX: Tautkan berkas dokumen APL.01 yang sudah ada sebagai bukti elemen APL.02
-     */
-    public function pilihBuktiApl01(Request $request)
-    {
-        $pengguna = auth()->user();
-
-        $request->validate([
-            'pendaftaran_id' => 'required|integer',
-            'elemen_id' => 'required|integer',
-            'dokumen_id' => 'required|integer',
-        ], [
-            'dokumen_id.required' => 'Pilih salah satu dokumen APL.01.',
-        ]);
-
-        $pendaftaran = PendaftaranAsesi::where('asesi_id', $pengguna->id)->findOrFail($request->pendaftaran_id);
-
-        // Guard izin ubah bukti berdasarkan status APL.02
-        if (!$pendaftaran->isApl02Draft() && !$pendaftaran->isApl02Revision()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Bukti FR.APL.02 tidak dapat diubah karena formulir sudah dikirim atau telah disetujui.',
-            ], 403);
-        }
-
-        $elemen = ElemenKompetensi::findOrFail($request->elemen_id);
-        $this->validasiStrukturApl02($pendaftaran, [$elemen->id]);
-        $dokumen = DokumenAsesi::where('pendaftaran_id', $pendaftaran->id)->findOrFail($request->dokumen_id);
-
-        // Cek apakah dokumen ini sudah ditautkan pada elemen ini
-        $existing = BuktiApl02::where('pendaftaran_id', $pendaftaran->id)
-            ->where('elemen_id', $elemen->id)
-            ->where('dokumen_id', $dokumen->id)
-            ->first();
-
-        if ($existing) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Dokumen APL.01 ini sudah terlampir pada elemen ini.',
-            ], 422);
-        }
-
-        $bukti = BuktiApl02::create([
-            'pendaftaran_id' => $pendaftaran->id,
-            'elemen_id' => $elemen->id,
-            'dokumen_id' => $dokumen->id,
-            'sumber' => 'apl01',
-            'nama_file_asli' => $dokumen->nama_dokumen ?: $dokumen->jenis_dokumen,
-            'nama_file_tersimpan' => null,
-            'file_path' => null,
-            'mime_type' => null,
-            'file_size' => 0,
-        ]);
-
-        // Sync fallback jawaban_apl02.bukti_relevan
-        JawabanApl02::updateOrCreate(
-            ['pendaftaran_id' => $pendaftaran->id, 'elemen_id' => $elemen->id],
-            ['bukti_relevan' => $dokumen->file_path]
-        );
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Bukti dari APL.01 berhasil ditautkan.',
-            'data' => [
-                'id' => $bukti->id,
-                'elemen_id' => $bukti->elemen_id,
-                'nama' => $bukti->nama_tampil,
-                'ukuran' => $bukti->file_size_formatted,
-                'url' => $bukti->url,
-                'is_image' => $bukti->is_image,
-                'is_pdf' => $bukti->is_pdf,
-                'sumber' => 'apl01',
-            ],
-        ]);
-    }
 
     /**
      * AJAX: Hapus bukti pendukung APL.02
