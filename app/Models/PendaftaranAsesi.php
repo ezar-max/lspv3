@@ -943,13 +943,78 @@ class PendaftaranAsesi extends Model
     /**
      * Pastikan data formulir FR.AK.01 tersinkronisasi dari Master FR.AK.01 Skema atau data skema di database
      */
+    public function hasAk01FromAsesor(): bool
+    {
+        if (!empty($this->tanda_tangan_asesor_ak01) || in_array($this->status_ak01, ['disetujui_asesor', 'selesai'])) {
+            return true;
+        }
+
+        $skema = $this->relationLoaded('skema') ? $this->skema : $this->skema()->with('masterAk01')->first();
+        if ($skema?->masterAk01 && $skema->masterAk01->status === 'selesai' && !empty($skema->masterAk01->tanda_tangan_asesor)) {
+            return true;
+        }
+
+        return false;
+    }
+
+    public function hasAk07FromAsesor(): bool
+    {
+        $ak07 = $this->relationLoaded('ak07Adjustment') ? $this->ak07Adjustment : $this->ak07Adjustment()->first();
+        if ($ak07 && !empty($ak07->asesor_signature)) {
+            return true;
+        }
+
+        $skema = $this->relationLoaded('skema') ? $this->skema : $this->skema()->with('masterAk07')->first();
+        if ($skema?->masterAk07 && $skema->masterAk07->status === 'selesai' && !empty($skema->masterAk07->tanda_tangan_asesor)) {
+            return true;
+        }
+
+        return false;
+    }
+
+    public function hasIaFormsFromAsesor(): bool
+    {
+        $skema = $this->relationLoaded('skema') ? $this->skema : $this->skema()->first();
+        if (!$skema) {
+            return false;
+        }
+
+        $soalCbt = \App\Http\Controllers\AsesiUjianController::getDaftarSoalCbt($skema);
+        if (count($soalCbt) > 0) {
+            return true;
+        }
+
+        $soalEsai = \App\Http\Controllers\AsesiUjianController::getDaftarSoalEsai($skema);
+        if (count($soalEsai) > 0) {
+            return true;
+        }
+
+        $panduanPraktik = \App\Http\Controllers\AsesiUjianController::getPanduanPraktikIa02($skema, $this);
+        if (!empty($panduanPraktik['skenario']) || !empty($panduanPraktik['instruksi_kerja']) || !empty($panduanPraktik['judul_tugas'])) {
+            return true;
+        }
+
+        return false;
+    }
+
+    public function hasAk02FromAsesor(): bool
+    {
+        $ak02 = $this->relationLoaded('ak02') ? $this->ak02 : $this->ak02()->first();
+        return $ak02 && (!empty($ak02->asesor_signature) || $ak02->status === 'completed' || $ak02->isFinalized());
+    }
+
+    public function hasAk03Available(): bool
+    {
+        return $this->isAk03Unlocked();
+    }
+
+    /**
+     * Pastikan data formulir FR.AK.01 tersinkronisasi dari Master FR.AK.01 Skema jika ada
+     */
     public function syncFromMasterAk01IfAvailable(): bool
     {
         $skema = $this->relationLoaded('skema') ? $this->skema : $this->skema()->with(['masterAk01', 'mapa02', 'masterInstruments'])->first();
         $masterAk01 = $skema?->masterAk01;
-
-        $needsUpdate = false;
-        $dataToUpdate = [];
 
         if ($masterAk01 && $masterAk01->status === 'selesai' && !empty($masterAk01->tanda_tangan_asesor)) {
             $masterBukti = (array) ($masterAk01->bukti_dikumpulkan ?? []);
@@ -977,30 +1042,27 @@ class PendaftaranAsesi extends Model
             } elseif ($this->status_ak01 === 'belum') {
                 $dataToUpdate['status_ak01'] = 'disetujui_asesor';
             }
-            $needsUpdate = true;
-        } else {
-            // Fallback jika Master FR.AK.01 belum dikonfigurasi: ambil data form sesuai skemanya dari database
-            if (empty($this->bukti_dikumpulkan)) {
-                $defaultBukti = $this->getDefaultBuktiDikumpulkanFromSkema();
-                if (!empty($defaultBukti)) {
-                    $this->bukti_dikumpulkan = $defaultBukti;
-                    $dataToUpdate['bukti_dikumpulkan'] = $defaultBukti;
-                    $needsUpdate = true;
-                }
+
+            if ($this->exists) {
+                $this->update($dataToUpdate);
             }
-            if (empty($this->tuk_type)) {
-                $defaultTuk = $this->jadwal?->nama_tuk ? 'Sewaktu' : 'Sewaktu';
-                $this->tuk_type = $defaultTuk;
-                $dataToUpdate['tuk_type'] = $defaultTuk;
-                $needsUpdate = true;
+
+            return true;
+        }
+
+        // Jika Master AK.01 belum dibuat/selesai oleh Asesor, jangan auto-isi data dummy/fallback ke pendaftaran!
+        // Jika pendaftaran belum memiliki tanda tangan asesor, bersihkan data bukti/tuk dummy agar benar-benar kosong sesuai data asesor
+        if (empty($this->tanda_tangan_asesor_ak01) && in_array($this->status_ak01, ['belum', 'draft', null])) {
+            if (!empty($this->tuk_type) || !empty($this->bukti_dikumpulkan)) {
+                $this->update([
+                    'tuk_type' => null,
+                    'bukti_dikumpulkan' => null,
+                    'bukti_dikumpulkan_lainnya' => null,
+                ]);
             }
         }
 
-        if ($needsUpdate && $this->exists) {
-            $this->update($dataToUpdate);
-        }
-
-        return $needsUpdate;
+        return false;
     }
 
     /**

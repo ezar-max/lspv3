@@ -212,7 +212,7 @@ class AssessmentAk07Controller extends Controller
         $criteriaDefinitions = AssessmentAk07Adjustment::CRITERIA_DEFINITIONS;
         $potensiDefinitions = AssessmentAk07Adjustment::POTENSI_DEFINITIONS;
 
-        $formBelumDibuat = (!$hasSignedMaster || !$ak07 || empty($ak07->asesor_signature));
+        $formBelumDibuat = !$pendaftaran->hasAk07FromAsesor();
 
         return view('asesi.ak07-detail', compact(
             'pendaftaran',
@@ -253,9 +253,9 @@ class AssessmentAk07Controller extends Controller
             $ak07 = $pendaftaran->ak07Adjustment;
         }
 
-        if (!$ak07) {
+        if (!$ak07 || ($user->peran === 'asesi' && !$pendaftaran->hasAk07FromAsesor())) {
             return redirect()->route('asesi.ak07', ['pendaftaranId' => $pendaftaran->id])
-                ->with('info', 'Formulir FR.AK.07 belum dibuat oleh Asesor atau Admin.');
+                ->with('warning', 'Formulir FR.AK.07 belum tersedia karena belum dibuat oleh Asesor atau Admin.');
         }
 
         $criteriaDefinitions = AssessmentAk07Adjustment::CRITERIA_DEFINITIONS;

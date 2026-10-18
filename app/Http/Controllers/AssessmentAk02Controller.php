@@ -69,6 +69,12 @@ class AssessmentAk02Controller extends Controller
 
         $this->authorizeAccess($pendaftaran, false);
 
+        $user = auth()->user();
+        if ($user && $user->peran === 'asesi' && !$pendaftaran->hasAk02FromAsesor()) {
+            return redirect()->route('asesi.dashboard', ['pendaftaran_id' => $pendaftaran->id])
+                ->with('warning', 'Formulir FR.AK.02 (Rekaman Asesmen Kompetensi) belum tersedia karena belum dibuat atau disahkan oleh Asesor.');
+        }
+
         $ak02 = $this->documentService->getOrCreateAk02($pendaftaran);
 
         return view('dokumen-asesmen.ak02.edit', compact('pendaftaran', 'ak02'));
@@ -179,6 +185,11 @@ class AssessmentAk02Controller extends Controller
             abort(403, 'Hanya peserta yang bersangkutan yang dapat menandatangani lembar konfirmasi ini.');
         }
 
+        if (!$pendaftaran->hasAk02FromAsesor()) {
+            return redirect()->route('asesi.dashboard', ['pendaftaran_id' => $pendaftaran->id])
+                ->with('warning', 'Formulir FR.AK.02 belum dapat ditandatangani karena belum disahkan oleh Asesor.');
+        }
+
         $ak02 = $this->documentService->getOrCreateAk02($pendaftaran);
 
         $signature = $request->input('signature') ?: $user->tanda_tangan;
@@ -225,6 +236,13 @@ class AssessmentAk02Controller extends Controller
         ])->findOrFail($pendaftaranId);
 
         $this->authorizeAccess($pendaftaran, false);
+
+        $user = auth()->user();
+        if ($user && $user->peran === 'asesi' && !$pendaftaran->hasAk02FromAsesor()) {
+            return redirect()->route('asesi.dashboard', ['pendaftaran_id' => $pendaftaran->id])
+                ->with('warning', 'Formulir FR.AK.02 belum dapat dicetak karena belum disahkan oleh Asesor.');
+        }
+
         $ak02 = $this->documentService->getOrCreateAk02($pendaftaran);
 
         return view('dokumen-asesmen.ak02.cetak', compact('pendaftaran', 'ak02'));

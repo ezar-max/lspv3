@@ -69,6 +69,12 @@ class AssessmentAk03Controller extends Controller
 
         $this->authorizeAccess($pendaftaran, false);
 
+        $user = auth()->user();
+        if ($user && $user->peran === 'asesi' && !$pendaftaran->isAk03Unlocked()) {
+            return redirect()->route('asesi.dashboard', ['pendaftaran_id' => $pendaftaran->id])
+                ->with('warning', 'Formulir FR.AK.03 (Umpan Balik dan Catatan Asesmen) belum tersedia karena keputusan asesmen (FR.AK.02) belum disahkan oleh Asesor.');
+        }
+
         $ak03 = $this->documentService->getOrCreateAk03($pendaftaran);
         $isUnlocked = $pendaftaran->isAk03Unlocked();
 
@@ -159,6 +165,13 @@ class AssessmentAk03Controller extends Controller
         ])->findOrFail($pendaftaranId);
 
         $this->authorizeAccess($pendaftaran, false);
+
+        $user = auth()->user();
+        if ($user && $user->peran === 'asesi' && !$pendaftaran->isAk03Unlocked()) {
+            return redirect()->route('asesi.dashboard', ['pendaftaran_id' => $pendaftaran->id])
+                ->with('warning', 'Formulir FR.AK.03 belum dapat dicetak karena keputusan asesmen (FR.AK.02) belum disahkan oleh Asesor.');
+        }
+
         $ak03 = $this->documentService->getOrCreateAk03($pendaftaran);
 
         return view('dokumen-asesmen.ak03.cetak', compact('pendaftaran', 'ak03'));

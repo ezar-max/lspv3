@@ -158,32 +158,55 @@ class AsesiTahapanController extends Controller
         $criteriaDefinitions = \App\Models\AssessmentAk07Adjustment::CRITERIA_DEFINITIONS;
         $potensiDefinitions = \App\Models\AssessmentAk07Adjustment::POTENSI_DEFINITIONS;
 
+        $hasAk01FromAsesor = $pendaftaran ? $pendaftaran->hasAk01FromAsesor() : false;
+        $hasAk07FromAsesor = $pendaftaran ? $pendaftaran->hasAk07FromAsesor() : false;
+        $hasIaFormsFromAsesor = $pendaftaran ? $pendaftaran->hasIaFormsFromAsesor() : false;
+        $isHasilAkhirTersedia = $pendaftaran ? ($pendaftaran->hasAk02FromAsesor() || $pendaftaran->hasAk03Available() || $pendaftaran->status_pendaftaran === 'selesai') : false;
+
         $activeStep = 1;
         if ($isAccAdmin && !$isApl02Approved) {
             $activeStep = 2;
         } elseif ($isApl02Approved && !$isAk01Selesai) {
-            $activeStep = 3;
+            $activeStep = $hasAk01FromAsesor ? 3 : 2;
         } elseif ($isAk01Selesai && !$isAk07Selesai) {
-            $activeStep = 4;
+            $activeStep = $hasAk07FromAsesor ? 4 : 3;
         } elseif ($isAk07Selesai) {
-            $activeStep = 5;
+            $activeStep = ($hasIaFormsFromAsesor || $isHasilAkhirTersedia) ? 5 : 4;
         }
 
         $currentStep = $activeStep;
         if ($request->filled('step')) {
             $requestedStep = (int) $request->get('step');
-            // STRICT BACKEND GUARD: AK.01 (Step 3) HANYA boleh dibuka jika FR.APL.02 sudah disetujui (Approved) oleh Asesor
-            if ($requestedStep === 3 && (!$pendaftaran || !$pendaftaran->isAk01Unlocked())) {
-                return redirect()->route('asesi.tahapan', ['pendaftaran_id' => $pendaftaran?->id, 'step' => 2])
-                    ->with('warning', 'Formulir FR.AK.01 belum tersedia. Silakan menunggu Formulir FR.APL.02 disetujui oleh asesor.');
+            // STRICT BACKEND GUARD: AK.01 (Step 3) HANYA boleh dibuka jika FR.APL.02 sudah disetujui (Approved) dan Form AK.01 SUDAH dibuat/disahkan Asesor/Admin
+            if ($requestedStep === 3) {
+                if (!$pendaftaran || !$pendaftaran->isAk01Unlocked()) {
+                    return redirect()->route('asesi.tahapan', ['pendaftaran_id' => $pendaftaran?->id, 'step' => 2])
+                        ->with('warning', 'Formulir FR.AK.01 belum tersedia. Silakan menunggu Formulir FR.APL.02 disetujui oleh asesor.');
+                }
+                if (!$hasAk01FromAsesor) {
+                    return redirect()->route('asesi.tahapan', ['pendaftaran_id' => $pendaftaran?->id, 'step' => 2])
+                        ->with('warning', 'Formulir FR.AK.01 belum tersedia. Asesor atau Admin belum membuat dan mengesahkan formulir rencana asesmen untuk skema ini.');
+                }
             }
-            if ($requestedStep === 4 && (!$pendaftaran || !$isAk01Selesai)) {
-                return redirect()->route('asesi.tahapan', ['pendaftaran_id' => $pendaftaran?->id, 'step' => 3])
-                    ->with('warning', 'Formulir FR.AK.07 belum dapat diakses. Silakan selesaikan Formulir FR.AK.01 terlebih dahulu.');
+            if ($requestedStep === 4) {
+                if (!$pendaftaran || !$isAk01Selesai) {
+                    return redirect()->route('asesi.tahapan', ['pendaftaran_id' => $pendaftaran?->id, 'step' => 3])
+                        ->with('warning', 'Formulir FR.AK.07 belum dapat diakses. Silakan selesaikan Formulir FR.AK.01 terlebih dahulu.');
+                }
+                if (!$hasAk07FromAsesor) {
+                    return redirect()->route('asesi.tahapan', ['pendaftaran_id' => $pendaftaran?->id, 'step' => 3])
+                        ->with('warning', 'Formulir FR.AK.07 belum tersedia. Asesor atau Admin belum membuat formulir penyesuaian asesmen untuk skema ini.');
+                }
             }
-            if ($requestedStep === 5 && (!$pendaftaran || !$isAk07Selesai)) {
-                return redirect()->route('asesi.tahapan', ['pendaftaran_id' => $pendaftaran?->id, 'step' => 4])
-                    ->with('warning', 'Halaman tes/ujian belum dapat diakses. Silakan selesaikan Formulir FR.AK.07 terlebih dahulu.');
+            if ($requestedStep === 5) {
+                if (!$pendaftaran || !$isAk07Selesai) {
+                    return redirect()->route('asesi.tahapan', ['pendaftaran_id' => $pendaftaran?->id, 'step' => 4])
+                        ->with('warning', 'Halaman tes/ujian belum dapat diakses. Silakan selesaikan Formulir FR.AK.07 terlebih dahulu.');
+                }
+                if (!$hasIaFormsFromAsesor && !$isHasilAkhirTersedia) {
+                    return redirect()->route('asesi.tahapan', ['pendaftaran_id' => $pendaftaran->id, 'step' => 4])
+                        ->with('warning', 'Formulir Ujian/Tes FR.IA belum tersedia. Asesor atau Admin belum menyiapkan instrumen asesmen untuk skema ini.');
+                }
             }
 
             if ($requestedStep >= 1 && $requestedStep <= 5) {
@@ -424,7 +447,10 @@ class AsesiTahapanController extends Controller
             'defaultTab',
             'adaFormOnlineDikerjakan',
             'isHasilAkhirTersedia',
-            'rekomendasi'
+            'rekomendasi',
+            'hasAk01FromAsesor',
+            'hasAk07FromAsesor',
+            'hasIaFormsFromAsesor'
         ));
     }
 
@@ -1027,12 +1053,13 @@ class AsesiTahapanController extends Controller
                 ->with('error', 'FR.APL.02 harus disetujui Asesor terlebih dahulu sebelum FR.AK.01 dapat diisi.');
         }
 
+        if (!$pendaftaran->hasAk01FromAsesor()) {
+            return redirect()->route('asesi.tahapan', ['pendaftaran_id' => $pendaftaran->id, 'step' => 2])
+                ->with('warning', 'Formulir FR.AK.01 belum dapat ditandatangani karena formulir belum dibuat atau belum disahkan oleh Asesor / Admin.');
+        }
+
         $masterAk01 = $pendaftaran->skema?->masterAk01;
         $asesorSignature = $masterAk01?->tanda_tangan_asesor ?: $pendaftaran->tanda_tangan_asesor_ak01;
-        if (empty($asesorSignature) || ($masterAk01 && $masterAk01->status !== 'selesai')) {
-            return redirect()->route('asesi.tahapan', ['pendaftaran_id' => $pendaftaran->id, 'step' => 3])
-                ->with('error', 'FR.AK.01 belum dapat ditandatangani karena rencana asesor belum disimpan dan ditandatangani.');
-        }
 
         $request->validate([
             'tanda_tangan_asesi_ak01' => ['required', 'string', 'max:2000000', 'regex:/^data:image\/(png|jpeg);base64,/'],

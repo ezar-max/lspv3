@@ -31,19 +31,101 @@
         isStep3Complete: {{ $isAk01Selesai ? 'true' : 'false' }},
         isStep4Complete: {{ ($isAk07Selesai ?? false) ? 'true' : 'false' }},
         isAsesiSignedAk01: {{ $isAk01Selesai ? 'true' : 'false' }},
+        isAk01Available: {{ ($hasAk01FromAsesor ?? false) ? 'true' : 'false' }},
+        isAk07Available: {{ ($hasAk07FromAsesor ?? false) ? 'true' : 'false' }},
+        isIaAvailable: {{ ($adaFormOnlineDikerjakan ?? false) ? 'true' : 'false' }},
+        isHasilAkhirTersedia: {{ ($isHasilAkhirTersedia ?? false) ? 'true' : 'false' }},
         setStep(step) {
             if (step === 2 && !this.isStep1Complete) return;
-            if (step === 3 && !this.isStep2Complete) {
-                alert('Formulir FR.AK.01 belum dapat diakses. Mohon menunggu Formulir FR.APL.02 Anda diperiksa dan disetujui (Approved) oleh Asesor Penguji.');
-                return;
+            if (step === 3) {
+                if (!this.isStep2Complete) {
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            icon: 'info',
+                            title: 'Formulir Belum Dapat Diakses',
+                            text: 'Formulir FR.AK.01 belum dapat diakses. Mohon menunggu Formulir FR.APL.02 Anda diperiksa dan disetujui (Approved) oleh Asesor Penguji.',
+                            confirmButtonColor: '#2563eb',
+                            confirmButtonText: 'Saya Mengerti'
+                        });
+                    } else {
+                        alert('Formulir FR.AK.01 belum dapat diakses. Mohon menunggu Formulir FR.APL.02 Anda diperiksa dan disetujui (Approved) oleh Asesor Penguji.');
+                    }
+                    return;
+                }
+                if (!this.isAk01Available) {
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Formulir Tidak Tersedia',
+                            text: 'Formulir FR.AK.01 (Persetujuan Asesmen & Kerahasiaan) belum tersedia. Asesor atau Admin belum membuat dan mengesahkan formulir rencana asesmen untuk skema ini.',
+                            confirmButtonColor: '#2563eb',
+                            confirmButtonText: 'Saya Mengerti'
+                        });
+                    } else {
+                        alert('Formulir FR.AK.01 belum tersedia. Asesor atau Admin belum membuat dan mengesahkan formulir rencana asesmen untuk skema ini.');
+                    }
+                    return;
+                }
             }
-            if (step === 4 && !this.isStep3Complete) {
-                alert('Formulir FR.AK.07 belum dapat diakses. Mohon selesaikan dan tanda tangani Formulir FR.AK.01 terlebih dahulu.');
-                return;
+            if (step === 4) {
+                if (!this.isStep3Complete) {
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            icon: 'info',
+                            title: 'Formulir Belum Dapat Diakses',
+                            text: 'Formulir FR.AK.07 belum dapat diakses. Mohon selesaikan dan tanda tangani Formulir FR.AK.01 terlebih dahulu.',
+                            confirmButtonColor: '#2563eb',
+                            confirmButtonText: 'Saya Mengerti'
+                        });
+                    } else {
+                        alert('Formulir FR.AK.07 belum dapat diakses. Mohon selesaikan dan tanda tangani Formulir FR.AK.01 terlebih dahulu.');
+                    }
+                    return;
+                }
+                if (!this.isAk07Available) {
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Formulir Tidak Tersedia',
+                            text: 'Formulir FR.AK.07 (Penyesuaian yang Wajar dan Beralasan) belum tersedia. Asesor atau Admin belum membuat formulir penyesuaian asesmen untuk skema ini.',
+                            confirmButtonColor: '#2563eb',
+                            confirmButtonText: 'Saya Mengerti'
+                        });
+                    } else {
+                        alert('Formulir FR.AK.07 belum tersedia. Asesor atau Admin belum membuat formulir penyesuaian asesmen untuk skema ini.');
+                    }
+                    return;
+                }
             }
-            if (step === 5 && !this.isStep4Complete) {
-                alert('Halaman tes/ujian belum dapat diakses. Mohon selesaikan dan tanda tangani Formulir FR.AK.07 terlebih dahulu.');
-                return;
+            if (step === 5) {
+                if (!this.isStep4Complete) {
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            icon: 'info',
+                            title: 'Halaman Belum Dapat Diakses',
+                            text: 'Halaman tes/ujian belum dapat diakses. Mohon selesaikan dan tanda tangani Formulir FR.AK.07 terlebih dahulu.',
+                            confirmButtonColor: '#2563eb',
+                            confirmButtonText: 'Saya Mengerti'
+                        });
+                    } else {
+                        alert('Halaman tes/ujian belum dapat diakses. Mohon selesaikan dan tanda tangani Formulir FR.AK.07 terlebih dahulu.');
+                    }
+                    return;
+                }
+                if (!this.isIaAvailable && !this.isHasilAkhirTersedia) {
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Formulir Tidak Tersedia',
+                            text: 'Formulir Ujian/Tes FR.IA belum tersedia. Asesor atau Admin belum menyiapkan instrumen asesmen untuk skema ini.',
+                            confirmButtonColor: '#2563eb',
+                            confirmButtonText: 'Saya Mengerti'
+                        });
+                    } else {
+                        alert('Formulir Ujian/Tes FR.IA belum tersedia. Asesor atau Admin belum menyiapkan instrumen asesmen untuk skema ini.');
+                    }
+                    return;
+                }
             }
             this.currentStep = step;
             window.scrollTo({ top: 120, behavior: 'smooth' });
@@ -1173,16 +1255,28 @@
                                             </span>
                                         </div>
                                         <p class="text-xs text-emerald-800 leading-relaxed">
-                                            Formulir FR.APL.02 Asesmen Mandiri Anda telah <strong>disetujui oleh Asesor Penguji</strong> (Rekomendasi: Asesmen DAPAT Dilanjutkan). Anda dapat melanjutkan ke Formulir <strong>FR.AK.01 Persetujuan Asesmen</strong>.
+                                            @if(!$hasAk01FromAsesor)
+                                                Formulir FR.APL.02 Asesmen Mandiri Anda telah <strong>disetujui oleh Asesor Penguji</strong> (Rekomendasi: Asesmen DAPAT Dilanjutkan). Menunggu Asesor / Admin membuat dan mengesahkan formulir <strong>FR.AK.01 Persetujuan Asesmen</strong>.
+                                            @else
+                                                Formulir FR.APL.02 Asesmen Mandiri Anda telah <strong>disetujui oleh Asesor Penguji</strong> (Rekomendasi: Asesmen DAPAT Dilanjutkan). Anda dapat melanjutkan ke Formulir <strong>FR.AK.01 Persetujuan Asesmen</strong>.
+                                            @endif
                                         </p>
                                     </div>
                                 </div>
                                 <div class="shrink-0">
-                                    <button type="button" @click="setStep(3)" 
-                                            class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition-colors flex items-center gap-2">
-                                        <span>Lanjut ke FR.AK.01</span>
-                                        <span>&rarr;</span>
-                                    </button>
+                                    @if(!$hasAk01FromAsesor)
+                                        <button type="button" @click="setStep(3)" 
+                                                class="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs shadow-xs transition-colors flex items-center gap-2 cursor-pointer">
+                                            <i class="fa-solid fa-clock"></i>
+                                            <span>Menunggu FR.AK.01 Asesor</span>
+                                        </button>
+                                    @else
+                                        <button type="button" @click="setStep(3)" 
+                                                class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition-colors flex items-center gap-2 cursor-pointer">
+                                            <span>Lanjut ke FR.AK.01</span>
+                                            <span>&rarr;</span>
+                                        </button>
+                                    @endif
                                 </div>
                             </div>
                         </div>
@@ -1616,11 +1710,19 @@
                                     <span>Menunggu Pemeriksaan Asesor</span>
                                 </div>
                             @elseif($statusApl02 === 'approved')
-                                <button type="button" @click="setStep({{ $isAk01Selesai ? 4 : 3 }})" 
-                                        class="w-1/2 sm:w-auto px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer">
-                                    <span>Lanjut ke {{ $isAk01Selesai ? 'FR.AK.07' : 'FR.AK.01' }}</span>
-                                    <span>&rarr;</span>
-                                </button>
+                                @if(!$hasAk01FromAsesor)
+                                    <button type="button" @click="setStep(3)" 
+                                            class="w-1/2 sm:w-auto px-6 py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs rounded-xl shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer">
+                                        <i class="fa-solid fa-clock"></i>
+                                        <span>Menunggu FR.AK.01 Asesor</span>
+                                    </button>
+                                @else
+                                    <button type="button" @click="setStep({{ $isAk01Selesai ? 4 : 3 }})" 
+                                            class="w-1/2 sm:w-auto px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer">
+                                        <span>Lanjut ke {{ $isAk01Selesai ? 'FR.AK.07' : 'FR.AK.01' }}</span>
+                                        <span>&rarr;</span>
+                                    </button>
+                                @endif
                             @elseif($statusApl02 === 'rejected')
                                 <div class="w-1/2 sm:w-auto px-5 py-2.5 rounded-xl bg-rose-100 text-rose-900 font-bold text-xs flex items-center justify-center gap-1.5">
                                     <span>FR.APL.02 Ditolak Asesor</span>
@@ -1651,6 +1753,27 @@
                         <button type="button" @click="setStep(2)" class="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs inline-flex items-center gap-2 cursor-pointer">
                             <span>Kembali ke FR.APL.02</span>
                             <span>&rarr;</span>
+                        </button>
+                    </div>
+                </div>
+            @elseif(!$hasAk01FromAsesor)
+                <div class="bg-white rounded-2xl border border-amber-200 shadow-xs p-8 text-center space-y-4">
+                    <div class="w-14 h-14 rounded-2xl bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center mx-auto text-xl font-bold">
+                        <i class="fa-solid fa-clock-rotate-left"></i>
+                    </div>
+                    <div class="max-w-lg mx-auto space-y-2">
+                        <h3 class="text-lg font-bold text-slate-800">Formulir FR.AK.01 Belum Dibuat oleh Asesor / Admin</h3>
+                        <p class="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                            Formulir FR.AK.01 (Persetujuan Asesmen & Kerahasiaan) belum tersedia. Asesor atau Admin belum membuat dan mengesahkan formulir rencana asesmen untuk skema ini.
+                        </p>
+                        <p class="text-xs text-slate-500">
+                            Silakan menunggu sampai Asesor atau Admin mengonfigurasi dan menandatangani formulir rencana asesmen FR.AK.01.
+                        </p>
+                    </div>
+                    <div class="pt-2">
+                        <button type="button" @click="setStep(2)" class="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs inline-flex items-center gap-2 cursor-pointer">
+                            <span>&larr;</span>
+                            <span>Kembali ke FR.APL.02</span>
                         </button>
                     </div>
                 </div>
@@ -1782,11 +1905,11 @@
                                     <span class="text-slate-500 font-semibold text-[11px] normal-case bg-slate-100 px-2 py-0.5 rounded">Ditetapkan Asesor / LSP</span>
                                 </label>
                                 @php
-                                    $selectedTuk = old('tuk_type', $pendaftaran->tuk_type ?: ($pendaftaran->skema?->masterAk01?->tuk_type ?: 'Sewaktu'));
+                                    $selectedTuk = old('tuk_type', $pendaftaran->tuk_type ?: ($pendaftaran->skema?->masterAk01?->tuk_type ?: null));
                                 @endphp
                                 <input type="hidden" name="tuk_type" value="{{ $selectedTuk }}">
                                 <select disabled class="w-full bg-slate-100 border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-800 outline-hidden font-medium opacity-90 cursor-not-allowed">
-                                    <option value="" {{ empty($selectedTuk) ? 'selected' : '' }}></option>
+                                    <option value="" {{ empty($selectedTuk) ? 'selected' : '' }}>-- Belum Ditentukan Asesor --</option>
                                     <option value="Sewaktu" {{ $selectedTuk === 'Sewaktu' ? 'selected' : '' }}>TUK Sewaktu (Sekolah/Mitra)</option>
                                     <option value="Tempat Kerja" {{ $selectedTuk === 'Tempat Kerja' ? 'selected' : '' }}>TUK Tempat Kerja / Industri (DUDI)</option>
                                     <option value="Mandiri" {{ $selectedTuk === 'Mandiri' ? 'selected' : '' }}>TUK Mandiri</option>
@@ -1802,8 +1925,8 @@
                                 </label>
                                 @php
                                     $savedBukti = (array) ($pendaftaran->bukti_dikumpulkan ?? []);
-                                    if (empty($savedBukti)) {
-                                        $savedBukti = (array) ($pendaftaran->skema?->masterAk01?->bukti_dikumpulkan ?: $pendaftaran->getDefaultBuktiDikumpulkanFromSkema());
+                                    if (empty($savedBukti) && $pendaftaran->skema?->masterAk01) {
+                                        $savedBukti = (array) ($pendaftaran->skema->masterAk01->bukti_dikumpulkan ?? []);
                                     }
                                 @endphp
                                 @foreach($savedBukti as $b)
@@ -2068,16 +2191,23 @@
                     $isSignedByAsesi = false;
                     $isSignedByAsesiAk07 = false;
                 @endphp
-                @if(!$ak07 || empty($ak07->asesor_signature))
-                    <div class="bg-white rounded-2xl border border-amber-200 shadow-xs p-8 text-center space-y-3">
-                        <div class="w-12 h-12 rounded-xl bg-amber-50 text-amber-700 border border-amber-200 flex items-center justify-center mx-auto font-bold">AK.07</div>
-                        <h2 class="text-base font-bold text-slate-900">FR.AK.07 Belum Diisi Asesor</h2>
-                        <p class="text-sm text-slate-600 max-w-xl mx-auto">
-                            Formulir FR.AK.07 untuk skema ini akan tampil setelah Asesor mengisi dan menandatangani Master FR.AK.07.
-                        </p>
-                        <button type="button" @click="setStep(3)" class="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs">
-                            Kembali ke FR.AK.01
-                        </button>
+                @if(!$hasAk07FromAsesor || !$ak07 || empty($ak07->asesor_signature))
+                    <div class="bg-white rounded-2xl border border-amber-200 shadow-xs p-8 text-center space-y-4">
+                        <div class="w-14 h-14 rounded-2xl bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center mx-auto text-xl font-bold">
+                            <i class="fa-solid fa-clock-rotate-left"></i>
+                        </div>
+                        <div class="max-w-lg mx-auto space-y-2">
+                            <h3 class="text-lg font-bold text-slate-800">Formulir FR.AK.07 Belum Dibuat oleh Asesor / Admin</h3>
+                            <p class="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                                Formulir FR.AK.07 (Penyesuaian yang Wajar dan Beralasan) untuk skema ini belum tersedia. Asesor atau Admin belum membuat dan menandatangani formulir penyesuaian asesmen.
+                            </p>
+                        </div>
+                        <div class="pt-2">
+                            <button type="button" @click="setStep(3)" class="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs inline-flex items-center gap-2 cursor-pointer">
+                                <span>&larr;</span>
+                                <span>Kembali ke FR.AK.01</span>
+                            </button>
+                        </div>
                     </div>
                 @else
                 @php
@@ -2545,6 +2675,24 @@
                     <button type="button" @click="setStep(4)" class="px-4 py-2 bg-amber-600 text-white font-bold text-xs rounded-xl shadow-xs cursor-pointer">
                         Buka Formulir FR.AK.07
                     </button>
+                </div>
+            @elseif(!$adaFormOnlineDikerjakan && !$isHasilAkhirTersedia)
+                <div class="bg-white rounded-2xl border border-amber-200 shadow-xs p-8 text-center space-y-4">
+                    <div class="w-14 h-14 rounded-2xl bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center mx-auto text-xl font-bold">
+                        <i class="fa-solid fa-clock-rotate-left"></i>
+                    </div>
+                    <div class="max-w-lg mx-auto space-y-2">
+                        <h3 class="text-lg font-bold text-slate-800">Formulir Ujian / Tes FR.IA Belum Tersedia</h3>
+                        <p class="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                            Formulir instrumen asesmen (FR.IA) untuk skema ini belum dibuat atau disiapkan oleh Asesor / Admin.
+                        </p>
+                    </div>
+                    <div class="pt-2">
+                        <button type="button" @click="setStep(4)" class="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs inline-flex items-center gap-2 cursor-pointer">
+                            <span>&larr;</span>
+                            <span>Kembali ke Formulir FR.AK.07</span>
+                        </button>
+                    </div>
                 </div>
             @else
                 <!-- Top navigation buttons -->

@@ -1649,10 +1649,15 @@ class AsesiController extends Controller
                 ->with('warning', 'Belum ada pendaftaran skema aktif.');
         }
 
-        // STRICT BACKEND GUARD: AK.01 HANYA boleh dibuka jika status_apl02 = approved
+        // STRICT BACKEND GUARD: AK.01 HANYA boleh dibuka jika status_apl02 = approved dan form AK.01 sudah dibuat oleh Asesor/Admin
         if (!$pendaftaran->isAk01Unlocked()) {
             return redirect()->route('asesi.tahapan', ['pendaftaran_id' => $pendaftaran->id, 'step' => 2])
                 ->with('error', 'FR.APL.02 harus disetujui Asesor terlebih dahulu sebelum FR.AK.01 dapat diisi.');
+        }
+
+        if (!$pendaftaran->hasAk01FromAsesor()) {
+            return redirect()->route('asesi.tahapan', ['pendaftaran_id' => $pendaftaran->id, 'step' => 2])
+                ->with('warning', 'Formulir FR.AK.01 belum tersedia. Asesor atau Admin belum membuat formulir rencana asesmen.');
         }
 
         $pendaftaran->load([
@@ -1717,10 +1722,15 @@ class AsesiController extends Controller
                 ->with('error', 'Pendaftaran untuk skema ini telah Ditolak. Anda tidak dapat melanjutkan pengisian formulir.');
         }
 
-        // STRICT BACKEND GUARD: Form APL-02 harus berstatus Approved
+        // STRICT BACKEND GUARD: Form APL-02 harus berstatus Approved dan Form AK-01 sudah dibuat
         if (!$pendaftaran->isAk01Unlocked()) {
             return redirect()->route('asesi.tahapan', ['pendaftaran_id' => $pendaftaran->id, 'step' => 2])
                 ->with('error', 'FR.APL.02 harus disetujui Asesor terlebih dahulu sebelum FR.AK.01 dapat diisi.');
+        }
+
+        if (!$pendaftaran->hasAk01FromAsesor()) {
+            return redirect()->route('asesi.tahapan', ['pendaftaran_id' => $pendaftaran->id, 'step' => 2])
+                ->with('warning', 'Formulir FR.AK.01 belum dapat ditandatangani karena formulir belum dibuat atau belum disahkan oleh Asesor / Admin.');
         }
 
         $request->validate([

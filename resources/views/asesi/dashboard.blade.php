@@ -289,7 +289,7 @@
                         <strong style="font-size: 0.95rem; color: #dc2626; display: block;">Dibatalkan</strong>
                         <span style="font-size: 0.78rem; color: #64748b;">Pendaftaran Ditolak</span>
                     @else
-                        <strong style="font-size: 0.95rem; color: var(--biru-malam); display: block;">{{ $p->jadwal->nama_tuk ?? ($p->tuk_type ? 'TUK ' . $p->tuk_type : 'TUK Sewaktu') }}</strong>
+                        <strong style="font-size: 0.95rem; color: var(--biru-malam); display: block;">{{ $p->jadwal->nama_tuk ?? ($p->tuk_type ? 'TUK ' . $p->tuk_type : 'TUK Ditentukan Kemudian') }}</strong>
                         <span style="font-size: 0.78rem; color: #64748b;">
                             {{ $p->jadwal ? \Carbon\Carbon::parse($p->jadwal->tanggal_uji)->format('d F Y') : 'Jadwal Ditentukan Kemudian' }}
                         </span>
@@ -372,12 +372,21 @@
                                 </p>
                             @endif
                         @elseif($p->isApl02Approved() && !$asesiTtdAk01)
-                            <div style="font-weight: 800; color: #92400e; font-size: 1rem; margin-bottom: 0.25rem;">
-                                APL-02 Disetujui Asesor! Silakan Tanda Tangani FR.AK.01
-                            </div>
-                            <p style="font-size: 0.86rem; color: #78350f; margin: 0;">
-                                Asesmen mandiri Anda telah disetujui (ACC) oleh Asesor. Langkah selanjutnya adalah menyepakati rencana asesmen dan menandatangani formulir FR.AK.01.
-                            </p>
+                            @if(!$p->hasAk01FromAsesor())
+                                <div style="font-weight: 800; color: #92400e; font-size: 1rem; margin-bottom: 0.25rem;">
+                                    APL-02 Disetujui Asesor! Menunggu Formulir FR.AK.01 Dibuat
+                                </div>
+                                <p style="font-size: 0.86rem; color: #78350f; margin: 0;">
+                                    Asesmen mandiri Anda telah disetujui (ACC). Formulir Persetujuan Asesmen (FR.AK.01) sedang disiapkan oleh Asesor / Admin LSP.
+                                </p>
+                            @else
+                                <div style="font-weight: 800; color: #92400e; font-size: 1rem; margin-bottom: 0.25rem;">
+                                    APL-02 Disetujui Asesor! Silakan Tanda Tangani FR.AK.01
+                                </div>
+                                <p style="font-size: 0.86rem; color: #78350f; margin: 0;">
+                                    Asesmen mandiri Anda telah disetujui (ACC) oleh Asesor. Langkah selanjutnya adalah menyepakati rencana asesmen dan menandatangani formulir FR.AK.01.
+                                </p>
+                            @endif
                         @elseif($p->isApl02Approved() && $asesiTtdAk01 && !$asesorTtdAk01)
                             <div style="font-weight: 800; color: #92400e; font-size: 1rem; margin-bottom: 0.25rem;">
                                 FR.AK.01 Telah Anda Tandatangani (Menunggu Pengesahan Asesor)
@@ -472,9 +481,15 @@
                             @endif
                         @elseif($p->isApl02Approved() && !$asesiTtdAk01)
                             <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
-                                <a href="{{ route('asesi.tahapan', ['step' => 3, 'pendaftaran_id' => $p->id]) }}" class="tombol tombol-utama" style="background: #2563eb; border-color: #2563eb; font-size: 0.9rem;">
-                                    Isi & TTD FR.AK.01 &rarr;
-                                </a>
+                                @if(!$p->hasAk01FromAsesor())
+                                    <button type="button" onclick="Swal.fire({ icon: 'warning', title: 'Formulir Tidak Tersedia', text: 'Formulir FR.AK.01 belum tersedia. Asesor atau Admin belum membuat dan mengesahkan rencana asesmen untuk skema ini.', confirmButtonColor: '#2563eb' })" class="tombol tombol-sekunder" style="font-size: 0.9rem; cursor: pointer;">
+                                        Menunggu FR.AK.01 Asesor
+                                    </button>
+                                @else
+                                    <a href="{{ route('asesi.tahapan', ['step' => 3, 'pendaftaran_id' => $p->id]) }}" class="tombol tombol-utama" style="background: #2563eb; border-color: #2563eb; font-size: 0.9rem;">
+                                        Isi & TTD FR.AK.01 &rarr;
+                                    </a>
+                                @endif
                                 <a href="{{ route('asesi.ak07', ['pendaftaranId' => $p->id]) }}" class="tombol tombol-sekunder" style="font-size: 0.85rem;">
                                     Formulir FR.AK.07
                                 </a>

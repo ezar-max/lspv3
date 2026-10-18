@@ -37,7 +37,11 @@ class DokumenAsesmenController extends Controller
         // 1. Query AK.02
         $ak02Query = AssessmentAk02::with(['pendaftaran.asesi', 'skema', 'asesor']);
         if ($user->peran === 'asesi') {
-            $ak02Query->whereHas('pendaftaran', fn ($q) => $q->where('asesi_id', $user->id));
+            $ak02Query->whereHas('pendaftaran', fn ($q) => $q->where('asesi_id', $user->id))
+                ->where(function ($q) {
+                    $q->whereNotNull('asesor_signature')
+                      ->orWhereIn('status', ['completed', 'signed_asesor', 'signed_both']);
+                });
         } elseif ($user->peran === 'asesor') {
             $ak02Query->where('asesor_id', $user->id);
         }
@@ -56,7 +60,11 @@ class DokumenAsesmenController extends Controller
         // 2. Query AK.03
         $ak03Query = AssessmentAk03::with(['pendaftaran.asesi', 'pendaftaran.skema', 'asesor']);
         if ($user->peran === 'asesi') {
-            $ak03Query->where('asesi_id', $user->id);
+            $ak03Query->where('asesi_id', $user->id)
+                ->whereHas('pendaftaran.ak02', function ($q) {
+                    $q->whereNotNull('asesor_signature')
+                      ->orWhereIn('status', ['completed', 'signed_asesor', 'signed_both']);
+                });
         } elseif ($user->peran === 'asesor') {
             $ak03Query->where('asesor_id', $user->id);
         }

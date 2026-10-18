@@ -270,6 +270,10 @@ class AsesiUjianController extends Controller
             return response()->json(['status' => 'error', 'message' => 'Formulir FR.AK.01 belum disahkan oleh kedua belah pihak.'], 403);
         }
 
+        if (!$pendaftaran->hasIaFormsFromAsesor()) {
+            return response()->json(['status' => 'error', 'message' => 'Materi / formulir asesmen FR.IA belum disiapkan oleh Asesor / Admin.'], 403);
+        }
+
         if ($pendaftaran->jadwal) {
             $pendaftaran->jadwal->syncRealtimeStatus();
             if ($pendaftaran->jadwal->status_jadwal === 'dibatalkan') {
@@ -441,6 +445,10 @@ class AsesiUjianController extends Controller
             return redirect()->back()->with('error', 'Formulir FR.AK.01 belum disahkan oleh kedua belah pihak.');
         }
 
+        if (!$pendaftaran->hasIaFormsFromAsesor()) {
+            return redirect()->back()->with('error', 'Formulir tugas praktik FR.IA.02 belum disiapkan oleh Asesor / Admin.');
+        }
+
         if ($pendaftaran->jadwal) {
             $pendaftaran->jadwal->syncRealtimeStatus();
             if ($pendaftaran->jadwal->status_jadwal === 'dibatalkan') {
@@ -566,6 +574,10 @@ class AsesiUjianController extends Controller
         $isAk01Selesai = ($pendaftaran->status_ak01 === 'selesai') || (!empty($pendaftaran->tanda_tangan_asesi_ak01) && !empty($pendaftaran->tanda_tangan_asesor_ak01));
         if (!$isAk01Selesai && $pendaftaran->status_pendaftaran !== 'selesai') {
             return redirect()->back()->with('error', 'Formulir FR.AK.01 belum disahkan oleh kedua belah pihak.');
+        }
+
+        if (!$pendaftaran->hasIaFormsFromAsesor()) {
+            return redirect()->back()->with('error', 'Materi asesmen FR.IA belum disiapkan oleh Asesor / Admin.');
         }
 
         if ($pendaftaran->jadwal) {
