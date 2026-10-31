@@ -1250,10 +1250,8 @@ class AsesiController extends Controller
     public function hasilNilai()
     {
         JadwalAsesmen::syncAllStatuses();
-        $pendaftaranList = PendaftaranAsesi::with(['skema', 'jadwal', 'penilaian.unit', 'rekomendasi.asesor'])
-            ->where('asesi_id', auth()->id())
-            ->get();
         $pendaftaranList = PendaftaranAsesi::with([
+            'asesi',
             'skema.unitKompetensi',
             'jadwal.asesor',
             'penilaian.unit',
@@ -1265,7 +1263,9 @@ class AsesiController extends Controller
         ->latest()
         ->get();
 
-        return view('asesi.hasil-nilai', compact('pendaftaranList'));
+        $pengaturan = \App\Models\PengaturanSistem::ambilData();
+
+        return view('asesi.hasil-nilai', compact('pendaftaranList', 'pengaturan'));
     }
 
     public function hasilFormulir(int $pendaftaranId, FrIa01Service $frIa01Service)

@@ -1455,7 +1455,7 @@
                     <div class="flex items-center gap-2.5 flex-wrap">
                         <a href="{{ route('formulir.ia02', ['skema_id' => $instrument->skema_id]) }}" target="_blank" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition">
                             <i class="fa-solid fa-arrow-up-right-from-square text-[11px]"></i>
-                            <span>Kelola Master FR.IA.01</span>
+                            <span>Buka Formulir FR.IA.02</span>
                         </a>
 
                         <button type="submit" class="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-violet-600 hover:bg-violet-700 active:bg-violet-800 text-white font-semibold text-xs shadow-xs transition cursor-pointer btn-submit-metadata">
@@ -2134,7 +2134,7 @@
         <form action="{{ route('admin.master-muk.update-metadata', $instrument->id) }}" method="POST">
             @csrf
 
-            <!-- BAR KONTROL & PENGATURAN CEPAT -->
+            <!-- BAR KONTOL & PENGATURAN CEPAT -->
             <div class="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-5 mb-6">
                 <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-100">
                     <div class="flex items-center gap-3">

@@ -64,7 +64,7 @@
     <div class="min-h-screen flex flex-col justify-between" x-data="{ mobileNavOpen: false, userDropdownOpen: false, openDropdown: null }">
         
         <!-- TOP STICKY NAVBAR (Solid di mobile, transparan glassmorphism di desktop) -->
-        <nav class="sticky top-0 z-40 bg-white border-b border-slate-200/80 lg:border-none lg:bg-white/50 lg:backdrop-blur-md transition-all duration-300">
+        <nav class="no-print sticky top-0 z-40 bg-white border-b border-slate-200/80 lg:border-none lg:bg-white/50 lg:backdrop-blur-md transition-all duration-300">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="flex items-center justify-between h-16 gap-4">
                     

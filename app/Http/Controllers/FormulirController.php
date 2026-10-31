@@ -1271,8 +1271,8 @@ class FormulirController extends Controller
                 abort_unless($isAssigned, 403, 'Akses Ditolak: Anda tidak ditugaskan untuk pendaftaran ini.');
             }
 
-            // Cek instrumen aktif (admin/superadmin dilewati; asesor dicek bila ada konfigurasi MAPA.02)
-            if ($user && !in_array($user->peran, ['admin', 'superadmin'])) {
+            // Cek instrumen aktif (hanya asesi yang dibatasi untuk ujian; asesor dan admin tetap dapat membuat/menyimpan form)
+            if ($user && $user->peran === 'asesi') {
                 if ($pendaftaran->hasMapa02Config() && !$pendaftaran->isInstrumenAktif($kodeForm)) {
                     abort(422, 'Instrumen ini tidak aktif pada MAPA.02 untuk pendaftaran tersebut.');
                 }
@@ -1469,12 +1469,12 @@ class FormulirController extends Controller
                 'saved_at' => now()->toDateTimeString(),
             ];
 
-            // Sinkronkan ke SchemeMasterInstrument (ia_04a) pada Master Mode atau jika master instrument ada
+            // Sinkronkan ke SchemeMasterInstrument (ia_04a) agar konfigurasi tersimpan untuk penggunaan skema berikutnya
             if ($pendaftaran->skema_id) {
                 $inst = \App\Models\SchemeMasterInstrument::where('skema_id', $pendaftaran->skema_id)
                     ->whereIn('instrument_code', \App\Models\SchemeMasterInstrument::getCodeAliases('ia_04a'))
                     ->first();
-                if (!$inst && $isMasterMode) {
+                if (!$inst) {
                     $inst = \App\Models\SchemeMasterInstrument::create([
                         'skema_id' => $pendaftaran->skema_id,
                         'instrument_code' => 'ia_04a',
@@ -1483,7 +1483,7 @@ class FormulirController extends Controller
                         'created_by' => auth()->id() ?? $pendaftaran->asesor_id,
                     ]);
                 }
-                if ($inst && ($isMasterMode || in_array($user?->peran, ['admin', 'superadmin'], true))) {
+                if ($inst) {
                     $meta = $inst->additional_metadata ?? [];
                     if (!is_array($meta)) $meta = json_decode($meta, true) ?: [];
                     if ($request->filled('skenario')) {
@@ -1884,8 +1884,8 @@ class FormulirController extends Controller
             $catatan = $request->catatan ?? ($request->umpan_balik ?? null);
         }
 
-        // Sinkronkan ke SchemeMasterInstrument untuk mode master (pendaftaran_id == 0) atau sinkronisasi IA.02, IA.05A, IA.06A, IA.07A
-        if ($pendaftaran->skema_id && ($pendaftaran->id == 0 || in_array($kodeForm, ['FR.IA.02', 'FR.IA.05A', 'FR.IA.06A', 'FR.IA.07A'], true) || in_array($user?->peran, ['admin', 'superadmin'], true))) {
+        // Sinkronkan ke SchemeMasterInstrument untuk mode master (pendaftaran_id == 0) atau sinkronisasi instrumen skema oleh asesor/admin
+        if ($pendaftaran->skema_id && ($pendaftaran->id == 0 || in_array($kodeForm, ['FR.IA.02', 'FR.IA.03', 'FR.IA.04A', 'FR.IA.04B', 'FR.IA.05A', 'FR.IA.06A', 'FR.IA.07A'], true) || in_array($user?->peran, ['admin', 'superadmin', 'asesor'], true))) {
             $rawCode = strtolower(str_replace(['FR.', 'fr.', '.'], '', $kodeForm));
             $instCode = \App\Models\SchemeMasterInstrument::normalizeCode($rawCode);
             $inst = \App\Models\SchemeMasterInstrument::where('skema_id', $pendaftaran->skema_id)
@@ -2124,6 +2124,17 @@ class FormulirController extends Controller
                             'pertanyaan' => $val['pertanyaan'] ?? ''
                         ];
                     }
+                }
+            } elseif ($kodeForm === 'FR.IA.03') {
+                if (!empty($dataPayload['kelompok_soal'])) $masterPayload['kelompok_soal'] = $dataPayload['kelompok_soal'];
+                if (!empty($dataPayload['pertanyaan'])) $masterPayload['pertanyaan'] = $dataPayload['pertanyaan'];
+            } elseif ($kodeForm === 'FR.IA.04B') {
+                if (!empty($dataPayload['judul_proyek'])) {
+                    $masterPayload['judul_proyek'] = $dataPayload['judul_proyek'];
+                    $inst->title = $dataPayload['judul_proyek'];
+                }
+                if (!empty($dataPayload['spesifikasi'])) {
+                    $masterPayload['spesifikasi'] = $dataPayload['spesifikasi'];
                 }
             } elseif ($kodeForm === 'FR.IA.10') {
                 // Saat ini tidak ada input master eksplisit di form 10, jangan simpan apapun

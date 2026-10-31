@@ -587,7 +587,12 @@
                             $jumlahSpec = $existingInst ? $existingInst->productSpecifications->count() : 0;
 
                             // Link Kelola Form
-                            if ($isExist) {
+                            if ($code === 'ia01' && $selectedSkema) {
+                                $kelolaUrl = route('formulir.ia01', [
+                                    'pendaftaranId' => 0,
+                                    'skema_id' => $selectedSkema->id
+                                ]);
+                            } elseif ($isExist) {
                                 $kelolaUrl = route('admin.master-muk.manage', $existingInst->id);
                             } elseif ($selectedSkema) {
                                 $kelolaUrl = route('admin.master-muk.create', [
@@ -598,17 +603,16 @@
                                 $kelolaUrl = '#';
                             }
 
-                            // Link Pratinjau / Cetak (Gunakan 0 sebagai Master Blanko jika belum ada pendaftaran asesi)
-                            $targetPendaftaranId = $samplePendaftaran ? $samplePendaftaran->id : 0;
+                            // Link Pratinjau / Cetak (Gunakan 0 sebagai Master Blanko jika form ia01 atau belum ada pendaftaran asesi)
+                            $targetPendaftaranId = ($code === 'ia01') ? 0 : ($samplePendaftaran ? $samplePendaftaran->id : 0);
                             $cetakUrl = route('formulir.' . $item['route_view'], [
                                 'skema_id' => $selectedSkema?->id,
                                 'pendaftaran_id' => $targetPendaftaranId,
                                 'pendaftaranId' => $targetPendaftaranId,
                             ]);
 
-                            // FR.IA.04 diisi langsung pada lembar formulirnya agar
-                            // tampilan "Tambah Form" sama dengan tampilan pratinjau.
-                            $tambahLangsungKeForm = true; // Ditampilkan langsung pada lembar formulir seperti tombol pratinjau
+                            // Form yang dikelola langsung pada lembar formulirnya
+                            $tambahLangsungKeForm = in_array($code, ['ia01', 'ia04a', 'ia04b'], true);
                         @endphp
 
                         <div class="ia-card">

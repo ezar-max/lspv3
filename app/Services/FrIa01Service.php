@@ -70,7 +70,10 @@ class FrIa01Service
         $mapa02 = $pendaftaran->getEffectiveMapa02();
         abort_unless($mapa02 && $mapa02->status_mapa === 'selesai', 403, 'FR.IA.01 belum dapat digunakan karena MAPA.02 belum dikonfirmasi.');
         abort_unless(! empty($mapa02->matriks_peta), 403, 'MAPA.02 belum memiliki matriks instrumen yang dikonfirmasi.');
-        abort_unless($pendaftaran->isInstrumenAktif(self::FORM_CODE), 403, 'FR.IA.01 tidak aktif pada MAPA.02 untuk pendaftaran ini.');
+        $currentUser = auth()->user();
+        if ($currentUser && $currentUser->peran === 'asesi') {
+            abort_unless($pendaftaran->isInstrumenAktif(self::FORM_CODE), 403, 'FR.IA.01 tidak aktif pada MAPA.02 untuk pendaftaran ini.');
+        }
 
         $record = $pendaftaran->relationLoaded('iaPenilaian')
             ? $pendaftaran->iaPenilaian->firstWhere('kode_formulir', self::FORM_CODE)
@@ -240,6 +243,25 @@ class FrIa01Service
             ->where('is_active', true)
             ->first();
         if (!$instrument) {
+            $defaultStandards = [];
+            foreach ($skema->unitKompetensi as $unit) {
+                foreach ($unit->elemenKompetensi as $elemen) {
+                    foreach ($elemen->kriteriaUnjukKerja as $kuk) {
+                        $defaultStandards[$kuk->id] = 'Standar Operasional Prosedur (SOP) Industri & SKKNI: ' . $kuk->pernyataan_kuk;
+                    }
+                }
+            }
+
+            if (!empty($defaultStandards)) {
+                return [
+                    'instrument_id' => null,
+                    'version' => 1,
+                    'published_at' => now()->toIso8601String(),
+                    'standar_industri' => $defaultStandards,
+                    'is_default_baseline' => true,
+                ];
+            }
+
             return null;
         }
 
@@ -277,10 +299,30 @@ class FrIa01Service
     {
         $metadata = $instrument?->additional_metadata ?? [];
 
-        return $this->normalizeMasterStandards(
+        $standards = $this->normalizeMasterStandards(
             (array) ($metadata['draft_standards'] ?? $metadata['published_standards'] ?? $metadata['standar_industri'] ?? $metadata['kuk_standards'] ?? []),
             $skema
         );
+
+        $hasAny = false;
+        foreach ($standards as $val) {
+            if (trim((string) $val) !== '') {
+                $hasAny = true;
+                break;
+            }
+        }
+
+        if (!$hasAny) {
+            foreach ($skema->unitKompetensi as $unit) {
+                foreach ($unit->elemenKompetensi as $elemen) {
+                    foreach ($elemen->kriteriaUnjukKerja as $kuk) {
+                        $standards[$kuk->id] = 'Standar Operasional Prosedur (SOP) Industri & SKKNI: ' . $kuk->pernyataan_kuk;
+                    }
+                }
+            }
+        }
+
+        return $standards;
     }
 
     public function executionStandards(PendaftaranAsesi $pendaftaran, ?IaPenilaian $record): array

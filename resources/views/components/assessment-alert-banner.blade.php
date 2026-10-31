@@ -152,7 +152,7 @@
     @mouseenter="pause()"
     @mouseleave="resume()"
     style="display: none;"
-    class="fixed bottom-5 right-4 sm:right-6 z-[9999] w-[410px] max-w-[calc(100vw-2rem)]"
+    class="no-print fixed bottom-5 right-4 sm:right-6 z-[9999] w-[410px] max-w-[calc(100vw-2rem)]"
 >
     <div class="bg-white/95 backdrop-blur-md rounded-2xl shadow-[0_20px_45px_-10px_rgba(15,23,42,0.12),0_8px_20px_-4px_rgba(15,23,42,0.04)] border border-slate-200/90 overflow-hidden relative transition-all group hover:shadow-[0_24px_50px_-10px_rgba(15,23,42,0.16)]">
         <div class="p-4 sm:p-5">
