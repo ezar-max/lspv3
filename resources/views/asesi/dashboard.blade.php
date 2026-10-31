@@ -540,8 +540,12 @@
                     $ia01Master = $p->skema?->masterInstruments->first(function ($instrument) {
                         return in_array($instrument->instrument_code, \App\Models\SchemeMasterInstrument::getCodeAliases('ia_01'), true);
                     });
-                    $canPreviewIa01 = $p->isInstrumenAktif('FR.IA.01')
-                        && (!$ia01Master || ($ia01Master->is_active && $ia01Master->isConfigured()));
+                    $ia01Record = $p->relationLoaded('iaPenilaian')
+                        ? $p->iaPenilaian->firstWhere('kode_formulir', 'FR.IA.01')
+                        : $p->iaPenilaian()->where('kode_formulir', 'FR.IA.01')->first();
+                    $hasIa01Snapshot = !empty($ia01Record?->data_jawaban['master_snapshot']) || !empty($ia01Record?->data_jawaban['standar_industri']);
+                    $isIa01Configured = $ia01Master && $ia01Master->is_active && $ia01Master->isConfigured();
+                    $canPreviewIa01 = $p->isInstrumenAktif('FR.IA.01') && ($hasIa01Snapshot || $isIa01Configured);
 
                     $listFormulir = [];
                     if ($p->isInstrumenAktif('FR.IA.02') && ($p->skema ? $p->skema->hasInstrumen('FR.IA.02') : true)) {
