@@ -44,15 +44,42 @@ class AdminController extends Controller
         JadwalAsesmen::syncAllStatuses();
 
         $status = $request->get('status', 'diajukan');
+        $kataKunci = $request->get('q');
+        $skemaFilter = $request->get('skema');
+
+        $daftarSkema = SkemaSertifikasi::select('id', 'nama_skema', 'kode_skema')
+            ->orderBy('nama_skema')
+            ->get();
 
         $pendaftaranList = PendaftaranAsesi::with(['asesi.profilAsesi', 'skema', 'dokumen', 'jadwal'])
-            ->when($status !== 'semua', function($q) use ($status) {
+            ->when($status !== 'semua' && !empty($status), function($q) use ($status) {
                 $q->where('status_pendaftaran', $status);
+            })
+            ->when($skemaFilter && $skemaFilter !== 'semua', function($q) use ($skemaFilter) {
+                $q->where('skema_id', $skemaFilter);
+            })
+            ->when($kataKunci, function($q) use ($kataKunci) {
+                $q->where(function($sub) use ($kataKunci) {
+                    $sub->where('nomor_pendaftaran', 'like', "%{$kataKunci}%")
+                        ->orWhereHas('asesi', function($sq) use ($kataKunci) {
+                            $sq->where('nama_lengkap', 'like', "%{$kataKunci}%")
+                               ->orWhere('email', 'like', "%{$kataKunci}%");
+                        });
+                });
             })
             ->latest()
             ->paginate(10);
 
-        return view('admin.verifikasi-berkas', compact('pendaftaranList', 'status'));
+        $totalPendingVerifikasi = PendaftaranAsesi::where('status_pendaftaran', 'diajukan')->count();
+        $totalTerverifikasi = PendaftaranAsesi::where('status_pendaftaran', 'diverifikasi')->count();
+        $totalRevisi = PendaftaranAsesi::where('status_pendaftaran', 'revisi')->count();
+        $totalDitolak = PendaftaranAsesi::where('status_pendaftaran', 'ditolak')->count();
+        $totalSemua = PendaftaranAsesi::count();
+
+        return view('admin.verifikasi-berkas', compact(
+            'pendaftaranList', 'status', 'kataKunci', 'skemaFilter', 'daftarSkema',
+            'totalPendingVerifikasi', 'totalTerverifikasi', 'totalRevisi', 'totalDitolak', 'totalSemua'
+        ));
     }
 
     public function detailVerifikasi($id)
@@ -61,11 +88,13 @@ class AdminController extends Controller
 
         $pendaftaran = PendaftaranAsesi::with([
             'asesi.profilAsesi', 
+            'asesi.pendaftaranAsesi.skema',
             'skema.unitKompetensi.elemenKompetensi', 
             'dokumen', 
             'jadwal.asesor', 
             'asesor',
-            'jawabanApl02'
+            'jawabanApl02',
+            'rekomendasi'
         ])->findOrFail($id);
 
         // Hitung nomor urut pendaftaran asesi pada skema ini
@@ -177,7 +206,8 @@ class AdminController extends Controller
                 ));
             }
 
-            return redirect()->route('admin.verifikasi-berkas')->with('sukses', 'Status pendaftaran berhasil dikembalikan sebagai REVISI ke Asesi beserta catatan perbaikan dokumen.');
+            $redirectRoute = $request->input('from') === 'asesi' ? 'admin.manajemen-asesi' : 'admin.verifikasi-berkas';
+            return redirect()->route($redirectRoute)->with('sukses', 'Status pendaftaran berhasil dikembalikan sebagai REVISI ke Asesi beserta catatan perbaikan dokumen.');
         }
 
         if ($isDitolak) {
@@ -241,7 +271,8 @@ class AdminController extends Controller
                 ));
             }
 
-            return redirect()->route('admin.verifikasi-berkas')->with('sukses', 'Status pendaftaran berhasil disimpan sebagai DITOLAK (Tidak Diterima).');
+            $redirectRoute = $request->input('from') === 'asesi' ? 'admin.manajemen-asesi' : 'admin.verifikasi-berkas';
+            return redirect()->route($redirectRoute)->with('sukses', 'Status pendaftaran berhasil disimpan sebagai DITOLAK (Tidak Diterima).');
         }
 
         // =========================================================================
@@ -395,14 +426,15 @@ class AdminController extends Controller
             ));
         }
 
-        return redirect()->route('admin.verifikasi-berkas')->with('sukses', 'Status verifikasi pendaftaran (DIVERIFIKASI / DITERIMA) dan Penugasan Asesor berhasil disimpan.');
+        $redirectRoute = $request->input('from') === 'asesi' ? 'admin.manajemen-asesi' : 'admin.verifikasi-berkas';
+        return redirect()->route($redirectRoute)->with('sukses', 'Status verifikasi pendaftaran (DIVERIFIKASI / DITERIMA) dan Penugasan Asesor berhasil disimpan.');
     }
 
     public function manajemenAsesi(Request $request)
     {
         $tab = $request->get('tab', 'data-asesi');
         $kataKunci = $request->get('q');
-        $statusVerifikasi = $request->get('status', 'diajukan');
+        $statusVerifikasi = $request->get('status', '');
         $skemaFilter = $request->get('skema');
 
         $daftarSkema = SkemaSertifikasi::select('id', 'nama_skema', 'kode_skema')
@@ -410,13 +442,16 @@ class AdminController extends Controller
             ->get();
 
         $asesiList = Pengguna::where('peran', 'asesi')
-            ->with(['profilAsesi', 'pendaftaranAsesi.skema'])
+            ->with(['profilAsesi', 'pendaftaranAsesi.skema', 'pendaftaranAsesi.jadwal', 'pendaftaranAsesi.dokumen'])
             ->when($kataKunci, function($q) use ($kataKunci) {
                 $q->where(function($sub) use ($kataKunci) {
                     $sub->where('nama_lengkap', 'like', "%{$kataKunci}%")
                         ->orWhere('email', 'like', "%{$kataKunci}%")
                         ->orWhereHas('profilAsesi', function($p) use ($kataKunci) {
                             $p->where('nik', 'like', "%{$kataKunci}%");
+                        })
+                        ->orWhereHas('pendaftaranAsesi', function($pa) use ($kataKunci) {
+                            $pa->where('nomor_pendaftaran', 'like', "%{$kataKunci}%");
                         });
                 });
             })
@@ -429,11 +464,20 @@ class AdminController extends Controller
                     });
                 }
             })
+            ->when($statusVerifikasi && $statusVerifikasi !== 'semua', function($q) use ($statusVerifikasi) {
+                if ($statusVerifikasi === 'belum_daftar') {
+                    $q->doesntHave('pendaftaranAsesi');
+                } else {
+                    $q->whereHas('pendaftaranAsesi', function($sq) use ($statusVerifikasi) {
+                        $sq->where('status_pendaftaran', $statusVerifikasi);
+                    });
+                }
+            })
             ->latest()
             ->paginate(10, ['*'], 'asesi_page');
 
         $pendaftaranList = PendaftaranAsesi::with(['asesi.profilAsesi', 'skema', 'dokumen', 'jadwal'])
-            ->when($statusVerifikasi !== 'semua' && $statusVerifikasi, function($q) use ($statusVerifikasi) {
+            ->when($statusVerifikasi !== 'semua' && $statusVerifikasi && $statusVerifikasi !== 'belum_daftar', function($q) use ($statusVerifikasi) {
                 $q->where('status_pendaftaran', $statusVerifikasi);
             })
             ->when($skemaFilter && $skemaFilter !== 'belum_daftar' && $skemaFilter !== 'semua', function($q) use ($skemaFilter) {
@@ -470,6 +514,12 @@ class AdminController extends Controller
             'pendaftaranAsesi.dokumen',
             'pendaftaranAsesi.rekomendasi'
         ])->findOrFail($id);
+
+        // Jika asesi sudah memiliki pendaftaran, arahkan langsung ke halaman terpadu Detail & Verifikasi Berkas
+        $latestPendaftaran = $asesi->pendaftaranAsesi->sortByDesc('created_at')->first();
+        if ($latestPendaftaran) {
+            return redirect()->route('admin.detail-verifikasi', ['id' => $latestPendaftaran->id, 'from' => 'asesi']);
+        }
 
         return view('admin.detail-asesi', compact('asesi'));
     }
@@ -579,6 +629,10 @@ class AdminController extends Controller
 
     public function manajemenAsesor(Request $request)
     {
+        if (auth()->user()?->peran === 'superadmin') {
+            return redirect()->route('superadmin.manajemen-pengguna', ['peran' => 'asesor']);
+        }
+
         $kataKunci = $request->get('q');
 
         $query = Pengguna::with('skema')->where('peran', 'asesor');

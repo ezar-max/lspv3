@@ -654,10 +654,17 @@
          TOP NAVIGATION & HEADER BAR
          ========================================================================= -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <a href="{{ route('admin.verifikasi-berkas') }}" 
-           class="inline-flex items-center gap-2 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white border border-slate-200 px-4 py-2.5 rounded-xl shadow-xs transition-colors w-fit">
-            <span>&larr;</span> Kembali ke Antrean Verifikasi
-        </a>
+        @if(request('from') === 'asesi')
+            <a href="{{ route('admin.manajemen-asesi') }}" 
+               class="inline-flex items-center gap-2 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white border border-slate-200 px-4 py-2.5 rounded-xl shadow-xs transition-colors w-fit">
+                <span>&larr;</span> Kembali ke Data &amp; Verifikasi Asesi
+            </a>
+        @else
+            <a href="{{ route('admin.verifikasi-berkas') }}" 
+               class="inline-flex items-center gap-2 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white border border-slate-200 px-4 py-2.5 rounded-xl shadow-xs transition-colors w-fit">
+                <span>&larr;</span> Kembali ke Antrean Verifikasi
+            </a>
+        @endif
 
         <div class="flex items-center gap-2 text-xs">
             <span class="px-3 py-1 bg-blue-50 text-blue-700 border border-blue-200/80 rounded-full font-bold uppercase tracking-wider">
@@ -688,6 +695,7 @@
     <!-- MAIN FORM VERIFIKASI -->
     <form id="form-verifikasi-admin" action="{{ route('admin.verifikasi.simpan', $pendaftaran->id) }}" method="POST" class="space-y-6">
         @csrf
+        <input type="hidden" name="from" value="{{ request('from') }}">
         <input type="hidden" name="tanda_tangan_admin_base64" id="input-ttd-admin-base64" value="{{ $pendaftaran->tanda_tangan_admin }}">
 
         <!-- Dynamic Hidden Inputs for Document Status & Notes -->
@@ -793,6 +801,92 @@
                         <span class="text-slate-400 font-medium">Email Pemohon</span>
                         <span class="font-semibold text-slate-800">{{ $pendaftaran->asesi->email }}</span>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- =====================================================================
+             RINGKASAN RIWAYAT & TAHAPAN ASESMEN PESERTA (TERPADU)
+             ===================================================================== -->
+        <div class="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden">
+            <div class="bg-slate-50/90 px-5 py-3.5 border-b border-slate-200/80 flex items-center justify-between flex-wrap gap-2">
+                <h3 class="font-bold text-slate-800 text-sm flex items-center gap-2">
+                    <i class="fa-solid fa-timeline text-blue-600 text-xs"></i>
+                    <span>Ringkasan Riwayat &amp; Tahapan Asesmen Peserta</span>
+                </h3>
+                @if($pendaftaran->asesi->pendaftaranAsesi && $pendaftaran->asesi->pendaftaranAsesi->count() > 1)
+                    <div class="flex items-center gap-1.5 flex-wrap">
+                        <span class="text-[11px] text-slate-400 font-semibold">Riwayat Pendaftaran:</span>
+                        @foreach($pendaftaran->asesi->pendaftaranAsesi as $riwayatP)
+                            <a href="{{ route('admin.detail-verifikasi', ['id' => $riwayatP->id, 'from' => request('from')]) }}"
+                               class="px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-colors {{ $riwayatP->id === $pendaftaran->id ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50' }}">
+                                {{ $riwayatP->nomor_pendaftaran }}
+                            </a>
+                        @endforeach
+                    </div>
+                @endif
+            </div>
+            <div class="p-5 grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                <!-- Tahap 1: Verifikasi Berkas APL-01 -->
+                <div class="p-4 rounded-xl bg-slate-50 border border-slate-200/80 space-y-2">
+                    <div class="text-[11px] font-extrabold uppercase tracking-wider text-slate-500">1. Verifikasi Berkas APL-01</div>
+                    <div>
+                        @if($pendaftaran->status_pendaftaran === 'diverifikasi')
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Diverifikasi (Disetujui)
+                            </span>
+                        @elseif($pendaftaran->status_pendaftaran === 'revisi')
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-orange-100 text-orange-800 border border-orange-200">
+                                <span class="w-1.5 h-1.5 rounded-full bg-orange-500"></span> Perlu Revisi
+                            </span>
+                        @elseif($pendaftaran->status_pendaftaran === 'ditolak')
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
+                                <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span> Ditolak
+                            </span>
+                        @else
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                                <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> Menunggu Verifikasi
+                            </span>
+                        @endif
+                    </div>
+                    <div class="text-slate-600">
+                        Berkas Terunggah: <strong class="text-slate-900">{{ $pendaftaran->dokumen->count() }} Dokumen</strong>
+                    </div>
+                </div>
+
+                <!-- Tahap 2: Jadwal Uji & Asesor -->
+                <div class="p-4 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1.5">
+                    <div class="text-[11px] font-extrabold uppercase tracking-wider text-slate-500">2. Jadwal Uji &amp; Asesor</div>
+                    @if($pendaftaran->jadwal)
+                        <div class="text-slate-700">Tanggal Uji: <strong class="text-slate-900">{{ date('d M Y', strtotime($pendaftaran->jadwal->tanggal_uji)) }}</strong></div>
+                        <div class="text-slate-700">TUK: <strong class="text-slate-900">{{ $pendaftaran->jadwal->nama_tuk }}</strong></div>
+                        <div class="text-slate-700">Asesor Penguji: <strong class="text-slate-900">{{ $pendaftaran->jadwal->asesor->nama_lengkap ?? ($pendaftaran->asesor->nama_lengkap ?? '-') }}</strong></div>
+                    @else
+                        <div class="text-slate-400 italic pt-1">Belum dijadwalkan / menunggu verifikasi</div>
+                    @endif
+                </div>
+
+                <!-- Tahap 3: Hasil & Rekomendasi Kelulusan -->
+                <div class="p-4 rounded-xl bg-slate-50 border border-slate-200/80 space-y-2">
+                    <div class="text-[11px] font-extrabold uppercase tracking-wider text-slate-500">3. Hasil &amp; Rekomendasi Kelulusan</div>
+                    @if($pendaftaran->rekomendasi)
+                        <div>
+                            @if($pendaftaran->rekomendasi->keputusan === 'kompeten')
+                                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                    ✓ KOMPETEN (LULUS)
+                                </span>
+                            @else
+                                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold bg-rose-100 text-rose-800 border border-rose-200">
+                                    ✗ BELUM KOMPETEN
+                                </span>
+                            @endif
+                        </div>
+                        <div class="text-slate-600">
+                            Catatan: {{ $pendaftaran->rekomendasi->catatan_keputusan ?? '-' }}
+                        </div>
+                    @else
+                        <div class="text-slate-400 italic pt-1">Belum ada hasil penilaian akhir</div>
+                    @endif
                 </div>
             </div>
         </div>

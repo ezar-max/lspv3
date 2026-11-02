@@ -620,6 +620,7 @@ class AsesorPenilaianController extends Controller
             }
         }
         $jadwal->save();
+        JadwalAsesmen::setManualStatusOverride($jadwal->id, $statusBaru);
 
         $label = ($statusBaru === 'berlangsung') ? 'DIBUKA (Sedang Berlangsung)' : 'DIUBAH (' . strtoupper($statusBaru) . ')';
         LogAktivitas::catat('Status Jadwal Diubah', "Sesi jadwal {$jadwal->kode_jadwal} telah {$label} oleh {$user->nama_lengkap}");
@@ -657,6 +658,7 @@ class AsesorPenilaianController extends Controller
             $jadwal->status_jadwal = 'berlangsung';
         }
         $jadwal->save();
+        JadwalAsesmen::setManualStatusOverride($jadwal->id, $jadwal->status_jadwal);
 
         LogAktivitas::catat('Perpanjangan Waktu Ujian', "Sesi jadwal {$jadwal->kode_jadwal} diperpanjang {$menitTambahan} menit (sampai {$newEnd->format('H:i')} WIB) oleh {$user->nama_lengkap}");
 

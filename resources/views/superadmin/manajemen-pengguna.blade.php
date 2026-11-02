@@ -11,29 +11,46 @@
     showPasswordAdd: false
 }">
 
-    <!-- FLASH MESSAGE -->
+    <!-- NOTIFIKASI / FLASH MESSAGE -->
     @if(session('sukses'))
-        <div class="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm shadow-xs flex items-center justify-between">
-            <div>
-                <span class="font-bold">Berhasil:</span> {{ session('sukses') }}
+        <div class="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm shadow-2xs flex items-center justify-between gap-3 animate-fade-in">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                    <i class="fa-solid fa-circle-check text-base"></i>
+                </div>
+                <div>
+                    <span class="font-bold">Berhasil:</span> {{ session('sukses') }}
+                </div>
             </div>
-            <button type="button" @click="$el.parentElement.remove()" class="text-emerald-600 hover:text-emerald-900 font-bold px-2 py-1 text-sm">Tutup</button>
+            <button type="button" @click="$el.parentElement.remove()" class="text-emerald-600 hover:text-emerald-900 font-bold px-2.5 py-1 text-xs rounded-lg hover:bg-emerald-100/50 transition-colors cursor-pointer">
+                Tutup
+            </button>
         </div>
     @endif
 
     @if(session('error'))
-        <div class="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-sm shadow-xs flex items-center justify-between">
-            <div>
-                <span class="font-bold">Perhatian:</span> {{ session('error') }}
+        <div class="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-sm shadow-2xs flex items-center justify-between gap-3 animate-fade-in">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center shrink-0">
+                    <i class="fa-solid fa-triangle-exclamation text-base"></i>
+                </div>
+                <div>
+                    <span class="font-bold">Perhatian:</span> {{ session('error') }}
+                </div>
             </div>
-            <button type="button" @click="$el.parentElement.remove()" class="text-rose-600 hover:text-rose-900 font-bold px-2 py-1 text-sm">Tutup</button>
+            <button type="button" @click="$el.parentElement.remove()" class="text-rose-600 hover:text-rose-900 font-bold px-2.5 py-1 text-xs rounded-lg hover:bg-rose-100/50 transition-colors cursor-pointer">
+                Tutup
+            </button>
         </div>
     @endif
 
     @if(isset($errors) && $errors->any())
-        <div class="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-sm shadow-xs">
-            <div class="font-bold mb-1">Terjadi Kesalahan Input:</div>
-            <ul class="list-disc list-inside space-y-0.5 text-xs text-rose-700">
+        <div class="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-sm shadow-2xs">
+            <div class="flex items-center gap-2 font-bold mb-2 text-rose-900">
+                <i class="fa-solid fa-circle-exclamation text-rose-600"></i>
+                <span>Terjadi Kesalahan Input:</span>
+            </div>
+            <ul class="list-disc list-inside space-y-1 text-xs text-rose-700 ml-5">
                 @foreach($errors->all() as $err)
                     <li>{{ $err }}</li>
                 @endforeach
@@ -41,91 +58,133 @@
         </div>
     @endif
 
-    <!-- HEADER SECTION (BRIGHT THEME, NO ICONS) -->
-    <div class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-xs">
-        <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div class="space-y-2">
-                <div class="inline-block px-3 py-1 rounded-md bg-blue-50 border border-blue-200 text-blue-700 text-xs font-bold tracking-wide uppercase">
-                    Master Access Control
+    <!-- EXECUTIVE HERO HEADER -->
+    <div class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/90 shadow-2xs">
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+            <div class="flex items-start sm:items-center gap-4 sm:gap-5">
+                <div class="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-blue-50 border border-blue-200/80 text-blue-600 flex items-center justify-center text-2xl sm:text-3xl shrink-0 shadow-2xs">
+                    <i class="fa-solid fa-users-gear"></i>
                 </div>
-                <h1 class="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 leading-tight">
-                    Manajemen Akun Pengguna
-                </h1>
-                <p class="text-slate-600 text-xs sm:text-sm max-w-2xl leading-relaxed">
-                    Pusat kendali akun pengguna tingkat tinggi. Anda memiliki wewenang penuh untuk membuat, memperbarui kredensial, serta mengedit detail profil Asesi dan nomor registrasi Asesor.
-                </p>
+                <div class="space-y-1.5 min-w-0">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-50 border border-blue-200/80 text-blue-700 text-[11px] font-extrabold uppercase tracking-wider">
+                            <span class="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse"></span>
+                            <span>Master Access Control</span>
+                        </span>
+                        <span class="text-slate-300 hidden sm:inline">&bull;</span>
+                        <span class="text-xs font-semibold text-slate-500">Kredensial &amp; Otoritas Terpusat</span>
+                    </div>
+                    <h1 class="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 leading-tight">
+                        Manajemen Akun Pengguna
+                    </h1>
+                    <p class="text-slate-600 text-xs sm:text-sm max-w-2xl leading-relaxed">
+                        Pusat kendali akun pengguna tingkat tinggi. Kelola otoritas Super Admin, Administrator LSP, Asesor Penguji, dan peserta Asesi secara menyeluruh dan terintegrasi.
+                    </p>
+                </div>
             </div>
 
-            <div class="flex items-center gap-3 shrink-0">
+            <div class="flex items-center gap-3 shrink-0 self-start lg:self-center">
                 <button type="button" 
                         @click="modalTambah = true; peranTambah = 'asesi'"
-                        class="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm shadow-xs transition-colors cursor-pointer">
-                    Tambah Akun Baru
+                        class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold text-xs sm:text-sm shadow-xs hover:shadow-md transition-all cursor-pointer">
+                    <i class="fa-solid fa-user-plus text-xs"></i>
+                    <span>Tambah Akun Baru</span>
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- METRICS CARDS (BRIGHT THEME, NO ICONS) -->
+    <!-- METRICS KPI CARDS (DOMINAN PUTIH & BIRU ELEGAN) -->
     <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5 sm:gap-4">
         <!-- TOTAL -->
         <a href="{{ route('superadmin.manajemen-pengguna') }}" 
-           class="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs hover:border-slate-300 transition-colors {{ empty($peranFilter) ? 'ring-2 ring-slate-800' : '' }}">
-            <div class="text-xs font-semibold text-slate-500 mb-1">Total Akun</div>
+           class="group p-4 rounded-2xl bg-white border {{ empty($peranFilter) ? 'border-blue-600 ring-2 ring-blue-600/20 shadow-xs' : 'border-slate-200/90 hover:border-blue-300 hover:shadow-xs' }} transition-all">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-bold text-slate-600">Total Akun</span>
+                <span class="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-xs group-hover:scale-110 transition-transform">
+                    <i class="fa-solid fa-users"></i>
+                </span>
+            </div>
             <div class="text-2xl font-black text-slate-900">{{ number_format($statistik['total'] ?? 0) }}</div>
-            <div class="text-[11px] text-slate-400 mt-0.5">Semua pengguna</div>
+            <div class="text-[11px] text-slate-400 mt-0.5">Semua pengguna aktif</div>
         </a>
 
         <!-- SUPER ADMIN -->
         <a href="{{ route('superadmin.manajemen-pengguna', ['peran' => 'superadmin']) }}" 
-           class="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs hover:border-slate-300 transition-colors {{ $peranFilter === 'superadmin' ? 'ring-2 ring-blue-600' : '' }}">
-            <div class="text-xs font-semibold text-slate-700 mb-1">Super Admin</div>
+           class="group p-4 rounded-2xl bg-white border {{ $peranFilter === 'superadmin' ? 'border-blue-600 ring-2 ring-blue-600/20 shadow-xs' : 'border-slate-200/90 hover:border-blue-300 hover:shadow-xs' }} transition-all">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-bold text-blue-900">Super Admin</span>
+                <span class="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-xs group-hover:scale-110 transition-transform">
+                    <i class="fa-solid fa-shield-halved"></i>
+                </span>
+            </div>
             <div class="text-2xl font-black text-slate-900">{{ number_format($statistik['superadmin'] ?? 0) }}</div>
-            <div class="text-[11px] text-slate-400 mt-0.5">Akses master</div>
+            <div class="text-[11px] text-slate-400 mt-0.5">Akses master sistem</div>
         </a>
 
         <!-- ADMIN -->
         <a href="{{ route('superadmin.manajemen-pengguna', ['peran' => 'admin']) }}" 
-           class="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs hover:border-slate-300 transition-colors {{ $peranFilter === 'admin' ? 'ring-2 ring-emerald-600' : '' }}">
-            <div class="text-xs font-semibold text-emerald-800 mb-1">Admin LSP</div>
+           class="group p-4 rounded-2xl bg-white border {{ $peranFilter === 'admin' ? 'border-emerald-600 ring-2 ring-emerald-600/20 shadow-xs' : 'border-slate-200/90 hover:border-emerald-300 hover:shadow-xs' }} transition-all">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-bold text-emerald-900">Admin LSP</span>
+                <span class="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center text-xs group-hover:scale-110 transition-transform">
+                    <i class="fa-solid fa-user-gear"></i>
+                </span>
+            </div>
             <div class="text-2xl font-black text-emerald-950">{{ number_format($statistik['admin'] ?? 0) }}</div>
-            <div class="text-[11px] text-slate-400 mt-0.5">Operasional uji</div>
+            <div class="text-[11px] text-slate-400 mt-0.5">Operasional sertifikasi</div>
         </a>
 
         <!-- ASESOR -->
         <a href="{{ route('superadmin.manajemen-pengguna', ['peran' => 'asesor']) }}" 
-           class="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs hover:border-slate-300 transition-colors {{ $peranFilter === 'asesor' ? 'ring-2 ring-amber-600' : '' }}">
-            <div class="text-xs font-semibold text-amber-800 mb-1">Asesor Penguji</div>
+           class="group p-4 rounded-2xl bg-white border {{ $peranFilter === 'asesor' ? 'border-amber-600 ring-2 ring-amber-600/20 shadow-xs' : 'border-slate-200/90 hover:border-amber-300 hover:shadow-xs' }} transition-all">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-bold text-amber-900">Asesor Penguji</span>
+                <span class="w-7 h-7 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center text-xs group-hover:scale-110 transition-transform">
+                    <i class="fa-solid fa-user-tie"></i>
+                </span>
+            </div>
             <div class="text-2xl font-black text-amber-950">{{ number_format($statistik['asesor'] ?? 0) }}</div>
             <div class="text-[11px] text-slate-400 mt-0.5">Penilai kompetensi</div>
         </a>
 
         <!-- ASESI -->
         <a href="{{ route('superadmin.manajemen-pengguna', ['peran' => 'asesi']) }}" 
-           class="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs hover:border-slate-300 transition-colors col-span-2 sm:col-span-1 {{ $peranFilter === 'asesi' ? 'ring-2 ring-blue-600' : '' }}">
-            <div class="text-xs font-semibold text-blue-800 mb-1">Asesi (Peserta)</div>
+           class="group p-4 rounded-2xl bg-white border col-span-2 sm:col-span-1 {{ $peranFilter === 'asesi' ? 'border-blue-600 ring-2 ring-blue-600/20 shadow-xs' : 'border-slate-200/90 hover:border-blue-300 hover:shadow-xs' }} transition-all">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-bold text-blue-900">Asesi (Peserta)</span>
+                <span class="w-7 h-7 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center text-xs group-hover:scale-110 transition-transform">
+                    <i class="fa-solid fa-user-graduate"></i>
+                </span>
+            </div>
             <div class="text-2xl font-black text-blue-950">{{ number_format($statistik['asesi'] ?? 0) }}</div>
-            <div class="text-[11px] text-slate-400 mt-0.5">Peserta sertifikasi</div>
+            <div class="text-[11px] text-slate-400 mt-0.5">Peserta uji asesmen</div>
         </a>
     </div>
 
-    <!-- FILTER & SEARCH BAR (BRIGHT THEME, NO ICONS) -->
-    <div class="bg-white rounded-3xl p-4 sm:p-5 border border-slate-200 shadow-xs">
+    <!-- FILTER & SEARCH BAR TERPADU -->
+    <div class="bg-white rounded-3xl p-4 sm:p-5 border border-slate-200/90 shadow-2xs">
         <form action="{{ route('superadmin.manajemen-pengguna') }}" method="GET" class="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
             <div class="flex-1 flex flex-col sm:flex-row items-center gap-3">
                 <!-- SEARCH INPUT -->
-                <div class="w-full sm:flex-1">
+                <div class="w-full sm:flex-1 relative">
+                    <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                        <i class="fa-solid fa-magnifying-glass text-xs"></i>
+                    </div>
                     <input type="text" 
                            name="q" 
                            value="{{ $kataKunci }}" 
                            placeholder="Cari nama, email, NIK, No. Registrasi, atau sekolah/instansi..." 
-                           class="w-full px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-hidden focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition-all">
+                           class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50/70 border border-slate-200 text-xs sm:text-sm text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-hidden focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition-all">
                 </div>
 
                 <!-- ROLE DROPDOWN -->
-                <div class="w-full sm:w-56">
+                <div class="w-full sm:w-60 relative">
+                    <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                        <i class="fa-solid fa-filter text-xs"></i>
+                    </div>
                     <select name="peran" 
-                            class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm text-slate-700 font-medium focus:bg-white focus:outline-hidden focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition-all">
+                            class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50/70 border border-slate-200 text-xs sm:text-sm text-slate-700 font-semibold focus:bg-white focus:outline-hidden focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition-all">
                         <option value="">Semua Peran (Role)</option>
                         <option value="superadmin" {{ $peranFilter == 'superadmin' ? 'selected' : '' }}>Super Admin</option>
                         <option value="admin" {{ $peranFilter == 'admin' ? 'selected' : '' }}>Admin LSP</option>
@@ -137,63 +196,95 @@
 
             <div class="flex items-center gap-2 shrink-0">
                 <button type="submit" 
-                        class="flex-1 sm:flex-none px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs sm:text-sm transition-colors cursor-pointer">
-                    Terapkan Filter
+                        class="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm shadow-xs transition-colors cursor-pointer">
+                    <i class="fa-solid fa-magnifying-glass text-xs"></i>
+                    <span>Terapkan Filter</span>
                 </button>
                 @if(!empty($kataKunci) || !empty($peranFilter))
                     <a href="{{ route('superadmin.manajemen-pengguna') }}" 
-                       class="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs sm:text-sm border border-slate-200 transition-colors">
-                        Reset
+                       class="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs sm:text-sm border border-slate-200 transition-colors">
+                        <i class="fa-solid fa-rotate-left text-xs"></i>
+                        <span>Reset</span>
                     </a>
                 @endif
             </div>
         </form>
     </div>
 
-    <!-- MAIN DATA TABLE (BRIGHT THEME, NO ICONS) -->
-    <div class="bg-white rounded-3xl border border-slate-200 shadow-xs overflow-hidden">
+    <!-- MAIN DATA TABLE -->
+    <div class="bg-white rounded-3xl border border-slate-200/90 shadow-2xs overflow-hidden">
         <div class="overflow-x-auto">
             <table class="w-full text-left border-collapse">
                 <thead>
-                    <tr class="bg-slate-50 border-b border-slate-200 text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">
-                        <th class="py-3.5 px-4 sm:px-6">Pengguna & Kontak</th>
-                        <th class="py-3.5 px-4">Peran (Role)</th>
-                        <th class="py-3.5 px-4">Data Khusus / Afiliasi</th>
-                        <th class="py-3.5 px-4">Status Akun</th>
-                        <th class="py-3.5 px-4">Terdaftar</th>
-                        <th class="py-3.5 px-4 sm:px-6 text-right">Aksi</th>
+                    <tr class="bg-slate-50/80 border-b border-slate-200 text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">
+                        <th class="py-4 px-4 sm:px-6">Pengguna &amp; Kontak</th>
+                        <th class="py-4 px-4">Peran (Role)</th>
+                        <th class="py-4 px-4">Data Khusus / Afiliasi</th>
+                        <th class="py-4 px-4">Status Akun</th>
+                        <th class="py-4 px-4">Terdaftar</th>
+                        <th class="py-4 px-4 sm:px-6 text-right">Aksi</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100 text-xs sm:text-sm">
                     @forelse($penggunaList as $u)
                         @php
                             $roleBadges = [
-                                'superadmin' => ['bg' => 'bg-slate-100', 'text' => 'text-slate-900', 'border' => 'border-slate-300'],
-                                'admin' => ['bg' => 'bg-emerald-50', 'text' => 'text-emerald-800', 'border' => 'border-emerald-200'],
-                                'asesor' => ['bg' => 'bg-amber-50', 'text' => 'text-amber-800', 'border' => 'border-amber-200'],
-                                'asesi' => ['bg' => 'bg-blue-50', 'text' => 'text-blue-800', 'border' => 'border-blue-200'],
+                                'superadmin' => [
+                                    'bg' => 'bg-blue-50',
+                                    'text' => 'text-blue-800',
+                                    'border' => 'border-blue-200',
+                                    'icon' => 'fa-solid fa-shield-halved',
+                                    'label' => 'SUPER ADMIN'
+                                ],
+                                'admin' => [
+                                    'bg' => 'bg-emerald-50',
+                                    'text' => 'text-emerald-800',
+                                    'border' => 'border-emerald-200',
+                                    'icon' => 'fa-solid fa-user-gear',
+                                    'label' => 'ADMIN LSP'
+                                ],
+                                'asesor' => [
+                                    'bg' => 'bg-amber-50',
+                                    'text' => 'text-amber-800',
+                                    'border' => 'border-amber-200',
+                                    'icon' => 'fa-solid fa-user-tie',
+                                    'label' => 'ASESOR PENGUJI'
+                                ],
+                                'asesi' => [
+                                    'bg' => 'bg-sky-50',
+                                    'text' => 'text-sky-800',
+                                    'border' => 'border-sky-200',
+                                    'icon' => 'fa-solid fa-user-graduate',
+                                    'label' => 'ASESI'
+                                ],
                             ];
                             $currBadge = $roleBadges[$u->peran] ?? $roleBadges['asesi'];
                         @endphp
-                        <tr class="hover:bg-slate-50/70 transition-colors">
+                        <tr class="hover:bg-slate-50/80 transition-colors">
                             <!-- 1. IDENTITAS & KONTAK -->
                             <td class="py-4 px-4 sm:px-6">
                                 <div class="flex items-center gap-3">
-                                    <div class="w-9 h-9 rounded-xl {{ $currBadge['bg'] }} {{ $currBadge['text'] }} font-extrabold flex items-center justify-center text-xs border {{ $currBadge['border'] }} shrink-0">
+                                    <div class="w-10 h-10 rounded-xl {{ $currBadge['bg'] }} {{ $currBadge['text'] }} font-black flex items-center justify-center text-xs border {{ $currBadge['border'] }} shrink-0 shadow-2xs">
                                         {{ strtoupper(substr($u->nama_lengkap, 0, 2)) }}
                                     </div>
                                     <div class="min-w-0">
                                         <div class="font-bold text-slate-900 truncate flex items-center gap-1.5">
                                             <span>{{ $u->nama_lengkap }}</span>
                                             @if($u->id === auth()->id())
-                                                <span class="px-1.5 py-0.2 rounded bg-slate-100 text-slate-700 text-[9px] font-bold border border-slate-200">Anda</span>
+                                                <span class="px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 text-[9px] font-extrabold border border-blue-200">Anda</span>
                                             @endif
                                         </div>
                                         <div class="text-xs text-slate-500 truncate flex items-center gap-2 mt-0.5">
-                                            <span>{{ $u->email }}</span>
+                                            <span class="flex items-center gap-1">
+                                                <i class="fa-regular fa-envelope text-[10px] text-slate-400"></i>
+                                                {{ $u->email }}
+                                            </span>
                                             @if($u->nomor_telepon)
                                                 <span>&bull;</span>
-                                                <span class="text-slate-600">{{ $u->nomor_telepon }}</span>
+                                                <span class="text-slate-600 flex items-center gap-1">
+                                                    <i class="fa-brands fa-whatsapp text-[11px] text-emerald-600"></i>
+                                                    {{ $u->nomor_telepon }}
+                                                </span>
                                             @endif
                                         </div>
                                     </div>
@@ -202,69 +293,85 @@
 
                             <!-- 2. PERAN -->
                             <td class="py-4 px-4">
-                                <span class="inline-block px-2.5 py-1 rounded-md text-xs font-bold border {{ $currBadge['bg'] }} {{ $currBadge['text'] }} {{ $currBadge['border'] }}">
-                                    {{ strtoupper($u->peran) }}
+                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold border {{ $currBadge['bg'] }} {{ $currBadge['text'] }} {{ $currBadge['border'] }}">
+                                    <i class="{{ $currBadge['icon'] }} text-[11px]"></i>
+                                    <span>{{ $currBadge['label'] }}</span>
                                 </span>
                             </td>
 
                             <!-- 3. DETAIL KHUSUS BERDASARKAN ROLE -->
                             <td class="py-4 px-4">
                                 @if($u->peran === 'asesi')
-                                    <div class="space-y-0.5">
-                                        <div class="text-xs font-semibold text-slate-800">
-                                            NIK: {{ $u->profilAsesi?->nik ?? 'Belum Diisi' }}
+                                    <div class="space-y-1">
+                                        <div class="text-xs font-semibold text-slate-800 flex items-center gap-1.5">
+                                            <span class="text-[10px] uppercase font-bold text-slate-400">NIK:</span>
+                                            <code class="px-1.5 py-0.2 rounded bg-slate-100 text-slate-700 font-mono text-[11px]">{{ $u->profilAsesi?->nik ?? 'Belum Diisi' }}</code>
                                         </div>
-                                        <div class="text-[11px] text-slate-500 truncate max-w-xs">
-                                            {{ $u->profilAsesi?->nama_sekolah_instansi ?? 'Instansi: -' }}
+                                        <div class="text-[11px] text-slate-500 truncate max-w-xs flex items-center gap-1">
+                                            <i class="fa-solid fa-school text-[10px] text-slate-400"></i>
+                                            <span>{{ $u->profilAsesi?->nama_sekolah_instansi ?? 'Instansi: -' }}</span>
                                         </div>
                                         @if($u->pendaftaranAsesi->isNotEmpty())
                                             @php $skemaDiikuti = $u->pendaftaranAsesi->first()->skema?->nama_skema; @endphp
-                                            <div class="text-[10px] text-blue-700 bg-blue-50 px-2 py-0.5 rounded inline-block mt-0.5 font-medium border border-blue-200 truncate max-w-[220px]" title="{{ $skemaDiikuti }}">
-                                                Skema: {{ $skemaDiikuti ?? 'Terdaftar' }}
+                                            <div class="text-[10px] text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md inline-flex items-center gap-1 font-semibold border border-blue-200/80 truncate max-w-[220px]" title="{{ $skemaDiikuti }}">
+                                                <i class="fa-solid fa-certificate text-[9px] text-blue-600"></i>
+                                                <span class="truncate">{{ $skemaDiikuti ?? 'Terdaftar' }}</span>
                                             </div>
                                         @else
                                             <span class="text-[10px] text-slate-400 italic">Belum mendaftar skema</span>
                                         @endif
                                     </div>
                                 @elseif($u->peran === 'asesor')
-                                    <div class="space-y-0.5">
-                                        <div class="text-xs font-semibold text-slate-800">
-                                            No. MET: {{ $u->nomor_registrasi ?? '-' }}
+                                    <div class="space-y-1">
+                                        <div class="text-xs font-semibold text-amber-900 flex items-center gap-1.5">
+                                            <span class="text-[10px] uppercase font-bold text-amber-700">No. MET:</span>
+                                            <code class="px-1.5 py-0.2 rounded bg-amber-50 text-amber-800 font-mono text-[11px] border border-amber-200">{{ $u->nomor_registrasi ?? '-' }}</code>
                                         </div>
-                                        <div class="text-[11px] text-slate-600 truncate max-w-[220px]" title="{{ $u->skema?->nama_skema }}">
-                                            Skema: {{ $u->skema?->nama_skema ?? 'Semua Skema' }}
+                                        <div class="text-[11px] text-slate-600 truncate max-w-[220px] flex items-center gap-1" title="{{ $u->skema?->nama_skema }}">
+                                            <i class="fa-solid fa-certificate text-[10px] text-amber-600"></i>
+                                            <span class="truncate">{{ $u->skema?->nama_skema ?? 'Semua Skema' }}</span>
                                         </div>
                                     </div>
                                 @elseif($u->peran === 'superadmin')
-                                    <div class="text-xs font-bold text-slate-900">
-                                        Master Hak Akses Penuh
+                                    <div class="text-xs font-bold text-blue-900 flex items-center gap-1.5">
+                                        <i class="fa-solid fa-crown text-amber-500 text-xs"></i>
+                                        <span>Master Hak Akses Penuh</span>
                                     </div>
-                                    <div class="text-[11px] text-slate-400">Bypass hak akses seluruh fitur</div>
+                                    <div class="text-[11px] text-slate-400 mt-0.5">Bypass otorisasi &amp; konfigurasi global</div>
                                 @else
-                                    <div class="text-xs font-bold text-emerald-900">
-                                        Administrator LSP
+                                    <div class="text-xs font-bold text-emerald-900 flex items-center gap-1.5">
+                                        <i class="fa-solid fa-user-shield text-emerald-600 text-xs"></i>
+                                        <span>Administrator LSP</span>
                                     </div>
-                                    <div class="text-[11px] text-slate-400">Operasional & tata kelola sertifikasi</div>
+                                    <div class="text-[11px] text-slate-400 mt-0.5">Operasional &amp; tata kelola uji asesmen</div>
                                 @endif
                             </td>
 
                             <!-- 4. STATUS -->
                             <td class="py-4 px-4">
                                 @if($u->aktif)
-                                    <span class="inline-block px-2.5 py-0.5 rounded-md text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                        Aktif
+                                    <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+                                        <span>Aktif</span>
                                     </span>
                                 @else
-                                    <span class="inline-block px-2.5 py-0.5 rounded-md text-[11px] font-bold bg-slate-100 text-slate-500 border border-slate-200">
-                                        Nonaktif
+                                    <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 text-slate-500 border border-slate-200">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
+                                        <span>Nonaktif</span>
                                     </span>
                                 @endif
                             </td>
 
                             <!-- 5. TANGGAL TERDAFTAR -->
                             <td class="py-4 px-4 text-xs text-slate-500">
-                                <div>{{ $u->created_at ? $u->created_at->format('d M Y') : '-' }}</div>
-                                <div class="text-[10px] text-slate-400">{{ $u->created_at ? $u->created_at->format('H:i') : '' }} WIB</div>
+                                <div class="font-semibold text-slate-700 flex items-center gap-1">
+                                    <i class="fa-regular fa-calendar text-[10px] text-slate-400"></i>
+                                    {{ $u->created_at ? $u->created_at->format('d M Y') : '-' }}
+                                </div>
+                                <div class="text-[10px] text-slate-400 mt-0.5 flex items-center gap-1">
+                                    <i class="fa-regular fa-clock text-[9px]"></i>
+                                    {{ $u->created_at ? $u->created_at->format('H:i') : '' }} WIB
+                                </div>
                             </td>
 
                             <!-- 6. AKSI -->
@@ -272,8 +379,10 @@
                                 <div class="flex items-center justify-end gap-1.5">
                                     <button type="button" 
                                             @click="activeEditModal = {{ $u->id }}"
-                                            class="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs border border-slate-200 transition-colors cursor-pointer">
-                                        Edit
+                                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-blue-50 text-slate-700 hover:text-blue-700 font-bold text-xs border border-slate-200 hover:border-blue-200 transition-colors cursor-pointer"
+                                            title="Ubah data pengguna">
+                                        <i class="fa-solid fa-pen-to-square text-[11px]"></i>
+                                        <span>Edit</span>
                                     </button>
 
                                     @if($u->id !== auth()->id())
@@ -283,9 +392,9 @@
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" 
-                                                    class="px-2.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold text-xs border border-rose-200 transition-colors cursor-pointer"
+                                                    class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs border border-rose-200 transition-colors cursor-pointer"
                                                     title="Hapus Akun Pengguna">
-                                                Hapus
+                                                <i class="fa-solid fa-trash-can text-[11px]"></i>
                                             </button>
                                         </form>
                                     @endif
@@ -297,45 +406,47 @@
                         <!-- MODAL EDIT PENGGUNA                            -->
                         <!-- ============================================== -->
                         <div x-show="activeEditModal === {{ $u->id }}" 
-                             x-transition:enter="transition ease-out duration-200"
-                             x-transition:enter-start="opacity-0 scale-95"
-                             x-transition:enter-end="opacity-100 scale-100"
-                             x-transition:leave="transition ease-in duration-150"
-                             x-transition:leave-start="opacity-100 scale-100"
-                             x-transition:leave-end="opacity-0 scale-95"
-                             class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5"
+                             x-transition:enter="transition-opacity ease-out duration-300"
+                             x-transition:enter-start="opacity-0"
+                             x-transition:enter-end="opacity-100"
+                             x-transition:leave="transition-opacity ease-in duration-200"
+                             x-transition:leave-start="opacity-100"
+                             x-transition:leave-end="opacity-0"
+                             class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5"
                              style="display: none;"
                              @keydown.escape.window="activeEditModal = null">
 
                             <div @click.outside="activeEditModal = null" 
-                                 class="bg-white rounded-3xl max-w-2xl w-full shadow-2xl border border-slate-100 overflow-hidden flex flex-col max-h-[90vh] my-auto"
+                                 x-transition:enter="transition ease-out duration-300"
+                                 x-transition:enter-start="opacity-0 translate-y-4 scale-98"
+                                 x-transition:enter-end="opacity-100 translate-y-0 scale-100"
+                                 x-transition:leave="transition ease-in duration-200"
+                                 x-transition:leave-start="opacity-100 translate-y-0 scale-100"
+                                 x-transition:leave-end="opacity-0 translate-y-4 scale-98"
+                                 class="bg-white rounded-3xl max-w-2xl w-full shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh] my-auto"
                                  x-data="{ editRole: '{{ $u->peran }}', showPwd: false, statusAktif: {{ $u->aktif ? 'true' : 'false' }} }">
 
                                 <!-- MODAL HEADER -->
-                                <div class="px-6 py-4.5 bg-white border-b border-slate-100 flex items-center justify-between shrink-0">
+                                <div class="px-6 py-5 bg-white border-b border-slate-100 flex items-center justify-between shrink-0">
                                     <div class="flex items-center gap-3">
-                                        <div class="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100 shrink-0">
-                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                            </svg>
+                                        <div class="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-200/80 shrink-0 text-base">
+                                            <i class="fa-solid fa-user-pen"></i>
                                         </div>
                                         <div>
                                             <div class="flex items-center gap-2">
                                                 <h3 class="text-base sm:text-lg font-bold text-slate-900 leading-tight">Edit Akun Pengguna</h3>
-                                                <span class="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider bg-slate-100 text-slate-600 border border-slate-200">
+                                                <span class="text-[10px] px-2 py-0.5 rounded-full font-extrabold uppercase tracking-wider {{ $currBadge['bg'] }} {{ $currBadge['text'] }} border {{ $currBadge['border'] }}">
                                                     {{ $u->peran }}
                                                 </span>
                                             </div>
-                                            <p class="text-xs text-slate-500 mt-0.5">{{ $u->nama_lengkap }} &bull; Peran: <span class="font-semibold text-slate-700">{{ strtoupper($u->peran) }}</span></p>
+                                            <p class="text-xs text-slate-500 mt-0.5">{{ $u->nama_lengkap }} &bull; Peran: <span class="font-bold text-slate-700">{{ strtoupper($u->peran) }}</span></p>
                                         </div>
                                     </div>
                                     <button type="button" 
                                             @click="activeEditModal = null"
                                             class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-400 hover:text-slate-700 flex items-center justify-center transition-colors cursor-pointer"
                                             title="Tutup dialog">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
-                                        </svg>
+                                        <i class="fa-solid fa-xmark text-sm"></i>
                                     </button>
                                 </div>
 
@@ -348,7 +459,10 @@
                                         <div class="space-y-4">
                                             <div class="flex items-center gap-2 pb-2 border-b border-slate-100">
                                                 <span class="w-1.5 h-4 bg-blue-600 rounded-full"></span>
-                                                <h4 class="text-xs font-bold uppercase tracking-wider text-slate-700">Informasi Akun & Akses Login</h4>
+                                                <h4 class="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
+                                                    <i class="fa-solid fa-id-card text-blue-600 text-xs"></i>
+                                                    <span>Informasi Akun &amp; Akses Login</span>
+                                                </h4>
                                             </div>
 
                                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -408,13 +522,7 @@
                                                                 class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 focus:outline-hidden cursor-pointer"
                                                                 tabindex="-1"
                                                                 title="Tampilkan / Sembunyikan sandi">
-                                                            <svg x-show="!showPwd" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                                            </svg>
-                                                            <svg x-show="showPwd" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="display: none;">
-                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18" />
-                                                            </svg>
+                                                            <i :class="showPwd ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye'" class="text-xs"></i>
                                                         </button>
                                                     </div>
                                                     <p class="text-[11px] text-slate-400 mt-1">Kosongkan jika tidak ingin mengubah sandi</p>
@@ -447,12 +555,15 @@
                                             <div class="flex items-center justify-between pb-2 border-b border-blue-100">
                                                 <div class="flex items-center gap-2">
                                                     <span class="w-1.5 h-4 bg-blue-600 rounded-full"></span>
-                                                    <h4 class="text-xs font-bold uppercase tracking-wider text-blue-900">Biodata & Profil Lengkap Asesi</h4>
+                                                    <h4 class="text-xs font-bold uppercase tracking-wider text-blue-900 flex items-center gap-2">
+                                                        <i class="fa-solid fa-user-graduate text-blue-600 text-xs"></i>
+                                                        <span>Biodata &amp; Profil Lengkap Asesi</span>
+                                                    </h4>
                                                 </div>
-                                                <span class="text-[10px] px-2 py-0.5 rounded-md bg-blue-50 border border-blue-200/80 text-blue-700 font-semibold font-mono">FR.APL.01 Data</span>
+                                                <span class="text-[10px] px-2 py-0.5 rounded-md bg-blue-50 border border-blue-200/80 text-blue-700 font-bold font-mono">FR.APL.01 Data</span>
                                             </div>
 
-                                            <div class="bg-blue-50/30 border border-blue-100/70 rounded-2xl p-4 sm:p-5 space-y-4">
+                                            <div class="bg-blue-50/40 border border-blue-100/80 rounded-2xl p-4 sm:p-5 space-y-4">
                                                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                                     <div>
                                                         <label class="block text-xs font-bold text-slate-700 mb-1.5">NIK (Nomor Induk Kependudukan)</label>
@@ -538,12 +649,15 @@
                                             <div class="flex items-center justify-between pb-2 border-b border-amber-100">
                                                 <div class="flex items-center gap-2">
                                                     <span class="w-1.5 h-4 bg-amber-600 rounded-full"></span>
-                                                    <h4 class="text-xs font-bold uppercase tracking-wider text-amber-900">Kredensial Asesor Penguji BNSP</h4>
+                                                    <h4 class="text-xs font-bold uppercase tracking-wider text-amber-900 flex items-center gap-2">
+                                                        <i class="fa-solid fa-user-tie text-amber-600 text-xs"></i>
+                                                        <span>Kredensial Asesor Penguji BNSP</span>
+                                                    </h4>
                                                 </div>
-                                                <span class="text-[10px] px-2 py-0.5 rounded-md bg-amber-50 border border-amber-200/80 text-amber-700 font-semibold font-mono">Lisensi MET</span>
+                                                <span class="text-[10px] px-2 py-0.5 rounded-md bg-amber-50 border border-amber-200/80 text-amber-700 font-bold font-mono">Lisensi MET</span>
                                             </div>
 
-                                            <div class="bg-amber-50/30 border border-amber-100/70 rounded-2xl p-4 sm:p-5 space-y-4">
+                                            <div class="bg-amber-50/40 border border-amber-100/80 rounded-2xl p-4 sm:p-5 space-y-4">
                                                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                                     <div>
                                                         <label class="block text-xs font-bold text-slate-700 mb-1.5">Nomor Registrasi / No. MET Asesor</label>
@@ -577,14 +691,12 @@
                                     <div class="px-6 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-3 shrink-0">
                                         <button type="button" 
                                                 @click="activeEditModal = null" 
-                                                class="px-4 py-2.5 rounded-xl bg-white hover:bg-slate-100 text-slate-700 font-semibold text-xs sm:text-sm border border-slate-200 shadow-2xs transition-colors cursor-pointer">
+                                                class="px-4 py-2.5 rounded-xl bg-white hover:bg-slate-100 text-slate-700 font-bold text-xs sm:text-sm border border-slate-200 shadow-2xs transition-colors cursor-pointer">
                                             Batal
                                         </button>
                                         <button type="submit" 
-                                                class="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold text-xs sm:text-sm shadow-xs transition-colors cursor-pointer flex items-center gap-1.5">
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                                            </svg>
+                                                class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold text-xs sm:text-sm shadow-xs transition-colors cursor-pointer">
+                                            <i class="fa-solid fa-floppy-disk text-xs"></i>
                                             <span>Simpan Perubahan</span>
                                         </button>
                                     </div>
@@ -594,6 +706,9 @@
                     @empty
                         <tr>
                             <td colspan="6" class="py-12 text-center text-slate-400">
+                                <div class="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3 text-lg">
+                                    <i class="fa-solid fa-users-slash"></i>
+                                </div>
                                 <div class="font-bold text-slate-700 text-base">Tidak Ada Pengguna Ditemukan</div>
                                 <p class="text-xs text-slate-400 max-w-sm mx-auto mt-1">Coba sesuaikan kata kunci pencarian atau ubah filter peran yang dipilih.</p>
                             </td>
@@ -615,27 +730,31 @@
     <!-- MODAL TAMBAH PENGGUNA BARU                     -->
     <!-- ============================================== -->
     <div x-show="modalTambah" 
-         x-transition:enter="transition ease-out duration-200"
-         x-transition:enter-start="opacity-0 scale-95"
-         x-transition:enter-end="opacity-100 scale-100"
-         x-transition:leave="transition ease-in duration-150"
-         x-transition:leave-start="opacity-100 scale-100"
-         x-transition:leave-end="opacity-0 scale-95"
-         class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5"
+         x-transition:enter="transition-opacity ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition-opacity ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5"
          style="display: none;"
          @keydown.escape.window="modalTambah = false">
 
         <div @click.outside="modalTambah = false" 
-             class="bg-white rounded-3xl max-w-2xl w-full shadow-2xl border border-slate-100 overflow-hidden flex flex-col max-h-[90vh] my-auto"
+             x-transition:enter="transition ease-out duration-300"
+             x-transition:enter-start="opacity-0 translate-y-4 scale-98"
+             x-transition:enter-end="opacity-100 translate-y-0 scale-100"
+             x-transition:leave="transition ease-in duration-200"
+             x-transition:leave-start="opacity-100 translate-y-0 scale-100"
+             x-transition:leave-end="opacity-0 translate-y-4 scale-98"
+             class="bg-white rounded-3xl max-w-2xl w-full shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh] my-auto"
              x-data="{ showPwdAdd: false }">
 
             <!-- MODAL HEADER -->
-            <div class="px-6 py-4.5 bg-white border-b border-slate-100 flex items-center justify-between shrink-0">
+            <div class="px-6 py-5 bg-white border-b border-slate-100 flex items-center justify-between shrink-0">
                 <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100 shrink-0">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-                        </svg>
+                    <div class="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-200/80 shrink-0 text-base">
+                        <i class="fa-solid fa-user-plus"></i>
                     </div>
                     <div>
                         <h3 class="text-base sm:text-lg font-bold text-slate-900 leading-tight">Buat Akun Pengguna Baru</h3>
@@ -646,9 +765,7 @@
                         @click="modalTambah = false"
                         class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-400 hover:text-slate-700 flex items-center justify-center transition-colors cursor-pointer"
                         title="Tutup dialog">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
+                    <i class="fa-solid fa-xmark text-sm"></i>
                 </button>
             </div>
 
@@ -661,7 +778,10 @@
                     <div class="space-y-4">
                         <div class="flex items-center gap-2 pb-2 border-b border-slate-100">
                             <span class="w-1.5 h-4 bg-blue-600 rounded-full"></span>
-                            <h4 class="text-xs font-bold uppercase tracking-wider text-slate-700">Informasi Akun & Akses Login</h4>
+                            <h4 class="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
+                                <i class="fa-solid fa-id-card text-blue-600 text-xs"></i>
+                                <span>Informasi Akun &amp; Akses Login</span>
+                            </h4>
                         </div>
 
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -721,13 +841,7 @@
                                             class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 focus:outline-hidden cursor-pointer"
                                             tabindex="-1"
                                             title="Tampilkan / Sembunyikan sandi">
-                                        <svg x-show="!showPwdAdd" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                        </svg>
-                                        <svg x-show="showPwdAdd" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="display: none;">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18" />
-                                        </svg>
+                                        <i :class="showPwdAdd ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye'" class="text-xs"></i>
                                     </button>
                                 </div>
                                 <p class="text-[11px] text-slate-400 mt-1">Gunakan kombinasi sandi yang aman</p>
@@ -755,12 +869,15 @@
                         <div class="flex items-center justify-between pb-2 border-b border-blue-100">
                             <div class="flex items-center gap-2">
                                 <span class="w-1.5 h-4 bg-blue-600 rounded-full"></span>
-                                <h4 class="text-xs font-bold uppercase tracking-wider text-blue-900">Biodata Awal Profil Asesi (Opsional)</h4>
+                                <h4 class="text-xs font-bold uppercase tracking-wider text-blue-900 flex items-center gap-2">
+                                    <i class="fa-solid fa-user-graduate text-blue-600 text-xs"></i>
+                                    <span>Biodata Awal Profil Asesi (Opsional)</span>
+                                </h4>
                             </div>
-                            <span class="text-[10px] px-2 py-0.5 rounded-md bg-blue-50 border border-blue-200/80 text-blue-700 font-semibold font-mono">Biodata</span>
+                            <span class="text-[10px] px-2 py-0.5 rounded-md bg-blue-50 border border-blue-200/80 text-blue-700 font-bold font-mono">Biodata</span>
                         </div>
 
-                        <div class="bg-blue-50/30 border border-blue-100/70 rounded-2xl p-4 sm:p-5 space-y-4">
+                        <div class="bg-blue-50/40 border border-blue-100/80 rounded-2xl p-4 sm:p-5 space-y-4">
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
                                     <label class="block text-xs font-bold text-slate-700 mb-1.5">NIK (KTP/KK)</label>
@@ -840,12 +957,15 @@
                         <div class="flex items-center justify-between pb-2 border-b border-amber-100">
                             <div class="flex items-center gap-2">
                                 <span class="w-1.5 h-4 bg-amber-600 rounded-full"></span>
-                                <h4 class="text-xs font-bold uppercase tracking-wider text-amber-900">Kredensial Asesor Penguji BNSP</h4>
+                                <h4 class="text-xs font-bold uppercase tracking-wider text-amber-900 flex items-center gap-2">
+                                    <i class="fa-solid fa-user-tie text-amber-600 text-xs"></i>
+                                    <span>Kredensial Asesor Penguji BNSP</span>
+                                </h4>
                             </div>
-                            <span class="text-[10px] px-2 py-0.5 rounded-md bg-amber-50 border border-amber-200/80 text-amber-700 font-semibold font-mono">Lisensi MET</span>
+                            <span class="text-[10px] px-2 py-0.5 rounded-md bg-amber-50 border border-amber-200/80 text-amber-700 font-bold font-mono">Lisensi MET</span>
                         </div>
 
-                        <div class="bg-amber-50/30 border border-amber-100/70 rounded-2xl p-4 sm:p-5 space-y-4">
+                        <div class="bg-amber-50/40 border border-amber-100/80 rounded-2xl p-4 sm:p-5 space-y-4">
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
                                     <label class="block text-xs font-bold text-slate-700 mb-1.5">Nomor Registrasi / No. MET Asesor</label>
@@ -876,14 +996,12 @@
                 <div class="px-6 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-3 shrink-0">
                     <button type="button" 
                             @click="modalTambah = false" 
-                            class="px-4 py-2.5 rounded-xl bg-white hover:bg-slate-100 text-slate-700 font-semibold text-xs sm:text-sm border border-slate-200 shadow-2xs transition-colors cursor-pointer">
+                            class="px-4 py-2.5 rounded-xl bg-white hover:bg-slate-100 text-slate-700 font-bold text-xs sm:text-sm border border-slate-200 shadow-2xs transition-colors cursor-pointer">
                         Batal
                     </button>
                     <button type="submit" 
-                            class="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold text-xs sm:text-sm shadow-xs transition-colors cursor-pointer flex items-center gap-1.5">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                        </svg>
+                            class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold text-xs sm:text-sm shadow-xs transition-colors cursor-pointer">
+                        <i class="fa-solid fa-user-plus text-xs"></i>
                         <span>Buat Akun Pengguna</span>
                     </button>
                 </div>

@@ -25,6 +25,30 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
 
+    <!-- Inisialisasi Dini State Sidebar Super Admin (Cegah Flash / Animasi saat Berpindah Halaman) -->
+    <script>
+        (function() {
+            try {
+                if (localStorage.getItem('sa_sidebar_state') === 'closed') {
+                    document.documentElement.classList.add('sa-collapsed');
+                } else {
+                    document.documentElement.classList.remove('sa-collapsed');
+                }
+            } catch (e) {}
+        })();
+    </script>
+    <style>
+        /* Standby layout instan saat pindah halaman (tanpa animasi geser yang mengganggu) */
+        @media (min-width: 1024px) {
+            html.sa-collapsed .sa-sidebar-panel {
+                transform: translateX(-100%) !important;
+            }
+            html.sa-collapsed .sa-main-panel {
+                padding-left: 0 !important;
+            }
+        }
+    </style>
+
     <!-- CSS Khusus Per Halaman -->
     @stack('css')
 </head>
@@ -1286,8 +1310,13 @@
     <!-- =========================================================================
          LAYOUT MODE: SIDEBAR MODERN (UNTUK SUPER ADMIN)
          - Tampilan Sidebar Profesional, Modern, Elegan & Tidak Norak
-         - Akses Penuh ke Seluruh Fitur Superadmin & Admin
+         - Buka / Tutup Sidebar Smooth (Desktop & Mobile)
+         - Dominan Putih & Biru Bersih (No Dark Theme)
          ========================================================================= -->
+    @php
+        $sidebarPendingCount = \App\Models\PendaftaranAsesi::where('status_pendaftaran', 'diajukan')->count();
+    @endphp
+
     <style>
         .custom-sidebar-scroll::-webkit-scrollbar {
             width: 4px;
@@ -1296,180 +1325,161 @@
             background: transparent;
         }
         .custom-sidebar-scroll::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.12);
+            background: rgba(148, 163, 184, 0.25);
             border-radius: 9999px;
         }
         .custom-sidebar-scroll::-webkit-scrollbar-thumb:hover {
-            background: rgba(255, 255, 255, 0.25);
+            background: rgba(148, 163, 184, 0.45);
         }
     </style>
 
-    <div class="min-h-screen bg-slate-50 flex flex-col lg:flex-row font-sans" x-data="{ sidebarOpen: false }">
+    <div class="min-h-screen bg-slate-50/70 flex flex-col font-sans" 
+         x-data="{ 
+             sidebarOpen: (localStorage.getItem('sa_sidebar_state') !== 'closed'),
+             mobileSidebar: false,
+             isReady: false,
+             init() {
+                 this.$nextTick(() => {
+                     setTimeout(() => { this.isReady = true; }, 75);
+                 });
+             },
+             toggleSidebar() {
+                 this.isReady = true;
+                 this.sidebarOpen = !this.sidebarOpen;
+                 if (this.sidebarOpen) {
+                     document.documentElement.classList.remove('sa-collapsed');
+                     localStorage.setItem('sa_sidebar_state', 'open');
+                 } else {
+                     document.documentElement.classList.add('sa-collapsed');
+                     localStorage.setItem('sa_sidebar_state', 'closed');
+                 }
+             }
+         }">
         
         <!-- BACKDROP OVERLAY FOR MOBILE -->
-        <div x-show="sidebarOpen" 
-             x-transition:enter="transition-opacity ease-linear duration-200"
+        <div x-show="mobileSidebar" 
+             x-transition:enter="transition-opacity ease-out duration-300"
              x-transition:enter-start="opacity-0"
              x-transition:enter-end="opacity-100"
-             x-transition:leave="transition-opacity ease-linear duration-200"
+             x-transition:leave="transition-opacity ease-in duration-200"
              x-transition:leave-start="opacity-100"
              x-transition:leave-end="opacity-0"
-             @click="sidebarOpen = false" 
-             class="fixed inset-0 bg-slate-900/30 backdrop-blur-xs z-40 lg:hidden"
+             @click="mobileSidebar = false" 
+             class="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-40 lg:hidden"
              style="display: none;"></div>
 
-        <!-- SIDEBAR (BRIGHT PROFESSIONAL THEME, NO ICONS) -->
-        <aside class="fixed inset-y-0 left-0 z-50 w-72 bg-white text-slate-700 border-r border-slate-200/90 flex flex-col justify-between transform transition-transform duration-200 ease-in-out lg:translate-x-0 shadow-xs"
-               :class="sidebarOpen ? 'translate-x-0 shadow-xl' : '-translate-x-full lg:translate-x-0'">
+        <!-- SIDEBAR (DOMINAN PUTIH & BIRU BERSIH) -->
+        <aside class="sa-sidebar-panel fixed inset-y-0 left-0 z-50 w-72 bg-white text-slate-700 border-r border-slate-200/90 flex flex-col justify-between shadow-xs -translate-x-full lg:translate-x-0"
+               :class="{
+                   'transition-all duration-300 ease-in-out': isReady,
+                   'translate-x-0': mobileSidebar || sidebarOpen,
+                   '-translate-x-full': !mobileSidebar && !sidebarOpen,
+                   'lg:translate-x-0': sidebarOpen,
+                   'lg:-translate-x-full': !sidebarOpen
+               }">
             
+            @php
+                $saMenu = [
+                    'Ringkasan & Kontrol' => [
+                        ['route' => 'superadmin.dashboard', 'active' => ['superadmin.dashboard*'], 'icon' => 'fa-shield-halved', 'label' => 'Control Panel', 'sub' => 'Ringkasan super admin'],
+                        ['route' => 'admin.dashboard', 'active' => ['admin.dashboard*'], 'icon' => 'fa-chart-pie', 'label' => 'Dashboard Operasional', 'sub' => 'Aktivitas admin LSP'],
+                    ],
+                    'Manajemen Pengguna' => [
+                        ['route' => 'superadmin.manajemen-pengguna', 'active' => ['superadmin.manajemen-pengguna*'], 'icon' => 'fa-users-gear', 'label' => 'Kelola Pengguna', 'sub' => 'Akun & hak akses'],
+                        ['route' => 'admin.manajemen-asesi', 'active' => ['admin.manajemen-asesi*', 'admin.verifikasi*', 'admin.detail-asesi'], 'icon' => 'fa-id-card', 'label' => 'Data & Verifikasi Asesi', 'sub' => 'Berkas pendaftar', 'badge' => $sidebarPendingCount],
+                        ['route' => 'admin.manajemen-asesor', 'active' => ['admin.manajemen-asesor*'], 'icon' => 'fa-user-tie', 'label' => 'Data Master Asesor', 'sub' => 'Penguji kompetensi'],
+                    ],
+                    'Skema & Perangkat Uji' => [
+                        ['route' => 'admin.manajemen-skema', 'active' => ['admin.manajemen-skema*'], 'icon' => 'fa-certificate', 'label' => 'Skema & Unit Kompetensi', 'sub' => 'Standar sertifikasi'],
+                        ['route' => 'admin.manajemen-jadwal', 'active' => ['admin.manajemen-jadwal*'], 'icon' => 'fa-calendar-days', 'label' => 'Jadwal Uji Asesmen', 'sub' => 'TUK & penugasan'],
+                        ['route' => 'admin.master-muk.index', 'active' => ['admin.master-muk*'], 'icon' => 'fa-file-pen', 'label' => 'Master MUK & Bank Soal', 'sub' => 'Instrumen FR.IA'],
+                    ],
+                    'Dokumen & Mutu BNSP' => [
+                        ['route' => 'admin.dokumen.index', 'active' => ['admin.dokumen*'], 'icon' => 'fa-box-archive', 'label' => 'Dokumen & Legalitas', 'sub' => 'Arsip lembaga'],
+                        ['route' => 'dokumen-asesmen.index', 'active' => ['dokumen-asesmen*'], 'icon' => 'fa-folder-tree', 'label' => 'Dokumen Asesmen Hub', 'sub' => 'Formulir per asesi'],
+                        ['route' => 'admin.laporan-kelulusan', 'active' => ['admin.laporan-kelulusan*'], 'icon' => 'fa-chart-line', 'label' => 'Laporan Kelulusan', 'sub' => 'Rekap hasil uji'],
+                        ['route' => 'admin.manajemen-pengumuman', 'active' => ['admin.manajemen-pengumuman*'], 'icon' => 'fa-bullhorn', 'label' => 'Informasi & Pengumuman', 'sub' => 'Publikasi portal'],
+                    ],
+                    'Sistem & Keamanan' => [
+                        ['route' => 'superadmin.log-aktivitas', 'active' => ['superadmin.log-aktivitas*'], 'icon' => 'fa-clock-rotate-left', 'label' => 'Audit Log Aktivitas', 'sub' => 'Jejak keamanan'],
+                        ['route' => 'superadmin.pengaturan-sistem', 'active' => ['superadmin.pengaturan-sistem*'], 'icon' => 'fa-sliders', 'label' => 'Pengaturan Global', 'sub' => 'Konfigurasi LSP'],
+                    ],
+                ];
+            @endphp
+
             <!-- TOP BRAND HEADER -->
-            <div class="p-5 border-b border-slate-100 bg-white">
-                <div class="flex items-center justify-between">
-                    <a href="{{ route('superadmin.dashboard') }}" class="flex items-center gap-3">
-                        <img src="{{ asset('images/logo-lsp.jpeg') }}" alt="Logo LSP" class="h-9 w-9 object-contain rounded-xl border border-slate-200 p-0.5 bg-white shadow-2xs">
-                        <div>
-                            <div class="font-bold text-slate-900 text-sm tracking-tight leading-tight">
-                                LSP SMKN 1 Gunungputri
-                            </div>
-                            <div class="inline-block mt-1 px-2 py-0.5 rounded-md bg-blue-50 border border-blue-200 text-[10px] font-extrabold text-blue-700 uppercase tracking-wider">
-                                Super Admin Console
-                            </div>
+            <div class="relative px-4 pt-5 pb-4 border-b border-slate-100 bg-gradient-to-b from-blue-50/70 to-white">
+                <div class="flex items-center justify-between gap-2">
+                    <a href="{{ route('superadmin.dashboard') }}" class="flex items-center gap-3 group min-w-0">
+                        <div class="relative shrink-0">
+                            <img src="{{ asset('images/logo-lsp.jpeg') }}" alt="Logo LSP" class="h-11 w-11 object-contain rounded-2xl border border-blue-100 p-1 bg-white shadow-sm group-hover:scale-105 transition-transform duration-300">
+                            <span class="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-500 ring-2 ring-white"></span>
+                        </div>
+                        <div class="leading-tight min-w-0">
+                            <div class="font-extrabold text-slate-900 text-[13px] tracking-tight truncate">LSP SMKN 1 Gunungputri</div>
+                            <div class="text-[10px] font-bold text-blue-600 uppercase tracking-[0.14em] mt-1">Super Admin Console</div>
                         </div>
                     </a>
-                    <button type="button" @click="sidebarOpen = false" class="lg:hidden text-slate-400 hover:text-slate-700 px-2 py-1 text-xs font-semibold rounded-lg hover:bg-slate-100">
-                        Tutup
-                    </button>
+                    <div class="flex items-center shrink-0">
+                        <button type="button" @click="toggleSidebar()" class="hidden lg:inline-flex items-center justify-center w-8 h-8 rounded-xl text-slate-400 hover:text-blue-600 hover:bg-white hover:shadow-sm border border-transparent hover:border-blue-100 transition-all duration-200 cursor-pointer" title="Sembunyikan Sidebar">
+                            <i class="fa-solid fa-angles-left text-xs"></i>
+                        </button>
+                        <button type="button" @click="mobileSidebar = false" class="lg:hidden inline-flex items-center justify-center w-8 h-8 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-white transition-colors cursor-pointer" title="Tutup Menu">
+                            <i class="fa-solid fa-xmark text-sm"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
 
-            <!-- NAVIGATION MENU (SCROLLABLE, NO ICONS) -->
-            <div class="flex-1 overflow-y-auto px-4 py-4 space-y-5 custom-sidebar-scroll">
-                
-                <!-- GRUP 1: RINGKASAN & KONTROL -->
-                <div>
-                    <div class="text-[10px] uppercase font-extrabold tracking-wider text-slate-400 px-3 mb-1.5">
-                        Ringkasan & Kontrol
-                    </div>
-                    <div class="space-y-1 text-xs">
-                        <a href="{{ route('superadmin.dashboard') }}" 
-                           class="block px-3.5 py-2.5 rounded-xl transition-all {{ request()->routeIs('superadmin.dashboard*') ? 'bg-blue-600 text-white font-bold shadow-xs' : 'hover:bg-slate-100 hover:text-slate-900 text-slate-600 font-medium' }}">
-                            Control Panel Super Admin
-                        </a>
-                        <a href="{{ route('admin.dashboard') }}" 
-                           class="block px-3.5 py-2.5 rounded-xl transition-all {{ request()->routeIs('admin.dashboard*') ? 'bg-slate-900 text-white font-bold shadow-xs' : 'hover:bg-slate-100 hover:text-slate-900 text-slate-600 font-medium' }}">
-                            Dashboard Operasional Admin
-                        </a>
-                    </div>
-                </div>
-
-                <!-- GRUP 2: MANAJEMEN PENGGUNA -->
-                <div>
-                    <div class="text-[10px] uppercase font-extrabold tracking-wider text-slate-400 px-3 mb-1.5 flex items-center justify-between">
-                        <span>Manajemen Pengguna</span>
-                        <span class="text-[9px] px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 font-bold">CRUD</span>
-                    </div>
-                    <div class="space-y-1 text-xs">
-                        <a href="{{ route('superadmin.manajemen-pengguna') }}" 
-                           class="flex items-center justify-between px-3.5 py-2.5 rounded-xl transition-all {{ request()->routeIs('superadmin.manajemen-pengguna*') ? 'bg-blue-600 text-white font-bold shadow-xs' : 'hover:bg-slate-100 hover:text-slate-900 text-slate-600 font-medium' }}">
-                            <span>Kelola Seluruh Pengguna</span>
-                            <span class="text-[9px] px-1.5 py-0.5 rounded {{ request()->routeIs('superadmin.manajemen-pengguna*') ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600' }} font-bold">Master</span>
-                        </a>
-                        <a href="{{ route('admin.manajemen-asesi') }}" 
-                           class="block px-3.5 py-2.5 rounded-xl transition-all {{ (request()->routeIs('admin.manajemen-asesi*') || request()->routeIs('admin.verifikasi*') || request()->routeIs('admin.detail-asesi')) ? 'bg-blue-600 text-white font-bold shadow-xs' : 'hover:bg-slate-100 hover:text-slate-900 text-slate-600 font-medium' }}">
-                            Data & Verifikasi Asesi
-                        </a>
-                        <a href="{{ route('admin.manajemen-asesor') }}" 
-                           class="block px-3.5 py-2.5 rounded-xl transition-all {{ request()->routeIs('admin.manajemen-asesor*') ? 'bg-blue-600 text-white font-bold shadow-xs' : 'hover:bg-slate-100 hover:text-slate-900 text-slate-600 font-medium' }}">
-                            Data Master Asesor
-                        </a>
-                    </div>
-                </div>
-
-                <!-- GRUP 3: SKEMA & PERANGKAT UJI -->
-                <div>
-                    <div class="text-[10px] uppercase font-extrabold tracking-wider text-slate-400 px-3 mb-1.5">
-                        Skema & Perangkat Uji
-                    </div>
-                    <div class="space-y-1 text-xs">
-                        <a href="{{ route('admin.manajemen-skema') }}" 
-                           class="block px-3.5 py-2.5 rounded-xl transition-all {{ request()->routeIs('admin.manajemen-skema*') ? 'bg-blue-600 text-white font-bold shadow-xs' : 'hover:bg-slate-100 hover:text-slate-900 text-slate-600 font-medium' }}">
-                            Skema & Unit Kompetensi
-                        </a>
-                        <a href="{{ route('admin.manajemen-jadwal') }}" 
-                           class="block px-3.5 py-2.5 rounded-xl transition-all {{ request()->routeIs('admin.manajemen-jadwal*') ? 'bg-blue-600 text-white font-bold shadow-xs' : 'hover:bg-slate-100 hover:text-slate-900 text-slate-600 font-medium' }}">
-                            Jadwal Uji Asesmen
-                        </a>
-                        <a href="{{ route('admin.master-muk.index') }}" 
-                           class="block px-3.5 py-2.5 rounded-xl transition-all {{ request()->routeIs('admin.master-muk*') ? 'bg-blue-600 text-white font-bold shadow-xs' : 'hover:bg-slate-100 hover:text-slate-900 text-slate-600 font-medium' }}">
-                            Master MUK & Bank Soal
-                        </a>
-                    </div>
-                </div>
-
-                <!-- GRUP 4: DOKUMEN & MUTU BNSP -->
-                <div>
-                    <div class="text-[10px] uppercase font-extrabold tracking-wider text-slate-400 px-3 mb-1.5">
-                        Dokumen & Mutu BNSP
-                    </div>
-                    <div class="space-y-1 text-xs">
-                        <a href="{{ route('admin.dokumen.index') }}" 
-                           class="block px-3.5 py-2.5 rounded-xl transition-all {{ request()->routeIs('admin.dokumen*') ? 'bg-blue-600 text-white font-bold shadow-xs' : 'hover:bg-slate-100 hover:text-slate-900 text-slate-600 font-medium' }}">
-                            Pusat Dokumen & Legalitas
-                        </a>
-                        <a href="{{ route('dokumen-asesmen.index') }}" 
-                           class="block px-3.5 py-2.5 rounded-xl transition-all {{ request()->routeIs('dokumen-asesmen*') ? 'bg-blue-600 text-white font-bold shadow-xs' : 'hover:bg-slate-100 hover:text-slate-900 text-slate-600 font-medium' }}">
-                            Dokumen Asesmen Hub
-                        </a>
-                        <a href="{{ route('admin.laporan-kelulusan') }}" 
-                           class="block px-3.5 py-2.5 rounded-xl transition-all {{ request()->routeIs('admin.laporan-kelulusan*') ? 'bg-blue-600 text-white font-bold shadow-xs' : 'hover:bg-slate-100 hover:text-slate-900 text-slate-600 font-medium' }}">
-                            Laporan & Rekap Kelulusan
-                        </a>
-                        <a href="{{ route('admin.manajemen-pengumuman') }}" 
-                           class="block px-3.5 py-2.5 rounded-xl transition-all {{ request()->routeIs('admin.manajemen-pengumuman*') ? 'bg-blue-600 text-white font-bold shadow-xs' : 'hover:bg-slate-100 hover:text-slate-900 text-slate-600 font-medium' }}">
-                            Informasi & Pengumuman
-                        </a>
-                    </div>
-                </div>
-
-                <!-- GRUP 5: SISTEM & AUDIT -->
-                <div>
-                    <div class="text-[10px] uppercase font-extrabold tracking-wider text-slate-400 px-3 mb-1.5">
-                        Sistem & Keamanan
-                    </div>
-                    <div class="space-y-1 text-xs">
-                        <a href="{{ route('superadmin.log-aktivitas') }}" 
-                           class="block px-3.5 py-2.5 rounded-xl transition-all {{ request()->routeIs('superadmin.log-aktivitas*') ? 'bg-blue-600 text-white font-bold shadow-xs' : 'hover:bg-slate-100 hover:text-slate-900 text-slate-600 font-medium' }}">
-                            Audit Log Aktivitas
-                        </a>
-                        <a href="{{ route('superadmin.pengaturan-sistem') }}" 
-                           class="block px-3.5 py-2.5 rounded-xl transition-all {{ request()->routeIs('superadmin.pengaturan-sistem*') ? 'bg-blue-600 text-white font-bold shadow-xs' : 'hover:bg-slate-100 hover:text-slate-900 text-slate-600 font-medium' }}">
-                            Pengaturan Global LSP
-                        </a>
-                    </div>
-                </div>
-
-            </div>
-
-            <!-- SIDEBAR FOOTER (USER PROFILE & LOGOUT, NO ICONS) -->
-            <div class="p-4 border-t border-slate-200/80 bg-slate-50/80">
-                <div class="flex items-center justify-between gap-3">
-                    <div class="flex items-center gap-2.5 min-w-0">
-                        <div class="w-9 h-9 rounded-xl bg-blue-100 text-blue-800 font-extrabold text-xs flex items-center justify-center shrink-0 border border-blue-200">
-                            {{ strtoupper(substr($user?->nama_lengkap ?? 'SA', 0, 2)) }}
+            <!-- NAVIGATION MENU -->
+            <nav class="flex-1 overflow-y-auto px-3 py-4 space-y-5 custom-sidebar-scroll">
+                @foreach($saMenu as $grup => $items)
+                    <div>
+                        <div class="flex items-center gap-2 px-3 mb-2">
+                            <span class="text-[10px] uppercase font-bold tracking-[0.12em] text-slate-400 whitespace-nowrap">{{ $grup }}</span>
+                            <span class="flex-1 h-px bg-slate-100"></span>
                         </div>
-                        <div class="min-w-0 flex-1">
-                            <div class="font-bold text-xs text-slate-900 truncate" title="{{ $user?->nama_lengkap }}">
-                                {{ $user?->nama_lengkap ?? 'Super Admin' }}
-                            </div>
-                            <div class="text-[10px] text-blue-700 font-semibold">
-                                Super Administrator
-                            </div>
+                        <div class="space-y-0.5">
+                            @foreach($items as $m)
+                                @php $aktif = request()->routeIs(...$m['active']); @endphp
+                                <a href="{{ route($m['route']) }}"
+                                   class="group relative flex items-center gap-3 px-2.5 py-2 rounded-xl transition-all duration-200 {{ $aktif ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' }}">
+                                    @if($aktif)
+                                        <span class="absolute -left-3 top-1/2 -translate-y-1/2 w-1 h-7 rounded-r-full bg-blue-600"></span>
+                                    @endif
+                                    <span class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-all duration-200 {{ $aktif ? 'bg-blue-600 text-white shadow-sm shadow-blue-600/30' : 'bg-slate-100/80 text-slate-500 group-hover:bg-blue-100 group-hover:text-blue-600' }}">
+                                        <i class="fa-solid {{ $m['icon'] }} text-[13px]"></i>
+                                    </span>
+                                    <span class="flex-1 min-w-0 leading-tight">
+                                        <span class="block text-[12.5px] truncate {{ $aktif ? 'font-bold' : 'font-semibold' }}">{{ $m['label'] }}</span>
+                                        <span class="block text-[10.5px] truncate mt-0.5 {{ $aktif ? 'text-blue-500' : 'text-slate-400' }}">{{ $m['sub'] }}</span>
+                                    </span>
+                                    @if(!empty($m['badge']))
+                                        <span class="min-w-[20px] h-5 px-1.5 rounded-full bg-amber-500 text-white text-[10px] font-bold flex items-center justify-center shadow-sm">{{ $m['badge'] }}</span>
+                                    @elseif(!$aktif)
+                                        <i class="fa-solid fa-chevron-right text-[9px] text-slate-300 opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200"></i>
+                                    @endif
+                                </a>
+                            @endforeach
                         </div>
+                    </div>
+                @endforeach
+            </nav>
+
+            <!-- SIDEBAR FOOTER (PROFIL & LOGOUT) -->
+            <div class="p-3 border-t border-slate-100">
+                <div class="flex items-center gap-3 p-2.5 rounded-2xl bg-gradient-to-br from-blue-50 to-white border border-blue-100/80">
+                    <div class="w-10 h-10 rounded-xl bg-blue-600 text-white font-extrabold text-xs flex items-center justify-center shrink-0 shadow-sm shadow-blue-600/30">
+                        {{ strtoupper(substr($user?->nama_lengkap ?? 'SA', 0, 2)) }}
+                    </div>
+                    <div class="min-w-0 flex-1 leading-tight">
+                        <div class="font-bold text-xs text-slate-900 truncate" title="{{ $user?->nama_lengkap }}">{{ $user?->nama_lengkap ?? 'Super Admin' }}</div>
+                        <div class="text-[10.5px] text-blue-600 font-semibold mt-0.5 truncate">Super Administrator</div>
                     </div>
                     <form action="{{ route('keluar') }}" method="POST">
                         @csrf
-                        <button type="submit" class="px-2.5 py-1.5 rounded-lg text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition-colors" title="Keluar dari Akun">
-                            Keluar
+                        <button type="submit" class="w-8 h-8 inline-flex items-center justify-center rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer" title="Keluar dari Akun">
+                            <i class="fa-solid fa-arrow-right-from-bracket text-xs"></i>
                         </button>
                     </form>
                 </div>
@@ -1478,39 +1488,51 @@
         </aside>
 
         <!-- MAIN CONTENT WRAPPER -->
-        <div class="flex-1 lg:pl-72 flex flex-col min-h-screen">
+        <div class="sa-main-panel flex-1 flex flex-col min-h-screen lg:pl-72"
+             :class="{
+                 'transition-all duration-300 ease-in-out': isReady,
+                 'lg:pl-72': sidebarOpen,
+                 'lg:pl-0': !sidebarOpen
+             }">
             
-            <!-- TOPBAR DESKTOP & MOBILE (NO ICONS) -->
-            <header class="sticky top-0 z-30 h-16 bg-white/95 backdrop-blur-md border-b border-slate-200 px-4 sm:px-6 lg:px-8 flex items-center justify-between no-print transition-all">
+            <!-- TOPBAR DESKTOP & MOBILE -->
+            <header class="sticky top-0 z-30 h-16 bg-white/95 backdrop-blur-md border-b border-slate-200/90 px-4 sm:px-6 lg:px-8 flex items-center justify-between no-print">
                 <div class="flex items-center gap-3">
-                    <button type="button" @click="sidebarOpen = true" class="lg:hidden px-3 py-1.5 rounded-xl border border-slate-200 text-slate-700 font-bold text-xs hover:bg-slate-100 transition-colors cursor-pointer">
-                        Menu
+                    <!-- Toggle Sidebar Button (Buka / Tutup Desktop & Mobile) -->
+                    <button type="button" 
+                            @click="if (window.innerWidth >= 1024) { toggleSidebar(); } else { mobileSidebar = true; }" 
+                            class="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-white hover:bg-blue-50 text-slate-600 hover:text-blue-600 border border-slate-200 shadow-2xs transition-colors cursor-pointer"
+                            title="Buka / Tutup Sidebar">
+                        <i class="fa-solid fa-bars text-sm"></i>
                     </button>
+
                     <div class="flex items-center gap-2">
                         <span class="font-bold text-slate-900 text-xs sm:text-sm">LSP SMKN 1 Gunungputri</span>
                         <span class="text-slate-300 hidden sm:inline">&bull;</span>
-                        <span class="hidden sm:inline-block px-2.5 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200 text-[11px] font-bold">
-                            Super Admin Console &bull; Akses Penuh Sistem
+                        <span class="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200/80 text-[11px] font-bold">
+                            <span class="w-1.5 h-1.5 rounded-full bg-blue-600"></span>
+                            <span>Super Admin Console &bull; Akses Penuh Sistem</span>
                         </span>
                     </div>
                 </div>
 
                 <div class="flex items-center gap-3">
-                    <a href="{{ route('beranda') }}" target="_blank" class="hidden sm:inline-block px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-600 hover:text-blue-700 hover:bg-blue-50 border border-slate-200 transition-colors">
-                        Website Publik
+                    <a href="{{ route('beranda') }}" target="_blank" class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-600 hover:text-blue-700 hover:bg-blue-50 border border-slate-200 transition-colors">
+                        <i class="fa-solid fa-arrow-up-right-from-square text-[11px] text-slate-400"></i>
+                        <span>Website Publik</span>
                     </a>
 
                     <x-notification-bell />
 
                     <div class="flex items-center gap-2.5 pl-3 border-l border-slate-200">
-                        <div class="w-8 h-8 rounded-xl bg-blue-50 text-blue-700 border border-blue-200 flex items-center justify-center font-bold text-xs shrink-0">
+                        <div class="w-8 h-8 rounded-xl bg-blue-50 text-blue-700 border border-blue-200 flex items-center justify-center font-bold text-xs shrink-0 shadow-2xs">
                             {{ strtoupper(substr($user?->nama_lengkap ?? 'SA', 0, 2)) }}
                         </div>
                         <div class="hidden md:block text-left leading-tight">
                             <div class="font-bold text-xs text-slate-900 truncate max-w-[140px]" title="{{ $user?->nama_lengkap }}">
                                 {{ $user?->nama_lengkap ?? 'Super Admin' }}
                             </div>
-                            <div class="text-[10px] text-blue-700 font-semibold">Super Administrator</div>
+                            <div class="text-[10px] text-blue-700 font-bold">Super Administrator</div>
                         </div>
                     </div>
                 </div>
@@ -1523,7 +1545,7 @@
             </main>
 
             <!-- FOOTER -->
-            <footer class="no-print py-4 px-6 border-t border-slate-200 bg-white text-xs text-slate-500 flex flex-col sm:flex-row justify-between items-center gap-2">
+            <footer class="no-print py-4 px-6 border-t border-slate-200/80 bg-white text-xs text-slate-500 flex flex-col sm:flex-row justify-between items-center gap-2">
                 <div>
                     &copy; {{ date('Y') }} <strong>{{ config('lsp.nama_lsp', 'LSP SMKN 1 Gunungputri') }}</strong> &bull; Lisensi BNSP: <strong class="text-slate-700">{{ config('lsp.nomor_lisensi', 'BNSP-LSP-2629-ID') }}</strong>
                 </div>

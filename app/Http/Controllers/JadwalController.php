@@ -131,6 +131,8 @@ class JadwalController extends Controller
             'status_jadwal' => $request->status_jadwal,
         ]);
 
+        JadwalAsesmen::setManualStatusOverride($jadwal->id, $request->status_jadwal);
+
         // Jika ada pergantian asesor, perbarui penugasan pada seluruh pendaftaran asesi di jadwal ini
         if ($oldAsesorId != $request->asesor_id) {
             $jadwal->pendaftaranAsesi()->update(['asesor_id' => $request->asesor_id]);
@@ -160,6 +162,7 @@ class JadwalController extends Controller
     {
         $jadwal = JadwalAsesmen::findOrFail($id);
         $kode = $jadwal->kode_jadwal;
+        JadwalAsesmen::clearManualStatusOverride($jadwal->id);
         $jadwal->delete();
 
         LogAktivitas::catat('Hapus Jadwal Asesmen', 'Menghapus jadwal uji #' . $kode);

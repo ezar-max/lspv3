@@ -98,8 +98,63 @@ class JadwalAsesmen extends Model
     }
 
     /**
+     * Lokasi penyimpanan status override manual admin agar tidak tertimpa sinkronisasi otomatis.
+     */
+    protected static function manualOverrideFilePath(): string
+    {
+        return storage_path('app/jadwal_manual_overrides.json');
+    }
+
+    public static function getManualStatusOverrides(): array
+    {
+        $path = static::manualOverrideFilePath();
+        if (!is_file($path)) {
+            return [];
+        }
+        $data = json_decode((string) @file_get_contents($path), true);
+        return is_array($data) ? $data : [];
+    }
+
+    public static function hasManualStatusOverride($id): bool
+    {
+        if (!$id) {
+            return false;
+        }
+        $overrides = static::getManualStatusOverrides();
+        return isset($overrides[(string) $id]);
+    }
+
+    public static function setManualStatusOverride($id, string $status): void
+    {
+        if (!$id) {
+            return;
+        }
+        $overrides = static::getManualStatusOverrides();
+        $overrides[(string) $id] = [
+            'status' => $status,
+            'updated_at' => now()->toIso8601String(),
+        ];
+        $path = static::manualOverrideFilePath();
+        @file_put_contents($path, json_encode($overrides, JSON_PRETTY_PRINT));
+    }
+
+    public static function clearManualStatusOverride($id): void
+    {
+        if (!$id) {
+            return;
+        }
+        $overrides = static::getManualStatusOverrides();
+        if (isset($overrides[(string) $id])) {
+            unset($overrides[(string) $id]);
+            $path = static::manualOverrideFilePath();
+            @file_put_contents($path, json_encode($overrides, JSON_PRETTY_PRINT));
+        }
+    }
+
+    /**
      * Sinkronisasi status seluruh jadwal secara real-time berdasarkan tanggal dan waktu WIB saat ini.
      * Aturan:
+     * - Jadwal yang baru diubah manual oleh Admin dipertahankan status pilihannya
      * - 'dibatalkan' tetap 'dibatalkan'
      * - Waktu saat ini > waktu_selesai (+ grace period) -> otomatis 'selesai' (waktu habis)
      * - Waktu saat ini di antara waktu_mulai dan waktu_selesai -> otomatis 'berlangsung'
@@ -110,11 +165,15 @@ class JadwalAsesmen extends Model
         $tz = config('app.timezone', 'Asia/Jakarta');
         $now = \Carbon\Carbon::now($tz);
         $yesterday = $now->copy()->subDay()->toDateString();
+        $manualOverrideIds = array_map('intval', array_keys(static::getManualStatusOverrides()));
 
-        // 1. Jadwal tanggal lampau (< kemarin) yang berstatus 'terjadwal' -> otomatis 'selesai'
-        static::where('status_jadwal', '=', 'terjadwal')
-            ->where('tanggal_uji', '<', $yesterday)
-            ->update(['status_jadwal' => 'selesai']);
+        // 1. Jadwal tanggal lampau (< kemarin) yang berstatus 'terjadwal' (dan bukan manual override) -> otomatis 'selesai'
+        $pastQuery = static::where('status_jadwal', '=', 'terjadwal')
+            ->where('tanggal_uji', '<', $yesterday);
+        if (!empty($manualOverrideIds)) {
+            $pastQuery->whereNotIn('id', $manualOverrideIds);
+        }
+        $pastQuery->update(['status_jadwal' => 'selesai']);
 
         // 2. Sinkronkan seluruh jadwal yang aktif/relevan (kemarin, hari ini, masa depan, atau yang belum selesai)
         $kandidatJadwal = static::where('status_jadwal', '!=', 'dibatalkan')
@@ -136,6 +195,11 @@ class JadwalAsesmen extends Model
     {
         if ($this->status_jadwal === 'dibatalkan') {
             return 'dibatalkan';
+        }
+
+        // Pertahankan status yang telah diatur secara manual oleh Admin/Super Admin
+        if ($this->id && static::hasManualStatusOverride($this->id)) {
+            return $this->status_jadwal ?? 'terjadwal';
         }
 
         $tz = config('app.timezone', 'Asia/Jakarta');
@@ -229,6 +293,10 @@ class JadwalAsesmen extends Model
             return false;
         }
 
+        if ($this->status_jadwal === 'terjadwal' && $this->id && static::hasManualStatusOverride($this->id)) {
+            return false;
+        }
+
         // Jika diset berlangsung (misal manual admin override / toleransi), izinkan
         if ($this->status_jadwal === 'berlangsung') {
             return true;
@@ -259,8 +327,12 @@ class JadwalAsesmen extends Model
             return false;
         }
 
-        if ($this->status_jadwal === 'dibatalkan') {
+        if ($this->status_jadwal === 'dibatalkan' || $this->status_jadwal === 'selesai') {
             return false;
+        }
+
+        if ($this->status_jadwal === 'terjadwal' && $this->id && static::hasManualStatusOverride($this->id)) {
+            return true;
         }
 
         $start = $this->waktu_mulai_carbon;
@@ -280,6 +352,14 @@ class JadwalAsesmen extends Model
     {
         if ($this->status_jadwal === 'berlangsung') {
             return false;
+        }
+
+        if ($this->status_jadwal === 'terjadwal' && $this->id && static::hasManualStatusOverride($this->id)) {
+            return false;
+        }
+
+        if ($this->status_jadwal === 'selesai' && $this->id && static::hasManualStatusOverride($this->id)) {
+            return true;
         }
 
         $start = $this->waktu_mulai_carbon;
@@ -352,8 +432,24 @@ class JadwalAsesmen extends Model
             ];
         }
 
+        if ($this->status_jadwal === 'terjadwal' && $this->id && static::hasManualStatusOverride($this->id)) {
+            return [
+                'status' => 'belum_mulai',
+                'is_active' => false,
+                'is_before' => true,
+                'is_after' => false,
+                'is_manual' => true,
+                'pesan' => "Ruang uji belum dibuka (Status: Terjadwal). Sesi asesmen dijadwalkan pada {$fmtTanggal} pukul {$fmtMulai}.",
+                'mulai_at' => $start,
+                'selesai_at' => $end,
+                'formatted_mulai' => $fmtMulai,
+                'formatted_selesai' => $fmtSelesai,
+                'formatted_tanggal' => $fmtTanggal,
+            ];
+        }
+
         // Prioritaskan cek waktu belum dimulai sebelum cek status selesai
-        if ($start && $now->isBefore($start)) {
+        if ($start && $now->isBefore($start) && $this->status_jadwal !== 'selesai') {
             $diffHuman = $start->diffForHumans($now, ['parts' => 2, 'syntax' => \Carbon\CarbonInterface::DIFF_RELATIVE_TO_NOW]);
             return [
                 'status' => 'belum_mulai',
